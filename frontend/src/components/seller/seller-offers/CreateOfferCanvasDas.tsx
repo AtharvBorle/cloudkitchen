@@ -41,6 +41,7 @@ export default function CreateOfferCanvasDas({
   const [discountValue, setDiscountValue] = useState("");
   const [minOrderValue, setMinOrderValue] = useState("");
   const [maxDiscountCap, setMaxDiscountCap] = useState("");
+  const [isAutoApply, setIsAutoApply] = useState(false);
 
   const [appliesTo, setAppliesTo] = useState<"ALL" | "CATEGORY" | "ITEMS">("ALL");
   const [customerEligibility, setCustomerEligibility] = useState<"ALL" | "NEW_ONLY">("ALL");
@@ -121,6 +122,7 @@ export default function CreateOfferCanvasDas({
         noExpiry: noExpiry,
         status: isDraft ? "Draft" : "Active",
         isActive: !isDraft,
+        isAutoApply: isAutoApply,
       };
 
       const res = await fetchApi("/api/seller/dashboard/offers", {
@@ -433,6 +435,37 @@ export default function CreateOfferCanvasDas({
                       <span>Leave blank for unlimited discount</span>
                     </div>
                   </div>
+                </div>
+
+                {/* Auto Apply on Checkout Toggle */}
+                <div style={{ marginTop: "1.25rem", padding: "14px 16px", backgroundColor: "#f8fafc", borderRadius: "10px", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: "0.9rem", color: "#0f172a", display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span>Auto Apply on Checkout</span>
+                      {isAutoApply && <span style={{ fontSize: "0.7rem", backgroundColor: "#dcfce7", color: "#15803d", padding: "2px 8px", borderRadius: "10px", fontWeight: "bold" }}>ENABLED</span>}
+                    </div>
+                    <div style={{ fontSize: "0.78rem", color: "#64748b", marginTop: "4px" }}>
+                      Automatically apply this coupon in customer's cart when their order satisfies minimum conditions.
+                    </div>
+                  </div>
+                  <label style={{ position: "relative", display: "inline-block", width: "44px", height: "24px", cursor: "pointer", flexShrink: 0 }}>
+                    <input
+                      type="checkbox"
+                      checked={isAutoApply}
+                      onChange={(e) => setIsAutoApply(e.target.checked)}
+                      style={{ opacity: 0, width: 0, height: 0 }}
+                    />
+                    <span style={{
+                      position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+                      backgroundColor: isAutoApply ? "#ff5500" : "#cbd5e1",
+                      transition: ".3s", borderRadius: "24px"
+                    }}>
+                      <span style={{
+                        position: "absolute", height: "18px", width: "18px", left: isAutoApply ? "22px" : "3px", bottom: "3px",
+                        backgroundColor: "white", transition: ".3s", borderRadius: "50%"
+                      }} />
+                    </span>
+                  </label>
                 </div>
               </div>
 

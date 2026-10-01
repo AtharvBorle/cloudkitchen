@@ -33,7 +33,7 @@ export const createCoupon = async (req: Request) => {
         throw new ApiError("Access denied. Superadmin privileges required.", 403);
     }
 
-    const { code, discountPercentage, appliesToSellerId, category } = await req.json();
+    const { code, discountPercentage, appliesToSellerId, category, isAutoApply, autoApply } = await req.json();
 
     const disc = parseFloat(discountPercentage);
     if (isNaN(disc) || disc <= 0 || disc > 100) {
@@ -45,7 +45,8 @@ export const createCoupon = async (req: Request) => {
             code: code.toUpperCase(),
             discountPercentage: disc,
             appliesToSellerId: appliesToSellerId || null,
-            category: category || "BOTH"
+            category: category || "BOTH",
+            isAutoApply: isAutoApply !== undefined ? Boolean(isAutoApply) : (autoApply !== undefined ? Boolean(autoApply) : false)
         }
     });
 

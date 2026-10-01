@@ -74,7 +74,9 @@ export const createCoupon = async (req: Request) => {
         status,
         appliesToSellerId,
         appliesToProductId,
-        category
+        category,
+        isAutoApply,
+        autoApply
     } = body;
 
     if (!code || !code.trim()) {
@@ -218,7 +220,8 @@ export const createCoupon = async (req: Request) => {
             maxDiscountAmount: finalMaxCap,
             isActive: !isDraft && status !== "Expired" && status !== "Paused" && status !== "Pending",
             approvalStatus,
-            category: category || "BOTH"
+            category: category || "BOTH",
+            isAutoApply: isAutoApply !== undefined ? Boolean(isAutoApply) : (autoApply !== undefined ? Boolean(autoApply) : false)
         };
 
         const newCoupon = await prisma.coupon.create({
@@ -286,7 +289,9 @@ export const updateCoupon = async (req: Request, couponId: string) => {
         expiryDate,
         validUntil,
         status,
-        appliesToProductId
+        appliesToProductId,
+        isAutoApply,
+        autoApply
     } = body;
 
     if (role === "SELLER") {
@@ -487,6 +492,12 @@ export const updateCoupon = async (req: Request, couponId: string) => {
             updateData.isActive = false;
             updateData.approvalStatus = "PENDING_APPROVAL";
         }
+    }
+
+    if (isAutoApply !== undefined) {
+        updateData.isAutoApply = Boolean(isAutoApply);
+    } else if (autoApply !== undefined) {
+        updateData.isAutoApply = Boolean(autoApply);
     }
 
     const updatedCoupon = await prisma.coupon.update({

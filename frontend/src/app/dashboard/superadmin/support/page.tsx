@@ -4358,7 +4358,7 @@ export default function SuperAdminSupportPage() {
 
 
 
-                                                    Paid Food Orders ({userActivity.orders?.filter((o: any) => o.isPaid).length || 0})
+                                                    Refund Eligible Orders ({userActivity.orders?.filter((o: any) => Boolean(o.refund || o.status === "CANCELLED" || (selectedTicket?.orderId && selectedTicket.orderId === o.id))).length || 0})
 
 
 
@@ -4366,11 +4366,11 @@ export default function SuperAdminSupportPage() {
 
 
 
-                                                {userActivity.orders?.filter((o: any) => o.isPaid).length === 0 ? (
+                                                {userActivity.orders?.filter((o: any) => Boolean(o.refund || o.status === "CANCELLED" || (selectedTicket?.orderId && selectedTicket.orderId === o.id))).length === 0 ? (
 
 
 
-                                                    <p style={{ fontSize: "0.7rem", color: "#94A3B8", fontStyle: "italic" }}>No paid food orders.</p>
+                                                    <p style={{ fontSize: "0.7rem", color: "#94A3B8", fontStyle: "italic" }}>No food orders requiring refund.</p>
 
 
 
@@ -4382,7 +4382,7 @@ export default function SuperAdminSupportPage() {
 
 
 
-                                                        {userActivity.orders?.filter((o: any) => o.isPaid).map((order: any) => (
+                                                        {userActivity.orders?.filter((o: any) => Boolean(o.refund || o.status === "CANCELLED" || (selectedTicket?.orderId && selectedTicket.orderId === o.id))).map((order: any) => (
 
 
 
@@ -4462,7 +4462,7 @@ export default function SuperAdminSupportPage() {
 
 
 
-                                                                        Refund: {order.refund.status}
+                                                                        Refund: {order.refund.status} (₹{typeof order.refund.amount === "number" ? order.refund.amount : order.totalAmount})
 
 
 
@@ -4590,7 +4590,7 @@ export default function SuperAdminSupportPage() {
 
 
 
-                                                    Confirmed Room Bookings ({userActivity.bookings?.filter((b: any) => b.status === 'CONFIRMED').length || 0})
+                                                    Refund Room Bookings ({userActivity.bookings?.filter((b: any) => Boolean(b.refund || b.status === "CANCELLED" || (selectedTicket?.bookingId && selectedTicket.bookingId === b.id))).length || 0})
 
 
 
@@ -4598,11 +4598,11 @@ export default function SuperAdminSupportPage() {
 
 
 
-                                                {userActivity.bookings?.filter((b: any) => b.status === 'CONFIRMED').length === 0 ? (
+                                                {userActivity.bookings?.filter((b: any) => Boolean(b.refund || b.status === "CANCELLED" || (selectedTicket?.bookingId && selectedTicket.bookingId === b.id))).length === 0 ? (
 
 
 
-                                                    <p style={{ fontSize: "0.7rem", color: "#94A3B8", fontStyle: "italic" }}>No confirmed bookings.</p>
+                                                    <p style={{ fontSize: "0.7rem", color: "#94A3B8", fontStyle: "italic" }}>No room bookings requiring refund.</p>
 
 
 
@@ -4614,7 +4614,7 @@ export default function SuperAdminSupportPage() {
 
 
 
-                                                        {userActivity.bookings?.filter((b: any) => b.status === 'CONFIRMED').map((booking: any) => {
+                                                        {userActivity.bookings?.filter((b: any) => Boolean(b.refund || b.status === "CANCELLED" || (selectedTicket?.bookingId && selectedTicket.bookingId === b.id))).map((booking: any) => {
 
 
 
@@ -4714,7 +4714,7 @@ export default function SuperAdminSupportPage() {
 
 
 
-                                                                            Refund: {booking.refund.status}
+                                                                            Refund: {booking.refund.status} (₹{typeof booking.refund.amount === "number" ? booking.refund.amount : (booking.totalAmount || bookingAmount)})
 
 
 
