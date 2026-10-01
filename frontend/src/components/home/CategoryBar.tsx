@@ -71,10 +71,17 @@ export default function CategoryBar({
       router.push("/room-booking");
       return;
     }
+    if (cat.id === "food" || cat.name.toLowerCase() === "food") {
+      router.push("/food-explore");
+      return;
+    }
+    const targetRoute =
+      cat.route && cat.route !== "/"
+        ? cat.route
+        : `/food-explore?category=${encodeURIComponent(cat.name.toLowerCase().trim())}`;
+    router.push(targetRoute);
     if (onSelectCategory) {
       onSelectCategory(cat.id);
-    } else {
-      router.push(cat.route);
     }
   };
 

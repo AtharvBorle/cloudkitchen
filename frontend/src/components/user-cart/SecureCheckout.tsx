@@ -246,10 +246,20 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
           const json = await res.json();
           const sellerObj = json.data || json;
           setSellerDetails(sellerObj);
-          if (sellerObj && sellerObj.isOnline === false) {
+          if (
+            !sellerObj ||
+            sellerObj.isOnline === false ||
+            sellerObj.user?.isActive === false ||
+            (sellerObj.verificationStatus && sellerObj.verificationStatus !== "APPROVED")
+          ) {
             setIsSellerClosed(true);
           } else {
             setIsSellerClosed(false);
+          }
+        } else if (res.status === 404 || !res.ok) {
+          if (isMounted) {
+            setIsSellerClosed(true);
+            setSellerDetails(null);
           }
         }
       } catch (e) {
@@ -459,6 +469,26 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
   const [isRecoveringTx, setIsRecoveringTx] = useState<boolean>(false);
   const [isOffline, setIsOffline] = useState<boolean>(false);
 
+  // Restore applied coupon from Cart page
+  useEffect(() => {
+    try {
+      if (typeof window !== "undefined") {
+        const saved = sessionStorage.getItem("applied_cart_coupon") || sessionStorage.getItem("appliedCoupon") || localStorage.getItem("appliedCoupon");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && (parsed.code || parsed.id)) {
+            setAppliedCoupon(parsed);
+            setIsPromoApplied(true);
+            setPromoCode(parsed.code || "");
+            setDiscountPercent(parsed.discountPercentage || 0);
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Failed to restore applied coupon from storage:", e);
+    }
+  }, []);
+
   // Network Offline / Online Detection
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -583,6 +613,9 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
           sessionStorage.setItem("latestConfirmedOrder", JSON.stringify(confirmedOrderPayload));
           localStorage.setItem("latestConfirmedOrder", JSON.stringify(confirmedOrderPayload));
           localStorage.removeItem("pending_order_transaction");
+          sessionStorage.removeItem("applied_cart_coupon");
+          sessionStorage.removeItem("appliedCoupon");
+          localStorage.removeItem("appliedCoupon");
         } catch (e) {
           console.error("Failed to save confirmed order to storage:", e);
         }
@@ -735,12 +768,9 @@ const loadRazorpayScript = (): Promise<boolean> => {
       if (offer.isEligible === false) return false;
       const isAuto = Boolean(offer.isAutoApply || offer.autoApply);
       if (!isAuto) return false;
-      const minCart = offer.minimumCartValue ?? offer.minOrderAmount ?? 0;
+      const minCart = Number(offer.minimumCartValue ?? offer.minOrderAmount ?? 0);
       if (subtotal < minCart) return false;
 
-      if (offer.appliesToSellerId && activeSellerId && offer.appliesToSellerId !== activeSellerId) {
-        return false;
-      }
       if (offer.appliesToProductId) {
         const hasProduct = checkoutItems.some(
           (it) => it.id === offer.appliesToProductId || it.foodItemId === offer.appliesToProductId
@@ -904,7 +934,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
     }
 
     if (isSellerClosed) {
-      showToast("This cloud kitchen is currently closed and not accepting orders.", "error");
+      showToast("This kitchen is currently unavailable. Please try another kitchen.", "error");
       return;
     }
 
@@ -1131,6 +1161,8 @@ const loadRazorpayScript = (): Promise<boolean> => {
                   sessionStorage.setItem("latestConfirmedOrder", JSON.stringify(confirmedOrderPayload));
                   localStorage.setItem("latestConfirmedOrder", JSON.stringify(confirmedOrderPayload));
                   localStorage.removeItem("pending_order_transaction");
+                  sessionStorage.removeItem("appliedCoupon");
+                  localStorage.removeItem("appliedCoupon");
                 } catch (e) {
                   console.error("Failed to save confirmed order to session storage:", e);
                 }
@@ -1289,6 +1321,8 @@ const loadRazorpayScript = (): Promise<boolean> => {
           sessionStorage.setItem("latestConfirmedOrder", JSON.stringify(confirmedOrderPayload));
           localStorage.setItem("latestConfirmedOrder", JSON.stringify(confirmedOrderPayload));
           localStorage.removeItem("pending_order_transaction");
+          sessionStorage.removeItem("appliedCoupon");
+          localStorage.removeItem("appliedCoupon");
         } catch (e) {
           console.error("Failed to save confirmed order to session storage:", e);
         }
@@ -1610,7 +1644,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
           <div className={styles.mainContent}>
             {/* Left Column: Form Cards */}
             <div className={styles.leftFormsColumn}>
-              {/* Closed Restaurant Alert Banner */}
+              {/* Closed / Unavailable Restaurant Alert Banner */}
               {isSellerClosed && (
                 <div
                   style={{
@@ -1631,10 +1665,10 @@ const loadRazorpayScript = (): Promise<boolean> => {
                     <span style={{ fontSize: "24px" }}>🔴</span>
                     <div>
                       <h3 style={{ margin: "0 0 2px 0", fontSize: "1rem", fontWeight: "800", color: "#991B1B" }}>
-                        Kitchen is Currently Closed
+                        Kitchen Currently Unavailable
                       </h3>
                       <p style={{ margin: 0, fontSize: "0.85rem", color: "#DC2626" }}>
-                        The restaurant for these items has turned off operations and cannot accept orders.
+                        This kitchen is currently unavailable. Please try another kitchen.
                       </p>
                     </div>
                   </div>
@@ -2243,183 +2277,6 @@ const loadRazorpayScript = (): Promise<boolean> => {
 
                 <div className={styles.divider} />
 
-                {/* Promo Code Input Row (NC-BUG-117) & Best Offers */}
-                <div className={styles.promoSectionWrapper}>
-                  {isPromoApplied ? (
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        backgroundColor: "#F0FDF4",
-                        border: "1.5px solid #86EFAC",
-                        borderRadius: "12px",
-                        padding: "10px 14px",
-                        gap: "10px",
-                      }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
-                        <Tag size={16} color="#16A34A" />
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: "0.85rem", fontWeight: "800", color: "#15803D", letterSpacing: "0.5px", display: "flex", alignItems: "center", gap: "6px" }}>
-                            <span>{appliedCouponData?.code || promoCode}</span>
-                            {(appliedCouponData as any)?.isAutoApply && (
-                              <span style={{ fontSize: "0.68rem", backgroundColor: "#BBF7D0", color: "#15803D", padding: "1px 6px", borderRadius: "4px", fontWeight: "700" }}>
-                                ⚡ AUTO-APPLIED
-                              </span>
-                            )}
-                          </div>
-                          <div style={{ fontSize: "0.75rem", color: "#166534", fontWeight: "600" }}>
-                            -₹{discountAmount} discount applied {discountPercent > 0 ? `(${discountPercent}%)` : ""}
-                          </div>
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={handleRemovePromo}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "4px",
-                          backgroundColor: "#DC2626",
-                          color: "#FFFFFF",
-                          border: "none",
-                          borderRadius: "6px",
-                          padding: "5px 10px",
-                          fontSize: "0.75rem",
-                          fontWeight: "700",
-                          cursor: "pointer",
-                          flexShrink: 0,
-                          transition: "all 0.15s ease",
-                        }}
-                        title="Remove applied coupon"
-                      >
-                        <X size={13} strokeWidth={2.5} />
-                        <span>Remove</span>
-                      </button>
-                    </div>
-                  ) : (
-                    <div className={styles.promoGroup}>
-                      <input
-                        type="text"
-                        value={promoCode}
-                        onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") handleApplyToggle();
-                        }}
-                        placeholder="Enter Coupon Code"
-                        className={styles.promoInput}
-                        disabled={checkoutItems.length === 0 || isValidatingPromo}
-                      />
-                      <button
-                        type="button"
-                        className={styles.promoBtnApply}
-                        onClick={() => handleApplyToggle()}
-                        disabled={checkoutItems.length === 0 || !promoCode.trim() || isValidatingPromo}
-                      >
-                        {isValidatingPromo ? "Checking..." : "Apply"}
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Best Offers & Available Coupons */}
-                  {availableOffers.length > 0 && (
-                    <div className={styles.bestOffersContainer}>
-                      <div className={styles.bestOffersHeader}>
-                        <Sparkles size={15} className={styles.bestOffersIcon} />
-                        <span className={styles.bestOffersTitle}>Best Offers & Coupons</span>
-                      </div>
-                      <div className={styles.bestOffersList}>
-                        {availableOffers.map((offer) => {
-                          const isCurrentApplied = isPromoApplied && (appliedCouponData?.code || promoCode) === offer.code;
-                          const minMet = !offer.minimumCartValue || subtotal >= offer.minimumCartValue;
-                          const isEligible = offer.isEligible !== false;
-
-                          return (
-                            <div
-                              key={offer.id || offer.code}
-                              className={`${styles.offerCard} ${isCurrentApplied ? styles.offerCardApplied : ""}`}
-                              style={!isEligible ? { opacity: 0.65 } : undefined}
-                              onClick={() => {
-                                if (!isCurrentApplied) {
-                                  if (!isEligible) {
-                                    showToast(offer.ineligibilityReason || `Coupon "${offer.code}" is not applicable to this order.`, "error");
-                                    return;
-                                  }
-                                  handleApplyToggle(offer.code);
-                                }
-                              }}
-                            >
-                              <div className={styles.offerCardLeft}>
-                                <div className={styles.offerCodeRow}>
-                                  <span className={styles.offerCodeBadge}>{offer.code}</span>
-                                  {offer.discountPercentage ? (
-                                    <span className={styles.offerSaveBadge}>{offer.discountPercentage}% OFF</span>
-                                  ) : offer.discountAmount ? (
-                                    <span className={styles.offerSaveBadge}>FLAT ₹{offer.discountAmount} OFF</span>
-                                  ) : null}
-                                  {!isEligible && (
-                                    <span style={{ fontSize: "0.68rem", backgroundColor: "#FEE2E2", color: "#DC2626", padding: "2px 6px", borderRadius: "4px", fontWeight: 700 }}>
-                                      {offer.customerEligibility === "NEW_ONLY" ? "FIRST ORDER ONLY" : "INELIGIBLE"}
-                                    </span>
-                                  )}
-                                </div>
-                                <p className={styles.offerDescription}>
-                                  {offer.description || (offer.discountPercentage ? `Get ${offer.discountPercentage}% off` : `Get ₹${offer.discountAmount} flat off`)}
-                                </p>
-                                {!isEligible && offer.ineligibilityReason ? (
-                                  <span style={{ fontSize: "0.75rem", color: "#DC2626", fontWeight: 600 }}>
-                                    {offer.ineligibilityReason}
-                                  </span>
-                                ) : offer.minimumCartValue > 0 ? (
-                                  <span className={`${styles.offerMinCart} ${!minMet ? styles.offerMinCartWarning : ""}`}>
-                                    {minMet ? `Min order ₹${offer.minimumCartValue}` : `Add ₹${offer.minimumCartValue - subtotal} more`}
-                                  </span>
-                                ) : null}
-                              </div>
-
-                              <div className={styles.offerCardRight}>
-                                {isCurrentApplied ? (
-                                  <button
-                                    type="button"
-                                    className={styles.offerAppliedBtn}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleRemovePromo();
-                                    }}
-                                  >
-                                    <Check size={12} strokeWidth={3} />
-                                    <span>Applied</span>
-                                  </button>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    className={styles.offerApplyBtn}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      if (!isEligible) {
-                                        showToast(offer.ineligibilityReason || `Coupon "${offer.code}" is not applicable to this order.`, "error");
-                                        return;
-                                      }
-                                      handleApplyToggle(offer.code);
-                                    }}
-                                    disabled={checkoutItems.length === 0 || isValidatingPromo || !isEligible}
-                                  >
-                                    Apply
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className={styles.divider} />
-
                 {/* Pricing Breakdown */}
                 <div className={styles.pricingBreakdown}>
                   <div className={styles.pricingRow}>
@@ -2512,7 +2369,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
                     >
                       <span>
                         {isSellerClosed
-                          ? "Kitchen Closed • Cannot Place Order"
+                          ? "Kitchen Unavailable • Cannot Place Order"
                           : isOutsideCoverage
                           ? `Outside 5 km Coverage (${shopDistanceKm ? `${shopDistanceKm} km` : "> 5 km"})`
                           : isCartEmpty

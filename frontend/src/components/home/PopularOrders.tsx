@@ -109,13 +109,10 @@ export default function PopularOrders({
       stockQuantity: stockLimit,
       maxStock: stockLimit,
       itemType: offer.itemType,
-    });
-
-    if (success) {
+    }, false, () => {
       setAddedId(offer.id);
-      showToast(`Added "${offer.title}" to your cart!`, "success");
       setTimeout(() => setAddedId(null), 1800);
-    }
+    });
   };
 
   return (

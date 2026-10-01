@@ -372,7 +372,7 @@
   width: 100%;
   max-width: 1312px;
   display: grid;
-  grid-template-columns: 1fr 410px;
+  grid-template-columns: minmax(0, 1fr) 410px;
   gap: 28px;
   align-items: flex-start;
   box-sizing: border-box;
@@ -383,6 +383,8 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
+  width: 100%;
 }
 
 .cartItemCard {
@@ -396,6 +398,10 @@
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
   transition: all 0.18s ease;
   box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .cartItemCard:hover {
@@ -408,6 +414,9 @@
   align-items: center;
   gap: 18px;
   min-width: 0;
+  max-width: 100%;
+  flex: 1 1 auto;
+  overflow: hidden;
 }
 
 .itemImageWrapper {
@@ -434,6 +443,9 @@
   flex-direction: column;
   gap: 3px;
   min-width: 0;
+  max-width: 100%;
+  flex: 1 1 auto;
+  overflow: hidden;
 }
 
 .itemTitle {
@@ -526,6 +538,52 @@
   color: #DC2626;
 }
 
+/* Faint / Unavailable Cart Item State */
+.cartItemCardUnavailable {
+  opacity: 0.52;
+  background: #F8FAFC !important;
+  border-color: #E2E8F0 !important;
+  transition: all 0.25s ease;
+}
+
+.cartItemCardUnavailable:hover {
+  border-color: #E2E8F0 !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02) !important;
+}
+
+.cartItemCardUnavailable .itemImageWrapper {
+  filter: grayscale(0.4);
+}
+
+.qtyStepperDisabled {
+  border-color: #CBD5E1 !important;
+  background: #F1F5F9 !important;
+  cursor: not-allowed !important;
+  opacity: 0.65;
+}
+
+.qtyBtnDisabled {
+  color: #94A3B8 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+  transform: none !important;
+}
+
+.unavailableBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #FEE2E2;
+  color: #DC2626;
+  border: 1px solid #FECACA;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
 /* Empty Cart State */
 .emptyCartState {
   background: #FFFFFF;
@@ -580,6 +638,11 @@
 }
 
 /* Promo Card */
+.promoCardWrapper {
+  position: relative;
+  width: 100%;
+}
+
 .promoCard {
   background: #FFFFFF;
   border-radius: 18px;
@@ -598,7 +661,7 @@
   flex: 1;
   border: 1px solid #E2E8F0;
   border-radius: 12px;
-  padding: 0 14px;
+  padding: 0 10px 0 14px;
   height: 48px;
   background: #F8FAFC;
   box-sizing: border-box;
@@ -622,12 +685,195 @@
   font-size: 14px;
   color: #0F172A;
   width: 100%;
+  min-width: 0;
+  flex: 1;
   font-family: inherit;
   font-weight: 500;
+  text-transform: uppercase;
 }
 
 .promoInput::placeholder {
   color: #94A3B8;
+  text-transform: none;
+}
+
+.couponDropdownToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #FFF7ED;
+  color: #EA580C;
+  border: 1px solid #FFEDD5;
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.couponDropdownToggle:hover {
+  background: #FFEDD5;
+  border-color: #FDBA74;
+}
+
+.couponOffersBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.couponDropdownMenu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: #FFFFFF;
+  border-radius: 18px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.12), 0 4px 12px rgba(15, 23, 42, 0.06);
+  padding: 16px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: dropdownFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dropdownHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.dropdownHeaderTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.dropdownCloseBtn {
+  background: #F1F5F9;
+  border: none;
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748B;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.dropdownCloseBtn:hover {
+  background: #E2E8F0;
+  color: #0F172A;
+}
+
+/* Coupon Search */
+.couponSearchBox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #F8FAFC;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 0 12px;
+  height: 38px;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease;
+}
+
+.couponSearchBox:focus-within {
+  border-color: #EA580C;
+  background: #FFFFFF;
+}
+
+.couponSearchIcon {
+  color: #94A3B8;
+  flex-shrink: 0;
+}
+
+.couponSearchInput {
+  border: none;
+  outline: none;
+  background: transparent;
+  width: 100%;
+  font-size: 12.5px;
+  color: #0F172A;
+  font-family: inherit;
+  font-weight: 500;
+}
+
+.couponSearchInput::placeholder {
+  color: #94A3B8;
+  font-weight: 400;
+}
+
+.couponSearchClearBtn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: #94A3B8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.couponSearchClearBtn:hover {
+  color: #0F172A;
+}
+
+.dropdownOffersList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.dropdownEmpty {
+  text-align: center;
+  padding: 20px 12px;
+  font-size: 13px;
+  color: #64748B;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.resetSearchBtn {
+  background: #FFF7ED;
+  color: #EA580C;
+  border: 1px solid #FFEDD5;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .applyButton {
@@ -966,6 +1212,84 @@
   letter-spacing: -0.3px;
 }
 
+/* Unlockable Coupon Upsell Suggestion Banner */
+.couponSuggestionBanner {
+  background: linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%);
+  border: 1.5px dashed #FDBA74;
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin: 14px 0 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(234, 88, 12, 0.06);
+  user-select: none;
+}
+
+.couponSuggestionBanner:hover {
+  background: linear-gradient(135deg, #FFEDD5 0%, #FED7AA 100%);
+  border-color: #FB923C;
+  transform: translateY(-1px);
+}
+
+.suggestionIconWrapper {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #EA580C;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(234, 88, 12, 0.12);
+}
+
+.suggestionContent {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.suggestionText {
+  font-size: 12.5px;
+  color: #9A3412;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.suggestionCodeHighlight {
+  display: inline-block;
+  background: #FFFFFF;
+  color: #C2410C;
+  border: 1px solid #FDBA74;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11.5px;
+  letter-spacing: 0.5px;
+  margin: 0 2px;
+}
+
+.suggestionActionLink {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #EA580C;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  text-decoration: none;
+}
+
+.suggestionActionLink:hover {
+  text-decoration: underline;
+}
+
 /* Proceed Button */
 .checkoutButton {
   width: 100%;
@@ -1150,7 +1474,7 @@
     padding: 32px 32px 60px 32px;
   }
   .mainContent {
-    grid-template-columns: 1fr 370px;
+    grid-template-columns: minmax(0, 1fr) 370px;
     gap: 20px;
   }
 }
@@ -1160,7 +1484,7 @@
     padding: 28px 24px 60px 24px;
   }
   .mainContent {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 24px;
   }
 }
@@ -1273,7 +1597,7 @@
 }
 
 /* =========================================================
-   AVAILABLE ADD-ONS (SINGLE LINE SCROLLABLE WITH EDGE SHADOWS)
+   AVAILABLE ADD-ONS (INTERACTIVE HORIZONTAL SCROLLER)
    ========================================================= */
 .availableAddonsSection {
   margin-top: 10px;
@@ -1290,12 +1614,27 @@
 .availableAddonsHeader {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 5px;
   font-size: 0.72rem;
   font-weight: 700;
   color: #047857;
   letter-spacing: 0.03em;
   text-transform: uppercase;
+}
+
+.availableAddonsHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.availableAddonsScrollHint {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #94A3B8;
+  text-transform: none;
+  letter-spacing: normal;
 }
 
 .availableAddonsScrollWrapper {
@@ -1320,38 +1659,56 @@
   padding: 4px 6px 6px 2px;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE/Edge */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  cursor: grab;
+  user-select: none;
 }
 
 .availableAddonsList::-webkit-scrollbar {
   display: none;
 }
 
-.scrollShadowLeft {
+.availableAddonsList.isDragging {
+  cursor: grabbing;
+  scroll-behavior: auto;
+}
+
+.permanentScrollShadowLeft {
   position: absolute;
   top: 0;
   bottom: 0;
   left: 0;
-  width: 32px;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.6) 50%, rgba(255, 255, 255, 0) 100%);
-  box-shadow: inset 8px 0 10px -4px rgba(15, 23, 42, 0.12);
+  width: 28px;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.2) 50%, rgba(0, 0, 0, 0) 100%);
   pointer-events: none;
-  z-index: 3;
-  border-radius: 6px 0 0 6px;
+  z-index: 6;
+  border-radius: 8px 0 0 8px;
 }
 
-.scrollShadowRight {
+.permanentScrollShadowRight {
   position: absolute;
   top: 0;
   bottom: 0;
   right: 0;
   width: 36px;
-  background: linear-gradient(270deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.6) 50%, rgba(255, 255, 255, 0) 100%);
-  box-shadow: inset -8px 0 10px -4px rgba(15, 23, 42, 0.14);
+  background: linear-gradient(270deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.2) 50%, rgba(0, 0, 0, 0) 100%);
   pointer-events: none;
-  z-index: 3;
-  border-radius: 0 6px 6px 0;
+  z-index: 6;
+  border-radius: 0 8px 8px 0;
+}
+
+.visibleShadow {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.hiddenShadow {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
 }
 
 .availableAddonBtn {
@@ -1366,7 +1723,7 @@
   background: linear-gradient(135deg, #F0FDF4 0%, #ECFDF5 100%);
   border: 1px solid #A7F3D0;
   padding: 3px 6px 3px 10px;
-  border-radius: 8px;
+  border-radius: 9999px;
   cursor: pointer;
   box-shadow: 0 1px 3px rgba(16, 185, 129, 0.08);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1377,9 +1734,14 @@
 .availableAddonBtn:hover {
   background: linear-gradient(135deg, #DCFCE7 0%, #D1FAE5 100%);
   border-color: #34D399;
-  transform: translateY(-2px);
+  transform: translateY(-2px) scale(1.02);
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.22);
   color: #047857;
+}
+
+.availableAddonBtn:hover svg {
+  transform: rotate(90deg);
+  transition: transform 0.25s ease;
 }
 
 .availableAddonBtn:active {
@@ -1400,7 +1762,7 @@
   font-size: 0.68rem;
   font-weight: 700;
   padding: 2px 7px;
-  border-radius: 5px;
+  border-radius: 9999px;
   letter-spacing: 0.02em;
   transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
   box-shadow: 0 1px 2px rgba(5, 150, 105, 0.3);

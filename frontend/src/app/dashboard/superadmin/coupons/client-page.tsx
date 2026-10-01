@@ -3,7 +3,7 @@ import { fetchApi } from "@/lib/fetch-api";
 
 
 import { useState, useEffect } from "react";
-import { Plus, Tag, Calendar, X, Percent, DollarSign, Store, Globe, Trash2 } from "lucide-react";
+import { Plus, Tag, Calendar, X, Percent, DollarSign, Store, Globe, Trash2, Search, Check, Layers, Utensils, Users } from "lucide-react";
 
 type SellerType = {
     id: string;
@@ -25,6 +25,10 @@ type CouponType = {
     currentUsersCount?: number;
     minimumCartValue?: number | null;
     isAutoApply?: boolean;
+    appliesTo?: "ALL" | "CATEGORY" | "ITEMS";
+    appliesToProductId?: string | null;
+    customerEligibility?: "ALL" | "NEW_ONLY";
+    maxDiscountAmount?: number | null;
     isActive: boolean;
 };
 
@@ -50,6 +54,28 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
     const [maxUsers, setMaxUsers] = useState("");
     const [minimumCartValue, setMinimumCartValue] = useState("");
     const [couponCategory, setCouponCategory] = useState("BOTH");
+    // Scope & Eligibility & Item restrictions
+    const [maxDiscountCap, setMaxDiscountCap] = useState("");
+    const [appliesTo, setAppliesTo] = useState<"ALL" | "CATEGORY" | "ITEMS">("ALL");
+    const [customerEligibility, setCustomerEligibility] = useState<"ALL" | "NEW_ONLY">("ALL");
+    const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+    const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
+    const [categorySearchQuery, setCategorySearchQuery] = useState("");
+    const [itemSearchQuery, setItemSearchQuery] = useState("");
+
+    // Global items & categories for selection
+    const [allFoodItems, setAllFoodItems] = useState<any[]>([]);
+    const [allFoodCategories, setAllFoodCategories] = useState<any[]>([]);
+    const [isLoadingCatalog, setIsLoadingCatalog] = useState(false);
+
+    // Edit modal additional states
+    const [editMaxDiscountCap, setEditMaxDiscountCap] = useState("");
+    const [editAppliesTo, setEditAppliesTo] = useState<"ALL" | "CATEGORY" | "ITEMS">("ALL");
+    const [editCustomerEligibility, setEditCustomerEligibility] = useState<"ALL" | "NEW_ONLY">("ALL");
+    const [editSelectedCategoryIds, setEditSelectedCategoryIds] = useState<string[]>([]);
+    const [editSelectedItemIds, setEditSelectedItemIds] = useState<string[]>([]);
+    const [editCategorySearchQuery, setEditCategorySearchQuery] = useState("");
+    const [editItemSearchQuery, setEditItemSearchQuery] = useState("");
     // Edit Coupon State
     const [editingCoupon, setEditingCoupon] = useState<CouponType | null>(null);
     const [editCode, setEditCode] = useState("");
@@ -85,6 +111,27 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
     useEffect(() => {
         fetchCoupons();
     }, []);
+
+    useEffect(() => {
+        async function loadCatalog() {
+            try {
+                setIsLoadingCatalog(true);
+                const res = await fetchApi("/api/public/explore");
+                if (res.ok) {
+                    const data = await res.json();
+                    const d = data.data || data;
+                    if (Array.isArray(d.foodItems)) setAllFoodItems(d.foodItems);
+                    if (Array.isArray(d.foodCategories)) setAllFoodCategories(d.foodCategories);
+                }
+            } catch (err) {
+                console.error("Failed to load catalog for superadmin coupons:", err);
+            } finally {
+                setIsLoadingCatalog(false);
+            }
+        }
+        loadCatalog();
+    }, []);
+
 
     const handleCreateCoupon = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -186,6 +233,11 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                 setValidUntil("");
                 setCouponCategory("BOTH");
                 setIsAutoApply(false);
+                setMaxDiscountCap("");
+                setAppliesTo("ALL");
+                setCustomerEligibility("ALL");
+                setSelectedCategoryIds([]);
+                setSelectedItemIds([]);
             } else {
                 const data = await res.json();
                 alert(data.message || "Failed to create coupon");

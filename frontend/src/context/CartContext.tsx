@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useRef } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, AlertCircle, CheckCircle2, Info, X } from "lucide-react";
 
@@ -74,9 +74,17 @@ export type ToastState = {
     type: ToastType;
 };
 
+export type PendingCartConflict = {
+    newItem?: CartItem;
+    newItems?: CartItem[];
+    existingSellerName: string;
+    newSellerName: string;
+    onConfirmAdded?: () => void;
+};
+
 type CartContextType = {
     cartItems: CartItem[];
-    addToCart: (item: CartItem) => boolean;
+    addToCart: (item: CartItem, clearExisting?: boolean, onConfirmAdded?: () => void) => boolean;
     addMultipleToCart: (items: CartItem[], clearExisting?: boolean) => void;
     updateQuantity: (itemId: string, quantity: number) => void;
     updateItemAddons: (itemId: string, selectedAddons: AddonItem[]) => void;
@@ -93,6 +101,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
     const [cartItems, setCartItems] = useState<CartItem[]>([]);
+    const [pendingConflict, setPendingConflict] = useState<PendingCartConflict | null>(null);
     const [toast, setToast] = useState<ToastState | null>(null);
     const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const router = useRouter();
@@ -125,7 +134,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         };
     }, []);
 
-    const syncCartWithLiveMenu = async (customList?: CartItem[]) => {
+    const syncCartWithLiveMenu = useCallback(async (customList?: CartItem[]) => {
         const targetList = customList || cartItems;
         if (!targetList || targetList.length === 0) return;
 
@@ -137,9 +146,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
         await Promise.all(
             sellerIds.map(async (sid) => {
+                // Skip static or mock seller IDs that do not exist in the database
+                if (!sid || sid.startsWith("k-") || sid.startsWith("mock_")) return;
+
                 try {
                     const res = await fetchApi(`/api/public/shop/${encodeURIComponent(sid)}`);
-                    if (res.ok) {
+                    if (res && res.ok) {
                         const json = await res.json();
                         const sellerObj = json.data || json;
                         const liveFoodItems: any[] = sellerObj?.foodItems || [];
@@ -181,8 +193,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                             }
                         }
                     }
-                } catch (err) {
-                    console.error("Failed to sync cart prices with live menu:", err);
+                } catch {
+                    // Silently ignore background sync network errors when offline or during transient connection drops
                 }
             })
         );
@@ -203,7 +215,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 return updated;
             });
         }
-    };
+    }, [cartItems]);
 
     // Load from local storage on mount and sync with live seller prices
     useEffect(() => {
@@ -252,14 +264,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem("kitchen_cart", JSON.stringify(cartItems));
     }, [cartItems]);
 
-    const addToCart = (item: CartItem): boolean => {
-        setCartItems(prev => {
-            // Prevent mixing items from different sellers in one order
-            if (prev.length > 0 && prev[0].sellerId && item.sellerId && prev[0].sellerId !== item.sellerId) {
-                showToast("You can only order from one kitchen at a time. Please clear your cart first.", "warning");
-                return prev;
-            }
+    const addToCart = (item: CartItem, clearExisting = false, onConfirmAdded?: () => void): boolean => {
+        // Prevent mixing items from different sellers in one order
+        if (!clearExisting && cartItems.length > 0 && cartItems[0].sellerId && item.sellerId && cartItems[0].sellerId !== item.sellerId) {
+            setPendingConflict({
+                newItem: item,
+                existingSellerName: cartItems[0].sellerName || "Existing Kitchen",
+                newSellerName: item.sellerName || "New Kitchen",
+                onConfirmAdded,
+            });
+            return false;
+        }
 
+        let addedSuccessfully = false;
+
+        setCartItems(prev => {
+            const basePrev = clearExisting ? [] : prev;
             const addons = deduplicateAddons(item.selectedAddons);
             const availableAddons = deduplicateAddons(item.addons);
             const addonsSum = addons.reduce((sum, a) => sum + (Number(a.price) || 0), 0);
@@ -281,7 +301,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 addons: availableAddons.length > 0 ? availableAddons : item.addons,
             };
 
-            const existing = prev.find(i => i.id === finalCartId);
+            const existing = basePrev.find(i => i.id === finalCartId);
             const rawStock = item.maxStock !== undefined ? item.maxStock : (item.stockQuantity !== undefined ? item.stockQuantity : (existing?.maxStock !== undefined ? existing.maxStock : existing?.stockQuantity));
             const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
             const itemImage = item.imageUrl || item.image || existing?.imageUrl || existing?.image;
@@ -289,7 +309,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             // Out-of-stock validation
             if (stockLimit === 0) {
                 showToast(`Sorry, "${item.name}" is currently out of stock.`, "warning");
-                return prev;
+                return basePrev;
             }
 
             if (existing) {
@@ -298,7 +318,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
                 if (stockLimit !== -1 && (existing.quantity >= stockLimit || newQty > stockLimit)) {
                     showToast(`We have only ${stockLimit} left in stock.`, "warning");
-                    return prev.map(i => i.id === finalCartId ? {
+                    return basePrev.map(i => i.id === finalCartId ? {
                         ...i,
                         ...normalizedItem,
                         quantity: Math.min(stockLimit, existing.quantity),
@@ -309,7 +329,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                     } : i);
                 }
 
-                return prev.map(i => i.id === finalCartId ? {
+                addedSuccessfully = true;
+                return basePrev.map(i => i.id === finalCartId ? {
                     ...i,
                     ...normalizedItem,
                     quantity: newQty,
@@ -323,7 +344,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             const initialQty = item.quantity !== undefined && item.quantity > 0 ? item.quantity : 1;
             if (stockLimit !== -1 && initialQty > stockLimit) {
                 showToast(`We have only ${stockLimit} left in stock.`, "warning");
-                return [...prev, {
+                addedSuccessfully = true;
+                return [...basePrev, {
                     ...normalizedItem,
                     quantity: stockLimit,
                     maxStock: stockLimit,
@@ -333,7 +355,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 }];
             }
 
-            return [...prev, {
+            addedSuccessfully = true;
+            return [...basePrev, {
                 ...normalizedItem,
                 quantity: initialQty,
                 maxStock: stockLimit,
@@ -342,24 +365,30 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 imageUrl: itemImage,
             }];
         });
-        return true;
+
+        if (addedSuccessfully || clearExisting) {
+            onConfirmAdded?.();
+            return true;
+        }
+
+        return false;
     };
 
     const addMultipleToCart = (items: CartItem[], clearExisting = false) => {
         if (!items || items.length === 0) return;
+        const targetSellerId = items[0]?.sellerId;
+
+        if (!clearExisting && cartItems.length > 0 && cartItems[0].sellerId && targetSellerId && cartItems[0].sellerId !== targetSellerId) {
+            setPendingConflict({
+                newItems: items,
+                existingSellerName: cartItems[0].sellerName || "Existing Kitchen",
+                newSellerName: items[0].sellerName || "New Kitchen",
+            });
+            return;
+        }
 
         setCartItems(prev => {
             let baseList = clearExisting ? [] : [...prev];
-            const targetSellerId = items[0]?.sellerId;
-
-            if (baseList.length > 0 && baseList[0].sellerId && targetSellerId && baseList[0].sellerId !== targetSellerId) {
-                if (!clearExisting) {
-                    showToast("You can only order from one kitchen at a time. Please clear your cart first.", "warning");
-                    return prev;
-                }
-                baseList = [];
-            }
-
             let updatedList = [...baseList];
 
             for (const item of items) {
@@ -584,6 +613,177 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                     >
                         <X size={15} />
                     </button>
+                </div>
+            )}
+
+            {/* Cross-Seller Replace Cart Confirmation Modal */}
+            {pendingConflict && (
+                <div
+                    style={{
+                        position: "fixed",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: "rgba(15, 23, 42, 0.62)",
+                        backdropFilter: "blur(6px)",
+                        WebkitBackdropFilter: "blur(6px)",
+                        zIndex: 999998,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "16px",
+                        boxSizing: "border-box",
+                    }}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="replace-cart-title"
+                >
+                    <div
+                        style={{
+                            width: "100%",
+                            maxWidth: "440px",
+                            backgroundColor: "#FFFFFF",
+                            borderRadius: "24px",
+                            padding: "26px 24px",
+                            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+                            border: "1px solid #F1F5F9",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "18px",
+                            boxSizing: "border-box",
+                            fontFamily: "Poppins, sans-serif",
+                        }}
+                    >
+                        {/* Header icon + close button */}
+                        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+                            <div
+                                style={{
+                                    width: "48px",
+                                    height: "48px",
+                                    borderRadius: "14px",
+                                    backgroundColor: "#FFF7ED",
+                                    border: "1.5px solid #FFEDD5",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    color: "#FF6B00",
+                                }}
+                            >
+                                <AlertTriangle size={24} strokeWidth={2.5} />
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setPendingConflict(null)}
+                                style={{
+                                    background: "none",
+                                    border: "none",
+                                    padding: "6px",
+                                    cursor: "pointer",
+                                    color: "#94A3B8",
+                                    borderRadius: "8px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                }}
+                                aria-label="Close"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Title & Body Text */}
+                        <div>
+                            <h3
+                                id="replace-cart-title"
+                                style={{
+                                    fontSize: "1.18rem",
+                                    fontWeight: "800",
+                                    color: "#0F172A",
+                                    margin: "0 0 8px 0",
+                                }}
+                            >
+                                Replace items already in cart?
+                            </h3>
+                            <p
+                                style={{
+                                    fontSize: "0.88rem",
+                                    color: "#64748B",
+                                    lineHeight: "1.55",
+                                    margin: 0,
+                                }}
+                            >
+                                Your cart contains dishes from <strong style={{ color: "#0F172A" }}>{pendingConflict.existingSellerName}</strong>. A single order can only contain items from one cloud kitchen.
+                            </p>
+                            <p
+                                style={{
+                                    fontSize: "0.88rem",
+                                    color: "#64748B",
+                                    lineHeight: "1.55",
+                                    margin: "8px 0 0 0",
+                                }}
+                            >
+                                Would you like to discard your current cart and start a fresh order with dishes from <strong style={{ color: "#FF6B00" }}>{pendingConflict.newSellerName}</strong>?
+                            </p>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "12px",
+                                marginTop: "6px",
+                            }}
+                        >
+                            <button
+                                type="button"
+                                onClick={() => setPendingConflict(null)}
+                                style={{
+                                    flex: 1,
+                                    padding: "11px 16px",
+                                    borderRadius: "14px",
+                                    border: "1.5px solid #E2E8F0",
+                                    backgroundColor: "#F8FAFC",
+                                    color: "#475569",
+                                    fontSize: "0.88rem",
+                                    fontWeight: "700",
+                                    cursor: "pointer",
+                                    transition: "all 0.15s ease",
+                                }}
+                            >
+                                Keep Cart
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (!pendingConflict) return;
+                                    const { newItem, newItems, onConfirmAdded } = pendingConflict;
+                                    if (newItem) {
+                                        addToCart(newItem, true, onConfirmAdded);
+                                    } else if (newItems && newItems.length > 0) {
+                                        addMultipleToCart(newItems, true);
+                                    }
+                                    setPendingConflict(null);
+                                }}
+                                style={{
+                                    flex: 1,
+                                    padding: "11px 16px",
+                                    borderRadius: "14px",
+                                    border: "none",
+                                    backgroundColor: "#FF6B00",
+                                    color: "#FFFFFF",
+                                    fontSize: "0.88rem",
+                                    fontWeight: "700",
+                                    cursor: "pointer",
+                                    boxShadow: "0 4px 14px rgba(255, 107, 0, 0.35)",
+                                    transition: "all 0.15s ease",
+                                }}
+                            >
+                                Discard & Add
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </CartContext.Provider>
