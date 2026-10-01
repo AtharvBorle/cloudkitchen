@@ -245,10 +245,20 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
           const json = await res.json();
           const sellerObj = json.data || json;
           setSellerDetails(sellerObj);
-          if (sellerObj && sellerObj.isOnline === false) {
+          if (
+            !sellerObj ||
+            sellerObj.isOnline === false ||
+            sellerObj.user?.isActive === false ||
+            (sellerObj.verificationStatus && sellerObj.verificationStatus !== "APPROVED")
+          ) {
             setIsSellerClosed(true);
           } else {
             setIsSellerClosed(false);
+          }
+        } else if (res.status === 404 || !res.ok) {
+          if (isMounted) {
+            setIsSellerClosed(true);
+            setSellerDetails(null);
           }
         }
       } catch (e) {
@@ -822,7 +832,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
     }
 
     if (isSellerClosed) {
-      showToast("This cloud kitchen is currently closed and not accepting orders.", "error");
+      showToast("This kitchen is currently unavailable. Please try another kitchen.", "error");
       return;
     }
 
@@ -1515,7 +1525,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
           <div className={styles.mainContent}>
             {/* Left Column: Form Cards */}
             <div className={styles.leftFormsColumn}>
-              {/* Closed Restaurant Alert Banner */}
+              {/* Closed / Unavailable Restaurant Alert Banner */}
               {isSellerClosed && (
                 <div
                   style={{
@@ -1536,10 +1546,10 @@ const loadRazorpayScript = (): Promise<boolean> => {
                     <span style={{ fontSize: "24px" }}>🔴</span>
                     <div>
                       <h3 style={{ margin: "0 0 2px 0", fontSize: "1rem", fontWeight: "800", color: "#991B1B" }}>
-                        Kitchen is Currently Closed
+                        Kitchen Currently Unavailable
                       </h3>
                       <p style={{ margin: 0, fontSize: "0.85rem", color: "#DC2626" }}>
-                        The restaurant for these items has turned off operations and cannot accept orders.
+                        This kitchen is currently unavailable. Please try another kitchen.
                       </p>
                     </div>
                   </div>
@@ -2240,7 +2250,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
                     >
                       <span>
                         {isSellerClosed
-                          ? "Kitchen Closed • Cannot Place Order"
+                          ? "Kitchen Unavailable • Cannot Place Order"
                           : isOutsideCoverage
                           ? `Outside 5 km Coverage (${shopDistanceKm ? `${shopDistanceKm} km` : "> 5 km"})`
                           : isCartEmpty

@@ -183,7 +183,7 @@ export const UserCart: React.FC<UserCartProps> = ({
   onProceedToCheckout,
 }) => {
   const router = useRouter();
-  const { cartItems: contextCartItems, addToCart, decreaseQuantity, removeFromCart, updateItemAddons, cartTotal, syncCartWithLiveMenu } = useCart();
+  const { cartItems: contextCartItems, addToCart, decreaseQuantity, removeFromCart, updateItemAddons, cartTotal, syncCartWithLiveMenu, clearCart } = useCart();
   const { defaultAddress, savedAddresses, openLocationModal, selectAddress } = useLocation();
 
   // State Management
@@ -233,6 +233,8 @@ export const UserCart: React.FC<UserCartProps> = ({
   const [isAddressModalOpen, setIsAddressModalOpen] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isSellerClosed, setIsSellerClosed] = useState<boolean>(false);
+  const [isSellerUnavailableDismissed, setIsSellerUnavailableDismissed] = useState<boolean>(false);
+  const hasShownUnavailableToast = React.useRef<boolean>(false);
   const [sellerDetails, setSellerDetails] = useState<any>(null);
 
   // Sync with live seller prices on mount
@@ -294,6 +296,8 @@ export const UserCart: React.FC<UserCartProps> = ({
   React.useEffect(() => {
     if (!currentSellerId) {
       setSellerDetails(null);
+      setIsSellerClosed(false);
+      hasShownUnavailableToast.current = false;
       return;
     }
 
@@ -305,10 +309,29 @@ export const UserCart: React.FC<UserCartProps> = ({
           const json = await res.json();
           const sellerObj = json.data || json;
           setSellerDetails(sellerObj);
-          if (sellerObj && sellerObj.isOnline === false) {
+          if (
+            !sellerObj ||
+            sellerObj.isOnline === false ||
+            sellerObj.user?.isActive === false ||
+            (sellerObj.verificationStatus && sellerObj.verificationStatus !== "APPROVED")
+          ) {
             setIsSellerClosed(true);
+            if (!hasShownUnavailableToast.current) {
+              hasShownUnavailableToast.current = true;
+              showToast("This kitchen is currently unavailable. Please try another kitchen.");
+            }
           } else {
             setIsSellerClosed(false);
+            hasShownUnavailableToast.current = false;
+          }
+        } else if (res.status === 404 || !res.ok) {
+          if (isMounted) {
+            setIsSellerClosed(true);
+            setSellerDetails(null);
+            if (!hasShownUnavailableToast.current) {
+              hasShownUnavailableToast.current = true;
+              showToast("This kitchen is currently unavailable. Please try another kitchen.");
+            }
           }
         }
       } catch (e) {
@@ -317,8 +340,25 @@ export const UserCart: React.FC<UserCartProps> = ({
     }
     checkSellerStatus();
 
+    // Real-time polling every 3 seconds to immediately detect superadmin disable/status changes without manual page reload
+    const pollInterval = setInterval(checkSellerStatus, 3000);
+
+    const handleFocus = () => {
+      checkSellerStatus();
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        checkSellerStatus();
+      }
+    };
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
       isMounted = false;
+      clearInterval(pollInterval);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [currentSellerId]);
 
@@ -740,7 +780,7 @@ export const UserCart: React.FC<UserCartProps> = ({
       return;
     }
     if (isSellerClosed) {
-      showToast("This kitchen is currently closed and not accepting orders.");
+      showToast("This kitchen is currently unavailable. Please try another kitchen.");
       return;
     }
     if (isOutsideCoverage) {
@@ -823,8 +863,8 @@ export const UserCart: React.FC<UserCartProps> = ({
         <div className={styles.mainContent}>
           {/* Left Column: Cart Items List */}
           <div className={styles.cartItemsList}>
-            {/* Closed Restaurant Alert Notice */}
-            {isSellerClosed && (
+            {/* Closed / Unavailable Restaurant Alert Notice */}
+            {isSellerClosed && !isSellerUnavailableDismissed && (
               <div
                 style={{
                   backgroundColor: "#FEF2F2",
@@ -838,41 +878,85 @@ export const UserCart: React.FC<UserCartProps> = ({
                   flexWrap: "wrap",
                   gap: "12px",
                   boxShadow: "0 4px 14px rgba(239, 68, 68, 0.08)",
+                  position: "relative",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, minWidth: "260px" }}>
                   <span style={{ fontSize: "24px" }}>🔴</span>
                   <div>
                     <h3 style={{ margin: "0 0 2px 0", fontSize: "1rem", fontWeight: "800", color: "#991B1B" }}>
-                      Cloud Kitchen is Currently Closed
+                      Kitchen Currently Unavailable
                     </h3>
-                    <p style={{ margin: 0, fontSize: "0.85rem", color: "#DC2626" }}>
-                      The kitchen for these items has turned off operations and is not accepting orders.
+                    <p style={{ margin: 0, fontSize: "0.85rem", color: "#DC2626", lineHeight: 1.4 }}>
+                      This kitchen is currently unavailable. Please try another kitchen.
                     </p>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => router.push("/explore-desktop")}
-                  style={{
-                    padding: "8px 16px",
-                    borderRadius: "10px",
-                    backgroundColor: "#DC2626",
-                    color: "#FFFFFF",
-                    fontWeight: "700",
-                    fontSize: "0.82rem",
-                    border: "none",
-                    cursor: "pointer",
-                  }}
-                >
-                  Explore Other Kitchens
-                </button>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearCart();
+                      setLocalCartItems([]);
+                      showToast("Unavailable items removed from cart");
+                    }}
+                    style={{
+                      padding: "8px 14px",
+                      borderRadius: "10px",
+                      backgroundColor: "#FEE2E2",
+                      color: "#991B1B",
+                      fontWeight: "700",
+                      fontSize: "0.82rem",
+                      border: "1px solid #FCA5A5",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Clear Cart
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => router.push("/food-explore")}
+                    style={{
+                      padding: "8px 16px",
+                      borderRadius: "10px",
+                      backgroundColor: "#DC2626",
+                      color: "#FFFFFF",
+                      fontWeight: "700",
+                      fontSize: "0.82rem",
+                      border: "none",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Explore Other Kitchens
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsSellerUnavailableDismissed(true)}
+                    title="Dismiss notification"
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#991B1B",
+                      cursor: "pointer",
+                      padding: "4px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderRadius: "6px",
+                    }}
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
               </div>
             )}
 
             {cartItems.length > 0 ? (
               cartItems.map((item) => (
-                <article key={item.id} className={styles.cartItemCard}>
+                <article
+                  key={item.id}
+                  className={`${styles.cartItemCard} ${isSellerClosed ? styles.cartItemCardUnavailable : ""}`}
+                >
                   {/* Left: Thumbnail & Details */}
                   <div className={styles.itemLeft}>
                     <div className={styles.itemImageWrapper}>
@@ -890,7 +974,12 @@ export const UserCart: React.FC<UserCartProps> = ({
                     </div>
 
                     <div className={styles.itemInfo}>
-                      <h2 className={styles.itemTitle}>{item.name}</h2>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                        <h2 className={styles.itemTitle}>{item.name}</h2>
+                        {isSellerClosed && (
+                          <span className={styles.unavailableBadge}>Unavailable</span>
+                        )}
+                      </div>
                       <p className={styles.itemSubtitle}>{item.description}</p>
                       
                       {/* Selected Add-ons Badge List with Tiny Cross (X) */}
@@ -910,6 +999,7 @@ export const UserCart: React.FC<UserCartProps> = ({
                                 display: "inline-flex",
                                 alignItems: "center",
                                 gap: "5px",
+                                opacity: isSellerClosed ? 0.7 : 1,
                               }}
                             >
                               <span>+ {addon.name}</span>
@@ -964,7 +1054,7 @@ export const UserCart: React.FC<UserCartProps> = ({
                       </div>
 
                       {/* Available remaining add-ons for this specific dish */}
-                      {(() => {
+                      {!isSellerClosed && (() => {
                         const allAddons = getDishAvailableAddons(item);
                         const selectedNames = new Set((item.selectedAddons || []).map((a) => (a.name || "").toLowerCase().trim()));
                         const remainingAddons = allAddons.filter((a) => !selectedNames.has((a.name || "").toLowerCase().trim()));
@@ -995,7 +1085,7 @@ export const UserCart: React.FC<UserCartProps> = ({
                   {/* Right: Quantity Stepper & Remove */}
                   <div className={styles.itemRightActions}>
                     <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center" }}>
-                      {item.maxStock !== undefined && item.maxStock !== -1 && item.qty >= item.maxStock && (
+                      {!isSellerClosed && item.maxStock !== undefined && item.maxStock !== -1 && item.qty >= item.maxStock && (
                         <div
                           style={{
                             position: "absolute",
@@ -1029,11 +1119,12 @@ export const UserCart: React.FC<UserCartProps> = ({
                           </span>
                         </div>
                       )}
-                      <div className={styles.qtyStepper}>
+                      <div className={`${styles.qtyStepper} ${isSellerClosed ? styles.qtyStepperDisabled : ""}`}>
                         <button
                           type="button"
-                          className={styles.qtyBtn}
-                          onClick={() => handleQtyChange(item.id, -1)}
+                          className={`${styles.qtyBtn} ${isSellerClosed ? styles.qtyBtnDisabled : ""}`}
+                          onClick={() => !isSellerClosed && handleQtyChange(item.id, -1)}
+                          disabled={isSellerClosed}
                           aria-label="Decrease quantity"
                         >
                           <Minus size={14} strokeWidth={3} />
@@ -1041,18 +1132,20 @@ export const UserCart: React.FC<UserCartProps> = ({
                         <span className={styles.qtyNumber}>{item.qty}</span>
                         <button
                           type="button"
-                          className={styles.qtyBtn}
+                          className={`${styles.qtyBtn} ${isSellerClosed ? styles.qtyBtnDisabled : ""}`}
                           onClick={() => {
+                            if (isSellerClosed) return;
                             if (item.maxStock !== undefined && item.maxStock !== -1 && item.qty >= item.maxStock) {
                               showToast(`We have only ${item.maxStock} left in stock.`);
                             } else {
                               handleQtyChange(item.id, 1);
                             }
                           }}
+                          disabled={isSellerClosed || (item.maxStock !== undefined && item.maxStock !== -1 && item.qty >= item.maxStock)}
                           aria-label="Increase quantity"
                           style={{
-                            opacity: item.maxStock !== undefined && item.maxStock !== -1 && item.qty >= item.maxStock ? 0.35 : 1,
-                            cursor: item.maxStock !== undefined && item.maxStock !== -1 && item.qty >= item.maxStock ? "not-allowed" : "pointer",
+                            opacity: isSellerClosed || (item.maxStock !== undefined && item.maxStock !== -1 && item.qty >= item.maxStock) ? 0.35 : 1,
+                            cursor: isSellerClosed || (item.maxStock !== undefined && item.maxStock !== -1 && item.qty >= item.maxStock) ? "not-allowed" : "pointer",
                           }}
                         >
                           <Plus size={14} strokeWidth={3} />
@@ -1477,7 +1570,7 @@ export const UserCart: React.FC<UserCartProps> = ({
               >
                 <span>
                   {isSellerClosed
-                    ? "Kitchen Closed • Cannot Order"
+                    ? "Kitchen Unavailable • Cannot Order"
                     : isOutsideCoverage
                     ? `Outside Coverage (${shopDistanceKm ? `${shopDistanceKm} km` : "> 5 km"})`
                     : cartItems.length === 0 || subtotal <= 0

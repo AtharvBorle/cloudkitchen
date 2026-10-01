@@ -29,10 +29,11 @@ export const initiateOrderPayment = async (req: Request) => {
                     { trackingId: sellerId },
                     { userId: sellerId }
                 ]
-            }
+            },
+            include: { user: true }
         });
-        if (seller && seller.isOnline === false) {
-            throw new ApiError("This store is currently offline and not accepting orders.", 400);
+        if (seller && (seller.isOnline === false || seller.user?.isActive === false)) {
+            throw new ApiError("This kitchen is currently unavailable. Please try another kitchen.", 400);
         }
     }
 
@@ -177,9 +178,9 @@ export const createOrder = async (req: Request) => {
         });
     }
 
-    if (!sellerProfile) throw new ApiError("Seller not found", 404);
+    if (!sellerProfile || sellerProfile.user?.isActive === false) throw new ApiError("This kitchen is currently unavailable. Please try another kitchen.", 404);
     if (sellerProfile.isOnline === false) {
-        throw new ApiError("This store is currently offline. Orders cannot be placed.", 400);
+        throw new ApiError("This kitchen is currently unavailable. Please try another kitchen.", 400);
     }
 
     const now = new Date();
