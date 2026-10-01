@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
-
-const prisma = new PrismaClient();
 
 export async function GET() {
     try {
@@ -14,7 +12,7 @@ export async function GET() {
             return NextResponse.json({ success: false, message: "Access denied. Superadmin privileges required.", error: "Access denied. Superadmin privileges required." }, { status: 403 });
         }
 
-        const subscriptions = await prisma.subscription.findMany({
+        const subscriptions = await db.subscription.findMany({
             include: {
                 seller: true,
                 plan: true
