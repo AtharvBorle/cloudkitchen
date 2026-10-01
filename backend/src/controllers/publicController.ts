@@ -225,50 +225,67 @@ export const getPublicCoupons = async (sellerId: string | null, userId?: string 
             }
         }
 
-        const now = new Date();
-
         const activeCoupons = await db.coupon.findMany({
             where: {
                 isActive: true,
-                approvalStatus: "APPROVED",
-                ...(cleanSellerId || resolvedSellerId
-                    ? {
-                        OR: [
-                            { appliesToSellerId: null },
-                            ...(resolvedSellerId ? [{ appliesToSellerId: resolvedSellerId }] : []),
-                            ...(matchedSeller?.trackingId ? [{ appliesToSellerId: matchedSeller.trackingId }] : []),
-                            ...(matchedSeller?.userId ? [{ appliesToSellerId: matchedSeller.userId }] : []),
-                            ...(cleanSellerId && cleanSellerId !== resolvedSellerId ? [{ appliesToSellerId: cleanSellerId }] : [])
-                        ]
-                    }
-                    : {}
-                ),
-                AND: [
-                    {
-                        OR: [
-                            { validFrom: null },
-                            { validFrom: { lte: now } }
-                        ]
-                    },
-                    {
-                        OR: [
-                            { validUntil: null },
-                            { validUntil: { gt: now } },
-                            { noExpiry: true }
-                        ]
-                    }
-                ]
+                NOT: {
+                    approvalStatus: { in: ["DRAFT", "REJECTED", "PENDING_APPROVAL", "Draft", "Rejected"] }
+                }
             },
             orderBy: {
                 createdAt: "desc"
             }
         });
 
+        const now = new Date();
+
         const filteredCoupons = activeCoupons.filter((c: any) => {
-            const cat = (c.category || "BOTH").toUpperCase();
-            if (cat === "BOTH" || cat === "FOOD") return true;
-            if (sellerCategory && (cat === sellerCategory || sellerCategory === "BOTH")) return true;
-            return false;
+            // 1. Seller match
+            const cSid = c.appliesToSellerId;
+            if (cSid && cSid !== "GLOBAL" && cSid !== "ALL" && cSid !== "null" && cSid !== "undefined" && String(cSid).trim() !== "") {
+                if (cleanSellerId || resolvedSellerId) {
+                    const targetKeys = [
+                        cleanSellerId,
+                        resolvedSellerId,
+                        matchedSeller?.id,
+                        matchedSeller?.trackingId,
+                        matchedSeller?.userId,
+                        matchedSeller?.businessName,
+                        matchedSeller?.user?.name
+                    ].filter(Boolean).map((s: string) => String(s).toLowerCase().trim());
+
+                    if (!targetKeys.includes(String(cSid).toLowerCase().trim())) {
+                        return false;
+                    }
+                }
+            }
+
+            // 2. Date validity (with 24h timezone tolerance for validFrom)
+            if (!c.noExpiry) {
+                if (c.validFrom) {
+                    const fromDate = new Date(c.validFrom);
+                    if (fromDate.getTime() > now.getTime() + 24 * 60 * 60 * 1000) {
+                        return false;
+                    }
+                }
+                if (c.validUntil) {
+                    const untilDate = new Date(c.validUntil);
+                    const endOfDay = new Date(untilDate.getFullYear(), untilDate.getMonth(), untilDate.getDate(), 23, 59, 59, 999);
+                    if (endOfDay.getTime() < now.getTime()) {
+                        return false;
+                    }
+                }
+            }
+
+            // 3. Category match
+            const cat = String(c.category || "BOTH").toUpperCase().trim();
+            if (cat && cat !== "BOTH" && cat !== "FOOD" && cat !== "ALL") {
+                if (sellerCategory && cat !== sellerCategory.toUpperCase().trim() && sellerCategory !== "BOTH") {
+                    return false;
+                }
+            }
+
+            return true;
         });
 
         // Resolve effective user context for eligibility checks
@@ -394,7 +411,9 @@ export const validateCouponForCart = async (req: Request) => {
         where: {
             code: { equals: cleanCode, mode: "insensitive" },
             isActive: true,
-            approvalStatus: "APPROVED"
+            NOT: {
+                approvalStatus: { in: ["DRAFT", "REJECTED", "PENDING_APPROVAL", "Draft", "Rejected"] }
+            }
         }
     });
 
@@ -402,12 +421,19 @@ export const validateCouponForCart = async (req: Request) => {
         throw new ApiError(`Coupon "${cleanCode}" is invalid or does not exist.`, 404);
     }
 
-    // Check validity dates
-    if (coupon.validFrom && new Date(coupon.validFrom) > now) {
-        throw new ApiError(`Coupon "${coupon.code}" is not active yet.`, 400);
+    // Check validity dates (with 24h timezone leeway for validFrom)
+    if (coupon.validFrom) {
+        const fromDate = new Date(coupon.validFrom);
+        if (fromDate.getTime() > now.getTime() + 24 * 60 * 60 * 1000) {
+            throw new ApiError(`Coupon "${coupon.code}" is not active yet.`, 400);
+        }
     }
-    if (!coupon.noExpiry && coupon.validUntil && new Date(coupon.validUntil) < now) {
-        throw new ApiError(`Coupon "${coupon.code}" has expired.`, 400);
+    if (!coupon.noExpiry && coupon.validUntil) {
+        const untilDate = new Date(coupon.validUntil);
+        const endOfDay = new Date(untilDate.getFullYear(), untilDate.getMonth(), untilDate.getDate(), 23, 59, 59, 999);
+        if (endOfDay.getTime() < now.getTime()) {
+            throw new ApiError(`Coupon "${coupon.code}" has expired.`, 400);
+        }
     }
 
     // Check usage limits
@@ -417,7 +443,8 @@ export const validateCouponForCart = async (req: Request) => {
     }
 
     // Check seller store restriction
-    if (coupon.appliesToSellerId) {
+    const cSid = coupon.appliesToSellerId;
+    if (cSid && cSid !== "GLOBAL" && cSid !== "ALL" && cSid !== "null" && cSid !== "undefined" && String(cSid).trim() !== "") {
         const couponSeller = await db.sellerProfile.findFirst({
             where: {
                 OR: [
