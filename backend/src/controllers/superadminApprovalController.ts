@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
+import { revalidateTag, revalidatePath } from "next/cache";
 
 export const getPendingApprovals = async () => {
     const session = await getAuthSession();
@@ -47,12 +48,22 @@ export const updateApprovalStatus = async (req: Request, type: string, id: strin
             where: { id },
             data: { approvalStatus: status, adminNote }
         });
+        try {
+            revalidateTag("popup-banners");
+            revalidatePath("/api/public/popup-banners");
+        } catch (e) {}
         return { banner: updated };
     } else if (type === "coupon") {
         const updated = await db.coupon.update({
             where: { id },
             data: { approvalStatus: status, adminNote }
         });
+        try {
+            revalidateTag("coupons");
+            revalidateTag("public-coupons");
+            revalidatePath("/api/public/coupons");
+            revalidatePath("/api/coupons");
+        } catch (e) {}
         return { coupon: updated };
     } else {
         throw new ApiError("Invalid item type specified.", 400);

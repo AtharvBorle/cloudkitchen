@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
-import { revalidateTag } from "next/cache";
+import { revalidateTag, revalidatePath } from "next/cache";
 
 export const getAllCoupons = async () => {
     const session = await getAuthSession();
@@ -226,8 +226,11 @@ export const createCoupon = async (req: Request) => {
         });
 
         try {
-            revalidateTag("coupons", {});
-            revalidateTag("public-coupons", {});
+            revalidateTag("coupons");
+            revalidateTag("public-coupons");
+            revalidatePath("/api/public/coupons");
+            revalidatePath("/api/coupons");
+            revalidatePath("/api/seller/dashboard/offers");
         } catch (e) {
             console.error("Revalidate coupons tag error:", e);
         }
@@ -503,8 +506,11 @@ export const updateCoupon = async (req: Request, couponId: string) => {
     });
 
     try {
-        revalidateTag("coupons", {});
-        revalidateTag("public-coupons", {});
+        revalidateTag("coupons");
+        revalidateTag("public-coupons");
+        revalidatePath("/api/public/coupons");
+        revalidatePath("/api/coupons");
+        revalidatePath("/api/seller/dashboard/offers");
     } catch (e) {
         console.error("Revalidate coupons tag error:", e);
     }
@@ -545,8 +551,11 @@ export const deleteCoupon = async (couponId: string) => {
     });
 
     try {
-        revalidateTag("coupons", {});
-        revalidateTag("public-coupons", {});
+        revalidateTag("coupons");
+        revalidateTag("public-coupons");
+        revalidatePath("/api/public/coupons");
+        revalidatePath("/api/coupons");
+        revalidatePath("/api/seller/dashboard/offers");
     } catch (e) {
         console.error("Revalidate coupons tag error:", e);
     }

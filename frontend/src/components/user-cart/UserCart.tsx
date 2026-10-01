@@ -557,6 +557,9 @@ export const UserCart: React.FC<UserCartProps> = ({
     showToast(`Removed "${name}" from cart`);
   };
 
+  // Pricing calculations (computed upfront for reactive hooks and offers)
+  const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
+
   // Fetch available public coupons for the seller / platform
   const [userDismissedPromo, setUserDismissedPromo] = useState<boolean>(false);
   const activeSellerId = cartItems.find((ci) => ci.sellerId)?.sellerId || null;
@@ -565,13 +568,19 @@ export const UserCart: React.FC<UserCartProps> = ({
     let isMounted = true;
     async function fetchOffers() {
       try {
-        setIsLoadingOffers(true);
         const targetSeller = currentSellerId || activeSellerId;
         const queryParams = new URLSearchParams();
         if (targetSeller) queryParams.set("sellerId", targetSeller);
         if (session?.user?.id) queryParams.set("userId", session.user.id);
-        const url = `/api/public/coupons${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
-        const res = await fetchApi(url);
+        queryParams.set("_t", String(Date.now()));
+        const url = `/api/public/coupons?${queryParams.toString()}`;
+        const res = await fetchApi(url, {
+          cache: "no-store",
+          headers: {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            Pragma: "no-cache",
+          },
+        });
         if (res.ok && isMounted) {
           const json = await res.json();
           const serverCoupons = Array.isArray(json)
@@ -581,19 +590,114 @@ export const UserCart: React.FC<UserCartProps> = ({
         }
       } catch (err) {
         console.error("Failed to fetch available coupons:", err);
-        if (isMounted) setAvailableOffers([]);
       } finally {
         if (isMounted) setIsLoadingOffers(false);
       }
     }
+
+    setIsLoadingOffers(true);
     fetchOffers();
+
+    // Real-time polling every 3 seconds for instant seller changes revalidation
+    const pollInterval = setInterval(fetchOffers, 3000);
+
+    const handleFocus = () => {
+      fetchOffers();
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchOffers();
+      }
+    };
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
       isMounted = false;
+      clearInterval(pollInterval);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [currentSellerId, activeSellerId, session?.user?.id]);
 
-  // Pricing calculations
-  const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
+  // Live sync of applied coupon properties when seller changes them in real-time
+  React.useEffect(() => {
+    if (!appliedCoupon || availableOffers.length === 0) return;
+
+    const matchedOffer = availableOffers.find(
+      (o) =>
+        (o.code && o.code.toUpperCase() === (appliedCoupon.code || "").toUpperCase()) ||
+        (o.id && o.id === appliedCoupon.id)
+    );
+
+    if (!matchedOffer) {
+      if ((appliedCoupon as any).isAutoApply) {
+        setAppliedCoupon(null);
+        setAppliedPromo(null);
+        setDiscountPercent(0);
+        setPromoCode("");
+        lastAutoAppliedCodeRef.current = null;
+        if (typeof window !== "undefined") {
+          try {
+            sessionStorage.removeItem("applied_cart_coupon");
+            sessionStorage.removeItem("appliedCoupon");
+            localStorage.removeItem("appliedCoupon");
+          } catch (e) {}
+        }
+      }
+      return;
+    }
+
+    const latestPct = Number(
+      matchedOffer.discountPercentage ||
+        (matchedOffer.discountType === "PERCENTAGE" ? matchedOffer.discountValue || 0 : 0)
+    );
+    const latestAmt =
+      Number(matchedOffer.discountAmount || (matchedOffer.discountType === "FLAT" ? matchedOffer.discountValue || 0 : 0)) ||
+      null;
+    const latestMax = Number(matchedOffer.maxDiscountAmount) || null;
+    const latestMinCart = Number(matchedOffer.minimumCartValue ?? matchedOffer.minOrderAmount ?? 0);
+    const latestType = matchedOffer.discountType || (latestPct > 0 ? "PERCENTAGE" : "FLAT");
+
+    const isPctChanged = Number(appliedCoupon.discountPercentage || 0) !== latestPct;
+    const isAmtChanged = Number(appliedCoupon.discountAmount || 0) !== (latestAmt || 0);
+    const isMaxChanged = Number(appliedCoupon.maxDiscountAmount || 0) !== (latestMax || 0);
+    const isMinChanged = Number(appliedCoupon.minimumCartValue || 0) !== latestMinCart;
+    const isTypeChanged = appliedCoupon.discountType !== latestType;
+
+    if (isPctChanged || isAmtChanged || isMaxChanged || isMinChanged || isTypeChanged) {
+      let recalculatedDiscount = 0;
+      if (latestPct > 0) {
+        recalculatedDiscount = Math.round((subtotal * latestPct) / 100);
+        if (latestMax) recalculatedDiscount = Math.min(recalculatedDiscount, latestMax);
+      } else if (latestAmt) {
+        recalculatedDiscount = Math.min(latestAmt, subtotal);
+      }
+
+      const updatedCouponObj = {
+        ...appliedCoupon,
+        ...matchedOffer,
+        discountType: latestType,
+        discountPercentage: latestPct || null,
+        discountAmount: latestAmt,
+        maxDiscountAmount: latestMax,
+        minimumCartValue: latestMinCart,
+        calculatedDiscount: recalculatedDiscount,
+      };
+
+      setAppliedCoupon(updatedCouponObj);
+      setDiscountPercent(latestPct);
+      if (typeof window !== "undefined") {
+        try {
+          sessionStorage.setItem("appliedCoupon", JSON.stringify(updatedCouponObj));
+          sessionStorage.setItem("applied_cart_coupon", JSON.stringify(updatedCouponObj));
+          localStorage.setItem("appliedCoupon", JSON.stringify(updatedCouponObj));
+        } catch (e) {}
+      }
+    }
+  }, [availableOffers, appliedCoupon, subtotal]);
+
+
 
   // Ref to track the last auto-applied coupon code (prevents re-apply loops)
   const lastAutoAppliedCodeRef = React.useRef<string | null>(null);
@@ -670,8 +774,21 @@ export const UserCart: React.FC<UserCartProps> = ({
       }
     }
 
-    // Skip if we already auto-applied this exact code and active coupon is present
-    if (lastAutoAppliedCodeRef.current === bestOffer.code && appliedPromo === bestOffer.code && appliedCoupon) {
+    const pct = Number(bestOffer.discountPercentage || (bestOffer.discountType === "PERCENTAGE" ? (bestOffer.discountValue || 0) : 0));
+    const amt = Number(bestOffer.discountAmount || bestOffer.discountValue || 0) || null;
+    const maxAmt = Number(bestOffer.maxDiscountAmount) || null;
+    const minCart = Number(bestOffer.minimumCartValue || bestOffer.minOrderAmount || 0);
+
+    // Skip if we already auto-applied this exact code and active coupon properties are identical
+    if (
+      lastAutoAppliedCodeRef.current === bestOffer.code &&
+      appliedPromo === bestOffer.code &&
+      appliedCoupon &&
+      Number(appliedCoupon.discountPercentage || 0) === pct &&
+      Number(appliedCoupon.discountAmount || 0) === (amt || 0) &&
+      Number(appliedCoupon.maxDiscountAmount || 0) === (maxAmt || 0) &&
+      Number(appliedCoupon.minimumCartValue || 0) === minCart
+    ) {
       return;
     }
 
@@ -679,7 +796,6 @@ export const UserCart: React.FC<UserCartProps> = ({
     lastAutoAppliedCodeRef.current = bestCode;
 
     // Immediately apply locally so UI reflects it synchronously
-    const pct = Number(bestOffer.discountPercentage || (bestOffer.discountType === "PERCENTAGE" ? (bestOffer.discountValue || 0) : 0));
     const localCouponObj = {
       id: bestOffer.id,
       code: bestOffer.code,
