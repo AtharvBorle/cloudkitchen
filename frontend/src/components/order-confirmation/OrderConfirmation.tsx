@@ -185,7 +185,10 @@ export default function OrderConfirmation() {
     if (parsedItems.length > 0) {
       computedItemsSubtotal = parsedItems.reduce((acc, it) => acc + (it.price * it.qty), 0);
     }
-    const finalTotal = Number(rawOrder.totalAmount) || computedItemsSubtotal;
+    const finalTotal =
+      rawOrder.totalAmount !== undefined && rawOrder.totalAmount !== null && !isNaN(Number(rawOrder.totalAmount))
+        ? Number(rawOrder.totalAmount)
+        : computedItemsSubtotal;
     const computedDiscount = Math.max(0, computedItemsSubtotal - finalTotal);
 
     setOrderData({
@@ -202,7 +205,7 @@ export default function OrderConfirmation() {
       },
       paymentMethod: `${rawOrder.paymentMethod === "ONLINE" ? "Online Payment" : (rawOrder.paymentMethod || "COD")} ${rawOrder.isPaid ? "(Paid Online)" : "(Pay on Delivery)"}`,
       items: parsedItems,
-      subtotal: computedItemsSubtotal || finalTotal,
+      subtotal: computedItemsSubtotal > 0 ? computedItemsSubtotal : finalTotal,
       discount: computedDiscount,
       deliveryFee: 0,
       taxes: 0,
@@ -733,7 +736,11 @@ export default function OrderConfirmation() {
                         Order Cancellation & Refund Notice
                       </h4>
                       <p className={styles.infoText} style={{ color: "#b91c1c" }}>
-                        This order request was cancelled by the store. If you made an online payment, a full refund of ₹{orderData.grandTotal.toLocaleString("en-IN")} will be credited to your original payment method within 2-4 business hours.
+                        {orderData.grandTotal === 0 ? (
+                          "This order request was cancelled. Since a 100% discount coupon was applied (₹0 paid), no refund is required."
+                        ) : (
+                          `This order request was cancelled by the store. If you made an online payment, a full refund of ₹${orderData.grandTotal.toLocaleString("en-IN")} will be credited to your original payment method within 2-4 business hours.`
+                        )}
                       </p>
                     </div>
                   </div>

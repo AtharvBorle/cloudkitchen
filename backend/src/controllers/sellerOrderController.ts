@@ -225,16 +225,23 @@ export const updateSellerOrder = async (req: Request, orderId: string) => {
             await handleCodOrderDelivered(tx, orderId);
         }
 
-        if (status === "CANCELLED" && existingOrder.isPaid) {
+        if (status === "CANCELLED" && (existingOrder.isPaid || existingOrder.totalAmount === 0)) {
             const existingRefund = await tx.refund.findUnique({ where: { orderId } });
             if (!existingRefund) {
+                const refundAmount = Number(existingOrder.totalAmount ?? 0);
+                let reason = `Order #${orderId} was rejected / cancelled by the kitchen partner.`;
+                if (refundAmount === 0) {
+                    reason += ` 100% discount coupon applied (₹0 paid by customer). No refund required.`;
+                } else {
+                    reason += ` Auto-submitted for refund processing.`;
+                }
                 await tx.refund.create({
                     data: {
                         userId: existingOrder.userId,
                         orderId,
-                        amount: existingOrder.totalAmount,
-                        reason: `Order #${orderId} was rejected / cancelled by the kitchen partner. Auto-submitted for refund processing.`,
-                        status: "PENDING"
+                        amount: refundAmount,
+                        reason,
+                        status: refundAmount === 0 ? "PROCESSED" : "PENDING"
                     }
                 });
             }

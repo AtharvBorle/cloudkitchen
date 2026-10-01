@@ -116,6 +116,40 @@ export interface DynamicKitchen {
   isWithin5km?: boolean;
 }
 
+export interface DynamicCuratedReel {
+  id: string;
+  instagramMediaId: string;
+  mediaType: string;
+  mediaUrl: string;
+  thumbnailUrl: string;
+  permalink?: string;
+  caption: string;
+  likeCount?: number;
+  commentsCount?: number;
+  displayOrder: number;
+  categoryTag?: string | null;
+  customTitle?: string | null;
+  customSubtitle?: string | null;
+  redirectType: "KITCHEN" | "DISH" | "CUSTOM_URL" | "NONE" | string;
+  customRedirectUrl?: string | null;
+  seller?: {
+    id: string;
+    name: string;
+    trackingId: string;
+    locality?: string;
+    imageUrl?: string;
+    rating?: number;
+    reviewsCount?: number;
+  } | null;
+  foodItem?: {
+    id: string;
+    name: string;
+    price: number;
+    imageUrl?: string | null;
+    itemType: string;
+  } | null;
+}
+
 export interface HomeDataFilterOptions {
   searchQuery?: string;
   category?: string;
@@ -135,6 +169,7 @@ export interface HomeDataState {
   kitchens: DynamicKitchen[];
   coupons: DynamicCoupon[];
   promoBanners: DynamicPromoBanner[];
+  reels: DynamicCuratedReel[];
   filteredFoodItems: DynamicFoodItem[];
   filteredKitchens: DynamicKitchen[];
   allFoodItems: DynamicFoodItem[];
@@ -155,6 +190,7 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
   const [kitchens, setKitchens] = useState<DynamicKitchen[]>([]);
   const [coupons, setCoupons] = useState<DynamicCoupon[]>([]);
   const [promoBanners, setPromoBanners] = useState<DynamicPromoBanner[]>([]);
+  const [reels, setReels] = useState<DynamicCuratedReel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isUsingFallback, setIsUsingFallback] = useState(false);
@@ -184,11 +220,16 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           .then((res) => (res.ok ? res.json() : null))
           .catch(() => null);
 
-        const [exploreRes, categoriesRes, couponsRes, bannersRes] = await Promise.all([
+        const reelsPromise = fetchApi('/api/public/reels')
+          .then((res) => (res.ok ? res.json() : null))
+          .catch(() => null);
+
+        const [exploreRes, categoriesRes, couponsRes, bannersRes, reelsRes] = await Promise.all([
           explorePromise,
           categoriesPromise,
           couponsPromise,
           bannersPromise,
+          reelsPromise,
         ]);
 
         if (!isMounted) return;
@@ -447,6 +488,34 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           });
         }
         setPromoBanners(rawBanners);
+
+        // 6. Process Curated Reels
+        const rawReels: DynamicCuratedReel[] = [];
+        const fetchedReels = reelsRes?.data?.reels || reelsRes?.reels;
+        if (Array.isArray(fetchedReels) && fetchedReels.length > 0) {
+          fetchedReels.forEach((r: any) => {
+            rawReels.push({
+              id: r.id,
+              instagramMediaId: r.instagramMediaId,
+              mediaType: r.mediaType || "VIDEO",
+              mediaUrl: r.mediaUrl,
+              thumbnailUrl: r.thumbnailUrl || r.mediaUrl,
+              permalink: r.permalink,
+              caption: r.caption || "",
+              likeCount: r.likeCount || 0,
+              commentsCount: r.commentsCount || 0,
+              displayOrder: r.displayOrder || 0,
+              categoryTag: r.categoryTag || "ALL",
+              customTitle: r.customTitle,
+              customSubtitle: r.customSubtitle,
+              redirectType: r.redirectType || "KITCHEN",
+              customRedirectUrl: r.customRedirectUrl,
+              seller: r.seller || null,
+              foodItem: r.foodItem || null,
+            });
+          });
+        }
+        setReels(rawReels);
         setError(null);
       } catch (err: any) {
         if (isMounted) {
@@ -748,6 +817,7 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
     kitchens: activePincode || hasUserCoords || options ? filteredKitchens : enrichedKitchens,
     coupons,
     promoBanners,
+    reels,
     filteredFoodItems,
     filteredKitchens,
     allFoodItems: enrichedFoodItems,

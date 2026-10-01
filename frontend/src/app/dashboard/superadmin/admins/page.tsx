@@ -253,6 +253,7 @@ export default function SuperadminDashboard() {
                     </div>
                     <select value={newRole} onChange={e => setNewRole(e.target.value)} className="input-field" style={{ flex: 1, minWidth: '150px', marginBottom: 0, appearance: 'auto', border: '1px solid #cbd5e1' }} required>
                         <option value="AGENT">Regional Agent</option>
+                        <option value="REEL_MANAGER">Reel Manager (Instagram &amp; Explore)</option>
                         <option value="SUPPORT">Support Admin</option>
                     </select>
                     <button type="submit" className="btn btn-coral" style={{ width: 'auto', padding: '12px 25px' }} disabled={loading}>
@@ -283,6 +284,8 @@ export default function SuperadminDashboard() {
                                 <td style={{ padding: '15px 20px', color: '#475569' }}>
                                      {admin.role === "SUPPORT" ? (
                                          <span style={{ backgroundColor: '#EBF5FB', color: '#2980B9', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 'bold' }}>Support Admin</span>
+                                     ) : admin.role === "REEL_MANAGER" ? (
+                                         <span style={{ backgroundColor: '#F3E8FF', color: '#7E22CE', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 'bold' }}>Reel Manager</span>
                                      ) : (
                                          <span style={{ backgroundColor: '#FCF3CF', color: '#B7950B', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 'bold' }}>Regional Agent</span>
                                      )}
@@ -375,6 +378,7 @@ export default function SuperadminDashboard() {
                                             className="input-field" style={{ appearance: 'auto', border: '1px solid #cbd5e1', marginBottom: 0 }}
                                         >
                                             <option value="AGENT">Regional Agent</option>
+                                            <option value="REEL_MANAGER">Reel Manager (Instagram &amp; Explore)</option>
                                             <option value="SUPPORT">Support Admin</option>
                                         </select>
                                     </div>

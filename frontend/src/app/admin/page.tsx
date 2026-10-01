@@ -16,6 +16,8 @@ export default function AdminPortalRoot() {
                 router.push("/dashboard/superadmin");
             } else if (role === "AGENT" || role === "ADMIN") {
                 router.push("/dashboard/admin");
+            } else if (role === "REEL_MANAGER") {
+                router.push("/dashboard/reel-manager");
             } else if (role === "SUPPORT") {
                 router.push("/dashboard/support");
             }
@@ -28,7 +30,7 @@ export default function AdminPortalRoot() {
         return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: '#1A252F', color: '#FFFFFF' }}>Loading Admin Portal...</div>;
     }
 
-    const isAdminRole = session?.user?.role === "SUPERADMIN" || session?.user?.role === "ADMIN" || session?.user?.role === "AGENT" || session?.user?.role === "SUPPORT";
+    const isAdminRole = session?.user?.role === "SUPERADMIN" || session?.user?.role === "ADMIN" || session?.user?.role === "AGENT" || session?.user?.role === "SUPPORT" || session?.user?.role === "REEL_MANAGER";
 
     if (status === "unauthenticated" || !session || !isAdminRole) {
         return <AdminLoginPage />;

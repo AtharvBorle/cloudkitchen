@@ -44,8 +44,47 @@ function ExploreDesktopContent() {
     }
   }, [dietaryParam]);
 
-  // Dynamic Reels from approved kitchens
+  // Dynamic Reels from Curated Reels (Instagram Sync) or Fallback to approved kitchens
   const dynamicReels = useMemo(() => {
+    // 1. If curated reels exist from Reel Manager, prioritize them
+    if (homeData.reels && homeData.reels.length > 0) {
+      let list = homeData.reels;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        list = list.filter((r) =>
+          (r.caption || "").toLowerCase().includes(q) ||
+          (r.seller?.name || "").toLowerCase().includes(q) ||
+          (r.foodItem?.name || "").toLowerCase().includes(q) ||
+          (r.customTitle || "").toLowerCase().includes(q)
+        );
+      }
+      if (selectedDiet && selectedDiet !== "all") {
+        list = list.filter((r) => {
+          if (!r.foodItem) return true;
+          if (selectedDiet === "veg") return r.foodItem.itemType === "VEG";
+          if (selectedDiet === "non_veg") return r.foodItem.itemType === "NON_VEG";
+          return true;
+        });
+      }
+
+      return list.map((r) => ({
+        id: r.id,
+        name: r.customTitle || r.seller?.name || "Neo Cloud Kitchen",
+        subtitle: r.customSubtitle || (r.foodItem ? `${r.foodItem.name} • ₹${r.foodItem.price}` : r.seller?.locality || "Fresh Kitchen Creation"),
+        image: r.thumbnailUrl || r.mediaUrl || "/images/places/place-biryani.png",
+        videoUrl: r.mediaUrl,
+        caption: r.caption,
+        likes: r.likeCount ? `${(r.likeCount / 1000).toFixed(1)}k` : undefined,
+        kitchenId: r.seller?.trackingId || r.seller?.id,
+        dishId: r.foodItem?.id,
+        dishName: r.foodItem?.name,
+        dishPrice: r.foodItem?.price,
+        redirectType: r.redirectType,
+        customRedirectUrl: r.customRedirectUrl || undefined,
+      }));
+    }
+
+    // 2. Fallback to approved kitchens if no curated reels yet
     const sourceKitchens = searchQuery ? homeData.allKitchens : homeData.kitchens;
     const sourceFoodItems = searchQuery ? homeData.allFoodItems : homeData.foodItems;
     if (!sourceKitchens || sourceKitchens.length === 0) return undefined;
@@ -63,7 +102,7 @@ function ExploreDesktopContent() {
       image: k.imageUrl || "/images/places/place-biryani.png",
       kitchenId: k.trackingId || k.id,
     }));
-  }, [homeData.kitchens, homeData.allKitchens, homeData.foodItems, homeData.allFoodItems, selectedDiet, searchQuery]);
+  }, [homeData.reels, homeData.kitchens, homeData.allKitchens, homeData.foodItems, homeData.allFoodItems, selectedDiet, searchQuery]);
 
   // Dynamic Featured Collections from food items
   const dynamicCollections = useMemo(() => {

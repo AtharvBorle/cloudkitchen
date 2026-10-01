@@ -106,7 +106,7 @@ export const AccountInformation: React.FC<AccountInformationProps> = ({
   );
   const isPhoneError = !isPhoneEmpty
     ? (!isPhoneComplete || phoneVerificationStatus === "taken" || phoneVerificationStatus === "error")
-    : Boolean(touched.phone && phoneLength !== 10);
+    : Boolean(touched.phone);
 
   const isPasswordValid = formData.password.length >= 8;
   const isPasswordError = touched.password && !isPasswordValid;
@@ -421,7 +421,7 @@ export const AccountInformation: React.FC<AccountInformationProps> = ({
               <button
                 type="button"
                 onClick={handleVerifyEmail}
-                disabled={!isEmailFormatValid || verificationStatus === "verifying"}
+                disabled={!isEmailFormatValid}
                 className={styles.verifyEmailBtn}
                 title={!isEmailFormatValid ? "Enter valid email to verify" : "Verify email availability"}
               >
@@ -509,7 +509,7 @@ export const AccountInformation: React.FC<AccountInformationProps> = ({
               <button
                 type="button"
                 onClick={handleVerifyPhone}
-                disabled={!isPhoneComplete || phoneVerificationStatus === "verifying"}
+                disabled={!isPhoneComplete}
                 className={styles.verifyEmailBtn}
                 title={!isPhoneComplete ? "Enter 10-digit number to verify" : "Verify mobile number availability"}
               >
