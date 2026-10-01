@@ -8,10 +8,9 @@ export async function GET(req: Request) {
         const userId = searchParams.get("userId");
 
         const data = await getPublicCoupons(sellerId, userId);
-        return successResponse(data);
+        return successResponse(data || []);
     } catch (error: any) {
         console.error("Error fetching public coupons:", error);
-        if (error.message === "sellerId is required") return errorResponse(error.message, 400);
-        return errorResponse("An error occurred fetching coupons", 500);
+        return successResponse([]);
     }
 }

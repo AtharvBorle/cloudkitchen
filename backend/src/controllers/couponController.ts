@@ -1,10 +1,7 @@
 import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
-import { PrismaClient } from "@prisma/client";
 import { ApiError } from "@/lib/api-error";
 import { revalidateTag } from "next/cache";
-
-const prisma = new PrismaClient();
 
 export const getAllCoupons = async () => {
     const session = await getAuthSession();
@@ -16,10 +13,10 @@ export const getAllCoupons = async () => {
     let coupons;
 
     if (role === "SUPERADMIN") {
-        coupons = await prisma.coupon.findMany();
+        coupons = await db.coupon.findMany();
     }
     else if (role === "SELLER") {
-        const sellerProfile = await prisma.sellerProfile.findUnique({
+        const sellerProfile = await db.sellerProfile.findUnique({
             where: { userId: session.user.id }
         });
 
@@ -27,7 +24,7 @@ export const getAllCoupons = async () => {
             throw new ApiError("Seller profile could not be found.", 404);
         }
 
-        coupons = await prisma.coupon.findMany({
+        coupons = await db.coupon.findMany({
             where: {
                 appliesToSellerId: sellerProfile.id
             }
@@ -169,7 +166,7 @@ export const createCoupon = async (req: Request) => {
     }
 
     if (role === "SELLER") {
-        const sellerProfile = await prisma.sellerProfile.findUnique({
+        const sellerProfile = await db.sellerProfile.findUnique({
             where: { userId: session.user.id }
         });
         if (!sellerProfile) throw new ApiError("A valid seller profile is required to create seller coupons.", 403);
@@ -224,7 +221,7 @@ export const createCoupon = async (req: Request) => {
             isAutoApply: isAutoApply !== undefined ? Boolean(isAutoApply) : (autoApply !== undefined ? Boolean(autoApply) : false)
         };
 
-        const newCoupon = await prisma.coupon.create({
+        const newCoupon = await db.coupon.create({
             data: couponData
         });
 
@@ -255,7 +252,7 @@ export const updateCoupon = async (req: Request, couponId: string) => {
 
     const body = await req.json();
 
-    const existingCoupon = await prisma.coupon.findUnique({
+    const existingCoupon = await db.coupon.findUnique({
         where: { id: couponId }
     });
 
@@ -295,7 +292,7 @@ export const updateCoupon = async (req: Request, couponId: string) => {
     } = body;
 
     if (role === "SELLER") {
-        const sellerProfile = await prisma.sellerProfile.findUnique({
+        const sellerProfile = await db.sellerProfile.findUnique({
             where: { userId: session.user.id }
         });
         if (!sellerProfile || (existingCoupon as any).appliesToSellerId !== sellerProfile.id) {
@@ -304,7 +301,7 @@ export const updateCoupon = async (req: Request, couponId: string) => {
     }
 
     if (code && code.toUpperCase() !== existingCoupon.code) {
-        const codeExists = await prisma.coupon.findUnique({
+        const codeExists = await db.coupon.findUnique({
             where: { code: code.toUpperCase() }
         });
         if (codeExists) {
@@ -500,7 +497,7 @@ export const updateCoupon = async (req: Request, couponId: string) => {
         updateData.isAutoApply = Boolean(autoApply);
     }
 
-    const updatedCoupon = await prisma.coupon.update({
+    const updatedCoupon = await db.coupon.update({
         where: { id: couponId },
         data: updateData
     });
@@ -524,7 +521,7 @@ export const deleteCoupon = async (couponId: string) => {
         throw new ApiError("Access denied. You do not have permission to delete coupons.", 403);
     }
 
-    const existingCoupon = await prisma.coupon.findUnique({
+    const existingCoupon = await db.coupon.findUnique({
         where: { id: couponId }
     });
 
@@ -535,7 +532,7 @@ export const deleteCoupon = async (couponId: string) => {
     const role = session.user.role;
 
     if (role === "SELLER") {
-        const sellerProfile = await prisma.sellerProfile.findUnique({
+        const sellerProfile = await db.sellerProfile.findUnique({
             where: { userId: session.user.id }
         });
         if (!sellerProfile || (existingCoupon as any).appliesToSellerId !== sellerProfile.id) {
@@ -543,7 +540,7 @@ export const deleteCoupon = async (couponId: string) => {
         }
     }
 
-    await prisma.coupon.delete({
+    await db.coupon.delete({
         where: { id: couponId }
     });
 
