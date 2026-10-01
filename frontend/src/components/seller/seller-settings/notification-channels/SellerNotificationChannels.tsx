@@ -8,7 +8,6 @@ export interface NotificationChannelsData {
   emailNotifications: boolean;
   smsAlerts: boolean;
   pushNotifications: boolean;
-  whatsappUpdates: boolean;
   enableQuietHours: boolean;
   quietHoursStart: string;
   quietHoursEnd: string;
@@ -18,7 +17,6 @@ export const DEFAULT_NOTIFICATION_CHANNELS: NotificationChannelsData = {
   emailNotifications: true,
   smsAlerts: true,
   pushNotifications: true,
-  whatsappUpdates: false,
   enableQuietHours: true,
   quietHoursStart: "10:00 PM",
   quietHoursEnd: "07:00 AM",
@@ -153,28 +151,6 @@ export const SellerNotificationChannels: React.FC<SellerNotificationChannelsProp
                   aria-checked={currentValues.pushNotifications}
                   checked={currentValues.pushNotifications}
                   onChange={() => handleToggle("pushNotifications")}
-                />
-                <span className={styles.toggleSlider} />
-              </label>
-            </div>
-          </div>
-
-          {/* WhatsApp Updates */}
-          <div className={styles.itemRow}>
-            <div className={styles.itemInfo}>
-              <h3 className={styles.itemTitle}>WhatsApp Updates</h3>
-              <p className={styles.itemSubtitle}>
-                Get weekly sales metrics and booking digests directly on WhatsApp.
-              </p>
-            </div>
-            <div className={styles.switchWrapper}>
-              <label className={styles.toggleSwitch} aria-label="Toggle WhatsApp Updates">
-                <input
-                  type="checkbox"
-                  role="switch"
-                  aria-checked={currentValues.whatsappUpdates}
-                  checked={currentValues.whatsappUpdates}
-                  onChange={() => handleToggle("whatsappUpdates")}
                 />
                 <span className={styles.toggleSlider} />
               </label>

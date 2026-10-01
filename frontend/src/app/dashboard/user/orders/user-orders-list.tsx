@@ -86,8 +86,9 @@ export default function UserOrdersList({ initialOrders }: { initialOrders: any[]
         // Initialize item ratings
         const initialItemRatings: { [key: string]: { rating: number; comment: string } } = {};
         parsedItems.forEach((item: any) => {
-            if (item.id) {
-                initialItemRatings[item.id] = { rating: 5, comment: "" };
+            const itemId = item.foodItemId || (typeof item.id === "string" && item.id.includes("_") ? item.id.split("_")[0] : item.id);
+            if (itemId) {
+                initialItemRatings[itemId] = { rating: 5, comment: "" };
             }
         });
         setItemRatings(initialItemRatings);

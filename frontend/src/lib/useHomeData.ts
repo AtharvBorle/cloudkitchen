@@ -43,6 +43,8 @@ export interface DynamicFoodItem {
   stockQuantity?: number;
   maxStock?: number;
   rating?: number;
+  totalRatings?: number;
+  reviewsCount?: number;
   deliveryTime?: string;
   servedPincodes?: string[];
   isWithin5km?: boolean;
@@ -358,7 +360,9 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
               sellerLongitude: resolvedLng,
               sellerIsLocationPinned: item.sellerIsLocationPinned ?? false,
               categoryName: item.foodCategory?.name || item.category?.name || 'Food',
-              rating: typeof item.rating === "number" ? item.rating : (typeof item.averageRating === "number" ? item.averageRating : 0),
+              rating: typeof item.rating === "number" ? item.rating : (typeof item.averageRating === "number" ? item.averageRating : (Array.isArray(item.itemRatings) && item.itemRatings.length > 0 ? item.itemRatings.reduce((sum: number, r: any) => sum + (Number(r?.rating) || 0), 0) / item.itemRatings.length : 0)),
+              totalRatings: typeof item.totalRatings === "number" ? item.totalRatings : (Array.isArray(item.itemRatings) ? item.itemRatings.length : 0),
+              reviewsCount: typeof item.reviewsCount === "number" ? item.reviewsCount : (typeof item.totalRatings === "number" ? item.totalRatings : 0),
               deliveryTime: item.deliveryTime || '20-30 min',
               servedPincodes: item.servedPincodes || [],
               addons: item.addons || item.variants || [],
@@ -382,7 +386,7 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
               reviewsCount: typeof k.reviewsCount === "number" ? k.reviewsCount : (typeof k.totalReviews === "number" ? k.totalReviews : 0),
               time: k.time || '20-30 min',
               imageUrl: k.imageUrl || '',
-              category: k.type || (k.foodType === 'VEG' ? 'Pure Veg' : 'Cloud Kitchen'),
+              category: k.type || ((k.foodType === 'VEG' || k.foodType === 'PURE_VEG' || k.foodType === 'VEG_ONLY') ? 'Pure Veg' : 'Cloud Kitchen'),
               locality: k.locality,
               city: k.city,
               pincode: k.pincode,

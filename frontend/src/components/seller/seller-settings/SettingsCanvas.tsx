@@ -64,7 +64,6 @@ export interface SettingsFormData {
   emailNotifications: boolean;
   smsAlerts: boolean;
   pushNotifications: boolean;
-  whatsappUpdates: boolean;
   enableQuietHours: boolean;
   quietHoursStart: string;
   quietHoursEnd: string;
@@ -148,7 +147,6 @@ const DEFAULT_DATA: SettingsFormData = {
   emailNotifications: true,
   smsAlerts: true,
   pushNotifications: true,
-  whatsappUpdates: false,
   enableQuietHours: true,
   quietHoursStart: "10:00 PM",
   quietHoursEnd: "07:00 AM",
@@ -480,7 +478,6 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
     emailNotifications: "Email Notifications",
     smsAlerts: "SMS Alerts",
     pushNotifications: "Push Notifications",
-    whatsappUpdates: "WhatsApp Updates",
     enableQuietHours: "Quiet Hours & Do Not Disturb",
     orderAlerts: "New Order Incoming",
     orderCancellationAlerts: "Order Cancellation",
@@ -1573,7 +1570,6 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                   emailNotifications: formData.emailNotifications,
                   smsAlerts: formData.smsAlerts,
                   pushNotifications: formData.pushNotifications,
-                  whatsappUpdates: formData.whatsappUpdates,
                   enableQuietHours: formData.enableQuietHours,
                   quietHoursStart: formData.quietHoursStart,
                   quietHoursEnd: formData.quietHoursEnd,

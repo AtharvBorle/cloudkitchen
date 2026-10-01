@@ -271,7 +271,7 @@ export const getPublicCuratedReels = unstable_cache(
       const reviewsCount = r.seller?.reviews?.length || 0;
       const avgRating = reviewsCount > 0
         ? Number((r.seller!.reviews.reduce((acc, rev) => acc + rev.rating, 0) / reviewsCount).toFixed(1))
-        : 4.8;
+        : 0;
 
       return {
         id: r.id,

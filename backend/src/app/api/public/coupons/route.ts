@@ -5,8 +5,9 @@ export async function GET(req: Request) {
     try {
         const { searchParams } = new URL(req.url);
         const sellerId = searchParams.get("sellerId");
+        const userId = searchParams.get("userId");
 
-        const data = await getPublicCoupons(sellerId);
+        const data = await getPublicCoupons(sellerId, userId);
         return successResponse(data);
     } catch (error: any) {
         console.error("Error fetching public coupons:", error);

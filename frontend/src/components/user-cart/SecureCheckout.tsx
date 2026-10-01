@@ -54,6 +54,7 @@ export interface SavedAddressItem {
 export interface CheckoutSummaryItem {
   id: string;
   foodItemId?: string;
+  sellerId?: string;
   name: string;
   variant: string;
   selectedAddons?: Array<{ id?: string; name: string; price: number }>;
@@ -651,20 +652,23 @@ const loadRazorpayScript = (): Promise<boolean> => {
 };
 
   // Cart Items derived from context with accurate price & selected add-ons
-  const checkoutItems: CheckoutSummaryItem[] = cartItems.length > 0
-    ? cartItems.map((ci) => ({
-        id: ci.id,
-        foodItemId: ci.foodItemId,
-        name: ci.name,
-        variant: ci.variantName || (ci.selectedAddons && ci.selectedAddons.length > 0 ? ci.selectedAddons.map(a => a.name).join(", ") : (ci.sellerName ? `From ${ci.sellerName}` : "")),
-        selectedAddons: ci.selectedAddons,
-        basePrice: ci.basePrice,
-        addonsTotal: ci.addonsTotal,
-        qty: ci.quantity,
-        price: ci.price * ci.quantity,
-        image: ci.imageUrl || ci.image || "/images/places/place-pizza.png",
-      }))
-    : items;
+  const checkoutItems: CheckoutSummaryItem[] = React.useMemo(() => {
+    return cartItems.length > 0
+      ? cartItems.map((ci) => ({
+          id: ci.id,
+          foodItemId: ci.foodItemId,
+          sellerId: ci.sellerId,
+          name: ci.name,
+          variant: ci.variantName || (ci.selectedAddons && ci.selectedAddons.length > 0 ? ci.selectedAddons.map(a => a.name).join(", ") : (ci.sellerName ? `From ${ci.sellerName}` : "")),
+          selectedAddons: ci.selectedAddons,
+          basePrice: ci.basePrice,
+          addonsTotal: ci.addonsTotal,
+          qty: ci.quantity,
+          price: ci.price * ci.quantity,
+          image: ci.imageUrl || ci.image || "/images/places/place-pizza.png",
+        }))
+      : items;
+  }, [cartItems, items]);
 
   // Pricing calculations: strictly only item prices and promo discounts
   const subtotal = checkoutItems.reduce((acc, item) => acc + item.price, 0);
@@ -685,19 +689,21 @@ const loadRazorpayScript = (): Promise<boolean> => {
   const grandTotal = Math.max(0, subtotal - discountAmount);
 
   const [userDismissedPromo, setUserDismissedPromo] = useState<boolean>(false);
+  const activeSellerId = cartItems[0]?.sellerId || (checkoutItems[0] as any)?.sellerId || null;
 
   // Fetch available public coupons for the seller / platform
   useEffect(() => {
     let isMounted = true;
     async function fetchOffers() {
-      const sellerId = (checkoutItems[0] as any)?.sellerId || cartItems[0]?.sellerId;
       try {
         setIsLoadingOffers(true);
-        const url = sellerId ? `/api/public/coupons?sellerId=${encodeURIComponent(sellerId)}` : "/api/public/coupons";
+        const url = activeSellerId
+          ? `/api/public/coupons?sellerId=${encodeURIComponent(activeSellerId)}${session?.user?.id ? `&userId=${encodeURIComponent(session.user.id)}` : ""}`
+          : `/api/public/coupons${session?.user?.id ? `?userId=${encodeURIComponent(session.user.id)}` : ""}`;
         const res = await fetchApi(url);
         if (res.ok && isMounted) {
           const json = await res.json();
-          const serverCoupons = json.data || [];
+          const serverCoupons = Array.isArray(json) ? json : (json.data?.coupons || json.coupons || json.data || []);
           if (Array.isArray(serverCoupons)) {
             setAvailableOffers(serverCoupons);
           } else {
@@ -714,7 +720,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
     return () => {
       isMounted = false;
     };
-  }, [checkoutItems, cartItems]);
+  }, [activeSellerId, session?.user?.id]);
 
   // Auto-apply eligible coupon when conditions are met
   useEffect(() => {
@@ -722,20 +728,31 @@ const loadRazorpayScript = (): Promise<boolean> => {
       return;
     }
 
-    const currentSubtotal = checkoutItems.reduce((acc, item) => acc + item.price, 0);
-    if (currentSubtotal <= 0) return;
+    if (subtotal <= 0) return;
 
-    // Filter offers configured with isAutoApply that satisfy minimum cart
+    // Filter offers configured with isAutoApply that satisfy minimum cart & scope & eligibility
     const eligibleAutoOffers = availableOffers.filter((offer) => {
+      if (offer.isEligible === false) return false;
       const isAuto = Boolean(offer.isAutoApply || offer.autoApply);
       if (!isAuto) return false;
-      const minCart = offer.minimumCartValue || offer.minOrderAmount || 0;
-      return currentSubtotal >= minCart;
+      const minCart = offer.minimumCartValue ?? offer.minOrderAmount ?? 0;
+      if (subtotal < minCart) return false;
+
+      if (offer.appliesToSellerId && activeSellerId && offer.appliesToSellerId !== activeSellerId) {
+        return false;
+      }
+      if (offer.appliesToProductId) {
+        const hasProduct = checkoutItems.some(
+          (it) => it.id === offer.appliesToProductId || it.foodItemId === offer.appliesToProductId
+        );
+        if (!hasProduct) return false;
+      }
+      return true;
     });
 
     if (eligibleAutoOffers.length === 0) {
       // If currently applied was auto-applied and subtotal dropped below threshold, remove it
-      if (appliedCoupon && (appliedCoupon as any).isAutoApply && (appliedCoupon.minimumCartValue || 0) > currentSubtotal) {
+      if (appliedCoupon && (appliedCoupon as any).isAutoApply) {
         setIsPromoApplied(false);
         setDiscountPercent(0);
         setAppliedCoupon(null);
@@ -752,10 +769,10 @@ const loadRazorpayScript = (): Promise<boolean> => {
       const pct = offer.discountPercentage || (offer.discountType === "PERCENTAGE" ? (offer.discountValue || 0) : 0);
       let disc = 0;
       if (pct > 0) {
-        disc = Math.round((currentSubtotal * pct) / 100);
+        disc = Math.round((subtotal * pct) / 100);
         if (offer.maxDiscountAmount) disc = Math.min(disc, offer.maxDiscountAmount);
       } else {
-        disc = Math.min(offer.discountAmount || offer.discountValue || 0, currentSubtotal);
+        disc = Math.min(offer.discountAmount || offer.discountValue || 0, subtotal);
       }
       if (disc >= maxDiscount) {
         maxDiscount = disc;
@@ -763,7 +780,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
       }
     }
 
-    if (!isPromoApplied || (appliedCoupon && (appliedCoupon as any).isAutoApply && appliedCoupon.code !== bestOffer.code)) {
+    if (!isPromoApplied || ((appliedCoupon as any)?.isAutoApply && appliedCoupon?.code !== bestOffer.code)) {
       const pct = bestOffer.discountPercentage || (bestOffer.discountType === "PERCENTAGE" ? (bestOffer.discountValue || 0) : 0);
       setAppliedCoupon({
         id: bestOffer.id,
@@ -781,7 +798,21 @@ const loadRazorpayScript = (): Promise<boolean> => {
       setDiscountPercent(pct);
       setPromoCode(bestOffer.code);
     }
-  }, [availableOffers, checkoutItems, userDismissedPromo, isPromoApplied, appliedCoupon, isValidatingPromo]);
+  }, [availableOffers, subtotal, userDismissedPromo, isPromoApplied, appliedCoupon, isValidatingPromo, activeSellerId, checkoutItems]);
+
+  // Auto-remove or invalidate applied coupon whenever subtotal drops below the minimum required cart value
+  useEffect(() => {
+    if (!appliedCoupon || !isPromoApplied) return;
+    const minCart = Number(appliedCoupon.minimumCartValue ?? (appliedCoupon as any).minOrderAmount ?? 0);
+    if (minCart > 0 && subtotal < minCart) {
+      const code = appliedCoupon.code || promoCode || "Applied";
+      setIsPromoApplied(false);
+      setDiscountPercent(0);
+      setAppliedCoupon(null);
+      setPromoCode("");
+      showToast(`Coupon "${code}" removed. Minimum cart value of ₹${minCart} required.`, "warning");
+    }
+  }, [subtotal, appliedCoupon, isPromoApplied, promoCode]);
 
   const handleRemovePromo = () => {
     setUserDismissedPromo(true);
@@ -888,6 +919,19 @@ const loadRazorpayScript = (): Promise<boolean> => {
     if (!validateFields()) {
       showToast("Please fill in all mandatory delivery address fields.", "error");
       return;
+    }
+
+    if (isPromoApplied && appliedCoupon) {
+      const minCart = Number(appliedCoupon.minimumCartValue ?? (appliedCoupon as any).minOrderAmount ?? 0);
+      if (minCart > 0 && subtotal < minCart) {
+        setIsPromoApplied(false);
+        setDiscountPercent(0);
+        setAppliedCoupon(null);
+        setPromoCode("");
+        showToast(`Coupon "${appliedCoupon.code}" requires a minimum order of ₹${minCart}. Please add more items to use this coupon.`, "error");
+        setIsSubmitting(false);
+        return;
+      }
     }
 
     if (onPlaceOrder) {
@@ -2290,13 +2334,19 @@ const loadRazorpayScript = (): Promise<boolean> => {
                         {availableOffers.map((offer) => {
                           const isCurrentApplied = isPromoApplied && (appliedCouponData?.code || promoCode) === offer.code;
                           const minMet = !offer.minimumCartValue || subtotal >= offer.minimumCartValue;
+                          const isEligible = offer.isEligible !== false;
 
                           return (
                             <div
                               key={offer.id || offer.code}
                               className={`${styles.offerCard} ${isCurrentApplied ? styles.offerCardApplied : ""}`}
+                              style={!isEligible ? { opacity: 0.65 } : undefined}
                               onClick={() => {
                                 if (!isCurrentApplied) {
+                                  if (!isEligible) {
+                                    showToast(offer.ineligibilityReason || `Coupon "${offer.code}" is not applicable to this order.`, "error");
+                                    return;
+                                  }
                                   handleApplyToggle(offer.code);
                                 }
                               }}
@@ -2309,15 +2359,24 @@ const loadRazorpayScript = (): Promise<boolean> => {
                                   ) : offer.discountAmount ? (
                                     <span className={styles.offerSaveBadge}>FLAT ₹{offer.discountAmount} OFF</span>
                                   ) : null}
+                                  {!isEligible && (
+                                    <span style={{ fontSize: "0.68rem", backgroundColor: "#FEE2E2", color: "#DC2626", padding: "2px 6px", borderRadius: "4px", fontWeight: 700 }}>
+                                      {offer.customerEligibility === "NEW_ONLY" ? "FIRST ORDER ONLY" : "INELIGIBLE"}
+                                    </span>
+                                  )}
                                 </div>
                                 <p className={styles.offerDescription}>
                                   {offer.description || (offer.discountPercentage ? `Get ${offer.discountPercentage}% off` : `Get ₹${offer.discountAmount} flat off`)}
                                 </p>
-                                {offer.minimumCartValue > 0 && (
+                                {!isEligible && offer.ineligibilityReason ? (
+                                  <span style={{ fontSize: "0.75rem", color: "#DC2626", fontWeight: 600 }}>
+                                    {offer.ineligibilityReason}
+                                  </span>
+                                ) : offer.minimumCartValue > 0 ? (
                                   <span className={`${styles.offerMinCart} ${!minMet ? styles.offerMinCartWarning : ""}`}>
                                     {minMet ? `Min order ₹${offer.minimumCartValue}` : `Add ₹${offer.minimumCartValue - subtotal} more`}
                                   </span>
-                                )}
+                                ) : null}
                               </div>
 
                               <div className={styles.offerCardRight}>
@@ -2339,9 +2398,13 @@ const loadRazorpayScript = (): Promise<boolean> => {
                                     className={styles.offerApplyBtn}
                                     onClick={(e) => {
                                       e.stopPropagation();
+                                      if (!isEligible) {
+                                        showToast(offer.ineligibilityReason || `Coupon "${offer.code}" is not applicable to this order.`, "error");
+                                        return;
+                                      }
                                       handleApplyToggle(offer.code);
                                     }}
-                                    disabled={checkoutItems.length === 0 || isValidatingPromo}
+                                    disabled={checkoutItems.length === 0 || isValidatingPromo || !isEligible}
                                   >
                                     Apply
                                   </button>

@@ -66,6 +66,79 @@ export const submitOrderReview = async (orderId: string, req: Request) => {
         throw new ApiError("Valid overall order rating (1-5 stars) is required", 400);
     }
 
+    const parsedRating = parseInt(String(rating), 10);
+
+    // Parse items from the order
+    let parsedOrderItems: any[] = [];
+    try {
+        parsedOrderItems = typeof order.items === "string" ? JSON.parse(order.items) : (order.items || []);
+    } catch {
+        parsedOrderItems = [];
+    }
+
+    // Lookup seller food items for ID resolution
+    const sellerFoodItems = await db.foodItem.findMany({
+        where: {
+            OR: [
+                { sellerId: order.sellerId },
+                ...(order.sellerId ? [{ seller: { trackingId: order.sellerId } }] : [])
+            ]
+        }
+    });
+
+    const foodItemMap = new Map<string, any>();
+    const foodItemByName = new Map<string, any>();
+    sellerFoodItems.forEach(fi => {
+        foodItemMap.set(fi.id, fi);
+        foodItemByName.set(fi.name.toLowerCase().trim(), fi);
+    });
+
+    const finalItemRatings: Array<{ foodItemId: string; rating: number; comment?: string | null }> = [];
+    const ratedFoodItemIds = new Set<string>();
+
+    if (itemRatings && Array.isArray(itemRatings) && itemRatings.length > 0) {
+        for (const ir of itemRatings) {
+            const rawId = String(ir.foodItemId || ir.id || "").trim();
+            const cleanId = rawId.includes("_") ? rawId.split("_")[0] : rawId;
+            const parsedItemRate = parseInt(String(ir.rating), 10);
+            if (isNaN(parsedItemRate) || parsedItemRate < 1 || parsedItemRate > 5) continue;
+
+            let matched = foodItemMap.get(rawId) || foodItemMap.get(cleanId);
+            if (!matched && ir.name) {
+                matched = foodItemByName.get(String(ir.name).toLowerCase().trim());
+            }
+
+            if (matched && !ratedFoodItemIds.has(matched.id)) {
+                finalItemRatings.push({
+                    foodItemId: matched.id,
+                    rating: parsedItemRate,
+                    comment: ir.comment || null
+                });
+                ratedFoodItemIds.add(matched.id);
+            }
+        }
+    }
+
+    // For any ordered items not explicitly rated individually, assign the overall order rating
+    for (const orderedItem of parsedOrderItems) {
+        const rawId = String(orderedItem.foodItemId || orderedItem.id || "").trim();
+        const cleanId = rawId.includes("_") ? rawId.split("_")[0] : rawId;
+
+        let matched = foodItemMap.get(rawId) || foodItemMap.get(cleanId);
+        if (!matched && orderedItem.name) {
+            matched = foodItemByName.get(String(orderedItem.name).toLowerCase().trim());
+        }
+
+        if (matched && !ratedFoodItemIds.has(matched.id)) {
+            finalItemRatings.push({
+                foodItemId: matched.id,
+                rating: parsedRating,
+                comment: null
+            });
+            ratedFoodItemIds.add(matched.id);
+        }
+    }
+
     // Create the review and item reviews inside a transaction
     const review = await db.$transaction(async (tx) => {
         const newReview = await tx.review.create({
@@ -73,30 +146,26 @@ export const submitOrderReview = async (orderId: string, req: Request) => {
                 orderId,
                 userId: session.user.id,
                 sellerId: order.sellerId,
-                rating: parseInt(rating),
+                rating: parsedRating,
                 comment: comment || null
             }
         });
 
-        if (itemRatings && Array.isArray(itemRatings) && itemRatings.length > 0) {
-            // Filter out any ratings with invalid values
-            const validItemRatings = itemRatings
-                .filter(ir => ir.foodItemId && ir.rating >= 1 && ir.rating <= 5)
-                .map((ir: any) => ({
+        if (finalItemRatings.length > 0) {
+            await tx.itemRating.createMany({
+                data: finalItemRatings.map(fir => ({
                     reviewId: newReview.id,
-                    foodItemId: ir.foodItemId,
-                    rating: parseInt(ir.rating),
-                    comment: ir.comment || null
-                }));
-
-            if (validItemRatings.length > 0) {
-                await tx.itemRating.createMany({
-                    data: validItemRatings
-                });
-            }
+                    foodItemId: fir.foodItemId,
+                    rating: fir.rating,
+                    comment: fir.comment || null
+                }))
+            });
         }
 
-        return newReview;
+        return tx.review.findUnique({
+            where: { id: newReview.id },
+            include: { itemRatings: true }
+        });
     });
 
     return { review };

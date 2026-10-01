@@ -825,7 +825,7 @@ export default function OrderConfirmation() {
           </Link>
 
           {/* Secondary Continue Exploring Button */}
-          <Link href="/explore" className={styles.exploreBtn}>
+          <Link href="/food-explore" className={styles.exploreBtn}>
             <Compass size={18} color="#EA580C" />
             <span>Explore More Dishes</span>
           </Link>

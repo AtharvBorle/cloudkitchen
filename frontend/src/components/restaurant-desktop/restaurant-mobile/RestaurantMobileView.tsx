@@ -317,9 +317,9 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
             )}
             {kitchenData.dietType && (
               (() => {
-                const lower = kitchenData.dietType.toLowerCase();
+                const lower = (kitchenData.dietType || "").toLowerCase();
                 const isBoth = lower.includes("&") || (lower.includes("veg") && lower.includes("non"));
-                const isPureVeg = !isBoth && (lower.includes("pure") || lower === "veg" || lower.includes("pure veg") || lower.includes("🥦"));
+                const isPureVeg = !isBoth && (lower.includes("pure") || lower === "veg" || lower.includes("pure veg") || lower.includes("pure_veg") || lower.includes("veg_only") || lower.includes("🥦"));
 
                 if (isBoth) {
                   return (
@@ -417,17 +417,46 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
             <div />
           )}
 
-          <div
-            className={styles.vegToggle}
-            onClick={() => onVegToggle(!isVegOnly)}
-            role="switch"
-            aria-checked={isVegOnly}
-          >
-            <span className={styles.vegLabel}>Veg</span>
-            <div className={`${styles.toggleTrack} ${isVegOnly ? styles.toggleTrackActive : ""}`}>
-              <div className={`${styles.toggleThumb} ${isVegOnly ? styles.toggleThumbActive : ""}`} />
-            </div>
-          </div>
+          {(() => {
+            const lower = (kitchenData.dietType || "").toLowerCase();
+            const isBoth = lower.includes("&") || (lower.includes("veg") && lower.includes("non"));
+            const isPureVeg = !isBoth && (lower.includes("pure") || lower === "veg" || lower.includes("pure veg") || lower.includes("pure_veg") || lower.includes("veg_only") || lower.includes("🥦"));
+
+            if (isPureVeg) {
+              return (
+                <div
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    backgroundColor: "#F0FDF4",
+                    border: "1px solid #86EFAC",
+                    padding: "4px 10px",
+                    borderRadius: "14px",
+                    color: "#16A34A",
+                    fontSize: "0.78rem",
+                    fontWeight: "800",
+                  }}
+                >
+                  <span>🥦 Pure Veg</span>
+                </div>
+              );
+            }
+
+            return (
+              <div
+                className={styles.vegToggle}
+                onClick={() => onVegToggle(!isVegOnly)}
+                role="switch"
+                aria-checked={isVegOnly}
+              >
+                <span className={styles.vegLabel}>Veg</span>
+                <div className={`${styles.toggleTrack} ${isVegOnly ? styles.toggleTrackActive : ""}`}>
+                  <div className={`${styles.toggleThumb} ${isVegOnly ? styles.toggleThumbActive : ""}`} />
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* 2.5 Active Weekly/Monthly Subscription Plans */}

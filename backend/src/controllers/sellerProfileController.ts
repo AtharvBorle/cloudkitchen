@@ -63,6 +63,7 @@ export const updateSellerProfile = async (req: Request) => {
     let pincode: string | undefined;
     let infoAddress: string | undefined;
     let upiId: string | undefined;
+    let foodType: string | undefined;
     let latitude: number | undefined;
     let longitude: number | undefined;
     let isLocationPinned: boolean | undefined;
@@ -83,6 +84,7 @@ export const updateSellerProfile = async (req: Request) => {
         pincode = formData.get("pincode") as string;
         infoAddress = (formData.get("infoAddress") as string) || (formData.get("registeredAddress") as string) || (formData.get("address") as string) || (formData.get("addressLocality") as string);
         upiId = formData.get("upiId") as string;
+        foodType = (formData.get("foodType") as string) || (formData.get("dietaryType") as string);
         currentPassword = formData.get("currentPassword") as string;
         newPassword = formData.get("newPassword") as string;
         const rawLat = formData.get("latitude") || formData.get("lat");
@@ -105,6 +107,7 @@ export const updateSellerProfile = async (req: Request) => {
         pincode = body.pincode;
         infoAddress = body.infoAddress || body.registeredAddress || body.address || body.addressLocality;
         upiId = body.upiId;
+        foodType = body.foodType || body.dietaryType;
         currentPassword = body.currentPassword;
         newPassword = body.newPassword;
         if (body.latitude !== undefined && body.latitude !== null && body.latitude !== "") {
@@ -195,6 +198,9 @@ export const updateSellerProfile = async (req: Request) => {
     }
     if (upiId !== undefined) {
         profileUpdateData.upiId = upiId ? (typeof upiId === "string" ? upiId.trim() : null) : null;
+    }
+    if (foodType !== undefined && typeof foodType === "string" && foodType.trim()) {
+        profileUpdateData.foodType = foodType.trim().toUpperCase();
     }
     if (latitude !== undefined && !isNaN(latitude)) {
         profileUpdateData.latitude = latitude;
