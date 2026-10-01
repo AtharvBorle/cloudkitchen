@@ -1649,7 +1649,17 @@ export const UserCart: React.FC<UserCartProps> = ({
               <h2 className={styles.summaryTitle}>Order Summary</h2>
 
               {/* Delivery Address Section */}
-              <div className={styles.deliveryBlock}>
+              <div
+                className={styles.deliveryBlock}
+                onClick={() => {
+                  if (savedAddresses && savedAddresses.length > 0) {
+                    setIsAddressModalOpen(true);
+                  } else {
+                    openLocationModal();
+                  }
+                }}
+                style={{ cursor: "pointer" }}
+              >
                 <div className={styles.addressHeaderRow}>
                   <div className={styles.addressPinBox}>
                     <MapPin size={20} />
@@ -1663,7 +1673,14 @@ export const UserCart: React.FC<UserCartProps> = ({
                 <button
                   type="button"
                   className={styles.changeAddressBtn}
-                  onClick={() => setIsAddressModalOpen(true)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (savedAddresses && savedAddresses.length > 0) {
+                      setIsAddressModalOpen(true);
+                    } else {
+                      openLocationModal();
+                    }
+                  }}
                 >
                   <span>Change</span>
                   <span aria-hidden="true">&gt;</span>
