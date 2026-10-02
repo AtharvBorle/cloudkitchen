@@ -19,6 +19,7 @@ export interface SellerProfileData {
   latitude?: number | null;
   longitude?: number | null;
   isLocationPinned?: boolean;
+  deliveryRadiusKm?: number;
   bannerImageUrl?: string;
   cardImageUrl?: string;
   kitchenImages?: string[];
@@ -170,6 +171,7 @@ export function useSellerProfile() {
       latitude: isSeller ? (cachedProfile?.latitude ?? null) : null,
       longitude: isSeller ? (cachedProfile?.longitude ?? null) : null,
       isLocationPinned: isSeller ? (cachedProfile?.isLocationPinned ?? false) : false,
+      deliveryRadiusKm: isSeller ? (cachedProfile?.deliveryRadiusKm ?? 5) : 5,
       bannerImageUrl: isSeller ? (cachedProfile?.bannerImageUrl || cachedProfile?.profile?.bannerImageUrl || "") : "",
       cardImageUrl: isSeller ? (cachedProfile?.cardImageUrl || "") : "",
       kitchenImages: isSeller ? (cachedProfile?.kitchenImages || []) : [],
@@ -283,6 +285,7 @@ export function useSellerProfile() {
           const rawTrackingId = profile?.trackingId || "";
           const rawUpiId = profile?.upiId || "";
           const rawBannerImageUrl = profile?.bannerImageUrl || "";
+          const rawDeliveryRadiusKm = profile?.deliveryRadiusKm !== undefined && profile?.deliveryRadiusKm !== null ? Number(profile.deliveryRadiusKm) : 5;
 
           let rawKitchenImages: string[] = [];
           if (profile?.kitchenImages) {
@@ -309,6 +312,7 @@ export function useSellerProfile() {
             latitude: rawLat,
             longitude: rawLng,
             isLocationPinned: rawPinned,
+            deliveryRadiusKm: rawDeliveryRadiusKm,
             bannerImageUrl: rawBannerImageUrl,
             cardImageUrl: rawCardImageUrl,
             kitchenImages: rawKitchenImages,
@@ -337,6 +341,7 @@ export function useSellerProfile() {
               latitude: rawLat,
               longitude: rawLng,
               isLocationPinned: rawPinned,
+              deliveryRadiusKm: rawDeliveryRadiusKm,
               bannerImageUrl: rawBannerImageUrl,
               cardImageUrl: rawCardImageUrl,
               kitchenImages: rawKitchenImages,

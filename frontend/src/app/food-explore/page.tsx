@@ -553,7 +553,7 @@ function FoodExploreContent() {
             <p style={{ margin: 0, fontSize: "0.95rem", color: "#64748B", fontWeight: "500" }}>
               {defaultAddress?.pincode ? (
                 <>
-                  Delivering near <strong style={{ color: "#FF6B00" }}>{defaultAddress.city || "Pune"} ({defaultAddress.pincode})</strong> within 5 km coverage radius
+                  Delivering near <strong style={{ color: "#FF6B00" }}>{defaultAddress.city || "Pune"} ({defaultAddress.pincode})</strong> within kitchen delivery radius
                 </>
               ) : (
                 "Discover delicious chef-crafted food and cloud kitchens nearby"

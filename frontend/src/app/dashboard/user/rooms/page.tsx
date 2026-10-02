@@ -172,6 +172,16 @@ export default function UserRoomsPage() {
             };
         })
         .filter(room => {
+            const roomRadius = room.sellerDeliveryRadiusKm && Number(room.sellerDeliveryRadiusKm) > 0
+                ? Number(room.sellerDeliveryRadiusKm)
+                : MAX_DELIVERY_RADIUS_KM;
+            if (hasUserCoords && room.distanceKm !== undefined) {
+                if (room.distanceKm > roomRadius) return false;
+            } else if (defaultAddress?.pincode) {
+                const guestPin = defaultAddress.pincode.trim();
+                if (room.sellerPincode && room.sellerPincode !== guestPin) return false;
+            }
+
             if (!searchQuery.trim()) return true;
             const q = searchQuery.toLowerCase().trim();
             return (
@@ -233,7 +243,7 @@ export default function UserRoomsPage() {
                             </button>
                         </div>
                     ) : (
-                        "No rooms available within 5 km right now."
+                        "No rooms available in your area right now."
                     )}
                 </div>
             ) : (

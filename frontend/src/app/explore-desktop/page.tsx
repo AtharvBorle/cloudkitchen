@@ -286,10 +286,10 @@ function ExploreDesktopContent() {
                 </div>
                 <div>
                   <h3 style={{ margin: "0 0 2px 0", fontSize: "1rem", fontWeight: "700", color: "#0F172A" }}>
-                    No Cloud Kitchens Delivering Within 5 km
+                    No Cloud Kitchens Delivering to Your Location
                   </h3>
                   <p style={{ margin: 0, fontSize: "0.85rem", color: "#64748B" }}>
-                    We only show outlets within a 5 km radius of your location to ensure fast &amp; fresh delivery. Choose a nearby area like Kothrud (411038), Baner (411045), or Deccan (411004).
+                    We only show outlets within their active delivery range to ensure fast &amp; fresh delivery. Choose a nearby area like Kothrud (411038), Baner (411045), or Deccan (411004).
                   </p>
                 </div>
               </div>

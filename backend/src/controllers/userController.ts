@@ -205,6 +205,7 @@ export const getUserDashboard = async () => {
                 sellerLatitude: resolvedLat,
                 sellerLongitude: resolvedLng,
                 sellerIsLocationPinned: seller.isLocationPinned,
+                sellerDeliveryRadiusKm: seller.deliveryRadiusKm ?? 5.0,
                 servedPincodes: seller.servedPincodes.map(p => p.pincode),
             };
         });
@@ -234,6 +235,7 @@ export const getUserDashboard = async () => {
             sellerLatitude: resolvedLat,
             sellerLongitude: resolvedLng,
             sellerIsLocationPinned: seller.isLocationPinned,
+            sellerDeliveryRadiusKm: seller.deliveryRadiusKm ?? 5.0,
         }));
     });
 

@@ -108,6 +108,7 @@ export const getPublicExploreData = unstable_cache(
                 imageUrl: parsedKitchenImages[0] || seller.bannerImageUrl || "/images/places/place-pizza.png",
                 isOnline: seller.isOnline,
                 foodType: seller.foodType,
+                deliveryRadiusKm: seller.deliveryRadiusKm ?? 5.0,
                 servedPincodes: seller.servedPincodes.map(p => p.pincode),
             });
 
@@ -135,6 +136,7 @@ export const getPublicExploreData = unstable_cache(
                     sellerLatitude: resolvedLat,
                     sellerLongitude: resolvedLng,
                     sellerIsLocationPinned: seller.isLocationPinned,
+                    sellerDeliveryRadiusKm: seller.deliveryRadiusKm ?? 5.0,
                     servedPincodes: seller.servedPincodes.map(p => p.pincode),
                 };
             });
@@ -163,6 +165,7 @@ export const getPublicExploreData = unstable_cache(
                 sellerLatitude: resolvedLat,
                 sellerLongitude: resolvedLng,
                 sellerIsLocationPinned: seller.isLocationPinned,
+                sellerDeliveryRadiusKm: seller.deliveryRadiusKm ?? 5.0,
             }));
         });
 
