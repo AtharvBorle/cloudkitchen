@@ -9,6 +9,7 @@ import Topbar from "../nav/Topbar";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
 import { useRealtimeStream } from "@/hooks/useRealtimeStream";
 import { fetchApi } from "@/lib/fetch-api";
+import { getRemainingSeconds } from "../seller-orders/SellerOrders";
 import RejectOrderModal from "../seller-orders/RejectOrderModal";
 import ToastNotification from "../seller-orders/ToastNotification";
 import styles from "./OrderDefault.module.css";
@@ -26,6 +27,7 @@ export interface OrderDetailsData {
   orderId: string;
   placedTime: string;
   cancelledTime?: string;
+  createdAt?: string;
   status: "Preparing" | "Pending" | "Out for Delivery" | "Completed" | "Cancelled";
   rawStatus: string;
   customerName: string;
@@ -78,6 +80,12 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
   const [order, setOrder] = useState<OrderDetailsData | null>(propOrderData || null);
   const [loading, setLoading] = useState(!propOrderData);
   const [actionLoading, setActionLoading] = useState(false);
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // In-app rejection modal & toast state
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
@@ -174,6 +182,7 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
             setOrder({
               id: target.id,
               orderId: `#NCR-${target.id.slice(0, 4).toUpperCase()}`,
+              createdAt: target.createdAt,
               placedTime: target.createdAt
                 ? `Today at ${timeStr}`
                 : "Today at 02:45 PM",
@@ -241,6 +250,13 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
       });
       if (res.ok) {
         setOrder((prev) => (prev ? { ...prev, status: "Preparing", rawStatus: "PREPARING" } : null));
+        loadOrder(true);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setToast({
+          type: "error",
+          text: errData.error || errData.message || "Failed to accept order (acceptance window may have expired).",
+        });
         loadOrder(true);
       }
     } catch (err) {
@@ -329,8 +345,21 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
   const isDelivered = rawStatus === "DELIVERED" || rawStatus === "COMPLETED";
   const isOut = rawStatus === "OUT_FOR_DELIVERY" || rawStatus === "ON_THE_WAY";
   const isPreparing = rawStatus === "PREPARING";
-  const isPending = rawStatus === "PENDING" || !rawStatus;
-  const isCancelled = rawStatus === "CANCELLED";
+  const remainingSec = order?.createdAt ? getRemainingSeconds(order.createdAt, now) : 0;
+  const isExpired = (rawStatus === "PENDING" || !rawStatus || order?.status === "Pending") && remainingSec <= 0;
+  const isCancelled = rawStatus === "CANCELLED" || order?.status === "Cancelled" || isExpired;
+  const isPending = (rawStatus === "PENDING" || !rawStatus || order?.status === "Pending") && !isCancelled;
+
+  useEffect(() => {
+    if (order && (order.status === "Pending" || order.rawStatus === "PENDING") && isExpired) {
+      fetchApi(`/api/seller/orders/${order.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "CANCELLED" }),
+      }).catch(() => {});
+      setOrder((prev) => (prev ? { ...prev, status: "Cancelled", rawStatus: "CANCELLED" } : null));
+    }
+  }, [isExpired, order]);
 
   if (loading && !order) {
     return (
@@ -445,6 +474,43 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
               <p className={styles.orderSubtitle}>{activeOrderData.placedTime}</p>
             </div>
           </div>
+
+          {/* Acceptance Timer Banner for Pending Orders */}
+          {isPending && !isCancelled && remainingSec > 0 && (
+            <div style={{
+              padding: "14px 20px",
+              backgroundColor: remainingSec <= 60 ? "#FEF2F2" : "#FFF7ED",
+              border: `1.5px solid ${remainingSec <= 60 ? "#FECACA" : "#FED7AA"}`,
+              borderRadius: "12px",
+              color: remainingSec <= 60 ? "#DC2626" : "#C2410C",
+              fontWeight: 600,
+              fontSize: "0.9rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: "10px",
+              marginBottom: "16px",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <Clock size={20} />
+                <span>
+                  Order Acceptance Time: Accept this order within <strong>{String(Math.floor(remainingSec / 60)).padStart(2, "0")}:{String(remainingSec % 60).padStart(2, "0")}</strong> before it auto-cancels.
+                </span>
+              </div>
+              <div style={{
+                backgroundColor: remainingSec <= 60 ? "#DC2626" : "#EA580C",
+                color: "#FFFFFF",
+                padding: "4px 14px",
+                borderRadius: "999px",
+                fontSize: "0.85rem",
+                fontWeight: 700,
+                fontVariantNumeric: "tabular-nums",
+              }}>
+                ⏱️ {String(Math.floor(remainingSec / 60)).padStart(2, "0")}:{String(remainingSec % 60).padStart(2, "0")} Remaining
+              </div>
+            </div>
+          )}
 
           {/* Cancelled Banner */}
           {isCancelled && (
@@ -751,7 +817,7 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
                   </div>
                 )}
 
-                {isPending && !isCancelled && (
+                {isPending && !isCancelled && remainingSec > 0 && (
                   <>
                     <button
                       type="button"

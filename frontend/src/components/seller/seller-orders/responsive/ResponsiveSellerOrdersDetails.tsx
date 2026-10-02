@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   ChevronLeft,
@@ -12,7 +12,9 @@ import {
   CheckCircle2,
   Bell,
   XCircle,
+  Clock,
 } from "lucide-react";
+import { getRemainingSeconds } from "../SellerOrders";
 import styles from "./ResponsiveSellerOrdersDetails.module.css";
 
 export interface ResponsiveOrderItemLine {
@@ -40,6 +42,7 @@ export interface ResponsiveSellerOrdersDetailsProps {
   total?: string;
   paymentMethod?: string;
   initialStatus?: OrderTimelineStep;
+  createdAt?: string;
   onBack?: () => void;
   onCallRider?: () => void;
 }
@@ -64,12 +67,28 @@ export const ResponsiveSellerOrdersDetails: React.FC<
   total = "₹0",
   paymentMethod = "COD",
   initialStatus = "Order Placed",
+  createdAt,
   onBack,
   onCallRider,
 }) => {
   const router = useRouter();
   const [currentStatus, setCurrentStatus] = useState<OrderTimelineStep>(initialStatus);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const remainingSec = createdAt ? getRemainingSeconds(createdAt, now) : 300;
+  const isExpired = currentStatus === "Order Placed" && remainingSec <= 0;
+
+  useEffect(() => {
+    if (isExpired && currentStatus === "Order Placed") {
+      setCurrentStatus("Cancelled");
+    }
+  }, [isExpired, currentStatus]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -192,6 +211,39 @@ export const ResponsiveSellerOrdersDetails: React.FC<
               </svg>
             </div>
           </section>
+
+          {/* Order Acceptance Countdown Alert (if Order Placed) */}
+          {currentStatus === "Order Placed" && !isExpired && (
+            <div style={{
+              margin: "0 16px 14px 16px",
+              padding: "10px 14px",
+              backgroundColor: remainingSec <= 60 ? "#FEF2F2" : "#FFF7ED",
+              border: `1.5px solid ${remainingSec <= 60 ? "#FECACA" : "#FED7AA"}`,
+              borderRadius: "12px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              color: remainingSec <= 60 ? "#DC2626" : "#C2410C",
+              fontSize: "0.84rem",
+              fontWeight: 600,
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <Clock size={16} />
+                <span>Acceptance Window</span>
+              </div>
+              <div style={{
+                backgroundColor: remainingSec <= 60 ? "#DC2626" : "#EA580C",
+                color: "#FFFFFF",
+                padding: "3px 10px",
+                borderRadius: "999px",
+                fontWeight: 700,
+                fontSize: "0.8rem",
+                fontVariantNumeric: "tabular-nums"
+              }}>
+                ⏱️ {String(Math.floor(remainingSec / 60)).padStart(2, "0")}:{String(remainingSec % 60).padStart(2, "0")}
+              </div>
+            </div>
+          )}
 
           {/* 2. Stepper Progress Bar */}
           <section className={styles.stepperCard}>

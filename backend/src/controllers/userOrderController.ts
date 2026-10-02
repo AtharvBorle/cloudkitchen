@@ -6,6 +6,7 @@ import Razorpay from "razorpay";
 import crypto from "crypto";
 import { emitOrderCreated, emitOrderCancelled, emitOrderUpdated } from "@/lib/realtime-events";
 import { calculateDistanceKm, getPincodeCoordinates, MAX_DELIVERY_RADIUS_KM } from "@/lib/geo-distance";
+import { cancelExpiredOrder, isOrderExpired } from "@/lib/order-expiry";
 
 export const validateDeliveryCoverage = async ({
     sellerProfile,
@@ -832,6 +833,12 @@ export const getOrderDetails = async (id: string) => {
 
     if (!order) {
         throw new ApiError("Order not found", 404);
+    }
+
+    // Auto-cancel if pending and 5-minute acceptance window has elapsed
+    if (order.status === "PENDING" && isOrderExpired(order.createdAt)) {
+        await cancelExpiredOrder(order);
+        order.status = "CANCELLED";
     }
 
     const isBuyer = order.userId === session.user.id;

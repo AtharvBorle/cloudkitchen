@@ -3,6 +3,7 @@ import { successResponse, errorResponse } from "@/lib/api-response";
 import { ApiError } from "@/lib/api-error";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { autoCancelExpiredOrders } from "@/lib/order-expiry";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -16,6 +17,9 @@ export async function GET() {
         if (session.user.role !== "USER") {
             throw new ApiError("Access denied. User account required.", 403);
         }
+
+        // Auto-cancel any pending orders that exceeded the 5-minute acceptance timer
+        await autoCancelExpiredOrders({ userId: session.user.id });
 
         const orders = await db.order.findMany({
             where: { userId: session.user.id },
