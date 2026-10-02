@@ -131,6 +131,7 @@ export default function ResponsiveSellerOrdersPage() {
         deliveredCount: 0,
         cancelledCount: 0,
         status: statusVal,
+        createdAt: o.createdAt,
       };
     });
   }, [orders]);

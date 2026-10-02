@@ -16,6 +16,7 @@ import {
   Sparkles,
   Lock,
   Search,
+  Clock,
 } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
@@ -23,6 +24,7 @@ import { useRealtimeStream } from "@/hooks/useRealtimeStream";
 import { useSellerNotifications, addSellerNotification } from "@/hooks/useSellerNotifications";
 import { playNewOrderChime } from "@/lib/audio-chime";
 import { performLogout } from "@/lib/logout";
+import { getRemainingSeconds } from "../seller-orders/SellerOrders";
 import styles from "./SellerDashboard.module.css";
 
 export interface OrderItem {
@@ -33,6 +35,7 @@ export interface OrderItem {
   items: string;
   total: string;
   status: "Preparing" | "Pending" | "Out for Delivery" | "Completed" | "Cancelled";
+  createdAt?: string;
 }
 
 const DEFAULT_FALLBACK_ORDERS: OrderItem[] = [];
@@ -67,6 +70,12 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
   );
   const [overview, setOverview] = useState<any>(null);
   const [statusData, setStatusData] = useState<any>(null);
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -191,6 +200,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                 items: itemsSummary || "1x Food Item",
                 total: `₹${o.totalAmount || 0}`,
                 status: statusVal,
+                createdAt: o.createdAt,
               };
             });
             setOrders(mapped);
@@ -712,24 +722,51 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                           </td>
                         </tr>
                       ) : (
-                        displayedOrders.map((order) => (
-                          <tr key={order.id}>
-                            <td className={styles.orderIdText}>{order.orderId}</td>
-                            <td className={styles.customerText}>{order.customer}</td>
-                            <td className={styles.roomNoText}>{order.roomNo}</td>
-                            <td className={styles.itemsText}>{order.items}</td>
-                            <td className={styles.totalPriceText}>{order.total}</td>
-                            <td>
-                              <span
-                                className={`${styles.statusBadge} ${getStatusBadgeClass(
-                                  order.status
-                                )}`}
-                              >
-                                {order.status}
-                              </span>
-                            </td>
-                          </tr>
-                        ))
+                        displayedOrders.map((order) => {
+                          const isPending = order.status === "Pending";
+                          const sec = isPending ? getRemainingSeconds(order.createdAt, now) : 0;
+                          const isExpired = isPending && sec <= 0;
+                          const mm = String(Math.floor(sec / 60)).padStart(2, "0");
+                          const ss = String(sec % 60).padStart(2, "0");
+                          const isUrgent = sec <= 60;
+
+                          return (
+                            <tr key={order.id}>
+                              <td className={styles.orderIdText}>{order.orderId}</td>
+                              <td className={styles.customerText}>{order.customer}</td>
+                              <td className={styles.roomNoText}>{order.roomNo}</td>
+                              <td className={styles.itemsText}>{order.items}</td>
+                              <td className={styles.totalPriceText}>{order.total}</td>
+                              <td>
+                                {isPending ? (
+                                  !isExpired ? (
+                                    <span
+                                      className={`${styles.statusBadge} ${
+                                        isUrgent ? styles.statusTimerUrgent : styles.statusTimer
+                                      }`}
+                                      title={`Acceptance window expires in ${mm}:${ss}`}
+                                    >
+                                      <Clock size={12} style={{ display: "inline", verticalAlign: "middle", marginRight: "3px" }} />
+                                      {mm}:{ss}
+                                    </span>
+                                  ) : (
+                                    <span className={`${styles.statusBadge} ${styles.statusCancelled}`}>
+                                      Cancelled
+                                    </span>
+                                  )
+                                ) : (
+                                  <span
+                                    className={`${styles.statusBadge} ${getStatusBadgeClass(
+                                      order.status
+                                    )}`}
+                                  >
+                                    {order.status}
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>

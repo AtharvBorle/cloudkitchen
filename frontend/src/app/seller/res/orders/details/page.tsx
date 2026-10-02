@@ -137,6 +137,7 @@ function DetailsContent() {
       total={`₹${totalNum}`}
       paymentMethod={`${order?.paymentMethod || "COD"} (${order?.isPaid ? "Paid" : "Unpaid"})`}
       initialStatus={order ? mapStatusToStep(order.status) : "Order Placed"}
+      createdAt={order?.createdAt}
     />
   );
 }
