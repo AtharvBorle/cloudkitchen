@@ -67,6 +67,7 @@ export const updateSellerProfile = async (req: Request) => {
     let latitude: number | undefined;
     let longitude: number | undefined;
     let isLocationPinned: boolean | undefined;
+    let deliveryRadiusKm: number | undefined;
     let currentPassword: string | undefined;
     let newPassword: string | undefined;
     let bannerImageFile: File | null = null;
@@ -93,6 +94,11 @@ export const updateSellerProfile = async (req: Request) => {
         if (rawLat && rawLat !== "") latitude = parseFloat(rawLat as string);
         if (rawLng && rawLng !== "") longitude = parseFloat(rawLng as string);
         if (rawPinned !== null && rawPinned !== undefined) isLocationPinned = rawPinned === "true" || rawPinned === "1";
+        const rawRadius = formData.get("deliveryRadiusKm") || formData.get("radiusKm");
+        if (rawRadius !== null && rawRadius !== undefined && rawRadius !== "") {
+            const parsed = parseFloat(rawRadius as string);
+            if (!isNaN(parsed)) deliveryRadiusKm = Math.min(15, Math.max(1, parsed));
+        }
         bannerImageFile = formData.get("bannerImageFile") as File | null;
         cardImageFile = (formData.get("cardImageFile") || formData.get("kitchenImageFile") || formData.get("cardGridImageFile")) as File | null;
         if (formData.get("removeCardImage") === "true") removeCardImage = true;
@@ -122,6 +128,13 @@ export const updateSellerProfile = async (req: Request) => {
         }
         if (body.isLocationPinned !== undefined) {
             isLocationPinned = Boolean(body.isLocationPinned);
+        }
+        if (body.deliveryRadiusKm !== undefined && body.deliveryRadiusKm !== null && body.deliveryRadiusKm !== "") {
+            const parsed = parseFloat(body.deliveryRadiusKm);
+            if (!isNaN(parsed)) deliveryRadiusKm = Math.min(15, Math.max(1, parsed));
+        } else if (body.radiusKm !== undefined && body.radiusKm !== null && body.radiusKm !== "") {
+            const parsed = parseFloat(body.radiusKm);
+            if (!isNaN(parsed)) deliveryRadiusKm = Math.min(15, Math.max(1, parsed));
         }
         if (body.removeCardImage) removeCardImage = true;
         if (body.removeBannerImage) removeBannerImage = true;
@@ -211,6 +224,9 @@ export const updateSellerProfile = async (req: Request) => {
         if (isLocationPinned === undefined) profileUpdateData.isLocationPinned = true;
     }
     if (isLocationPinned !== undefined) profileUpdateData.isLocationPinned = isLocationPinned;
+    if (deliveryRadiusKm !== undefined && !isNaN(deliveryRadiusKm)) {
+        profileUpdateData.deliveryRadiusKm = deliveryRadiusKm;
+    }
 
     if (cardImageFile && cardImageFile.size > 0) {
         const bytes = await cardImageFile.arrayBuffer();

@@ -2637,7 +2637,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
                         {isSellerClosed
                           ? "Kitchen Unavailable • Cannot Place Order"
                           : isOutsideCoverage
-                          ? `Outside Delivery Area (${shopDistanceKm ? `${shopDistanceKm} km` : "> 5 km"})`
+                          ? `Outside Delivery Area (${shopDistanceKm ? `${shopDistanceKm} km` : `> ${maxDeliveryRadius} km`})`
                           : isCartEmpty
                           ? "Your Cart is Empty • Add Products"
                           : isSubmitting

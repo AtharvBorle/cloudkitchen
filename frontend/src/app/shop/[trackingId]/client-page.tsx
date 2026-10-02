@@ -88,9 +88,13 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
         return null;
     }, [finalUserLat, finalUserLng, sellerLat, sellerLng]);
 
+    const maxRadiusKm = seller?.deliveryRadiusKm && Number(seller.deliveryRadiusKm) > 0
+        ? Number(seller.deliveryRadiusKm)
+        : MAX_DELIVERY_RADIUS_KM;
+
     const isDeliverable = (item?: any) => {
         if (shopDistanceKm !== null) {
-            return shopDistanceKm <= MAX_DELIVERY_RADIUS_KM;
+            return shopDistanceKm <= maxRadiusKm;
         }
         if (!userAddress || !userAddress.pincode) return true;
         const userPincode = userAddress.pincode.trim();
@@ -320,7 +324,7 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                     display: 'inline-flex',
                                     alignItems: 'center',
                                     gap: '6px',
-                                    backgroundColor: shopDistanceKm <= MAX_DELIVERY_RADIUS_KM ? 'rgba(16, 185, 129, 0.85)' : 'rgba(239, 68, 68, 0.85)',
+                                    backgroundColor: shopDistanceKm <= maxRadiusKm ? 'rgba(16, 185, 129, 0.85)' : 'rgba(239, 68, 68, 0.85)',
                                     padding: '6px 14px',
                                     borderRadius: '20px',
                                     backdropFilter: 'blur(5px)',
@@ -333,7 +337,7 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                 <MapPin size={15} />
                                 <span>{formatDistance(shopDistanceKm)} away</span>
                                 <span style={{ opacity: 0.9, fontSize: '0.78rem' }}>
-                                    {shopDistanceKm <= MAX_DELIVERY_RADIUS_KM ? "• Delivering" : "• Beyond 5 km radius"}
+                                    {shopDistanceKm <= maxRadiusKm ? "• Delivering" : `• Beyond ${maxRadiusKm} km radius`}
                                 </span>
                             </div>
                         )}

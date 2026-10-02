@@ -238,9 +238,12 @@ export default function UserFoodPage() {
         .filter(item => {
             if (!isCurrentlyOpen(item)) return false;
 
-            // 5 km delivery radius filter
+            // Dynamic delivery radius filter per seller
+            const maxRadius = item.sellerDeliveryRadiusKm && Number(item.sellerDeliveryRadiusKm) > 0
+                ? Number(item.sellerDeliveryRadiusKm)
+                : MAX_DELIVERY_RADIUS_KM;
             if (hasUserCoords && item.distanceKm !== undefined) {
-                if (item.distanceKm > MAX_DELIVERY_RADIUS_KM) return false;
+                if (item.distanceKm > maxRadius) return false;
             } else if (defaultAddress?.pincode) {
                 const guestPin = defaultAddress.pincode.trim();
                 const pins = item.deliveryPincodes ? item.deliveryPincodes.split(",").map((p: any) => p.trim()) : [];

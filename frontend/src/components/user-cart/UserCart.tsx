@@ -1993,7 +1993,7 @@ export const UserCart: React.FC<UserCartProps> = ({
                   {isSellerClosed
                     ? "Kitchen Unavailable • Cannot Order"
                     : isOutsideCoverage
-                    ? `Outside Coverage (${shopDistanceKm ? `${shopDistanceKm} km` : "> 5 km"})`
+                    ? `Outside Coverage (${shopDistanceKm ? `${shopDistanceKm} km` : `> ${maxDeliveryRadius} km`})`
                     : cartItems.length === 0 || subtotal <= 0
                     ? "Cart is Empty • Add Products"
                     : "Proceed to Checkout"}
