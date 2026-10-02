@@ -771,22 +771,44 @@ function CheckoutContent() {
             return;
         }
 
+        let targetSubtotal = baseTotal;
+        if (appliedCoupon.appliesToProductId && !isRoomBooking) {
+            const allowedKeys = String(appliedCoupon.appliesToProductId)
+                .split(",")
+                .map((s) => s.trim().toLowerCase())
+                .filter(Boolean);
+            if (allowedKeys.length > 0) {
+                const matchingItems = cartItems.filter((it: any) => {
+                    const itemId = String(it.id || "").toLowerCase();
+                    const foodItemId = String(it.foodItemId || "").toLowerCase();
+                    const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+                    const name = String(it.name || "").toLowerCase().trim();
+                    return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
+                });
+                if (matchingItems.length === 0) {
+                    setDiscountAmount(0);
+                    return;
+                }
+                targetSubtotal = matchingItems.reduce((acc: number, it: any) => acc + (it.price || 0) * (it.quantity || it.qty || 1), 0);
+            }
+        }
+
         if (appliedCoupon.discountPercentage) {
-            let calcDiscount = Math.round((baseTotal * appliedCoupon.discountPercentage) / 100);
+            let calcDiscount = Math.round((targetSubtotal * appliedCoupon.discountPercentage) / 100);
             if (appliedCoupon.maxDiscountAmount && calcDiscount > appliedCoupon.maxDiscountAmount) {
                 calcDiscount = appliedCoupon.maxDiscountAmount;
             }
-            setDiscountAmount(Math.min(calcDiscount, baseTotal));
+            setDiscountAmount(Math.min(calcDiscount, targetSubtotal));
         } else if (appliedCoupon.discountAmount) {
             let calcDiscount = appliedCoupon.discountAmount;
             if (appliedCoupon.maxDiscountAmount && calcDiscount > appliedCoupon.maxDiscountAmount) {
                 calcDiscount = appliedCoupon.maxDiscountAmount;
             }
-            setDiscountAmount(Math.min(calcDiscount, baseTotal));
+            setDiscountAmount(Math.min(calcDiscount, targetSubtotal));
         }
-    }, [appliedCoupon, cartTotal, isRoomBooking, roomDetails, bookingDates]);
+    }, [appliedCoupon, cartTotal, cartItems, isRoomBooking, roomDetails, bookingDates]);
 
-    // Auto-remove applied coupon if base total drops below minimum required value
+    // Auto-remove applied coupon if base total drops below minimum required value or required item removed
     useEffect(() => {
         if (!appliedCoupon) return;
         const baseTotal = isRoomBooking
@@ -799,8 +821,31 @@ function CheckoutContent() {
             setAppliedCoupon(null);
             setDiscountAmount(0);
             setError(`Coupon "${code}" removed. Minimum cart value of ₹${minCart} required.`);
+            return;
         }
-    }, [cartTotal, appliedCoupon, isRoomBooking, roomDetails, bookingDates]);
+
+        if (appliedCoupon.appliesToProductId && !isRoomBooking && cartItems.length > 0) {
+            const allowedKeys = String(appliedCoupon.appliesToProductId)
+                .split(",")
+                .map((s) => s.trim().toLowerCase())
+                .filter(Boolean);
+            if (allowedKeys.length > 0) {
+                const hasMatchingProduct = cartItems.some((it: any) => {
+                    const itemId = String(it.id || "").toLowerCase();
+                    const foodItemId = String(it.foodItemId || "").toLowerCase();
+                    const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+                    const name = String(it.name || "").toLowerCase().trim();
+                    return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
+                });
+                if (!hasMatchingProduct) {
+                    const code = appliedCoupon.code;
+                    setAppliedCoupon(null);
+                    setDiscountAmount(0);
+                    setError(`Coupon "${code}" is no longer applicable as the required item was removed from the cart.`);
+                }
+            }
+        }
+    }, [cartTotal, cartItems, appliedCoupon, isRoomBooking, roomDetails, bookingDates]);
 
     if (status === "loading" || !isClient) {
         return (

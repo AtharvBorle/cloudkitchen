@@ -233,7 +233,7 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
     }
   }, [availableOffers, subtotal, userDismissedPromo, appliedPromo, appliedCoupon, isValidatingPromo, activeSellerId, cartItems]);
 
-  // Auto-remove or invalidate applied coupon whenever subtotal drops below the minimum required cart value
+  // Auto-remove or invalidate applied coupon whenever subtotal drops below minimum required cart value or required item is removed
   React.useEffect(() => {
     if (!appliedCoupon) return;
     const minCart = Number(appliedCoupon.minimumCartValue ?? (appliedCoupon as any).minOrderAmount ?? 0);
@@ -244,8 +244,39 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
       setDiscountPercent(0);
       setPromoCode("");
       showToast(`Coupon "${code}" removed. Minimum cart value of ₹${minCart} required.`);
+      return;
     }
-  }, [subtotal, appliedCoupon, appliedPromo]);
+
+    if (appliedCoupon.appliesToProductId && cartItems.length > 0) {
+      const allowedKeys = String(appliedCoupon.appliesToProductId)
+        .split(",")
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean);
+      if (allowedKeys.length > 0) {
+        const hasMatchingProduct = cartItems.some((it) => {
+          const itemId = String(it.id || "").toLowerCase();
+          const foodItemId = String(it.foodItemId || "").toLowerCase();
+          const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+          const name = String(it.name || "").toLowerCase().trim();
+          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
+        });
+        if (!hasMatchingProduct) {
+          const code = appliedCoupon.code || appliedPromo || "Applied";
+          setAppliedCoupon(null);
+          setAppliedPromo(null);
+          setDiscountPercent(0);
+          setPromoCode("");
+          showToast(`Coupon "${code}" is no longer applicable as the required item was removed from the cart.`);
+          return;
+        }
+      }
+    } else if (appliedCoupon.appliesToProductId && cartItems.length === 0) {
+      setAppliedCoupon(null);
+      setAppliedPromo(null);
+      setDiscountPercent(0);
+      setPromoCode("");
+    }
+  }, [subtotal, cartItems, appliedCoupon, appliedPromo]);
 
   const handleRemovePromo = () => {
     setUserDismissedPromo(true);
@@ -328,16 +359,36 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
 
   const discountAmount = React.useMemo(() => {
-    if (!appliedCoupon || subtotal <= 0) return 0;
+    if (!appliedCoupon || subtotal <= 0 || cartItems.length === 0) return 0;
     if (appliedCoupon.minimumCartValue && subtotal < appliedCoupon.minimumCartValue) return 0;
+
+    let targetSubtotal = subtotal;
+    if (appliedCoupon.appliesToProductId) {
+      const allowedKeys = String(appliedCoupon.appliesToProductId)
+        .split(",")
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean);
+      if (allowedKeys.length > 0) {
+        const matchingItems = cartItems.filter((it) => {
+          const itemId = String(it.id || "").toLowerCase();
+          const foodItemId = String(it.foodItemId || "").toLowerCase();
+          const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+          const name = String(it.name || "").toLowerCase().trim();
+          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
+        });
+        if (matchingItems.length === 0) return 0;
+        targetSubtotal = matchingItems.reduce((acc, it) => acc + it.price * it.qty, 0);
+      }
+    }
+
     if (appliedCoupon.discountType === "PERCENTAGE" || (appliedCoupon.discountPercentage && !appliedCoupon.discountAmount)) {
       const pct = appliedCoupon.discountPercentage || 0;
-      const raw = Math.round((subtotal * pct) / 100);
+      const raw = Math.round((targetSubtotal * pct) / 100);
       return appliedCoupon.maxDiscountAmount ? Math.min(raw, appliedCoupon.maxDiscountAmount) : raw;
     }
     const flat = appliedCoupon.discountAmount || 0;
-    return Math.min(flat, subtotal);
-  }, [appliedCoupon, subtotal]);
+    return Math.min(flat, targetSubtotal);
+  }, [appliedCoupon, subtotal, cartItems]);
   const deliveryFee = 0;
   const taxesAndCharges = 0;
   const grandTotal = Math.max(0, subtotal - discountAmount);

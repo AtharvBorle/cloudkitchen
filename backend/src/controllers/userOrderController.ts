@@ -7,6 +7,157 @@ import crypto from "crypto";
 import { emitOrderCreated, emitOrderCancelled, emitOrderUpdated } from "@/lib/realtime-events";
 import { calculateDistanceKm, getPincodeCoordinates, MAX_DELIVERY_RADIUS_KM } from "@/lib/geo-distance";
 
+export const validateDeliveryCoverage = async ({
+    sellerProfile,
+    userId,
+    addressId,
+    deliveryAddress,
+    latitude,
+    longitude,
+    pincode,
+}: {
+    sellerProfile: any;
+    userId: string;
+    addressId?: string | null;
+    deliveryAddress?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    pincode?: string | null;
+}) => {
+    const sellerLat = sellerProfile.latitude ?? getPincodeCoordinates(sellerProfile.user?.pincode)?.lat ?? null;
+    const sellerLng = sellerProfile.longitude ?? getPincodeCoordinates(sellerProfile.user?.pincode)?.lng ?? null;
+    const maxRadiusKm = sellerProfile.deliveryRadiusKm || MAX_DELIVERY_RADIUS_KM; // 5.0 km default
+
+    let customerLat: number | null = null;
+    let customerLng: number | null = null;
+    let userPincode: string | null = null;
+
+    // 1. If explicit saved address ID provided, look up saved address
+    if (addressId) {
+        const savedAddress = await db.address.findFirst({
+            where: { id: addressId, userId }
+        });
+        if (savedAddress) {
+            userPincode = savedAddress.pincode ? savedAddress.pincode.trim() : null;
+            if (savedAddress.latitude != null && savedAddress.longitude != null && !isNaN(Number(savedAddress.latitude)) && !isNaN(Number(savedAddress.longitude))) {
+                customerLat = Number(savedAddress.latitude);
+                customerLng = Number(savedAddress.longitude);
+            } else if (userPincode) {
+                const pinCoords = getPincodeCoordinates(userPincode);
+                if (pinCoords) {
+                    customerLat = pinCoords.lat;
+                    customerLng = pinCoords.lng;
+                }
+            }
+        }
+    }
+
+    // 2. If coordinates passed directly from client
+    if (customerLat === null || customerLng === null) {
+        if (latitude != null && longitude != null && !isNaN(Number(latitude)) && !isNaN(Number(longitude))) {
+            customerLat = Number(latitude);
+            customerLng = Number(longitude);
+        }
+    }
+
+    // 3. If explicit pincode passed or found in deliveryAddress string
+    if (!userPincode && pincode) {
+        userPincode = String(pincode).replace(/\D/g, "").slice(0, 6);
+    }
+    if (!userPincode && deliveryAddress) {
+        const pinMatch = deliveryAddress.match(/\b\d{6}\b/);
+        if (pinMatch) {
+            userPincode = pinMatch[0];
+        }
+    }
+
+    // 4. Try matching user's saved addresses if deliveryAddress text is provided
+    if ((customerLat === null || customerLng === null) && deliveryAddress && userId) {
+        const userSavedAddresses = await db.address.findMany({
+            where: { userId }
+        });
+        for (const addr of userSavedAddresses) {
+            const cleanDelivery = deliveryAddress.toLowerCase();
+            if (
+                (addr.street && cleanDelivery.includes(addr.street.toLowerCase())) ||
+                (addr.pincode && cleanDelivery.includes(addr.pincode))
+            ) {
+                if (addr.latitude != null && addr.longitude != null && !isNaN(Number(addr.latitude)) && !isNaN(Number(addr.longitude))) {
+                    customerLat = Number(addr.latitude);
+                    customerLng = Number(addr.longitude);
+                    userPincode = addr.pincode;
+                    break;
+                } else if (addr.pincode) {
+                    const pinCoords = getPincodeCoordinates(addr.pincode);
+                    if (pinCoords) {
+                        customerLat = pinCoords.lat;
+                        customerLng = pinCoords.lng;
+                        userPincode = addr.pincode;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    // 5. If pincode is known and coordinates still null, get from PINCODE_COORDINATES
+    if ((customerLat === null || customerLng === null) && userPincode) {
+        const pinCoords = getPincodeCoordinates(userPincode);
+        if (pinCoords) {
+            customerLat = pinCoords.lat;
+            customerLng = pinCoords.lng;
+        }
+    }
+
+    // 6. Only fallback to defaultAddress / user profile pincode if NO delivery address or pincode was specified at all
+    if (customerLat === null && customerLng === null && !userPincode && !deliveryAddress) {
+        const defaultAddress = await db.address.findFirst({
+            where: { userId, isDefault: true }
+        });
+        if (defaultAddress) {
+            userPincode = defaultAddress.pincode ? defaultAddress.pincode.trim() : null;
+            if (defaultAddress.latitude != null && defaultAddress.longitude != null && !isNaN(Number(defaultAddress.latitude)) && !isNaN(Number(defaultAddress.longitude))) {
+                customerLat = Number(defaultAddress.latitude);
+                customerLng = Number(defaultAddress.longitude);
+            }
+        }
+        if (!userPincode) {
+            const dbUser = await db.user.findUnique({ where: { id: userId }, select: { pincode: true } });
+            userPincode = dbUser?.pincode ? dbUser.pincode.trim() : null;
+        }
+        if ((customerLat === null || customerLng === null) && userPincode) {
+            const pinCoords = getPincodeCoordinates(userPincode);
+            if (pinCoords) {
+                customerLat = pinCoords.lat;
+                customerLng = pinCoords.lng;
+            }
+        }
+    }
+
+    // Check Distance & Enforce Delivery Radius
+    if (customerLat !== null && customerLng !== null && sellerLat !== null && sellerLng !== null) {
+        const distanceKm = calculateDistanceKm(customerLat, customerLng, sellerLat, sellerLng);
+        if (distanceKm > maxRadiusKm) {
+            throw new ApiError(
+                `This address is outside the delivery area. Your delivery location is ${distanceKm} km away, which exceeds the maximum delivery radius of ${maxRadiusKm} km. Please select a valid delivery address within the coverage area.`,
+                400
+            );
+        }
+    } else if (userPincode && sellerProfile.user?.pincode) {
+        const userPinCoords = getPincodeCoordinates(userPincode);
+        const sellerPinCoords = getPincodeCoordinates(sellerProfile.user.pincode);
+        if (userPinCoords && sellerPinCoords) {
+            const pinDistance = calculateDistanceKm(userPinCoords.lat, userPinCoords.lng, sellerPinCoords.lat, sellerPinCoords.lng);
+            if (pinDistance > maxRadiusKm) {
+                throw new ApiError(
+                    `This address is outside the delivery area. Your delivery pincode (${userPincode}) is ${pinDistance} km away, which exceeds the maximum delivery radius of ${maxRadiusKm} km. Please select a valid delivery address within the coverage area.`,
+                    400
+                );
+            }
+        }
+    }
+};
+
 export const initiateOrderPayment = async (req: Request) => {
     const session = await getAuthSession();
     if (!session?.user) {
@@ -16,13 +167,14 @@ export const initiateOrderPayment = async (req: Request) => {
         throw new ApiError("Access denied. Customer account required to place orders.", 403);
     }
 
-    const { totalAmount, sellerId } = await req.json();
+    const { totalAmount, sellerId, addressId, deliveryAddress, latitude, longitude, pincode } = await req.json();
     if (!totalAmount || Number(totalAmount) <= 0) {
         throw new ApiError("Invalid total amount", 400);
     }
 
+    let seller = null;
     if (sellerId) {
-        const seller = await db.sellerProfile.findFirst({
+        seller = await db.sellerProfile.findFirst({
             where: {
                 OR: [
                     { id: sellerId },
@@ -34,6 +186,17 @@ export const initiateOrderPayment = async (req: Request) => {
         });
         if (seller && (seller.isOnline === false || seller.user?.isActive === false)) {
             throw new ApiError("This kitchen is currently unavailable. Please try another kitchen.", 400);
+        }
+        if (seller) {
+            await validateDeliveryCoverage({
+                sellerProfile: seller,
+                userId: session.user.id,
+                addressId,
+                deliveryAddress,
+                latitude,
+                longitude,
+                pincode,
+            });
         }
     }
 
@@ -86,6 +249,10 @@ export const createOrder = async (req: Request) => {
         customerPhone,
         paymentMethod,
         appliedCouponId,
+        addressId,
+        latitude,
+        longitude,
+        pincode,
         razorpay_payment_id,
         razorpay_order_id,
         razorpay_signature
@@ -226,9 +393,19 @@ export const createOrder = async (req: Request) => {
 
         // Specific Item check
         if (validatedCoupon.appliesToProductId) {
-            const hasProduct = items.some((it: any) => it.id === validatedCoupon.appliesToProductId || it.foodItemId === validatedCoupon.appliesToProductId);
+            const allowedKeys = String(validatedCoupon.appliesToProductId)
+                .split(",")
+                .map((s: string) => s.trim().toLowerCase())
+                .filter(Boolean);
+            const hasProduct = items.some((it: any) => {
+                const itemId = String(it.id || "").toLowerCase();
+                const foodItemId = String(it.foodItemId || "").toLowerCase();
+                const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+                const name = String(it.name || "").toLowerCase().trim();
+                return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
+            });
             if (!hasProduct) {
-                throw new ApiError("This coupon is only valid on specific items not found in your cart", 400);
+                throw new ApiError(`Coupon "${validatedCoupon.code}" is only valid on specific items not found in your cart`, 400);
             }
         }
 
@@ -297,64 +474,16 @@ export const createOrder = async (req: Request) => {
     }
     // --- End Coupon Validation Logic ---
 
-    // --- Pincode Validation ---
-    const defaultAddress = await db.address.findFirst({
-        where: { userId: session.user.id, isDefault: true }
-    });
-    let userPincode = defaultAddress?.pincode ? defaultAddress.pincode.trim() : (dbUser.pincode ? dbUser.pincode.trim() : null);
-
-    if (!userPincode && deliveryAddress) {
-        const pinMatch = deliveryAddress.match(/\b\d{6}\b/);
-        if (pinMatch) {
-            userPincode = pinMatch[0];
-        }
-    }
-
-    if (!userPincode) {
-        userPincode = "411038";
-    }
-
     // --- Delivery Coverage & Distance Validation ---
-    const sellerLat = sellerProfile.latitude ?? getPincodeCoordinates(sellerProfile.user?.pincode)?.lat ?? null;
-    const sellerLng = sellerProfile.longitude ?? getPincodeCoordinates(sellerProfile.user?.pincode)?.lng ?? null;
-
-    let customerLat: number | null = null;
-    let customerLng: number | null = null;
-
-    if (defaultAddress?.latitude && defaultAddress?.longitude) {
-        customerLat = Number(defaultAddress.latitude);
-        customerLng = Number(defaultAddress.longitude);
-    } else {
-        const pinCoords = getPincodeCoordinates(userPincode);
-        if (pinCoords) {
-            customerLat = pinCoords.lat;
-            customerLng = pinCoords.lng;
-        }
-    }
-
-    const maxRadiusKm = MAX_DELIVERY_RADIUS_KM; // 5.0 km default
-
-    if (customerLat !== null && customerLng !== null && sellerLat !== null && sellerLng !== null) {
-        const distanceKm = calculateDistanceKm(customerLat, customerLng, sellerLat, sellerLng);
-        if (distanceKm > maxRadiusKm) {
-            throw new ApiError(
-                `Your delivery location is ${distanceKm} km away, which is outside this restaurant's ${maxRadiusKm} km delivery coverage. Please select a valid delivery address within the coverage area.`,
-                400
-            );
-        }
-    } else if (userPincode && sellerProfile.user?.pincode) {
-        const userPinCoords = getPincodeCoordinates(userPincode);
-        const sellerPinCoords = getPincodeCoordinates(sellerProfile.user.pincode);
-        if (userPinCoords && sellerPinCoords) {
-            const pinDistance = calculateDistanceKm(userPinCoords.lat, userPinCoords.lng, sellerPinCoords.lat, sellerPinCoords.lng);
-            if (pinDistance > maxRadiusKm) {
-                throw new ApiError(
-                    `Your delivery pincode (${userPincode}) is ${pinDistance} km away, which is outside the restaurant's ${maxRadiusKm} km delivery coverage. Please select a valid delivery address within the coverage area.`,
-                    400
-                );
-            }
-        }
-    }
+    await validateDeliveryCoverage({
+        sellerProfile,
+        userId: session.user.id,
+        addressId,
+        deliveryAddress,
+        latitude,
+        longitude,
+        pincode,
+    });
 
     // Aggregate item quantities by base foodItemId to validate stock and update inventory properly
     const aggregatedQuantities = new Map<string, { quantity: number; name: string }>();

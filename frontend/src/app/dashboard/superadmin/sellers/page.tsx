@@ -204,13 +204,36 @@ export default function SuperadminSellersPage() {
         }
     };
 
-    // Derived categorization
+    // Derived categorization (supports multiple comma-separated categories per seller)
     const groupedSellers = categories.reduce((acc, cat) => {
-        acc[cat.name] = sellers.filter(s => s.type === cat.name);
+        acc[cat.name] = sellers.filter(s => {
+            if (!s.type) return false;
+            const sellerTypes = s.type.split(',').map((t: string) => t.trim().toLowerCase());
+            return sellerTypes.includes(cat.name.toLowerCase());
+        });
         return acc;
     }, {} as Record<string, any[]>);
 
-    const uncategorizedSellers = sellers.filter(s => !categories.find(c => c.name === s.type));
+    const uncategorizedSellers = sellers.filter(s => {
+        if (!s.type || s.type === 'N/A') return true;
+        const sellerTypes = s.type.split(',').map((t: string) => t.trim().toLowerCase()).filter(Boolean);
+        return sellerTypes.length === 0 || !categories.some(c => sellerTypes.includes(c.name.toLowerCase()));
+    });
+
+    const selectedTypes = editType
+        ? editType.split(',').map((s: string) => s.trim()).filter(Boolean)
+        : [];
+
+    const handleToggleCategoryType = (categoryName: string) => {
+        const exists = selectedTypes.some((t: string) => t.toLowerCase() === categoryName.toLowerCase());
+        let newSelected: string[];
+        if (exists) {
+            newSelected = selectedTypes.filter((t: string) => t.toLowerCase() !== categoryName.toLowerCase());
+        } else {
+            newSelected = [...selectedTypes, categoryName];
+        }
+        setEditType(newSelected.join(', '));
+    };
 
     return (
         <div style={{ minHeight: '100vh', backgroundColor: '#F0F2F5', padding: '40px', fontFamily: "var(--font-sans)" }}>
@@ -281,6 +304,19 @@ export default function SuperadminSellersPage() {
                                         <td style={{ padding: '15px 20px' }}>
                                             <div style={{ fontWeight: 'bold', color: '#334155', marginBottom: '3px' }}>{seller.businessName}</div>
                                             <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{seller.trackingId}</div>
+                                            {seller.type && (
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                                                    {seller.type.split(',').map((t: string, idx: number) => {
+                                                        const trimmed = t.trim();
+                                                        if (!trimmed) return null;
+                                                        return (
+                                                            <span key={idx} style={{ fontSize: '0.72rem', backgroundColor: '#e2e8f0', color: '#334155', padding: '1px 6px', borderRadius: '4px', fontWeight: '500' }}>
+                                                                {formatDisplayName(trimmed)}
+                                                            </span>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
                                         </td>
                                         <td style={{ padding: '15px 20px' }}>
                                             <div style={{ color: '#475569', fontSize: '0.9rem', marginBottom: '3px' }}>{seller.name}</div>
@@ -321,8 +357,22 @@ export default function SuperadminSellersPage() {
                             <tr key={`seller-${seller.id}`} style={{ transition: 'background-color 0.2s', borderBottom: '1px solid #f1f5f9' }}>
                                 <td style={{ padding: '15px 20px' }}>
                                     <div style={{ fontWeight: 'bold', color: '#334155', marginBottom: '3px' }}>{seller.businessName}</div>
-                                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Type: {seller.type || 'N/A'}</div>
                                     <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{seller.trackingId}</div>
+                                    {seller.type && seller.type !== 'N/A' ? (
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                                            {seller.type.split(',').map((t: string, idx: number) => {
+                                                const trimmed = t.trim();
+                                                if (!trimmed) return null;
+                                                return (
+                                                    <span key={idx} style={{ fontSize: '0.72rem', backgroundColor: '#fef3c7', color: '#b45309', padding: '1px 6px', borderRadius: '4px', fontWeight: '500' }}>
+                                                        {formatDisplayName(trimmed)}
+                                                    </span>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : (
+                                        <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Type: N/A</div>
+                                    )}
                                 </td>
                                 <td style={{ padding: '15px 20px' }}>
                                     <div style={{ color: '#475569', fontSize: '0.9rem', marginBottom: '3px' }}>{seller.name}</div>
@@ -366,44 +416,26 @@ export default function SuperadminSellersPage() {
             {/* Edit Modal */}
             {editingSeller && (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, backdropFilter: 'blur(4px)' }}>
-                    <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', width: '100%', maxWidth: '500px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', maxHeight: '90vh', overflowY: 'auto' }}>
+                    <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', width: '100%', maxWidth: '560px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', maxHeight: '90vh', overflowY: 'auto' }}>
                         <h2 style={{ fontSize: '1.4rem', fontWeight: 'bold', marginBottom: '5px', color: 'var(--text-main)' }}>Edit Seller Profile</h2>
                         <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '25px' }}>Modifying details for {editBusinessName || editName}</p>
 
                         <form onSubmit={handleUpdateSeller}>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                                <div className="input-group">
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '15px', marginBottom: '15px' }}>
+                                <div className="input-group" style={{ marginBottom: 0 }}>
                                     <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Business Name</label>
                                     <input type="text" value={editBusinessName} onChange={e => setEditBusinessName(e.target.value)} className="input-field" required />
                                 </div>
-
-                                <div className="input-group">
-                                    <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Category Type</label>
-                                    <select
-                                        value={editType}
-                                        onChange={e => setEditType(e.target.value)}
-                                        className="input-field" style={{ appearance: 'auto' }} required
-                                    >
-                                        <option value="">Select Category...</option>
-                                        {categories.map(cat => (
-                                            <option key={cat.id} value={cat.name}>{formatDisplayName(cat.name)}</option>
-                                        ))}
-                                        {/* Fallback for sellers with types that don't match any global category exactly */}
-                                        {editType && !categories.some(c => c.name === editType) && (
-                                            <option value={editType}>{formatDisplayName(editType)} (Legacy)</option>
-                                        )}
-                                    </select>
-                                </div>
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                                <div className="input-group">
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
+                                <div className="input-group" style={{ marginBottom: 0 }}>
                                     <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Owner Name</label>
                                     <input type="text" value={editName} onChange={e => setEditName(e.target.value)} className="input-field" required />
                                 </div>
 
-                                <div className="input-group">
+                                <div className="input-group" style={{ marginBottom: 0 }}>
                                     <PhoneInput
                                         label="Phone"
                                         value={editPhone}
@@ -412,6 +444,113 @@ export default function SuperadminSellersPage() {
                                         required
                                     />
                                 </div>
+                            </div>
+
+                            {/* Category Type Multi-Select Checklist */}
+                            <div className="input-group" style={{ marginBottom: '20px' }}>
+                                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '6px', color: '#475569', fontWeight: '600' }}>
+                                    Category Types <span style={{ fontSize: '0.8rem', fontWeight: 'normal', color: '#64748B' }}>(Select multiple applicable categories)</span>
+                                </label>
+                                
+                                <div style={{
+                                    maxHeight: '160px',
+                                    overflowY: 'auto',
+                                    border: '1px solid #CBD5E1',
+                                    borderRadius: '8px',
+                                    padding: '10px 12px',
+                                    backgroundColor: '#F8FAFC',
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                                    gap: '8px'
+                                }}>
+                                    {categories.map((cat) => {
+                                        const isChecked = selectedTypes.some(t => t.toLowerCase() === cat.name.toLowerCase());
+                                        return (
+                                            <label
+                                                key={cat.id}
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '8px',
+                                                    padding: '6px 10px',
+                                                    borderRadius: '6px',
+                                                    backgroundColor: isChecked ? '#EFF6FF' : '#FFFFFF',
+                                                    border: isChecked ? '1px solid #3B82F6' : '1px solid #E2E8F0',
+                                                    cursor: 'pointer',
+                                                    fontSize: '0.85rem',
+                                                    fontWeight: isChecked ? '600' : '400',
+                                                    color: isChecked ? '#1D4ED8' : '#334155',
+                                                    transition: 'all 0.15s ease'
+                                                }}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isChecked}
+                                                    onChange={() => handleToggleCategoryType(cat.name)}
+                                                    style={{ accentColor: '#2563EB', cursor: 'pointer' }}
+                                                />
+                                                <span>{formatDisplayName(cat.name)}</span>
+                                                <span style={{ fontSize: '0.7rem', color: '#94A3B8' }}>({cat.type})</span>
+                                            </label>
+                                        );
+                                    })}
+
+                                    {/* Legacy / Unmatched Selected Types */}
+                                    {selectedTypes
+                                        .filter(t => !categories.some(c => c.name.toLowerCase() === t.toLowerCase()))
+                                        .map((legacyType) => (
+                                            <label
+                                                key={legacyType}
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '8px',
+                                                    padding: '6px 10px',
+                                                    borderRadius: '6px',
+                                                    backgroundColor: '#FEF3C7',
+                                                    border: '1px solid #F59E0B',
+                                                    cursor: 'pointer',
+                                                    fontSize: '0.85rem',
+                                                    fontWeight: '600',
+                                                    color: '#B45309'
+                                                }}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={true}
+                                                    onChange={() => handleToggleCategoryType(legacyType)}
+                                                    style={{ accentColor: '#D97706', cursor: 'pointer' }}
+                                                />
+                                                <span>{formatDisplayName(legacyType)}</span>
+                                                <span style={{ fontSize: '0.7rem', color: '#92400E' }}>(Legacy)</span>
+                                            </label>
+                                        ))}
+                                </div>
+
+                                {selectedTypes.length > 0 ? (
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px', alignItems: 'center' }}>
+                                        <span style={{ fontSize: '0.75rem', color: '#64748B' }}>Selected:</span>
+                                        {selectedTypes.map((st) => (
+                                            <span
+                                                key={st}
+                                                style={{
+                                                    fontSize: '0.75rem',
+                                                    backgroundColor: '#E0F2FE',
+                                                    color: '#0369A1',
+                                                    padding: '2px 8px',
+                                                    borderRadius: '12px',
+                                                    fontWeight: '600'
+                                                }}
+                                            >
+                                                {formatDisplayName(st)}
+                                            </span>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p style={{ fontSize: '0.75rem', color: '#EF4444', margin: '6px 0 0 0' }}>
+                                        Please select at least one category for this seller.
+                                    </p>
+                                )}
                             </div>
 
                             <div style={{ backgroundColor: '#f8fafc', padding: '15px', borderRadius: '8px', marginBottom: '20px', border: '1px solid #e2e8f0' }}>
