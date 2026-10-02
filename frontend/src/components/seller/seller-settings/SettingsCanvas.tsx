@@ -37,6 +37,7 @@ import { fetchApi } from "@/lib/fetch-api";
 import { validateEmail } from "@/lib/email-validation";
 import { validateKitchenName } from "@/lib/kitchen-validation";
 import { convertBusinessDataToCSV } from "@/lib/export-business-data-csv";
+import { compressImage } from "@/lib/image-compression";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import SellerMapPicker from "@/components/seller/seller-registration/business-information/SellerMapPicker";
 import styles from "./SettingsCanvas.module.css";
@@ -348,25 +349,35 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
     }
   }, [seller.cardImageUrl, cardFile]);
 
-  const handleCardFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCardFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      setToastData({ title: "Image size must be less than 5MB", status: "OFF" });
+    if (file.size > 10 * 1024 * 1024) {
+      setToastData({ title: "Image size must be less than 10MB", status: "OFF" });
       return;
     }
-    setCardFile(file);
     const localUrl = URL.createObjectURL(file);
     setCardPreview(localUrl);
+    setCardFile(file);
     setToastData({ title: "Card photo selected. Click Save to publish.", status: "ON" });
+    
+    // Fast pre-compression in background
+    try {
+      const compressed = await compressImage(file, { maxDimension: 1200, quality: 0.82 });
+      setCardFile(compressed);
+    } catch {
+      // Keep original file if compression fails
+    }
   };
 
   const handleQuickUploadCard = async () => {
     if (!cardFile) return;
     setIsUploadingCard(true);
     try {
+      // Ensure file is compressed before upload
+      const fileToUpload = await compressImage(cardFile, { maxDimension: 1200, quality: 0.82 });
       const data = new FormData();
-      data.append("cardImageFile", cardFile);
+      data.append("cardImageFile", fileToUpload);
       data.append("businessName", formData.businessName || seller.businessName);
       data.append("phone", formData.phoneNumber || seller.phone);
       data.append("email", formData.businessEmail || seller.email);
@@ -443,25 +454,34 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
     }
   }, [seller.bannerImageUrl, bannerFile]);
 
-  const handleBannerFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBannerFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      setToastData({ title: "Image size must be less than 5MB", status: "OFF" });
+    if (file.size > 10 * 1024 * 1024) {
+      setToastData({ title: "Image size must be less than 10MB", status: "OFF" });
       return;
     }
-    setBannerFile(file);
     const localUrl = URL.createObjectURL(file);
     setBannerPreview(localUrl);
+    setBannerFile(file);
     setToastData({ title: "Banner selected. Click Save Changes to publish.", status: "ON" });
+
+    // Fast pre-compression in background
+    try {
+      const compressed = await compressImage(file, { maxDimension: 1600, quality: 0.82 });
+      setBannerFile(compressed);
+    } catch {
+      // Keep original file if compression fails
+    }
   };
 
   const handleQuickUploadBanner = async () => {
     if (!bannerFile) return;
     setIsUploadingBanner(true);
     try {
+      const fileToUpload = await compressImage(bannerFile, { maxDimension: 1600, quality: 0.82 });
       const data = new FormData();
-      data.append("bannerImageFile", bannerFile);
+      data.append("bannerImageFile", fileToUpload);
       data.append("businessName", formData.businessName || seller.businessName);
       data.append("phone", formData.phoneNumber || seller.phone);
       data.append("email", formData.businessEmail || seller.email);

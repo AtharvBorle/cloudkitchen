@@ -45,7 +45,10 @@ async function uploadToCloudinary(fileBuffer: Buffer, folder: string): Promise<s
         const uploadStream = cloudinary.uploader.upload_stream(
             {
                 folder: `neo-cloud-room/${folder}`,
-                resource_type: 'auto',
+                resource_type: 'image',
+                quality: 'auto:good',
+                fetch_format: 'auto',
+                timeout: 8000,
             },
             (error, result) => {
                 if (error) {

@@ -203,6 +203,7 @@ const INITIAL_SETTINGS: ResponsiveSellerSettingsData = {
 import { useSellerProfile, toggleSellerOnlineStatus, updateCachedProfile, computeInitials } from "@/hooks/useSellerProfile";
 import { useSellerNotifications } from "@/hooks/useSellerNotifications";
 import { fetchApi } from "@/lib/fetch-api";
+import { compressImage } from "@/lib/image-compression";
 
 export interface ResponsiveSellerSettingsProps {
   ownerName?: string;
@@ -374,25 +375,33 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
     }
   }, [seller.cardImageUrl, cardFile]);
 
-  const handleCardFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCardFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      setToastData({ title: "Image size must be less than 5MB", status: "OFF" });
+    if (file.size > 10 * 1024 * 1024) {
+      setToastData({ title: "Image size must be less than 10MB", status: "OFF" });
       return;
     }
-    setCardFile(file);
     const localUrl = URL.createObjectURL(file);
     setCardPreview(localUrl);
+    setCardFile(file);
     setToastData({ title: "Card photo selected. Tap Save to apply.", status: "ON" });
+
+    try {
+      const compressed = await compressImage(file, { maxDimension: 1200, quality: 0.82 });
+      setCardFile(compressed);
+    } catch {
+      // Fallback to original file
+    }
   };
 
   const handleQuickUploadCard = async () => {
     if (!cardFile) return;
     setIsUploadingCard(true);
     try {
+      const fileToUpload = await compressImage(cardFile, { maxDimension: 1200, quality: 0.82 });
       const data = new FormData();
-      data.append("cardImageFile", cardFile);
+      data.append("cardImageFile", fileToUpload);
       data.append("businessName", formData.businessName || seller.businessName);
       data.append("phone", formData.phoneNumber || seller.phone);
       data.append("email", formData.businessEmail || seller.email);
@@ -469,25 +478,33 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
     }
   }, [seller.bannerImageUrl, bannerFile]);
 
-  const handleBannerFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBannerFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      setToastData({ title: "Image size must be less than 5MB", status: "OFF" });
+    if (file.size > 10 * 1024 * 1024) {
+      setToastData({ title: "Image size must be less than 10MB", status: "OFF" });
       return;
     }
-    setBannerFile(file);
     const localUrl = URL.createObjectURL(file);
     setBannerPreview(localUrl);
+    setBannerFile(file);
     setToastData({ title: "Banner selected. Tap Save to apply.", status: "ON" });
+
+    try {
+      const compressed = await compressImage(file, { maxDimension: 1600, quality: 0.82 });
+      setBannerFile(compressed);
+    } catch {
+      // Fallback to original file
+    }
   };
 
   const handleQuickUploadBanner = async () => {
     if (!bannerFile) return;
     setIsUploadingBanner(true);
     try {
+      const fileToUpload = await compressImage(bannerFile, { maxDimension: 1600, quality: 0.82 });
       const data = new FormData();
-      data.append("bannerImageFile", bannerFile);
+      data.append("bannerImageFile", fileToUpload);
       data.append("businessName", formData.businessName || seller.businessName);
       data.append("phone", formData.phoneNumber || seller.phone);
       data.append("email", formData.businessEmail || seller.email);
