@@ -827,8 +827,10 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
       return true;
     });
 
-    // Sort by distance closest first
-    if (options?.sortBy === "fastest" || hasUserCoords) {
+    // Sort kitchens
+    if (options?.sortBy === "rating") {
+      list = [...list].sort((a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0));
+    } else if (options?.sortBy === "fastest" || hasUserCoords) {
       list = [...list].sort((a, b) => (a.distanceKm ?? 999) - (b.distanceKm ?? 999));
     }
 

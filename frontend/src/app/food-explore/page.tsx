@@ -188,14 +188,58 @@ function FoodExploreContent() {
     }
 
     // Sort
+    const getDishDeliveryMinutes = (f: DynamicFoodItem): number => {
+      if (f.distanceKm != null && !isNaN(f.distanceKm)) {
+        return f.distanceKm * 6 + 10;
+      }
+      if (f.deliveryTime) {
+        const m = f.deliveryTime.match(/\d+/);
+        if (m) return parseInt(m[0], 10);
+      }
+      return 40;
+    };
+
     if (sortBy === "rating") {
-      list = [...list].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+      list = [...list].sort((a, b) => {
+        const rA = Number(a.rating) || 0;
+        const rB = Number(b.rating) || 0;
+        if (rB !== rA) return rB - rA;
+        return (a.distanceKm ?? 999) - (b.distanceKm ?? 999);
+      });
     } else if (sortBy === "price_asc") {
-      list = [...list].sort((a, b) => a.price - b.price);
+      list = [...list].sort((a, b) => {
+        const pA = Number(a.price) || 0;
+        const pB = Number(b.price) || 0;
+        if (pA !== pB) return pA - pB;
+        return (Number(b.rating) || 0) - (Number(a.rating) || 0);
+      });
     } else if (sortBy === "price_desc") {
-      list = [...list].sort((a, b) => b.price - a.price);
+      list = [...list].sort((a, b) => {
+        const pA = Number(a.price) || 0;
+        const pB = Number(b.price) || 0;
+        if (pB !== pA) return pB - pA;
+        return (Number(b.rating) || 0) - (Number(a.rating) || 0);
+      });
     } else if (sortBy === "fastest") {
-      list = [...list].sort((a, b) => (a.distanceKm ?? 999) - (b.distanceKm ?? 999));
+      list = [...list].sort((a, b) => {
+        if ((a.sellerIsOnline === false) !== (b.sellerIsOnline === false)) {
+          return a.sellerIsOnline === false ? 1 : -1;
+        }
+        const timeA = getDishDeliveryMinutes(a);
+        const timeB = getDishDeliveryMinutes(b);
+        if (timeA !== timeB) return timeA - timeB;
+        return (a.distanceKm ?? 999) - (b.distanceKm ?? 999);
+      });
+    } else if (sortBy === "popular") {
+      list = [...list].sort((a, b) => {
+        if ((a.sellerIsOnline === false) !== (b.sellerIsOnline === false)) {
+          return a.sellerIsOnline === false ? 1 : -1;
+        }
+        const rA = Number(a.rating) || 0;
+        const rB = Number(b.rating) || 0;
+        if (rB !== rA) return rB - rA;
+        return (a.distanceKm ?? 999) - (b.distanceKm ?? 999);
+      });
     }
 
     return list;
@@ -286,10 +330,96 @@ function FoodExploreContent() {
       });
     }
 
+    const getKitchenMinPrice = (k: DynamicKitchen): number => {
+      const kId = (k.id || "").toLowerCase().trim();
+      const kTracking = (k.trackingId || "").toLowerCase().trim();
+      const kName = (k.name || "").toLowerCase().trim();
+
+      const kDishes = sourceFoodItems.filter((f) => {
+        const fSellerId = (f.sellerId || "").toLowerCase().trim();
+        const fTracking = (f.sellerTrackingId || "").toLowerCase().trim();
+        const fSellerName = (f.sellerName || "").toLowerCase().trim();
+        return (
+          (kId && fSellerId && (fSellerId === kId || fTracking === kId)) ||
+          (kTracking && (fTracking === kTracking || fSellerId === kTracking)) ||
+          (kName && fSellerName && (kName === fSellerName || kName.includes(fSellerName) || fSellerName.includes(kName)))
+        );
+      });
+      const prices = kDishes.map((d) => Number(d.price) || 0).filter((p) => p > 0);
+      return prices.length > 0 ? Math.min(...prices) : 999999;
+    };
+
+    const getKitchenMaxPrice = (k: DynamicKitchen): number => {
+      const kId = (k.id || "").toLowerCase().trim();
+      const kTracking = (k.trackingId || "").toLowerCase().trim();
+      const kName = (k.name || "").toLowerCase().trim();
+
+      const kDishes = sourceFoodItems.filter((f) => {
+        const fSellerId = (f.sellerId || "").toLowerCase().trim();
+        const fTracking = (f.sellerTrackingId || "").toLowerCase().trim();
+        const fSellerName = (f.sellerName || "").toLowerCase().trim();
+        return (
+          (kId && fSellerId && (fSellerId === kId || fTracking === kId)) ||
+          (kTracking && (fTracking === kTracking || fSellerId === kTracking)) ||
+          (kName && fSellerName && (kName === fSellerName || kName.includes(fSellerName) || fSellerName.includes(kName)))
+        );
+      });
+      const prices = kDishes.map((d) => Number(d.price) || 0).filter((p) => p > 0);
+      return prices.length > 0 ? Math.max(...prices) : 0;
+    };
+
+    const getKitchenDeliveryMinutes = (k: DynamicKitchen): number => {
+      if (k.distanceKm != null && !isNaN(k.distanceKm)) {
+        return k.distanceKm * 6 + 10;
+      }
+      if (k.time) {
+        const m = k.time.match(/\d+/);
+        if (m) return parseInt(m[0], 10);
+      }
+      return 40;
+    };
+
     if (sortBy === "rating") {
-      list = [...list].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+      list = [...list].sort((a, b) => {
+        const rA = Number(a.rating) || 0;
+        const rB = Number(b.rating) || 0;
+        if (rB !== rA) return rB - rA;
+        return (Number(b.reviewsCount) || 0) - (Number(a.reviewsCount) || 0);
+      });
+    } else if (sortBy === "price_asc") {
+      list = [...list].sort((a, b) => {
+        const pA = getKitchenMinPrice(a);
+        const pB = getKitchenMinPrice(b);
+        if (pA !== pB) return pA - pB;
+        return (Number(b.rating) || 0) - (Number(a.rating) || 0);
+      });
+    } else if (sortBy === "price_desc") {
+      list = [...list].sort((a, b) => {
+        const pA = getKitchenMaxPrice(a);
+        const pB = getKitchenMaxPrice(b);
+        if (pB !== pA) return pB - pA;
+        return (Number(b.rating) || 0) - (Number(a.rating) || 0);
+      });
     } else if (sortBy === "fastest") {
-      list = [...list].sort((a, b) => (a.distanceKm ?? 999) - (b.distanceKm ?? 999));
+      list = [...list].sort((a, b) => {
+        if ((a.isOnline === false) !== (b.isOnline === false)) {
+          return a.isOnline === false ? 1 : -1;
+        }
+        const timeA = getKitchenDeliveryMinutes(a);
+        const timeB = getKitchenDeliveryMinutes(b);
+        if (timeA !== timeB) return timeA - timeB;
+        return (a.distanceKm ?? 999) - (b.distanceKm ?? 999);
+      });
+    } else if (sortBy === "popular") {
+      list = [...list].sort((a, b) => {
+        if ((a.isOnline === false) !== (b.isOnline === false)) {
+          return a.isOnline === false ? 1 : -1;
+        }
+        const rA = Number(a.rating) || 0;
+        const rB = Number(b.rating) || 0;
+        if (rB !== rA) return rB - rA;
+        return (Number(b.reviewsCount) || 0) - (Number(a.reviewsCount) || 0);
+      });
     }
 
     return list;
@@ -298,12 +428,14 @@ function FoodExploreContent() {
     homeData.allKitchens,
     homeData.foodItems,
     homeData.allFoodItems,
+    homeData.coupons,
     searchQuery,
     selectedCategory,
     selectedDiet,
     selectedCuisines,
     selectedPrice,
     openOnly,
+    offersOnly,
     sortBy,
   ]);
 
