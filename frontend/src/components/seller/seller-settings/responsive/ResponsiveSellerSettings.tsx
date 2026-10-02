@@ -680,6 +680,20 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
       }
     }
 
+    // Validate operating hours: Start Time and End Time cannot be the same
+    const invalidOperatingDay = formData.operatingHours.find(
+      (row) => row.isOpen && row.timeRange && (
+        row.timeRange.split("-")[0]?.trim() === row.timeRange.split("-")[1]?.trim()
+      )
+    );
+    if (invalidOperatingDay) {
+      setToastData({
+        title: `Start Time and End Time cannot be the same for ${invalidOperatingDay.day}.`,
+        status: "OFF",
+      });
+      return;
+    }
+
     setSaving(true);
 
     try {

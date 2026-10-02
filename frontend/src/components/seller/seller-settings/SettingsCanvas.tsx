@@ -616,9 +616,20 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
     field: "openTime" | "closeTime",
     value: string
   ) => {
+    const targetDay = formData.operatingHours[index];
+    const otherField = field === "openTime" ? "closeTime" : "openTime";
+    const otherValue = targetDay[otherField];
+
+    if (value === otherValue) {
+      setToastData({
+        title: "Start Time and End Time cannot be the same.",
+        status: "OFF",
+      });
+      return;
+    }
+
     setFormData((prev) => {
       const updatedHours = [...prev.operatingHours];
-      const targetDay = updatedHours[index];
       updatedHours[index] = {
         ...targetDay,
         [field]: value,
@@ -674,6 +685,18 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
         });
         return;
       }
+    }
+
+    // Validate operating hours: Start Time and End Time cannot be the same
+    const invalidOperatingDay = formData.operatingHours.find(
+      (row) => row.isOpen && row.openTime && row.closeTime && row.openTime === row.closeTime
+    );
+    if (invalidOperatingDay) {
+      setToastData({
+        title: `Start Time and End Time cannot be the same for ${invalidOperatingDay.day}.`,
+        status: "OFF",
+      });
+      return;
     }
 
     setSaving(true);
@@ -1752,8 +1775,8 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                           style={{ opacity: row.isOpen ? 1 : 0.5 }}
                         >
                           {TIME_OPTIONS.map((t) => (
-                            <option key={t} value={t}>
-                              {t}
+                            <option key={t} value={t} disabled={t === row.closeTime}>
+                              {t} {t === row.closeTime ? "(Same as Close Time)" : ""}
                             </option>
                           ))}
                         </select>
@@ -1770,8 +1793,8 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                           style={{ opacity: row.isOpen ? 1 : 0.5 }}
                         >
                           {TIME_OPTIONS.map((t) => (
-                            <option key={t} value={t}>
-                              {t}
+                            <option key={t} value={t} disabled={t === row.openTime}>
+                              {t} {t === row.openTime ? "(Same as Open Time)" : ""}
                             </option>
                           ))}
                         </select>
