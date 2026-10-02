@@ -55,11 +55,20 @@ export default function CreateOfferCanvasDas({
   const expiryDateRef = useRef<HTMLInputElement>(null);
   const todayStr = new Date().toISOString().split("T")[0];
 
-  const isFormValid = couponCode.trim().length > 0 && discountValue.trim().length > 0;
+  const isFormValid = couponCode.trim().length > 0 && couponCode.trim().length <= 20 && discountValue.trim().length > 0;
 
   const handlePublish = async (isDraft: boolean = false) => {
-    if (!couponCode.trim()) {
+    const cleanCode = couponCode.trim().toUpperCase();
+    if (!cleanCode) {
       alert("Please enter a valid coupon code.");
+      return;
+    }
+    if (cleanCode.length > 20) {
+      alert("Coupon code cannot exceed 20 characters.");
+      return;
+    }
+    if (!/^[A-Z0-9_-]+$/.test(cleanCode)) {
+      alert("Coupon code can only contain uppercase letters, numbers, hyphens, and underscores.");
       return;
     }
 
@@ -266,16 +275,17 @@ export default function CreateOfferCanvasDas({
                     </label>
                     <input
                       type="text"
+                      maxLength={20}
                       className={`${styles.inputField} ${styles.uppercaseInput}`}
                       value={couponCode}
                       onChange={(e) =>
-                        setCouponCode(e.target.value.toUpperCase().replace(/\s+/g, ""))
+                        setCouponCode(e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ""))
                       }
                       placeholder="e.g. SUMMER20"
                     />
                     <div className={styles.helpText}>
                       <Info size={12} color="#94A3B8" />
-                      <span>Uppercase letters & numbers only. Customers enter this at checkout.</span>
+                      <span>Max 20 characters. Uppercase letters, numbers, hyphens & underscores.</span>
                     </div>
                   </div>
 

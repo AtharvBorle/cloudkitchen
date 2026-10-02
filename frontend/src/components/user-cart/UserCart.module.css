@@ -1451,6 +1451,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  max-width: min(90vw, 480px);
+  word-break: break-word;
   z-index: 1100;
   animation: slideUp 0.2s ease-out;
 }

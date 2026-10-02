@@ -48,6 +48,7 @@ const TABS: TabItem[] = [
 
 import { useSellerProfile } from "@/hooks/useSellerProfile";
 import { useSellerNotifications } from "@/hooks/useSellerNotifications";
+import { formatNotificationTime } from "../notificationData";
 
 export interface ResponsiveSellerNotificationsProps {
   ownerName?: string;
@@ -331,7 +332,12 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
                       >
                         {notif.severity}
                       </span>
-                      <span className={styles.timeAgo}>{notif.timeAgo}</span>
+                      <span
+                        className={styles.timeAgo}
+                        title={notif.timestamp ? new Date(notif.timestamp).toLocaleString("en-IN") : undefined}
+                      >
+                        {formatNotificationTime(notif.timestamp, notif.timeAgo)}
+                      </span>
                     </div>
 
                     <div className={styles.cardHeaderRow}>

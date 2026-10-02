@@ -25,6 +25,76 @@ export interface SellerNotificationItem {
   actionHref?: string;
 }
 
+export function formatNotificationTime(
+  timestamp?: string | number | Date | null,
+  fallback: string = "Just now"
+): string {
+  if (!timestamp) return fallback;
+
+  const date = typeof timestamp === "string" || typeof timestamp === "number" ? new Date(timestamp) : timestamp;
+  if (isNaN(date.getTime())) return fallback;
+
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+
+  // Future timestamp or less than 45 seconds ago
+  if (diffSec < 45) {
+    return "Just now";
+  }
+
+  // Under 1 hour (1 to 59 mins ago)
+  if (diffSec < 3600) {
+    const mins = Math.floor(diffSec / 60);
+    return `${mins} ${mins === 1 ? "min" : "mins"} ago`;
+  }
+
+  const timeStr = date.toLocaleTimeString("en-IN", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+
+  // Same day
+  const isToday =
+    date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear();
+
+  if (isToday) {
+    const hours = Math.floor(diffSec / 3600);
+    return `${hours} ${hours === 1 ? "hour" : "hours"} ago • ${timeStr}`;
+  }
+
+  // Yesterday
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const isYesterday =
+    date.getDate() === yesterday.getDate() &&
+    date.getMonth() === yesterday.getMonth() &&
+    date.getFullYear() === yesterday.getFullYear();
+
+  if (isYesterday) {
+    return `Yesterday • ${timeStr}`;
+  }
+
+  // Within 7 days
+  if (diffSec < 86400 * 7) {
+    const days = Math.floor(diffSec / 86400);
+    return `${days} ${days === 1 ? "day" : "days"} ago • ${timeStr}`;
+  }
+
+  // Older than 7 days
+  return date.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
 export const INITIAL_SELLER_NOTIFICATIONS: SellerNotificationItem[] = [];
 
 export const SAMPLE_PRESET_NOTIFICATIONS: SellerNotificationItem[] = [];

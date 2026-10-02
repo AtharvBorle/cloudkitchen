@@ -38,32 +38,33 @@ export default function SellerOffersClient({ sellerId, products }: SellerOffersC
     const handleDelete = async (id: string) => {
         if (!confirm("Are you sure you want to delete this offer/coupon?")) return;
         try {
-            const res = await fetchApi(`/api/seller/coupons?id=${id}`, { method: "DELETE" });
+            const res = await fetchApi(`/api/seller/dashboard/offers?id=${id}`, { method: "DELETE" });
             if (res.ok) {
                 setOffers(prev => prev.filter(o => o.id !== id));
             } else {
-                const err = await res.json();
+                const err = await res.json().catch(() => ({}));
                 alert(err.message || "Failed to delete coupon");
             }
-        } catch (e) {
-            alert("Error deleting coupon");
+        } catch (e: any) {
+            alert(e.message || "Error deleting coupon");
         }
     };
 
     const handleToggleStatus = async (id: string, currentStatus: boolean) => {
         try {
-            const res = await fetchApi(`/api/seller/coupons?id=${id}`, {
-                method: "PATCH",
+            const res = await fetchApi(`/api/seller/dashboard/offers/${id}`, {
+                method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ isActive: !currentStatus })
             });
             if (res.ok) {
                 setOffers(prev => prev.map(o => o.id === id ? { ...o, isActive: !currentStatus } : o));
             } else {
-                alert("Failed to update status");
+                const err = await res.json().catch(() => ({}));
+                alert(err.message || "Failed to update status");
             }
-        } catch (e) {
-            alert("Error updating status");
+        } catch (e: any) {
+            alert(e.message || "Error updating status");
         }
     };
 
@@ -297,7 +298,23 @@ export default function SellerOffersClient({ sellerId, products }: SellerOffersC
                                         <tr key={offer.id} style={{ borderBottom: "1px solid #F1F5F9" }}>
                                             <td style={{ padding: "14px 16px", fontWeight: 700, color: "#0F172A" }}>
                                                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                                    <span style={{ backgroundColor: "#FFF1E8", color: "#FF5500", padding: "3px 8px", borderRadius: "6px", fontSize: "12px", letterSpacing: "0.5px" }}>
+                                                    <span 
+                                                        title={offer.code}
+                                                        style={{ 
+                                                            backgroundColor: "#FFF1E8", 
+                                                            color: "#FF5500", 
+                                                            padding: "3px 8px", 
+                                                            borderRadius: "6px", 
+                                                            fontSize: "12px", 
+                                                            letterSpacing: "0.5px",
+                                                            display: "inline-block",
+                                                            maxWidth: "180px",
+                                                            overflow: "hidden",
+                                                            textOverflow: "ellipsis",
+                                                            whiteSpace: "nowrap",
+                                                            verticalAlign: "middle"
+                                                        }}
+                                                    >
                                                         {offer.code}
                                                     </span>
                                                 </div>

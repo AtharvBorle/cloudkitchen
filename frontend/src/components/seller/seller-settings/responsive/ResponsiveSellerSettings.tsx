@@ -32,6 +32,7 @@ import {
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import { validateEmail } from "@/lib/email-validation";
 import { validateKitchenName } from "@/lib/kitchen-validation";
+import { convertBusinessDataToCSV } from "@/lib/export-business-data-csv";
 import SellerMapPicker from "@/components/seller/seller-registration/business-information/SellerMapPicker";
 import styles from "./ResponsiveSellerSettings.module.css";
 
@@ -739,6 +740,48 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
         window.location.href = "/seller/login";
       }, 1500);
     }, 1200);
+  };
+
+  const [isExportingData, setIsExportingData] = useState<boolean>(false);
+
+  const handleExportBusinessData = async () => {
+    if (isExportingData) return;
+    setIsExportingData(true);
+    setToastData({ title: "Exporting Business Data...", status: "ON" });
+    try {
+      const res = await fetchApi("/api/seller/export-data", {
+        method: "GET",
+      });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.message || "Failed to export business data");
+      }
+      const json = await res.json();
+      const payload = json.data || json;
+
+      const csvContent = convertBusinessDataToCSV(payload);
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const downloadAnchor = document.createElement("a");
+      const safeName = (formData.businessName || seller.businessName || "business-data")
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "-")
+        .replace(/-+/g, "-");
+      const dateStr = new Date().toISOString().split("T")[0];
+      downloadAnchor.setAttribute("href", url);
+      downloadAnchor.setAttribute("download", `${safeName}-business-data-${dateStr}.csv`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      URL.revokeObjectURL(url);
+
+      setToastData({ title: "Business data exported and downloaded as CSV (Excel) successfully!", status: "ON" });
+    } catch (err: any) {
+      console.error("Export data error:", err);
+      setToastData({ title: err.message || "Failed to export business data", status: "OFF" });
+    } finally {
+      setIsExportingData(false);
+    }
   };
 
   return (
@@ -1956,15 +1999,15 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                         color: "#334155",
                         fontSize: "13px",
                         fontWeight: 600,
-                        cursor: "pointer",
+                        cursor: isExportingData ? "not-allowed" : "pointer",
+                        opacity: isExportingData ? 0.7 : 1,
                         fontFamily: "inherit",
                         width: "100%",
                       }}
-                      onClick={() => {
-                        showNotificationToast("Exporting Business Data...", true);
-                      }}
+                      disabled={isExportingData}
+                      onClick={handleExportBusinessData}
                     >
-                      Export My Business Data
+                      {isExportingData ? "Exporting Business Data..." : "Export My Business Data"}
                     </button>
                     <button
                       type="button"

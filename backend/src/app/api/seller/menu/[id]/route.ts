@@ -4,11 +4,10 @@ import { ApiError } from "@/lib/api-error";
 
 export async function PATCH(
     req: Request,
-    { params }: { params: Promise<{ id: string }> | { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const resolvedParams = await Promise.resolve(params);
-        const { id } = resolvedParams;
+        const { id } = await params;
         const data = await updateMenuItem(req, id);
         return successResponse(data, "Menu item updated successfully", 200);
     } catch (error: any) {
@@ -20,11 +19,10 @@ export async function PATCH(
 
 export async function DELETE(
     req: Request,
-    { params }: { params: Promise<{ id: string }> | { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const resolvedParams = await Promise.resolve(params);
-        const { id } = resolvedParams;
+        const { id } = await params;
         const data = await deleteMenuItem(id);
         return successResponse(data, "Menu item deleted successfully", 200);
     } catch (error: any) {

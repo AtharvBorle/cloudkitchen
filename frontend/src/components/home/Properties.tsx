@@ -125,8 +125,14 @@ function isKitchenMatchingPrice(
 
   if (pricePreset === "under-150") {
     return prices.some((p) => p <= 150);
+  } else if (pricePreset === "under-300") {
+    return prices.some((p) => p <= 300);
+  } else if (pricePreset === "150-300") {
+    return prices.some((p) => p >= 150 && p <= 300);
   } else if (pricePreset === "150-400") {
     return prices.some((p) => p >= 150 && p <= 400);
+  } else if (pricePreset === "300-plus") {
+    return prices.some((p) => p >= 300);
   } else if (pricePreset === "400-plus") {
     return prices.some((p) => p >= 400);
   } else if (maxPrice < 2500) {
@@ -564,8 +570,8 @@ export default function Properties({ places, foodItems = [] }: PropertiesProps) 
               {[
                 { id: "all", label: "Any Price" },
                 { id: "under-150", label: "Under ₹150" },
-                { id: "150-400", label: "₹150 – ₹400" },
-                { id: "400-plus", label: "₹400+" },
+                { id: "150-300", label: "₹150 – ₹300" },
+                { id: "300-plus", label: "₹300+" },
               ].map((tier) => {
                 const isSelected = activePricePreset === tier.id;
                 return (
@@ -579,7 +585,9 @@ export default function Properties({ places, foodItems = [] }: PropertiesProps) 
                       } else {
                         setActivePricePreset(tier.id);
                         if (tier.id === "under-150") setMaxPrice(150);
+                        else if (tier.id === "150-300") setMaxPrice(300);
                         else if (tier.id === "150-400") setMaxPrice(400);
+                        else if (tier.id === "300-plus") setMaxPrice(2500);
                         else if (tier.id === "400-plus") setMaxPrice(2500);
                         else setMaxPrice(2500);
                       }

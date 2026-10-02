@@ -176,6 +176,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                     title: `New Incoming Order #${o.id.slice(0, 8)}`,
                     message: `${itemsSummary || "1x Food Item"}. Total: ₹${o.totalAmount || 0}.`,
                     details: `Customer: ${o.user?.name || "Customer"}${customerPhone ? ` • Phone: ${customerPhone}` : ""}${address ? ` • Address: ${address}` : ""}`,
+                    timestamp: o.createdAt || new Date().toISOString(),
                     severity: "success",
                     actionLabel: "View Order",
                     actionHref: "/seller/orders",
@@ -503,7 +504,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                 </div>
               )}
 
-              {/* Header Row: Title & Subtitle + Sync Devices Button */}
+              {/* Header Row: Title & Subtitle */}
               <div className={styles.headerRow}>
                 <div className={styles.headerGroup}>
                   <h1 className={styles.title}>Operations Dashboard</h1>
@@ -511,13 +512,6 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                     Real-time tracking of Neo Cloud Room revenue and food delivery metrics.
                   </p>
                 </div>
-                <button
-                  type="button"
-                  className={styles.syncBtn}
-                  onClick={onSyncDevices}
-                >
-                  Sync Devices
-                </button>
               </div>
 
               {/* 4-Stat Cards Row */}
@@ -719,14 +713,15 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                             <td className={styles.roomNoText}>{order.roomNo}</td>
                             <td className={styles.itemsText}>{order.items}</td>
                             <td className={styles.totalPriceText}>{order.total}</td>
-                            <td>
-                              <span
+                            <td className={styles.statusCell}>
+                              <div
                                 className={`${styles.statusBadge} ${getStatusBadgeClass(
                                   order.status
                                 )}`}
                               >
-                                {order.status}
-                              </span>
+                                <span className={styles.statusDot} />
+                                <span className={styles.statusLabel}>{order.status}</span>
+                              </div>
                             </td>
                           </tr>
                         ))

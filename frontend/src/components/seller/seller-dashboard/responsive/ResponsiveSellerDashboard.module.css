@@ -355,38 +355,35 @@
 }
 
 .statusBadge {
-  padding: 5px 14px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 700;
+  padding: 0;
+  background: transparent;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
   letter-spacing: 0.1px;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
+  white-space: nowrap;
 }
 
 .statusNew {
-  background-color: #FFF1E8;
-  color: #F97316;
-}
-
-.statusPreparing {
-  background-color: #FEF3C7;
   color: #D97706;
 }
 
+.statusPreparing {
+  color: #EA580C;
+}
+
 .statusDelivered {
-  background-color: #DCFCE7;
   color: #16A34A;
 }
 
 .statusCancelled {
-  background-color: #FEE2E2;
   color: #DC2626;
 }
 
 .statusDefault {
-  background-color: #F1F5F9;
   color: #64748B;
 }
 

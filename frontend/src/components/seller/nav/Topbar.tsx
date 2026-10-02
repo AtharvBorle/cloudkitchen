@@ -23,7 +23,7 @@ import {
 import styles from "./Topbar.module.css";
 import { useSellerProfile, computeInitials, isGenericFallbackName, toggleSellerOnlineStatus } from "@/hooks/useSellerProfile";
 import { useSellerNotifications, broadcastShopTimingAlert } from "@/hooks/useSellerNotifications";
-import { NotificationCategory } from "../seller-notifications/notificationData";
+import { NotificationCategory, formatNotificationTime } from "../seller-notifications/notificationData";
 
 export interface TopbarProps {
   title?: string;
@@ -376,7 +376,12 @@ export default function Topbar({
                             {!item.isRead && <span className={styles.unreadDot} />}
                             {item.title}
                           </h5>
-                          <span className={styles.dropdownItemTime}>{item.timeAgo}</span>
+                          <span
+                            className={styles.dropdownItemTime}
+                            title={item.timestamp ? new Date(item.timestamp).toLocaleString("en-IN") : undefined}
+                          >
+                            {formatNotificationTime(item.timestamp, item.timeAgo)}
+                          </span>
                         </div>
                         <p className={styles.dropdownItemMessage}>{item.message}</p>
                       </div>

@@ -22,6 +22,7 @@ import {
 import {
   SellerNotificationItem,
   NotificationCategory,
+  formatNotificationTime,
 } from "./notificationData";
 import { useSellerNotifications } from "@/hooks/useSellerNotifications";
 import styles from "./SellerNotificationsCanvas.module.css";
@@ -327,7 +328,12 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
                       <span className={`${styles.severityBadge} ${getSeverityClass(item.severity)}`}>
                         {item.severity}
                       </span>
-                      <span className={styles.timeAgo}>{item.timeAgo}</span>
+                      <span
+                        className={styles.timeAgo}
+                        title={item.timestamp ? new Date(item.timestamp).toLocaleString("en-IN") : undefined}
+                      >
+                        {formatNotificationTime(item.timestamp, item.timeAgo)}
+                      </span>
                     </div>
                   </div>
 

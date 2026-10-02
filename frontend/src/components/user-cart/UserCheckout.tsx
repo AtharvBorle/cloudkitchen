@@ -168,6 +168,16 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
       return;
     }
 
+    if (targetCode.length > 20) {
+      showToast("Coupon code cannot exceed 20 characters");
+      return;
+    }
+
+    if (!/^[A-Z0-9_-]+$/.test(targetCode)) {
+      showToast("Coupon code can only contain letters, numbers, hyphens, and underscores");
+      return;
+    }
+
     setPromoCode(targetCode);
     const currentSubtotal = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
 
@@ -438,7 +448,7 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
                     boxShadow: "0 2px 8px rgba(22, 163, 74, 0.08)",
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0, flex: 1, overflow: "hidden" }}>
                     <div
                       style={{
                         width: "32px",
@@ -454,11 +464,22 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
                     >
                       <Check size={16} strokeWidth={3} />
                     </div>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: "0.88rem", fontWeight: "800", color: "#15803D", letterSpacing: "0.5px" }}>
+                    <div style={{ minWidth: 0, overflow: "hidden", flex: 1 }}>
+                      <div 
+                        title={appliedCouponData?.code || appliedPromo}
+                        style={{ 
+                          fontSize: "0.88rem", 
+                          fontWeight: "800", 
+                          color: "#15803D", 
+                          letterSpacing: "0.5px",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap"
+                        }}
+                      >
                         {appliedCouponData?.code || appliedPromo}
                       </div>
-                      <div style={{ fontSize: "0.75rem", color: "#166534", fontWeight: "600" }}>
+                      <div style={{ fontSize: "0.75rem", color: "#166534", fontWeight: "600", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         -₹{discountAmount} discount applied {discountPercent > 0 ? `(${discountPercent}%)` : ""}
                       </div>
                     </div>
@@ -494,9 +515,10 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
                     <Tag size={18} className={styles.promoTagIcon} />
                     <input
                       type="text"
+                      maxLength={20}
                       placeholder="Enter promo code"
                       value={promoCode}
-                      onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                      onChange={(e) => setPromoCode(e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ""))}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           handleApplyPromo();

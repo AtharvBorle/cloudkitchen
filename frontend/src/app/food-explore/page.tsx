@@ -33,6 +33,10 @@ import {
   matchesDishSearch,
   matchesDishCategory,
   matchesKitchenCategoryFilter,
+  isDishMatchingCuisine,
+  isKitchenServingCuisine,
+  isKitchenHavingOffers,
+  isDishHavingOffers,
 } from "@/lib/dietary-filter";
 import Link from "next/link";
 
@@ -118,10 +122,8 @@ function FoodExploreContent() {
     if (!items || items.length === 0) return { all: 0, veg: 0, non_veg: 0, vegan: 0, jain: 0, under150: 0, price150to300: 0, price300plus: 0, cuisineCounts: {} };
 
     const cuisineCounts: Record<string, number> = {};
-    items.forEach((item) => {
-      if (item.categoryName) {
-        cuisineCounts[item.categoryName] = (cuisineCounts[item.categoryName] || 0) + 1;
-      }
+    availableCuisines.forEach((c) => {
+      cuisineCounts[c] = items.filter((f) => isDishMatchingCuisine(c, f)).length;
     });
 
     return {
@@ -135,7 +137,7 @@ function FoodExploreContent() {
       price300plus: items.filter((f) => f.price > 300).length,
       cuisineCounts,
     };
-  }, [homeData.foodItems, homeData.allFoodItems, searchQuery]);
+  }, [homeData.foodItems, homeData.allFoodItems, availableCuisines, searchQuery]);
 
   // Filter and sort food items
   const filteredFoodItems = useMemo(() => {
@@ -171,7 +173,7 @@ function FoodExploreContent() {
     // Cuisines
     if (selectedCuisines.length > 0) {
       list = list.filter((f) =>
-        selectedCuisines.some((c) => matchesDishCategory(c, f))
+        selectedCuisines.some((c) => isDishMatchingCuisine(c, f))
       );
     }
 
@@ -182,11 +184,7 @@ function FoodExploreContent() {
 
     // Offers only
     if (offersOnly) {
-      list = list.filter((f) => {
-        return homeData.coupons.some(
-          (cp: any) => !cp.appliesToSellerId || cp.appliesToSellerId === f.sellerId
-        );
-      });
+      list = list.filter((f) => isDishHavingOffers(f, homeData.coupons));
     }
 
     // Sort
@@ -246,13 +244,19 @@ function FoodExploreContent() {
     if (selectedCuisines.length > 0) {
       list = list.filter((k) =>
         selectedCuisines.some((c) =>
-          k.category?.toLowerCase().includes(c.toLowerCase())
+          isKitchenServingCuisine(c, k, sourceFoodItems)
         )
       );
     }
 
     if (openOnly) {
       list = list.filter((k) => k.isOnline !== false);
+    }
+
+    if (offersOnly) {
+      list = list.filter((k) =>
+        isKitchenHavingOffers(k, homeData.coupons, sourceFoodItems)
+      );
     }
 
     if (selectedPrice && selectedPrice !== "all") {

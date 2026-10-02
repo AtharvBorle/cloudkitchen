@@ -953,12 +953,16 @@ export const validateReorder = async (orderId: string) => {
             ? Number(foodItem.price) 
             : (item.basePrice !== undefined ? Number(item.basePrice) : (Number(item.price) || 0));
         const finalUnitPrice = currentBasePrice + validAddonsTotal;
+        const prevUnitPrice = Number(item.price) || (Number(item.basePrice) || 0);
+        const priceChanged = prevUnitPrice > 0 && Math.abs(prevUnitPrice - finalUnitPrice) > 0.01;
 
         const availItem = {
             id: foodItem.id,
             foodItemId: foodItem.id,
             name: foodItem.name,
             price: finalUnitPrice,
+            previousPrice: prevUnitPrice > 0 ? prevUnitPrice : finalUnitPrice,
+            priceChanged,
             basePrice: currentBasePrice,
             quantity: finalQty,
             sellerId: seller?.id || order.sellerId,

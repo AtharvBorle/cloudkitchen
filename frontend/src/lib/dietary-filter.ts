@@ -10,6 +10,48 @@ export function normalizeDietary(diet?: string | null): DietaryOption {
   return "all";
 }
 
+const NON_VEG_PATTERNS = [
+  /\b(chicken|murgh?|mutton|gosht|egg|eggs|anda|fish|prawns?|shrimps?|meat|beef|pork|seafood|crab|keema|kheema|haleem|wings?|shawarma)\b/i,
+  /\b(non[\s-_]?veg(etarian)?)\b/i,
+  /\b(tangdi|tandoori\s+chicken|chicken\s+tikka|mutton\s+tikka)\b/i,
+];
+
+export function isNonVegDish(dish: {
+  itemType?: string | null;
+  name?: string | null;
+  description?: string | null;
+  categoryName?: string | null;
+}): boolean {
+  const rawType = String(dish.itemType || "").toUpperCase().replace(/[\s-]/g, "_").trim();
+  if (
+    rawType === "NON_VEG" ||
+    rawType === "NONVEG" ||
+    rawType === "NON_VEGETARIAN" ||
+    rawType.includes("NON_VEG") ||
+    rawType.includes("NONVEG")
+  ) {
+    return true;
+  }
+
+  const text = `${dish.name || ""} ${dish.description || ""} ${dish.categoryName || ""}`.toLowerCase();
+
+  // If text contains explicit meat/egg/fish keywords
+  if (NON_VEG_PATTERNS.some((pat) => pat.test(text))) {
+    return true;
+  }
+
+  // Biryani, Kebab, Tikka without veg/paneer prefix
+  const hasBiryaniOrKebab = /\b(biryani|kabab|kebab|tikka)\b/i.test(text);
+  if (hasBiryaniOrKebab) {
+    const hasVegPrefix = /\b(veg|vegetable|paneer|soya|chaap|mushroom|kathal|jackfruit|aloo|alu|subz|dal|dum\s+veg|hara\s+bhara)\b/i.test(text);
+    if (!hasVegPrefix && rawType !== "VEG" && rawType !== "PURE_VEG" && rawType !== "VEGAN" && rawType !== "JAIN") {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 const NON_VEG_KEYWORDS = [
   "chicken",
   "mutton",
@@ -161,55 +203,38 @@ export function isDishMatchingDiet(
   const norm = normalizeDietary(dietary);
   if (norm === "all") return true;
 
-  const raw = String(dish.itemType || "")
-    .toUpperCase()
-    .replace(/[\s-]/g, "_");
-  const tokens = raw.split(",").map((s) => s.trim());
-
-  const isNonVeg =
-    tokens.some((t) => t === "NON_VEG" || t === "NONVEG" || t === "NON_VEGETARIAN") ||
-    raw.includes("NON_VEG");
-
-  const isVegan =
-    tokens.some((t) => t === "VEGAN" || t === "PLANT_BASED") ||
-    raw.includes("VEGAN");
-
-  const isJain =
-    tokens.some((t) => t === "JAIN" || t === "SATVIK") ||
-    raw.includes("JAIN") ||
-    raw.includes("SATVIK");
-
-  const isVeg =
-    tokens.some((t) => t === "VEG" || t === "PURE_VEG" || t === "VEGETARIAN") ||
-    raw.includes("VEG") ||
-    raw.includes("PURE_VEG") ||
-    isVegan ||
-    isJain;
-
+  const rawType = String(dish.itemType || "").toUpperCase().replace(/[\s-]/g, "_").trim();
+  const isNonVeg = isNonVegDish(dish);
   const text = `${dish.name || ""} ${dish.description || ""} ${dish.categoryName || ""}`.toLowerCase();
 
+  const isExplicitVegan =
+    rawType === "VEGAN" ||
+    rawType.includes("VEGAN") ||
+    VEGAN_POSITIVE_WORDS.some((w) => text.includes(w));
+
+  const isExplicitJain =
+    rawType === "JAIN" ||
+    rawType === "SATVIK" ||
+    rawType.includes("JAIN") ||
+    rawType.includes("SATVIK") ||
+    JAIN_POSITIVE_WORDS.some((w) => text.includes(w));
+
   if (norm === "veg") {
+    // If it is non-veg, it is NEVER pure veg
     if (isNonVeg) return false;
-    if (isVeg || isVegan || isJain) return true;
-    const containsNonVegStrict = NON_VEG_STRICT_WORDS.some((word) => {
-      const regex = new RegExp(`\\b${word}\\b`, "i");
-      return regex.test(text);
-    });
-    return !containsNonVegStrict;
+    return true;
   }
 
   if (norm === "non_veg") {
     if (isNonVeg) return true;
-    if (isVeg || isVegan || isJain) return false;
-    return NON_VEG_STRICT_WORDS.some((word) => {
-      const regex = new RegExp(`\\b${word}\\b`, "i");
-      return regex.test(text);
-    });
+    if (isExplicitVegan || isExplicitJain) return false;
+    if (rawType === "VEG" || rawType === "PURE_VEG") return false;
+    return false;
   }
 
   if (norm === "vegan") {
     if (isNonVeg) return false;
-    if (isVegan) return true;
+    if (isExplicitVegan) return true;
     const hasDairy = NON_VEGAN_WORDS.some((w) => {
       const regex = new RegExp(`\\b${w}\\b`, "i");
       return regex.test(text);
@@ -225,7 +250,7 @@ export function isDishMatchingDiet(
 
   if (norm === "jain") {
     if (isNonVeg) return false;
-    if (isJain) return true;
+    if (isExplicitJain) return true;
     const hasRoots = NON_JAIN_ROOTS.some((w) => {
       const regex = new RegExp(`\\b${w}\\b`, "i");
       return regex.test(text);
@@ -254,6 +279,7 @@ export function isKitchenMatchingDiet(
   foodItems?: Array<{
     sellerId?: string | null;
     sellerTrackingId?: string | null;
+    sellerName?: string | null;
     itemType?: string | null;
     name?: string | null;
     description?: string | null;
@@ -266,75 +292,103 @@ export function isKitchenMatchingDiet(
   const rawFoodType = (kitchen.foodType || "").toUpperCase().replace(/[\s-]/g, "_").trim();
   const kitchenText = `${kitchen.name || ""} ${kitchen.category || ""}`.toLowerCase();
 
-  const kitchenDishes = foodItems
-    ? foodItems.filter(
-        (f) =>
-          (kitchen.id && f.sellerId === kitchen.id) ||
-          (kitchen.trackingId && f.sellerTrackingId === kitchen.trackingId) ||
-          (kitchen.id && f.sellerTrackingId === kitchen.id)
-      )
+  const kId = (kitchen.id || "").toLowerCase().trim();
+  const kTracking = (kitchen.trackingId || "").toLowerCase().trim();
+  const kName = (kitchen.name || "").toLowerCase().trim();
+
+  const kitchenDishes = foodItems && Array.isArray(foodItems)
+    ? foodItems.filter((f: any) => {
+        const fSellerId = (f.sellerId || "").toLowerCase().trim();
+        const fTracking = (f.sellerTrackingId || "").toLowerCase().trim();
+        const fSellerName = (f.sellerName || "").toLowerCase().trim();
+        return (
+          (kId && (fSellerId === kId || fTracking === kId)) ||
+          (kTracking && (fTracking === kTracking || fSellerId === kTracking)) ||
+          (kName && fSellerName && (kName === fSellerName || kName.includes(fSellerName) || fSellerName.includes(kName)))
+        );
+      })
     : [];
 
+  const isDeclaredPureVeg =
+    rawFoodType === "PURE_VEG" ||
+    rawFoodType === "VEG" ||
+    kitchenText.includes("pure veg") ||
+    kitchenText.includes("pure-veg") ||
+    kitchenText.includes("pureveg") ||
+    kitchenText.includes("100% veg");
+
+  const isDeclaredNonVeg =
+    rawFoodType === "NON_VEG" ||
+    rawFoodType === "NONVEG" ||
+    rawFoodType === "NON_VEGETARIAN";
+
+  const isBothVegAndNonVeg =
+    rawFoodType === "BOTH" ||
+    rawFoodType === "VEG_NON_VEG" ||
+    rawFoodType === "VEG_AND_NON_VEG";
+
   if (norm === "veg") {
-    if (rawFoodType === "PURE_VEG" || rawFoodType === "VEG") return true;
-    if (rawFoodType === "BOTH") {
-      return kitchenDishes.length === 0 || kitchenDishes.some((d) => isDishMatchingDiet(d, "veg"));
+    // 1. Explicitly Non-Veg or Hybrid BOTH kitchen is NOT 100% Pure Veg
+    if (isDeclaredNonVeg || isBothVegAndNonVeg) {
+      return false;
     }
-    if (rawFoodType === "NON_VEG") {
-      return kitchenDishes.length > 0 && kitchenDishes.some((d) => isDishMatchingDiet(d, "veg"));
+
+    // 2. If the kitchen has dishes loaded
+    if (kitchenDishes.length > 0) {
+      // Must NOT have any non-veg dish
+      const hasAnyNonVegDish = kitchenDishes.some((d) => isNonVegDish(d));
+      if (hasAnyNonVegDish) {
+        return false;
+      }
+      // Must have at least one veg dish or all dishes are veg
+      const allDishesVeg = kitchenDishes.every((d) => isDishMatchingDiet(d, "veg"));
+      return allDishesVeg;
     }
-    return kitchenDishes.length === 0 || kitchenDishes.some((d) => isDishMatchingDiet(d, "veg"));
+
+    // 3. If kitchen has no dishes loaded currently
+    // Must be declared Pure Veg in profile or name
+    if (isDeclaredPureVeg) {
+      const hasNonVegKeywords = /\b(chicken|mutton|fish|meat|biryani|egg|eggs|non[\s-_]?veg|kebab|shawarma|seafood|prawns?)\b/i.test(kitchenText);
+      return !hasNonVegKeywords;
+    }
+
+    return false;
   }
 
   if (norm === "non_veg") {
-    if (rawFoodType === "PURE_VEG" || rawFoodType === "VEGAN" || rawFoodType === "JAIN") return false;
-    if (rawFoodType === "NON_VEG" || rawFoodType === "BOTH") {
-      return kitchenDishes.length === 0 || kitchenDishes.some((d) => isDishMatchingDiet(d, "non_veg"));
+    // If it is 100% Pure Veg with no non-veg dishes, exclude from non-veg filter
+    if (isDeclaredPureVeg && !isBothVegAndNonVeg && kitchenDishes.length > 0 && kitchenDishes.every((d) => !isNonVegDish(d))) {
+      return false;
     }
-    if (
-      kitchenText.includes("non-veg") ||
-      kitchenText.includes("non veg") ||
-      kitchenText.includes("biryani") ||
-      kitchenText.includes("chicken") ||
-      kitchenText.includes("meat") ||
-      kitchenText.includes("fish")
-    ) {
-      return true;
+    if (isDeclaredNonVeg || isBothVegAndNonVeg) return true;
+    if (kitchenDishes.length > 0) {
+      return kitchenDishes.some((d) => isNonVegDish(d));
     }
-    return kitchenDishes.some((d) => isDishMatchingDiet(d, "non_veg"));
+    const hasNonVegKeywords = /\b(chicken|mutton|fish|meat|biryani|egg|eggs|non[\s-_]?veg|kebab|shawarma|seafood|prawns?)\b/i.test(kitchenText);
+    return hasNonVegKeywords;
   }
 
   if (norm === "vegan") {
-    if (rawFoodType === "NON_VEG" || rawFoodType === "NON-VEG") {
-      return kitchenDishes.length > 0 && kitchenDishes.some((d) => isDishMatchingDiet(d, "vegan"));
+    if (isDeclaredNonVeg || isBothVegAndNonVeg) return false;
+    if (kitchenDishes.length > 0) {
+      return kitchenDishes.every((d) => isDishMatchingDiet(d, "vegan"));
     }
-    if (rawFoodType === "VEGAN") return true;
-    if (
-      kitchenText.includes("vegan") ||
-      kitchenText.includes("plant-based") ||
-      kitchenText.includes("plant based") ||
-      kitchenText.includes("dairy-free") ||
-      kitchenText.includes("dairy free")
-    ) {
-      return true;
-    }
-    return kitchenDishes.length > 0 && kitchenDishes.some((d) => isDishMatchingDiet(d, "vegan"));
+    return rawFoodType === "VEGAN" || kitchenText.includes("vegan") || kitchenText.includes("100% vegan");
   }
 
   if (norm === "jain") {
-    if (rawFoodType === "NON_VEG" || rawFoodType === "NON-VEG") {
-      return false;
+    if (isDeclaredNonVeg || isBothVegAndNonVeg) return false;
+    if (kitchenDishes.length > 0) {
+      return kitchenDishes.every((d) => isDishMatchingDiet(d, "jain"));
     }
-    if (rawFoodType === "JAIN") return true;
-    if (
+    return (
+      rawFoodType === "JAIN" ||
+      rawFoodType === "SATVIK" ||
       kitchenText.includes("jain") ||
       kitchenText.includes("satvik") ||
       kitchenText.includes("swaminarayan") ||
       kitchenText.includes("no onion no garlic")
-    ) {
-      return true;
-    }
-    return kitchenDishes.length > 0 && kitchenDishes.some((d) => isDishMatchingDiet(d, "jain"));
+    );
   }
 
   return true;
@@ -813,4 +867,236 @@ export function matchesKitchenOrDishSearch(
 
   return false;
 }
+
+/**
+ * Checks whether a single food item / dish matches a cuisine filter.
+ * Matches by:
+ * - Category name (exact or substring)
+ * - Dish name (exact or substring)
+ * - Description keywords
+ * - Predefined category rules (CATEGORY_RULES)
+ */
+export function isDishMatchingCuisine(
+  cuisine: string | null | undefined,
+  dish: {
+    name?: string | null;
+    categoryName?: string | null;
+    description?: string | null;
+  }
+): boolean {
+  if (!cuisine || !cuisine.trim()) return true;
+  const c = cuisine.trim().toLowerCase();
+  const dishCat = (dish.categoryName || "").toLowerCase().trim();
+  const dishName = (dish.name || "").toLowerCase().trim();
+  const dishDesc = (dish.description || "").toLowerCase().trim();
+
+  if (dishCat === c || dishCat.includes(c) || c.includes(dishCat)) return true;
+  if (dishName.includes(c)) return true;
+  if (dishDesc.includes(c)) return true;
+  if (matchesDishCategory(c, dish)) return true;
+  return false;
+}
+
+/**
+ * Checks whether a kitchen serves the requested cuisine.
+ * A kitchen matches IF AND ONLY IF:
+ * 1. The kitchen has at least one dish matching the cuisine in its menu.
+ * 2. OR the kitchen's declared category or kitchen name explicitly matches the cuisine.
+ */
+export function isKitchenServingCuisine(
+  cuisine: string | null | undefined,
+  kitchen: {
+    id?: string | null;
+    trackingId?: string | null;
+    kitchenId?: string | null;
+    name?: string | null;
+    category?: string | null;
+  },
+  foodItems?: Array<{
+    sellerId?: string | null;
+    sellerTrackingId?: string | null;
+    sellerName?: string | null;
+    name?: string | null;
+    categoryName?: string | null;
+    description?: string | null;
+  }>
+): boolean {
+  if (!cuisine || !cuisine.trim()) return true;
+  const c = cuisine.trim().toLowerCase();
+
+  // 1. Check actual child dishes of this kitchen
+  if (foodItems && foodItems.length > 0) {
+    const kId = (kitchen.id || "").toLowerCase().trim();
+    const kTracking = (kitchen.trackingId || "").toLowerCase().trim();
+    const kKitchenId = (kitchen.kitchenId || "").toLowerCase().trim();
+    const kName = (kitchen.name || "").toLowerCase().trim();
+
+    const kitchenDishes = foodItems.filter((f) => {
+      const fSellerId = (f.sellerId || "").toLowerCase().trim();
+      const fTracking = (f.sellerTrackingId || "").toLowerCase().trim();
+      const fSellerName = (f.sellerName || "").toLowerCase().trim();
+
+      const matchId = kId && fSellerId && (fSellerId === kId || fTracking === kId);
+      const matchTracking = kTracking && (fTracking === kTracking || fSellerId === kTracking);
+      const matchKitchenId = kKitchenId && (fSellerId === kKitchenId || fTracking === kKitchenId);
+      const matchCrossId =
+        (kId && fTracking && fTracking === kId) ||
+        (kTracking && fSellerId && fSellerId === kTracking);
+      const matchName = kName && fSellerName && (
+        kName === fSellerName ||
+        kName.includes(fSellerName) ||
+        fSellerName.includes(kName)
+      );
+
+      return matchId || matchTracking || matchKitchenId || matchCrossId || matchName;
+    });
+
+    if (kitchenDishes.length > 0) {
+      return kitchenDishes.some((dish) => isDishMatchingCuisine(c, dish));
+    }
+  }
+
+  // 2. Fallback on kitchen category or kitchen name if no dishes loaded
+  const kCat = (kitchen.category || "").toLowerCase();
+  const kName = (kitchen.name || "").toLowerCase();
+  if (kCat.includes(c) || c.includes(kCat)) return true;
+  if (kName.includes(c)) return true;
+  if (kitchen.category && matchesDishCategory(c, { name: kitchen.category, categoryName: kitchen.category })) return true;
+
+  return false;
+}
+
+/**
+ * Checks whether a dish has active seller/item-specific offers, discounts, or coupons.
+ */
+export function isDishHavingOffers(
+  dish: {
+    id?: string | null;
+    sellerId?: string | null;
+    sellerTrackingId?: string | null;
+    price?: number;
+    originalPrice?: number;
+    discountPercent?: number;
+    offerTag?: string;
+  },
+  coupons: Array<{
+    id?: string | null;
+    appliesToSellerId?: string | null;
+    sellerId?: string | null;
+    isActive?: boolean;
+  }> = []
+): boolean {
+  // 1. Direct item-level discount / offer
+  if (dish.originalPrice && dish.price && Number(dish.price) < Number(dish.originalPrice)) return true;
+  if (dish.discountPercent && Number(dish.discountPercent) > 0) return true;
+  if (dish.offerTag && String(dish.offerTag).trim() !== "") return true;
+
+  // 2. Coupon match (must be specifically assigned to this seller/kitchen)
+  if (!coupons || coupons.length === 0) return false;
+
+  const dSeller = (dish.sellerId || "").toLowerCase().trim();
+  const dTrack = (dish.sellerTrackingId || "").toLowerCase().trim();
+
+  return coupons.some((cp) => {
+    if (cp.isActive === false) return false;
+    const target = (cp.appliesToSellerId || cp.sellerId || "").toLowerCase().trim();
+    if (!target || target === "global" || target === "all") return false;
+    return (dSeller && target === dSeller) || (dTrack && target === dTrack);
+  });
+}
+
+/**
+ * Checks whether a kitchen has active seller-specific offers, coupons, or discounted dishes.
+ */
+export function isKitchenHavingOffers(
+  kitchen: {
+    id?: string | null;
+    trackingId?: string | null;
+    kitchenId?: string | null;
+    name?: string | null;
+  },
+  coupons: Array<{
+    id?: string | null;
+    appliesToSellerId?: string | null;
+    sellerId?: string | null;
+    isActive?: boolean;
+  }> = [],
+  foodItems: Array<{
+    sellerId?: string | null;
+    sellerTrackingId?: string | null;
+    sellerName?: string | null;
+    price?: number;
+    originalPrice?: number;
+    discountPercent?: number;
+    offerTag?: string;
+  }> = []
+): boolean {
+  const kId = (kitchen.id || "").toLowerCase().trim();
+  const kTracking = (kitchen.trackingId || "").toLowerCase().trim();
+  const kKitchenId = (kitchen.kitchenId || "").toLowerCase().trim();
+  const kName = (kitchen.name || "").toLowerCase().trim();
+
+  // Find all actual dishes belonging to this kitchen
+  const kitchenDishes = (foodItems || []).filter((f) => {
+    const fSellerId = (f.sellerId || "").toLowerCase().trim();
+    const fTracking = (f.sellerTrackingId || "").toLowerCase().trim();
+    const fSellerName = (f.sellerName || "").toLowerCase().trim();
+
+    const matchId = kId && fSellerId && (fSellerId === kId || fTracking === kId);
+    const matchTracking = kTracking && (fTracking === kTracking || fSellerId === kTracking);
+    const matchKitchenId = kKitchenId && (fSellerId === kKitchenId || fTracking === kKitchenId);
+    const matchCrossId =
+      (kId && fTracking && fTracking === kId) ||
+      (kTracking && fSellerId && fSellerId === kTracking);
+    const matchName = kName && fSellerName && (
+      kName === fSellerName ||
+      kName.includes(fSellerName) ||
+      fSellerName.includes(kName)
+    );
+
+    return matchId || matchTracking || matchKitchenId || matchCrossId || matchName;
+  });
+
+  // A kitchen with NO food items cannot have offers or deals
+  if (kitchenDishes.length === 0) {
+    return false;
+  }
+
+  // 1. Check seller-specific coupon match targeting this kitchen
+  if (coupons && coupons.length > 0) {
+    const hasSellerCoupon = coupons.some((cp) => {
+      if (cp.isActive === false) return false;
+      const target = (cp.appliesToSellerId || cp.sellerId || "").toLowerCase().trim();
+      if (!target || target === "global" || target === "all") return false;
+      return (
+        (kId && target === kId) ||
+        (kTracking && target === kTracking) ||
+        (kKitchenId && target === kKitchenId)
+      );
+    });
+    if (hasSellerCoupon) return true;
+  }
+
+  // 2. Check child dishes of this kitchen for item-level offers or specific coupons
+  const hasDiscountedDish = kitchenDishes.some((d) => isDishHavingOffers(d, coupons));
+  if (hasDiscountedDish) return true;
+
+  if (coupons && coupons.length > 0) {
+    const hasDishCoupon = coupons.some((cp) => {
+      if (cp.isActive === false) return false;
+      const target = (cp.appliesToSellerId || cp.sellerId || "").toLowerCase().trim();
+      if (!target || target === "global" || target === "all") return false;
+      return kitchenDishes.some((d) => {
+        const dSeller = (d.sellerId || "").toLowerCase().trim();
+        const dTrack = (d.sellerTrackingId || "").toLowerCase().trim();
+        return (dSeller && target === dSeller) || (dTrack && target === dTrack);
+      });
+    });
+    if (hasDishCoupon) return true;
+  }
+
+  return false;
+}
+
+
 
