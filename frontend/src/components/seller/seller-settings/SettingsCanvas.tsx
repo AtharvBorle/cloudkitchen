@@ -227,17 +227,53 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
     }
     return initialTab;
   });
-  const [formData, setFormData] = useState<SettingsFormData>(() => ({
-    ...DEFAULT_DATA,
-    businessName: initialData?.businessName || seller.businessName,
-    businessEmail: initialData?.businessEmail || seller.email,
-    phoneNumber: initialData?.phoneNumber || seller.phone,
-    address: initialData?.address || seller.address,
-    latitude: initialData?.latitude !== undefined ? initialData.latitude : (seller.latitude ?? null),
-    longitude: initialData?.longitude !== undefined ? initialData.longitude : (seller.longitude ?? null),
-    isLocationPinned: initialData?.isLocationPinned !== undefined ? initialData.isLocationPinned : (seller.isLocationPinned ?? false),
-    ...initialData,
-  }));
+  const [formData, setFormData] = useState<SettingsFormData>(() => {
+    let savedHours = DEFAULT_HOURS;
+    let savedLanguage = "English";
+    let savedTimezone = "Asia/Kolkata (UTC+5:30)";
+    let savedCurrency = "INR (₹)";
+
+    if (typeof window !== "undefined") {
+      try {
+        const savedRegional = localStorage.getItem("seller_regional_settings");
+        if (savedRegional) {
+          const parsed = JSON.parse(savedRegional);
+          if (parsed.operatingHours && Array.isArray(parsed.operatingHours) && parsed.operatingHours.length > 0) {
+            savedHours = parsed.operatingHours;
+          }
+          if (parsed.language) savedLanguage = parsed.language;
+          if (parsed.timezone) savedTimezone = parsed.timezone;
+          if (parsed.currency) savedCurrency = parsed.currency;
+        } else {
+          const savedPrefs = localStorage.getItem("seller_settings_preferences");
+          if (savedPrefs) {
+            const parsed = JSON.parse(savedPrefs);
+            if (parsed.operatingHours && Array.isArray(parsed.operatingHours) && parsed.operatingHours.length > 0) {
+              savedHours = parsed.operatingHours;
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error reading initial settings from localStorage:", err);
+      }
+    }
+
+    return {
+      ...DEFAULT_DATA,
+      operatingHours: savedHours,
+      language: savedLanguage,
+      timezone: savedTimezone,
+      currency: savedCurrency,
+      businessName: initialData?.businessName || seller.businessName,
+      businessEmail: initialData?.businessEmail || seller.email,
+      phoneNumber: initialData?.phoneNumber || seller.phone,
+      address: initialData?.address || seller.address,
+      latitude: initialData?.latitude !== undefined ? initialData.latitude : (seller.latitude ?? null),
+      longitude: initialData?.longitude !== undefined ? initialData.longitude : (seller.longitude ?? null),
+      isLocationPinned: initialData?.isLocationPinned !== undefined ? initialData.isLocationPinned : (seller.isLocationPinned ?? false),
+      ...initialData,
+    };
+  });
 
   useEffect(() => {
     try {
@@ -250,7 +286,7 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
             language: parsed.language || prev.language,
             timezone: parsed.timezone || prev.timezone,
             currency: parsed.currency || prev.currency,
-            operatingHours: parsed.operatingHours || prev.operatingHours,
+            operatingHours: parsed.operatingHours && Array.isArray(parsed.operatingHours) && parsed.operatingHours.length > 0 ? parsed.operatingHours : prev.operatingHours,
           }));
         }
 
@@ -260,6 +296,7 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
           setFormData((prev) => ({
             ...prev,
             ...parsed,
+            operatingHours: parsed.operatingHours && Array.isArray(parsed.operatingHours) && parsed.operatingHours.length > 0 ? parsed.operatingHours : prev.operatingHours,
           }));
         }
       }
@@ -607,7 +644,25 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
         isOpen: nextIsOpen,
       };
       showNotificationToast(`${targetDay.day} Schedule`, nextIsOpen);
-      return { ...prev, operatingHours: updatedHours };
+      const nextFormData = { ...prev, operatingHours: updatedHours };
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem(
+            "seller_regional_settings",
+            JSON.stringify({
+              language: prev.language,
+              timezone: prev.timezone,
+              currency: prev.currency,
+              operatingHours: updatedHours,
+            })
+          );
+          localStorage.setItem(
+            "seller_settings_preferences",
+            JSON.stringify(nextFormData)
+          );
+        } catch {}
+      }
+      return nextFormData;
     });
   };
 
@@ -636,7 +691,25 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
       };
       const label = field === "openTime" ? "Opens at" : "Closes at";
       setToastData({ title: `${targetDay.day} ${label} ${value}`, status: "ON" });
-      return { ...prev, operatingHours: updatedHours };
+      const nextFormData = { ...prev, operatingHours: updatedHours };
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem(
+            "seller_regional_settings",
+            JSON.stringify({
+              language: prev.language,
+              timezone: prev.timezone,
+              currency: prev.currency,
+              operatingHours: updatedHours,
+            })
+          );
+          localStorage.setItem(
+            "seller_settings_preferences",
+            JSON.stringify(nextFormData)
+          );
+        } catch {}
+      }
+      return nextFormData;
     });
   };
 

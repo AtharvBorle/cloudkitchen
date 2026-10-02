@@ -246,17 +246,53 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
   });
 
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
-  const [formData, setFormData] = useState<ResponsiveSellerSettingsData>({
-    ...INITIAL_SETTINGS,
-    businessName: seller.businessName || INITIAL_SETTINGS.businessName,
-    phoneNumber: seller.phone || INITIAL_SETTINGS.phoneNumber,
-    businessEmail: seller.email || INITIAL_SETTINGS.businessEmail,
-    address: seller.address || INITIAL_SETTINGS.address,
-    latitude: initialData?.latitude !== undefined ? initialData.latitude : (seller.latitude ?? null),
-    longitude: initialData?.longitude !== undefined ? initialData.longitude : (seller.longitude ?? null),
-    isLocationPinned: initialData?.isLocationPinned !== undefined ? initialData.isLocationPinned : (seller.isLocationPinned ?? false),
-    storeOnline: typeof seller.isOnline === "boolean" ? seller.isOnline : INITIAL_SETTINGS.storeOnline,
-    ...initialData,
+  const [formData, setFormData] = useState<ResponsiveSellerSettingsData>(() => {
+    let savedHours = DEFAULT_OPERATING_HOURS;
+    let savedLanguage = "English";
+    let savedTimezone = "Asia/Kolkata (UTC+5:30)";
+    let savedCurrency = "INR (₹)";
+
+    if (typeof window !== "undefined") {
+      try {
+        const savedRegional = localStorage.getItem("seller_regional_settings");
+        if (savedRegional) {
+          const parsed = JSON.parse(savedRegional);
+          if (parsed.operatingHours && Array.isArray(parsed.operatingHours) && parsed.operatingHours.length > 0) {
+            savedHours = parsed.operatingHours;
+          }
+          if (parsed.language) savedLanguage = parsed.language;
+          if (parsed.timezone) savedTimezone = parsed.timezone;
+          if (parsed.currency) savedCurrency = parsed.currency;
+        } else {
+          const savedPrefs = localStorage.getItem("seller_settings_preferences");
+          if (savedPrefs) {
+            const parsed = JSON.parse(savedPrefs);
+            if (parsed.operatingHours && Array.isArray(parsed.operatingHours) && parsed.operatingHours.length > 0) {
+              savedHours = parsed.operatingHours;
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error reading initial settings in responsive:", err);
+      }
+    }
+
+    return {
+      ...INITIAL_SETTINGS,
+      operatingHours: savedHours,
+      language: savedLanguage,
+      timezone: savedTimezone,
+      currency: savedCurrency,
+      businessName: seller.businessName || INITIAL_SETTINGS.businessName,
+      phoneNumber: seller.phone || INITIAL_SETTINGS.phoneNumber,
+      businessEmail: seller.email || INITIAL_SETTINGS.businessEmail,
+      address: seller.address || INITIAL_SETTINGS.address,
+      latitude: initialData?.latitude !== undefined ? initialData.latitude : (seller.latitude ?? null),
+      longitude: initialData?.longitude !== undefined ? initialData.longitude : (seller.longitude ?? null),
+      isLocationPinned: initialData?.isLocationPinned !== undefined ? initialData.isLocationPinned : (seller.isLocationPinned ?? false),
+      storeOnline: typeof seller.isOnline === "boolean" ? seller.isOnline : INITIAL_SETTINGS.storeOnline,
+      ...initialData,
+    };
   });
 
   useEffect(() => {
@@ -270,7 +306,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
             language: parsed.language || prev.language,
             timezone: parsed.timezone || prev.timezone,
             currency: parsed.currency || prev.currency,
-            operatingHours: parsed.operatingHours || prev.operatingHours,
+            operatingHours: parsed.operatingHours && Array.isArray(parsed.operatingHours) && parsed.operatingHours.length > 0 ? parsed.operatingHours : prev.operatingHours,
           }));
         }
 
@@ -280,6 +316,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
           setFormData((prev) => ({
             ...prev,
             ...parsed,
+            operatingHours: parsed.operatingHours && Array.isArray(parsed.operatingHours) && parsed.operatingHours.length > 0 ? parsed.operatingHours : prev.operatingHours,
           }));
         }
       }
@@ -648,10 +685,28 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
         isOpen: nextIsOpen,
       };
       showNotificationToast(`${targetDay.day} Schedule`, nextIsOpen);
-      return {
+      const nextFormData = {
         ...prev,
         operatingHours: updated,
       };
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem(
+            "seller_regional_settings",
+            JSON.stringify({
+              language: prev.language,
+              timezone: prev.timezone,
+              currency: prev.currency,
+              operatingHours: updated,
+            })
+          );
+          localStorage.setItem(
+            "seller_settings_preferences",
+            JSON.stringify(nextFormData)
+          );
+        } catch {}
+      }
+      return nextFormData;
     });
   };
 
