@@ -890,7 +890,25 @@ export const UserCart: React.FC<UserCartProps> = ({
     })();
   }, [availableOffers, subtotal, userDismissedPromo, appliedPromo, appliedCoupon, isValidatingPromo, activeSellerId, cartItems, session?.user?.id]);
 
-  // Auto-remove or invalidate applied coupon whenever subtotal drops below the minimum required cart value
+  // Check if coupon item-level scope is satisfied by cart items
+  const isCouponItemApplicable = (coupon: any, items: UserCartItem[]) => {
+    if (!coupon || !coupon.appliesToProductId) return true;
+    const allowedKeys = String(coupon.appliesToProductId)
+      .split(",")
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
+    if (allowedKeys.length === 0) return true;
+
+    return items.some((it) => {
+      const itemId = String(it.id || "").toLowerCase();
+      const foodItemId = String(it.foodItemId || "").toLowerCase();
+      const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+      const name = String(it.name || "").toLowerCase().trim();
+      return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
+    });
+  };
+
+  // Auto-remove or invalidate applied coupon whenever subtotal drops below minimum cart value or required item is removed
   React.useEffect(() => {
     if (!appliedCoupon) return;
     const minCart = Number(appliedCoupon.minimumCartValue ?? (appliedCoupon as any).minOrderAmount ?? 0);
@@ -908,8 +926,41 @@ export const UserCart: React.FC<UserCartProps> = ({
         } catch (e) {}
       }
       showToast(`Coupon "${code}" removed. Minimum cart value of ₹${minCart} required.`);
+      return;
     }
-  }, [subtotal, appliedCoupon, appliedPromo]);
+
+    if (appliedCoupon.appliesToProductId && cartItems.length > 0) {
+      const isApplicable = isCouponItemApplicable(appliedCoupon, cartItems);
+      if (!isApplicable) {
+        const code = appliedCoupon.code || appliedPromo || "Applied";
+        setAppliedCoupon(null);
+        setAppliedPromo(null);
+        setDiscountPercent(0);
+        setPromoCode("");
+        if (typeof window !== "undefined") {
+          try {
+            sessionStorage.removeItem("applied_cart_coupon");
+            sessionStorage.removeItem("appliedCoupon");
+            localStorage.removeItem("appliedCoupon");
+          } catch (e) {}
+        }
+        showToast(`Coupon "${code}" is no longer applicable as the required item was removed from your cart.`);
+        return;
+      }
+    } else if (appliedCoupon.appliesToProductId && cartItems.length === 0) {
+      setAppliedCoupon(null);
+      setAppliedPromo(null);
+      setDiscountPercent(0);
+      setPromoCode("");
+      if (typeof window !== "undefined") {
+        try {
+          sessionStorage.removeItem("applied_cart_coupon");
+          sessionStorage.removeItem("appliedCoupon");
+          localStorage.removeItem("appliedCoupon");
+        } catch (e) {}
+      }
+    }
+  }, [subtotal, cartItems, appliedCoupon, appliedPromo]);
 
   // Handle click outside to close coupon dropdown
   useEffect(() => {
@@ -1048,16 +1099,36 @@ export const UserCart: React.FC<UserCartProps> = ({
 
   // Price Calculations
   const discountAmount = React.useMemo(() => {
-    if (!appliedCoupon || subtotal <= 0) return 0;
+    if (!appliedCoupon || subtotal <= 0 || cartItems.length === 0) return 0;
     if (appliedCoupon.minimumCartValue && subtotal < appliedCoupon.minimumCartValue) return 0;
+
+    let targetSubtotal = subtotal;
+    if (appliedCoupon.appliesToProductId) {
+      const allowedKeys = String(appliedCoupon.appliesToProductId)
+        .split(",")
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean);
+      if (allowedKeys.length > 0) {
+        const matchingItems = cartItems.filter((it) => {
+          const itemId = String(it.id || "").toLowerCase();
+          const foodItemId = String(it.foodItemId || "").toLowerCase();
+          const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+          const name = String(it.name || "").toLowerCase().trim();
+          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
+        });
+        if (matchingItems.length === 0) return 0;
+        targetSubtotal = matchingItems.reduce((acc, it) => acc + it.price * it.qty, 0);
+      }
+    }
+
     if (appliedCoupon.discountType === "PERCENTAGE" || (appliedCoupon.discountPercentage && !appliedCoupon.discountAmount)) {
       const pct = appliedCoupon.discountPercentage || 0;
-      const raw = Math.round((subtotal * pct) / 100);
+      const raw = Math.round((targetSubtotal * pct) / 100);
       return appliedCoupon.maxDiscountAmount ? Math.min(raw, appliedCoupon.maxDiscountAmount) : raw;
     }
     const flat = appliedCoupon.discountAmount || 0;
-    return Math.min(flat, subtotal);
-  }, [appliedCoupon, subtotal]);
+    return Math.min(flat, targetSubtotal);
+  }, [appliedCoupon, subtotal, cartItems]);
   const deliveryFee = 0;
   const taxesAndCharges = 0;
   const grandTotal = Math.max(0, subtotal - discountAmount);
@@ -1112,7 +1183,7 @@ export const UserCart: React.FC<UserCartProps> = ({
       return;
     }
     if (isOutsideCoverage) {
-      showToast(`Your delivery location is ${shopDistanceKm ? `${shopDistanceKm} km away, ` : ""}outside this kitchen's ${maxDeliveryRadius} km coverage area.`);
+      showToast(`This address is outside the delivery area. Your delivery location is ${shopDistanceKm ? `${shopDistanceKm} km away, ` : ""}which exceeds the maximum delivery radius of ${maxDeliveryRadius} km.`);
       openLocationModal();
       return;
     }
@@ -1879,7 +1950,7 @@ export const UserCart: React.FC<UserCartProps> = ({
                     <AlertCircle size={18} color="#DC2626" style={{ flexShrink: 0, marginTop: "2px" }} />
                     <div>
                       <h4 style={{ margin: 0, fontSize: "0.88rem", fontWeight: 700, color: "#991B1B" }}>
-                        Outside Delivery Coverage Area
+                        This address is outside the delivery area
                       </h4>
                       <p style={{ margin: "3px 0 0 0", fontSize: "0.8rem", color: "#B91C1C", lineHeight: 1.4 }}>
                         Your current delivery location is <strong>{shopDistanceKm} km</strong> away from this restaurant. Maximum delivery coverage is <strong>{maxDeliveryRadius} km</strong>.

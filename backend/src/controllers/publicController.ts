@@ -503,7 +503,11 @@ export const validateCouponForCart = async (req: Request) => {
     }
 
     // Check specific item or category restrictions
-    if (coupon.appliesToProductId && Array.isArray(items) && items.length > 0) {
+    let matchingProductSubtotal = 0;
+    if (coupon.appliesToProductId) {
+        if (!Array.isArray(items) || items.length === 0) {
+            throw new ApiError(`Coupon "${coupon.code}" is only valid on specific items not present in your cart.`, 400);
+        }
         const allowedKeys = coupon.appliesToProductId.split(',').map((s: string) => s.trim().toLowerCase()).filter(Boolean);
         if (allowedKeys.length > 0) {
             if (coupon.appliesTo === "CATEGORY") {
@@ -521,15 +525,29 @@ export const validateCouponForCart = async (req: Request) => {
                 if (matchingFoodItems.length === 0) {
                     throw new ApiError(`Coupon "${coupon.code}" is only valid for items in specific categories not present in your cart.`, 400);
                 }
-            } else {
-                const hasMatchingProduct = items.some((it: any) => {
+                const matchingItemIds = new Set(matchingFoodItems.map(f => f.id.toLowerCase()));
+                matchingProductSubtotal = items.reduce((sum: number, it: any) => {
                     const itemId = String(it.id || "").toLowerCase();
                     const foodItemId = String(it.foodItemId || "").toLowerCase();
-                    return allowedKeys.includes(itemId) || allowedKeys.includes(foodItemId);
+                    if (matchingItemIds.has(itemId) || matchingItemIds.has(foodItemId)) {
+                        return sum + (Number(it.price) || 0) * (Number(it.quantity || it.qty || 1));
+                    }
+                    return sum;
+                }, 0);
+            } else {
+                const matchingItems = items.filter((it: any) => {
+                    const itemId = String(it.id || "").toLowerCase();
+                    const foodItemId = String(it.foodItemId || "").toLowerCase();
+                    const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+                    const name = String(it.name || "").toLowerCase().trim();
+                    return allowedKeys.some(k => k === itemId || k === foodItemId || k === baseId || k === name);
                 });
-                if (!hasMatchingProduct) {
+                if (matchingItems.length === 0) {
                     throw new ApiError(`Coupon "${coupon.code}" is only valid on specific items not present in your cart.`, 400);
                 }
+                matchingProductSubtotal = matchingItems.reduce((sum: number, it: any) => {
+                    return sum + (Number(it.price) || 0) * (Number(it.quantity || it.qty || 1));
+                }, 0);
             }
         }
     }
@@ -581,10 +599,11 @@ export const validateCouponForCart = async (req: Request) => {
     const isPercentage = coupon.discountType === "PERCENTAGE" || (coupon.discountPercentage && !coupon.discountAmount);
     let calculatedDiscount = 0;
     let discountLabel = "";
+    const baseDiscountSubtotal = (coupon.appliesToProductId && matchingProductSubtotal > 0) ? matchingProductSubtotal : numSubtotal;
 
     if (isPercentage) {
         const pct = coupon.discountPercentage || 0;
-        calculatedDiscount = Math.round((numSubtotal * pct) / 100);
+        calculatedDiscount = Math.round((baseDiscountSubtotal * pct) / 100);
         if (coupon.maxDiscountAmount && calculatedDiscount > coupon.maxDiscountAmount) {
             calculatedDiscount = coupon.maxDiscountAmount;
         }
@@ -594,7 +613,7 @@ export const validateCouponForCart = async (req: Request) => {
         if (flatAmt > 0 && numSubtotal < flatAmt) {
             throw new ApiError(`Coupon "${coupon.code}" provides a ₹${flatAmt} discount and requires an order total of at least ₹${flatAmt}. (Your cart is ₹${numSubtotal})`, 400);
         }
-        calculatedDiscount = Math.min(flatAmt, numSubtotal);
+        calculatedDiscount = Math.min(flatAmt, baseDiscountSubtotal);
         discountLabel = `₹${flatAmt} OFF`;
     }
 
@@ -607,6 +626,9 @@ export const validateCouponForCart = async (req: Request) => {
         discountAmount: !isPercentage ? (coupon.discountAmount || 0) : null,
         maxDiscountAmount: coupon.maxDiscountAmount,
         minimumCartValue: coupon.minimumCartValue || 0,
+        appliesToProductId: coupon.appliesToProductId || null,
+        appliesTo: coupon.appliesTo || "ALL",
+        appliesToSellerId: coupon.appliesToSellerId || null,
         calculatedDiscount,
         discountLabel,
         isAutoApply: Boolean(coupon.isAutoApply),

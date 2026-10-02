@@ -62,7 +62,7 @@ const isCurrentlyOpen = (item: any) => {
 
 export default function UserFoodPage() {
     const { addToCart } = useCart();
-    const { defaultAddress } = useLocation();
+    const { defaultAddress, openLocationModal } = useLocation();
     const { status } = useSession();
     const [vegOnly, setVegOnly] = useState(false);
     const [foodItems, setFoodItems] = useState<any[]>([]);
@@ -448,8 +448,26 @@ export default function UserFoodPage() {
             {loading ? (
                 <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>Loading menus...</div>
             ) : filteredFood.length === 0 ? (
-                <div style={{ backgroundColor: '#F8F9F9', padding: '40px', textAlign: 'center', borderRadius: '12px', color: 'var(--text-muted)' }}>
-                    {searchQuery ? "No food items found matching your search." : "No food items available at the moment."}
+                <div style={{ backgroundColor: '#F8F9F9', padding: '40px 20px', textAlign: 'center', borderRadius: '12px', color: 'var(--text-muted)' }}>
+                    {searchQuery ? (
+                        "No food items found matching your search."
+                    ) : !defaultAddress ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                            <p style={{ margin: 0, fontSize: '0.95rem', color: '#475569', fontWeight: '500' }}>
+                                📍 No delivery location selected. Please select your location to discover kitchens serving in your area.
+                            </p>
+                            <button
+                                type="button"
+                                onClick={openLocationModal}
+                                className="btn btn-primary"
+                                style={{ padding: '8px 22px', fontSize: '0.9rem', width: 'auto' }}
+                            >
+                                Select Delivery Location
+                            </button>
+                        </div>
+                    ) : (
+                        "No food items available at the moment."
+                    )}
                 </div>
             ) : selectedCategoryId ? (
                 /* Single selected category layout */

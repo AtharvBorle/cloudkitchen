@@ -46,6 +46,8 @@ export interface SavedAddressItem {
   landmark?: string | null;
   pincode: string;
   city?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   isDefault: boolean;
   recipientName?: string;
   recipientPhone?: string;
@@ -175,6 +177,8 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
               landmark: a.landmark || "",
               pincode: a.pincode || "",
               city: a.city || "Pune",
+              latitude: a.latitude != null ? Number(a.latitude) : (getPincodeCoordinates(a.pincode)?.lat ?? null),
+              longitude: a.longitude != null ? Number(a.longitude) : (getPincodeCoordinates(a.pincode)?.lng ?? null),
               isDefault: Boolean(a.isDefault),
               recipientName: a.recipientName || session?.user?.name || "Registered User",
               recipientPhone: a.recipientPhone || (session?.user as any)?.phone || "",
@@ -273,7 +277,7 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
     };
   }, [cartItems]);
 
-  // Delivery coverage & distance validation
+  // Delivery coverage & distance validation for selected delivery address
   const { isOutsideCoverage, shopDistanceKm, maxDeliveryRadius } = React.useMemo(() => {
     if (!sellerDetails) {
       return { isOutsideCoverage: false, shopDistanceKm: null, maxDeliveryRadius: MAX_DELIVERY_RADIUS_KM };
@@ -288,16 +292,53 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
 
     let userLat: number | null = null;
     let userLng: number | null = null;
+    let activePin: string | null = null;
 
-    if (defaultAddress?.latitude && defaultAddress?.longitude) {
-      userLat = Number(defaultAddress.latitude);
-      userLng = Number(defaultAddress.longitude);
-    } else {
-      const activePin = postalCode.trim() || defaultAddress?.pincode || (typeof window !== "undefined" ? localStorage.getItem("active-selected-pincode") || localStorage.getItem("guest-pincode") : null);
-      const userCoords = getPincodeCoordinates(activePin);
-      if (userCoords) {
-        userLat = userCoords.lat;
-        userLng = userCoords.lng;
+    // 1. If in Saved Address mode and an address is selected, prioritize selected saved address
+    if (addressMode === "saved" && selectedSavedAddressId) {
+      const selectedAddr = savedAddresses.find((a) => a.id === selectedSavedAddressId);
+      if (selectedAddr) {
+        if (selectedAddr.latitude != null && selectedAddr.longitude != null && !isNaN(Number(selectedAddr.latitude)) && !isNaN(Number(selectedAddr.longitude))) {
+          userLat = Number(selectedAddr.latitude);
+          userLng = Number(selectedAddr.longitude);
+        } else if (selectedAddr.pincode) {
+          const pinCoords = getPincodeCoordinates(selectedAddr.pincode);
+          if (pinCoords) {
+            userLat = pinCoords.lat;
+            userLng = pinCoords.lng;
+          }
+        }
+        activePin = selectedAddr.pincode ? selectedAddr.pincode.trim() : null;
+      }
+    }
+
+    // 2. If in Manual Address mode or no saved address coordinates yet
+    if (userLat === null || userLng === null) {
+      if (postalCode && postalCode.trim()) {
+        activePin = postalCode.trim();
+        const pinCoords = getPincodeCoordinates(activePin);
+        if (pinCoords) {
+          userLat = pinCoords.lat;
+          userLng = pinCoords.lng;
+        }
+      }
+    }
+
+    // 3. Fallback only if no address or pincode selected at all
+    if (userLat === null || userLng === null) {
+      if (defaultAddress?.latitude && defaultAddress?.longitude) {
+        userLat = Number(defaultAddress.latitude);
+        userLng = Number(defaultAddress.longitude);
+      } else {
+        const fallbackPin = defaultAddress?.pincode || (typeof window !== "undefined" ? localStorage.getItem("active-selected-pincode") || localStorage.getItem("guest-pincode") : null);
+        if (fallbackPin) {
+          activePin = fallbackPin;
+          const userCoords = getPincodeCoordinates(fallbackPin);
+          if (userCoords) {
+            userLat = userCoords.lat;
+            userLng = userCoords.lng;
+          }
+        }
       }
     }
 
@@ -313,9 +354,8 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
     }
 
     // Pincode fallback
-    const userPin = postalCode.trim() || defaultAddress?.pincode || (typeof window !== "undefined" ? localStorage.getItem("active-selected-pincode") : "");
-    if (userPin && sellerDetails.user?.pincode) {
-      const userPinCoords = getPincodeCoordinates(userPin);
+    if (activePin && sellerDetails.user?.pincode) {
+      const userPinCoords = getPincodeCoordinates(activePin);
       const sellerPinCoords = getPincodeCoordinates(sellerDetails.user.pincode);
       if (userPinCoords && sellerPinCoords) {
         const pinDistance = calculateDistanceKm(userPinCoords.lat, userPinCoords.lng, sellerPinCoords.lat, sellerPinCoords.lng);
@@ -328,7 +368,45 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
     }
 
     return { isOutsideCoverage: false, shopDistanceKm: null, maxDeliveryRadius: maxRadius };
-  }, [sellerDetails, defaultAddress, postalCode]);
+  }, [sellerDetails, addressMode, selectedSavedAddressId, savedAddresses, postalCode, defaultAddress]);
+
+  const getActiveLocationPayload = () => {
+    let activeLat: number | null = null;
+    let activeLng: number | null = null;
+    let activePincode = postalCode.trim();
+    let addressIdToSend: string | undefined = undefined;
+
+    if (addressMode === "saved" && selectedSavedAddressId) {
+      const selectedAddr = savedAddresses.find((a) => a.id === selectedSavedAddressId);
+      if (selectedAddr) {
+        addressIdToSend = selectedAddr.id;
+        activePincode = selectedAddr.pincode?.trim() || postalCode.trim();
+        if (selectedAddr.latitude != null && selectedAddr.longitude != null && !isNaN(Number(selectedAddr.latitude)) && !isNaN(Number(selectedAddr.longitude))) {
+          activeLat = Number(selectedAddr.latitude);
+          activeLng = Number(selectedAddr.longitude);
+        } else {
+          const pinCoords = getPincodeCoordinates(activePincode);
+          if (pinCoords) {
+            activeLat = pinCoords.lat;
+            activeLng = pinCoords.lng;
+          }
+        }
+      }
+    } else {
+      const pinCoords = getPincodeCoordinates(activePincode);
+      if (pinCoords) {
+        activeLat = pinCoords.lat;
+        activeLng = pinCoords.lng;
+      }
+    }
+
+    return {
+      addressId: addressIdToSend,
+      latitude: activeLat,
+      longitude: activeLng,
+      pincode: activePincode,
+    };
+  };
 
   useEffect(() => {
     if (session?.user) {
@@ -706,16 +784,36 @@ const loadRazorpayScript = (): Promise<boolean> => {
   // Pricing calculations: strictly only item prices and promo discounts
   const subtotal = checkoutItems.reduce((acc, item) => acc + item.price, 0);
   const discountAmount = React.useMemo(() => {
-    if (!isPromoApplied || !appliedCoupon || subtotal <= 0) return 0;
+    if (!isPromoApplied || !appliedCoupon || subtotal <= 0 || checkoutItems.length === 0) return 0;
     if (appliedCoupon.minimumCartValue && subtotal < appliedCoupon.minimumCartValue) return 0;
+
+    let targetSubtotal = subtotal;
+    if (appliedCoupon.appliesToProductId) {
+      const allowedKeys = String(appliedCoupon.appliesToProductId)
+        .split(",")
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean);
+      if (allowedKeys.length > 0) {
+        const matchingItems = checkoutItems.filter((it) => {
+          const itemId = String(it.id || "").toLowerCase();
+          const foodItemId = String(it.foodItemId || "").toLowerCase();
+          const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+          const name = String(it.name || "").toLowerCase().trim();
+          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
+        });
+        if (matchingItems.length === 0) return 0;
+        targetSubtotal = matchingItems.reduce((acc, it) => acc + it.price, 0);
+      }
+    }
+
     if (appliedCoupon.discountType === "PERCENTAGE" || (appliedCoupon.discountPercentage && !appliedCoupon.discountAmount)) {
       const pct = appliedCoupon.discountPercentage || 0;
-      const raw = Math.round((subtotal * pct) / 100);
+      const raw = Math.round((targetSubtotal * pct) / 100);
       return appliedCoupon.maxDiscountAmount ? Math.min(raw, appliedCoupon.maxDiscountAmount) : raw;
     }
     const flat = appliedCoupon.discountAmount || 0;
-    return Math.min(flat, subtotal);
-  }, [isPromoApplied, appliedCoupon, subtotal]);
+    return Math.min(flat, targetSubtotal);
+  }, [isPromoApplied, appliedCoupon, subtotal, checkoutItems]);
 
   const deliveryFee = 0;
   const taxesAndCharges = 0;
@@ -919,7 +1017,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
     }
   }, [availableOffers, subtotal, userDismissedPromo, isPromoApplied, appliedCoupon, isValidatingPromo, activeSellerId, checkoutItems]);
 
-  // Auto-remove or invalidate applied coupon whenever subtotal drops below the minimum required cart value
+  // Auto-remove or invalidate applied coupon whenever subtotal drops below minimum required cart value or required item is removed
   useEffect(() => {
     if (!appliedCoupon || !isPromoApplied) return;
     const minCart = Number(appliedCoupon.minimumCartValue ?? (appliedCoupon as any).minOrderAmount ?? 0);
@@ -930,8 +1028,39 @@ const loadRazorpayScript = (): Promise<boolean> => {
       setAppliedCoupon(null);
       setPromoCode("");
       showToast(`Coupon "${code}" removed. Minimum cart value of ₹${minCart} required.`, "warning");
+      return;
     }
-  }, [subtotal, appliedCoupon, isPromoApplied, promoCode]);
+
+    if (appliedCoupon.appliesToProductId && checkoutItems.length > 0) {
+      const allowedKeys = String(appliedCoupon.appliesToProductId)
+        .split(",")
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean);
+      if (allowedKeys.length > 0) {
+        const hasMatchingProduct = checkoutItems.some((it) => {
+          const itemId = String(it.id || "").toLowerCase();
+          const foodItemId = String(it.foodItemId || "").toLowerCase();
+          const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+          const name = String(it.name || "").toLowerCase().trim();
+          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
+        });
+        if (!hasMatchingProduct) {
+          const code = appliedCoupon.code || promoCode || "Applied";
+          setIsPromoApplied(false);
+          setDiscountPercent(0);
+          setAppliedCoupon(null);
+          setPromoCode("");
+          showToast(`Coupon "${code}" is no longer applicable as the required item was removed from your cart.`, "warning");
+          return;
+        }
+      }
+    } else if (appliedCoupon.appliesToProductId && checkoutItems.length === 0) {
+      setIsPromoApplied(false);
+      setDiscountPercent(0);
+      setAppliedCoupon(null);
+      setPromoCode("");
+    }
+  }, [subtotal, checkoutItems, appliedCoupon, isPromoApplied, promoCode]);
 
   const handleRemovePromo = () => {
     setUserDismissedPromo(true);
@@ -1029,7 +1158,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
 
     if (isOutsideCoverage) {
       showToast(
-        `Your delivery address is ${shopDistanceKm ? `${shopDistanceKm} km away, ` : ""}outside this restaurant's ${maxDeliveryRadius} km coverage area. Please update your delivery address.`,
+        `This address is outside the delivery area. Your selected delivery address is ${shopDistanceKm ? `${shopDistanceKm} km away, ` : ""}outside this restaurant's ${maxDeliveryRadius} km coverage area. Please select a valid delivery address within the coverage area.`,
         "error"
       );
       return;
@@ -1126,12 +1255,15 @@ const loadRazorpayScript = (): Promise<boolean> => {
         }
         setPendingTx(pendingData);
 
+        const locationPayload = getActiveLocationPayload();
         const initRes = await fetchApi("/api/user/orders/initiate-payment", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             totalAmount: grandTotal,
             sellerId: sellerId || "seller",
+            deliveryAddress: fullDeliveryAddress,
+            ...locationPayload,
           }),
         });
 
@@ -1186,6 +1318,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
               }
               setPendingTx(paidPendingData);
 
+              const locationPayload = getActiveLocationPayload();
               const createRes = await fetchApi("/api/user/orders", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -1200,6 +1333,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
                   razorpay_payment_id: response.razorpay_payment_id,
                   razorpay_order_id: response.razorpay_order_id,
                   razorpay_signature: response.razorpay_signature,
+                  ...locationPayload,
                 }),
               });
 
@@ -1341,6 +1475,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
       // -------------------------------------------------------------
       // FLOW 2: CASH ON DELIVERY (COD) or ZERO PAYMENT (100% OFF)
       // -------------------------------------------------------------
+      const locationPayload = getActiveLocationPayload();
       const res = await fetchApi("/api/user/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1352,6 +1487,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
           customerPhone: phoneNumber,
           paymentMethod: grandTotal === 0 ? (paymentMethod === "UPI" ? "ONLINE" : "COD") : "COD",
           appliedCouponId: isPromoApplied && appliedCoupon ? appliedCoupon.id : (isPromoApplied ? promoCode : null),
+          ...locationPayload,
         }),
       });
 
@@ -1855,19 +1991,37 @@ const loadRazorpayScript = (): Promise<boolean> => {
                           (addr.type || "").toUpperCase().includes("WORK") ||
                           (addr.type || "").toUpperCase().includes("OFFICE");
 
+                        const sellerCoords = (sellerDetails?.latitude && sellerDetails?.longitude)
+                          ? { lat: Number(sellerDetails.latitude), lng: Number(sellerDetails.longitude) }
+                          : getPincodeCoordinates(sellerDetails?.user?.pincode);
+                        const sellerLat = sellerCoords?.lat ?? null;
+                        const sellerLng = sellerCoords?.lng ?? null;
+                        const addrLat = addr.latitude != null ? Number(addr.latitude) : (getPincodeCoordinates(addr.pincode)?.lat ?? null);
+                        const addrLng = addr.longitude != null ? Number(addr.longitude) : (getPincodeCoordinates(addr.pincode)?.lng ?? null);
+                        let addrDist: number | null = null;
+                        if (addrLat != null && addrLng != null && sellerLat != null && sellerLng != null) {
+                          addrDist = calculateDistanceKm(addrLat, addrLng, sellerLat, sellerLng);
+                        } else if (addr.pincode && sellerDetails?.user?.pincode) {
+                          const p1 = getPincodeCoordinates(addr.pincode);
+                          const p2 = getPincodeCoordinates(sellerDetails.user.pincode);
+                          if (p1 && p2) addrDist = calculateDistanceKm(p1.lat, p1.lng, p2.lat, p2.lng);
+                        }
+                        const isAddrOutside = Boolean(sellerDetails && addrDist !== null && addrDist > maxDeliveryRadius);
+
                         return (
                           <div
                             key={addr.id}
                             className={`${styles.savedAddressCard} ${
                               isSelected ? styles.savedAddressCardSelected : ""
                             }`}
+                            style={isAddrOutside && isSelected ? { borderColor: "#F87171", backgroundColor: "#FEF2F2" } : undefined}
                             onClick={() => selectSavedAddress(addr)}
                             role="button"
                             tabIndex={0}
-                            title="Click to select this delivery address"
+                            title={isAddrOutside ? "This address is outside the delivery area" : "Click to select this delivery address"}
                           >
                             <div className={styles.cardTopRow}>
-                              <div className={styles.tagsGroup}>
+                              <div className={styles.tagsGroup} style={{ flexWrap: "wrap", gap: "4px" }}>
                                 <span
                                   className={
                                     isHome
@@ -1888,6 +2042,11 @@ const loadRazorpayScript = (): Promise<boolean> => {
                                 </span>
                                 {addr.isDefault && (
                                   <span className={styles.defaultBadge}>DEFAULT</span>
+                                )}
+                                {isAddrOutside && (
+                                  <span style={{ fontSize: "10px", fontWeight: 700, backgroundColor: "#FEE2E2", color: "#DC2626", padding: "2px 6px", borderRadius: "4px" }}>
+                                    OUTSIDE AREA ({addrDist} km)
+                                  </span>
                                 )}
                               </div>
 
@@ -1917,15 +2076,33 @@ const loadRazorpayScript = (): Promise<boolean> => {
                     </div>
 
                     {/* Selected Address Confirmation Banner */}
-                    <div className={styles.selectedAddressSummary}>
+                    <div
+                      className={styles.selectedAddressSummary}
+                      style={isOutsideCoverage ? { backgroundColor: "#FEF2F2", borderColor: "#FCA5A5" } : undefined}
+                    >
                       <div className={styles.selectedSummaryLeft}>
-                        <CheckCircle2 size={20} color="#EA580C" />
+                        {isOutsideCoverage ? (
+                          <AlertCircle size={20} color="#DC2626" style={{ flexShrink: 0 }} />
+                        ) : (
+                          <CheckCircle2 size={20} color="#EA580C" style={{ flexShrink: 0 }} />
+                        )}
                         <div>
-                          <div className={styles.selectedSummaryTitle}>
-                            Delivering to Selected Address
+                          <div
+                            className={styles.selectedSummaryTitle}
+                            style={isOutsideCoverage ? { color: "#991B1B" } : undefined}
+                          >
+                            {isOutsideCoverage ? "This address is outside the delivery area" : "Delivering to Selected Address"}
                           </div>
-                          <div className={styles.selectedSummaryText}>
+                          <div
+                            className={styles.selectedSummaryText}
+                            style={isOutsideCoverage ? { color: "#B91C1C" } : undefined}
+                          >
                             {streetAddress}, {city} - {postalCode}
+                            {isOutsideCoverage && (
+                              <span style={{ display: "block", marginTop: "4px", fontWeight: 600, fontSize: "0.82rem" }}>
+                                {shopDistanceKm ? `Selected address is ${shopDistanceKm} km away. ` : ""}Maximum allowed delivery radius is {maxDeliveryRadius} km.
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -2413,7 +2590,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
                       <AlertCircle size={18} color="#DC2626" style={{ flexShrink: 0, marginTop: "2px" }} />
                       <div>
                         <h4 style={{ margin: 0, fontSize: "0.88rem", fontWeight: 700, color: "#991B1B" }}>
-                          Outside Delivery Coverage
+                          This address is outside the delivery area
                         </h4>
                         <p style={{ margin: "3px 0 0 0", fontSize: "0.8rem", color: "#B91C1C", lineHeight: 1.4 }}>
                           Your selected delivery address is <strong>{shopDistanceKm} km</strong> away from this restaurant. Maximum delivery distance is <strong>{maxDeliveryRadius} km</strong>.
@@ -2460,7 +2637,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
                         {isSellerClosed
                           ? "Kitchen Unavailable • Cannot Place Order"
                           : isOutsideCoverage
-                          ? `Outside 5 km Coverage (${shopDistanceKm ? `${shopDistanceKm} km` : "> 5 km"})`
+                          ? `Outside Delivery Area (${shopDistanceKm ? `${shopDistanceKm} km` : "> 5 km"})`
                           : isCartEmpty
                           ? "Your Cart is Empty • Add Products"
                           : isSubmitting
