@@ -22,6 +22,8 @@ import {
   LayoutGrid,
   Upload,
   Save,
+  Edit2,
+  Check,
 } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import SellerNotificationChannels from "../notification-channels/SellerNotificationChannels";
@@ -534,6 +536,75 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+
+  // Address Direct Edit / Update states
+  const [isEditingAddress, setIsEditingAddress] = useState(false);
+  const [isUpdatingAddress, setIsUpdatingAddress] = useState(false);
+  const [addressUpdatedSuccess, setAddressUpdatedSuccess] = useState(false);
+  const addressTextareaRef = React.useRef<HTMLTextAreaElement>(null);
+
+  const handleToggleEditAddress = () => {
+    setIsEditingAddress(true);
+    setTimeout(() => {
+      addressTextareaRef.current?.focus();
+    }, 50);
+  };
+
+  const handleQuickUpdateAddress = async () => {
+    if (!formData.address.trim()) {
+      setToastData({ title: "Address cannot be empty", status: "OFF" });
+      return;
+    }
+
+    setIsUpdatingAddress(true);
+    try {
+      const res = await fetchApi("/api/seller/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          address: formData.address.trim(),
+          latitude: formData.latitude,
+          longitude: formData.longitude,
+          isLocationPinned: Boolean(formData.latitude && formData.longitude),
+        }),
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.message || "Failed to update address");
+      }
+
+      // Update cached profile state
+      updateCachedProfile({
+        address: formData.address.trim(),
+        latitude: formData.latitude,
+        longitude: formData.longitude,
+        isLocationPinned: Boolean(formData.latitude && formData.longitude),
+      });
+
+      // Sync localStorage
+      if (typeof window !== "undefined") {
+        try {
+          const prevPrefs = JSON.parse(localStorage.getItem("seller_settings_preferences") || "{}");
+          localStorage.setItem(
+            "seller_settings_preferences",
+            JSON.stringify({ ...prevPrefs, address: formData.address.trim() })
+          );
+        } catch {}
+        window.dispatchEvent(new CustomEvent("seller-status-updated"));
+      }
+
+      setAddressUpdatedSuccess(true);
+      setIsEditingAddress(false);
+      setToastData({ title: "Registered address updated successfully!", status: "ON" });
+      setTimeout(() => setAddressUpdatedSuccess(false), 4000);
+    } catch (err: any) {
+      console.error("Failed to update address:", err);
+      setToastData({ title: err.message || "Failed to update address", status: "OFF" });
+    } finally {
+      setIsUpdatingAddress(false);
+    }
+  };
 
   useEffect(() => {
     if (!toastData) return;
@@ -1451,19 +1522,141 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                 </div>
 
                 <div className={styles.fieldGroup}>
-                  <label className={styles.label}>
-                    Registered Address &amp; Building Details <span style={{ color: "#EA580C" }}>*</span>
-                  </label>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+                    <label className={styles.label} style={{ margin: 0 }}>
+                      Registered Address &amp; Building Details <span style={{ color: "#EA580C" }}>*</span>
+                    </label>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      {addressUpdatedSuccess && (
+                        <span
+                          style={{
+                            fontSize: "11px",
+                            fontWeight: 700,
+                            color: "#16A34A",
+                            backgroundColor: "#F0FDF4",
+                            padding: "3px 8px",
+                            borderRadius: "8px",
+                            border: "1px solid #BBF7D0",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
+                          }}
+                        >
+                          <CheckCircle2 size={12} /> Address Updated
+                        </span>
+                      )}
+                      {!isEditingAddress ? (
+                        <button
+                          type="button"
+                          onClick={handleToggleEditAddress}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "5px",
+                            padding: "4px 10px",
+                            borderRadius: "8px",
+                            border: "1px solid #FED7AA",
+                            backgroundColor: "#FFF7ED",
+                            color: "#EA580C",
+                            fontSize: "12px",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                          }}
+                        >
+                          <Edit2 size={12} />
+                          <span>Edit Address</span>
+                        </button>
+                      ) : (
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          <button
+                            type="button"
+                            onClick={() => setIsEditingAddress(false)}
+                            style={{
+                              padding: "4px 8px",
+                              borderRadius: "8px",
+                              border: "1px solid #E2E8F0",
+                              backgroundColor: "#FFFFFF",
+                              color: "#64748B",
+                              fontSize: "12px",
+                              fontWeight: 600,
+                              cursor: "pointer",
+                            }}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleQuickUpdateAddress}
+                            disabled={isUpdatingAddress}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "5px",
+                              padding: "4px 12px",
+                              borderRadius: "8px",
+                              border: "none",
+                              backgroundColor: "#EA580C",
+                              color: "#FFFFFF",
+                              fontSize: "12px",
+                              fontWeight: 700,
+                              cursor: isUpdatingAddress ? "not-allowed" : "pointer",
+                              boxShadow: "0 2px 6px rgba(234, 88, 12, 0.25)",
+                            }}
+                          >
+                            {isUpdatingAddress ? <Loader2 size={12} className={styles.spinner} /> : <Save size={12} />}
+                            <span>{isUpdatingAddress ? "Updating..." : "Update Address"}</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                   <textarea
+                    ref={addressTextareaRef}
                     className={styles.textarea}
                     value={formData.address}
                     onChange={(e) => handleInputChange("address", e.target.value)}
                     placeholder="Flat / Shop No., Building Name, Street / Road, Area, City, Pincode"
                     rows={3}
+                    style={
+                      isEditingAddress
+                        ? {
+                            borderColor: "#EA580C",
+                            boxShadow: "0 0 0 3px rgba(234, 88, 12, 0.15)",
+                            backgroundColor: "#FFFFFF",
+                          }
+                        : {}
+                    }
                   />
-                  <p className={styles.helperText} style={{ marginTop: "3px" }}>
-                    Shown on customer receipts and used by delivery riders for store pickup navigation.
-                  </p>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "4px", flexWrap: "wrap", gap: "6px" }}>
+                    <p className={styles.helperText} style={{ margin: 0 }}>
+                      Shown on customer receipts and used by delivery riders for store pickup navigation.
+                    </p>
+                    {isEditingAddress && (
+                      <button
+                        type="button"
+                        onClick={handleQuickUpdateAddress}
+                        disabled={isUpdatingAddress}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "5px",
+                          padding: "6px 14px",
+                          borderRadius: "8px",
+                          border: "none",
+                          backgroundColor: "#EA580C",
+                          color: "#FFFFFF",
+                          fontSize: "12px",
+                          fontWeight: 700,
+                          cursor: isUpdatingAddress ? "not-allowed" : "pointer",
+                          boxShadow: "0 2px 6px rgba(234, 88, 12, 0.25)",
+                        }}
+                      >
+                        {isUpdatingAddress ? <Loader2 size={12} className={styles.spinner} /> : <Check size={12} />}
+                        <span>Save &amp; Update Address</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
