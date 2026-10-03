@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Check, CheckCircle2, AlertTriangle, Bell } from "lucide-react";
 import styles from "./ResponsiveCashHandover.module.css";
