@@ -503,7 +503,6 @@ export interface SellerSecuritySettingsProps {
 export const SellerSecuritySettings: React.FC<SellerSecuritySettingsProps> = ({
   passwords,
   onPasswordChange,
-  onLogoutOtherSessions,
   className = "",
 }) => {
   return (
@@ -513,9 +512,6 @@ export const SellerSecuritySettings: React.FC<SellerSecuritySettingsProps> = ({
         newPassword={passwords?.newPass}
         confirmPassword={passwords?.confirm}
         onPasswordChange={onPasswordChange}
-      />
-      <ActiveLoginSessionsCard
-        onLogoutOtherSessions={onLogoutOtherSessions}
       />
     </div>
   );
