@@ -1106,6 +1106,25 @@
     height: 48px;
     font-size: 14px;
   }
+  .addressModeTabs {
+    flex-direction: column;
+    gap: 6px;
+    padding: 3px;
+  }
+  .modeTabBtn {
+    padding: 7px 10px;
+    font-size: 12px;
+  }
+  .savedAddressCard {
+    padding: 12px 14px;
+    gap: 6px;
+  }
+  .cardRecipient {
+    font-size: 13px;
+  }
+  .cardAddressText {
+    font-size: 12px;
+  }
   .toastMessage {
     bottom: 16px;
     padding: 10px 14px;

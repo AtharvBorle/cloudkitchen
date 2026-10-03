@@ -75,6 +75,8 @@ export const ActiveSubscriptionsNotifications: React.FC = () => {
     saveNotificationsSummaryPreferences({ [key]: nextVal });
   };
 
+  const activeSubscriptions = subscriptions.filter((s) => s.status === "ACTIVE");
+
   return (
     <div className={styles.sectionContainer}>
       {/* 1. Left Card: Active Subscriptions */}
@@ -87,7 +89,7 @@ export const ActiveSubscriptionsNotifications: React.FC = () => {
             <h2 className={styles.cardTitle}>Active Subscriptions</h2>
           </div>
 
-          {subscriptions.length > 0 && (
+          {activeSubscriptions.length > 0 && (
             <Link
               href="/my-subscriptions-desktop"
               style={{
@@ -100,7 +102,7 @@ export const ActiveSubscriptionsNotifications: React.FC = () => {
                 gap: "4px",
               }}
             >
-              <span>View All</span>
+              <span>View All ({activeSubscriptions.length})</span>
               <ArrowRight size={13} />
             </Link>
           )}
@@ -119,9 +121,9 @@ export const ActiveSubscriptionsNotifications: React.FC = () => {
           >
             Loading subscriptions...
           </div>
-        ) : subscriptions.length > 0 ? (
+        ) : activeSubscriptions.length > 0 ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            {subscriptions.slice(0, 3).map((sub) => {
+            {activeSubscriptions.slice(0, 3).map((sub) => {
               const planName = sub.plan?.name || "Meal Plan";
               const sellerName = sub.seller?.businessName || "Kitchen Partner";
               const isPaused = sub.isPaused || sub.status === "PAUSED";

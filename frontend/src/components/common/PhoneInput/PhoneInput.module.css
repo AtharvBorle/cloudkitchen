@@ -1,4 +1,4 @@
-﻿.phoneContainer {
+.phoneContainer {
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -96,6 +96,10 @@
   height: 38px;
   padding: 0 36px 0 10px;
   font-size: 0.85rem;
+}
+
+.phoneFieldWithAction {
+  padding-right: 4px !important;
 }
 
 .phoneField::placeholder {
@@ -199,5 +203,25 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@media (max-width: 640px) {
+  .countryCodePrefix {
+    padding: 0 8px;
+    gap: 3px;
+    font-size: 0.82rem;
+  }
+  .phoneField {
+    padding-left: 8px;
+    font-size: 0.88rem;
+    letter-spacing: 0.02em;
+  }
+  .phoneFieldWithAction {
+    padding-right: 2px !important;
+  }
+  .actionWrapper {
+    gap: 4px;
+    padding-right: 4px;
   }
 }

@@ -317,23 +317,34 @@ export default function PopularOrders({
               </div>
 
               {/* Info: Title & Coupon Code */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: 0, width: "100%", overflow: "hidden" }}>
                 <h3
                   style={{
-                    fontSize: "1.05rem",
+                    fontSize: "1.02rem",
                     fontWeight: "800",
                     color: isClosed ? "#64748B" : "#18181B",
                     margin: 0,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    maxWidth: "100%",
                   }}
+                  title={offer.title}
                 >
                   {offer.title}
                 </h3>
                 <span
                   style={{
-                    fontSize: "0.82rem",
+                    fontSize: "0.80rem",
                     fontWeight: "600",
                     color: isClosed ? "#94A3B8" : "#475569",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    maxWidth: "100%",
+                    display: "block",
                   }}
+                  title={offer.code}
                 >
                   {offer.code}
                 </span>

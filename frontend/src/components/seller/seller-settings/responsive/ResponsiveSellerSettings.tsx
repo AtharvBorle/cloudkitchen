@@ -1970,57 +1970,76 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
 
           {activeTab === "Notifications" && (
             <>
-              {/* Notification Channels & Quiet Hours (Exact Reference Image Design) */}
-              <SellerNotificationChannels
-                data={{
-                  emailNotifications: formData.emailNotifications,
-                  smsAlerts: formData.smsAlerts,
-                  pushNotifications: formData.pushNotifications,
-                  enableQuietHours: formData.enableQuietHours,
-                  quietHoursStart: formData.quietHoursStart,
-                  quietHoursEnd: formData.quietHoursEnd,
-                }}
-                onChange={(field, value) => {
-                  setFormData((prev) => {
-                    const updated = {
-                      ...prev,
-                      [field]: value,
-                    };
-                    if (typeof window !== "undefined") {
-                      try {
-                        localStorage.setItem("seller_settings_preferences", JSON.stringify(updated));
-                      } catch {}
-                    }
-                    return updated;
-                  });
-                }}
-                onToggle={(field) => {
-                  setFormData((prev) => {
-                    const nextVal = !prev[field as keyof ResponsiveSellerSettingsData];
-                    const updated = {
-                      ...prev,
-                      [field]: nextVal,
-                    };
-                    if (typeof window !== "undefined") {
-                      try {
-                        localStorage.setItem("seller_settings_preferences", JSON.stringify(updated));
-                      } catch {}
-                    }
-                    return updated;
-                  });
-                }}
-              />
-
-              {/* 1. Order & Booking Alerts */}
+              {/* 1. Notification Channels */}
               <div className={styles.card}>
-                <h2 className={styles.cardTitle} style={{ margin: "0 0 2px 0", fontSize: "15px", fontWeight: 700 }}>
-                  Order &amp; Booking Alerts
-                </h2>
+                <div className={styles.cardHeaderRow}>
+                  <Bell size={17} className={styles.cardHeaderIcon} />
+                  <h2 className={styles.cardTitle}>Notification Channels</h2>
+                </div>
+
+                <div className={styles.hoursRow}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                    <span className={styles.label}>Email Notifications</span>
+                    <span style={{ fontSize: "12px", color: "#64748B" }}>Order summaries, invoices, and settlement reports.</span>
+                  </div>
+                  <div className={styles.switchWrapper}>
+                    <label className={styles.toggleSwitch}>
+                      <input
+                        type="checkbox"
+                        checked={formData.emailNotifications}
+                        onChange={(e) => handleInputChange("emailNotifications", e.target.checked)}
+                      />
+                      <span className={styles.toggleSlider} />
+                    </label>
+                  </div>
+                </div>
+
+                <div className={styles.hoursRow}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                    <span className={styles.label}>SMS Alerts</span>
+                    <span style={{ fontSize: "12px", color: "#64748B" }}>Critical notifications for new orders &amp; customer updates.</span>
+                  </div>
+                  <div className={styles.switchWrapper}>
+                    <label className={styles.toggleSwitch}>
+                      <input
+                        type="checkbox"
+                        checked={formData.smsAlerts}
+                        onChange={(e) => handleInputChange("smsAlerts", e.target.checked)}
+                      />
+                      <span className={styles.toggleSlider} />
+                    </label>
+                  </div>
+                </div>
+
+                <div className={styles.hoursRow}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                    <span className={styles.label}>Push Notifications</span>
+                    <span style={{ fontSize: "12px", color: "#64748B" }}>Instant device popups for incoming orders and kitchen status.</span>
+                  </div>
+                  <div className={styles.switchWrapper}>
+                    <label className={styles.toggleSwitch}>
+                      <input
+                        type="checkbox"
+                        checked={formData.pushNotifications}
+                        onChange={(e) => handleInputChange("pushNotifications", e.target.checked)}
+                      />
+                      <span className={styles.toggleSlider} />
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Order & Booking Alerts */}
+              <div className={styles.card}>
+                <div className={styles.cardHeaderRow}>
+                  <Package size={17} className={styles.cardHeaderIcon} />
+                  <h2 className={styles.cardTitle}>Order &amp; Booking Alerts</h2>
+                </div>
 
                 <div className={styles.hoursRow}>
                   <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
                     <span className={styles.label}>New Order Incoming</span>
-                    <span style={{ fontSize: "12px", color: "#64748B" }}>Trigger alarm and print invoice instantly upon receiving customer orders.</span>
+                    <span style={{ fontSize: "12px", color: "#64748B" }}>Trigger alarm and instant sound for incoming orders.</span>
                   </div>
                   <div className={styles.switchWrapper}>
                     <label className={styles.toggleSwitch}>
@@ -2037,7 +2056,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                 <div className={styles.hoursRow}>
                   <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
                     <span className={styles.label}>Order Cancellation</span>
-                    <span style={{ fontSize: "12px", color: "#64748B" }}>Immediate SMS and push ping when a customer cancels an order.</span>
+                    <span style={{ fontSize: "12px", color: "#64748B" }}>Immediate alert when a customer cancels an order.</span>
                   </div>
                   <div className={styles.switchWrapper}>
                     <label className={styles.toggleSwitch}>
@@ -2054,7 +2073,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                 <div className={styles.hoursRow}>
                   <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
                     <span className={styles.label}>Room Bookings</span>
-                    <span style={{ fontSize: "12px", color: "#64748B" }}>Alert when a customer books a cloud dining space or workspace.</span>
+                    <span style={{ fontSize: "12px", color: "#64748B" }}>Alert when a customer books a space or room.</span>
                   </div>
                   <div className={styles.switchWrapper}>
                     <label className={styles.toggleSwitch}>
@@ -2071,7 +2090,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                 <div className={styles.hoursRow}>
                   <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
                     <span className={styles.label}>Delayed Deliveries</span>
-                    <span style={{ fontSize: "12px", color: "#64748B" }}>Ping when a rider hasn&apos;t picked up an order within 15 minutes.</span>
+                    <span style={{ fontSize: "12px", color: "#64748B" }}>Alert when delivery pickup is delayed past estimated time.</span>
                   </div>
                   <div className={styles.switchWrapper}>
                     <label className={styles.toggleSwitch}>
@@ -2086,16 +2105,17 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                 </div>
               </div>
 
-              {/* 2. Marketing & Growth Alerts */}
+              {/* 3. Marketing & Growth Alerts */}
               <div className={styles.card}>
-                <h2 className={styles.cardTitle} style={{ margin: "0 0 2px 0", fontSize: "15px", fontWeight: 700 }}>
-                  Marketing &amp; Growth Alerts
-                </h2>
+                <div className={styles.cardHeaderRow}>
+                  <Clock size={17} className={styles.cardHeaderIcon} />
+                  <h2 className={styles.cardTitle}>Marketing &amp; Growth Alerts</h2>
+                </div>
 
                 <div className={styles.hoursRow}>
                   <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
                     <span className={styles.label}>Weekly Growth Performance</span>
-                    <span style={{ fontSize: "12px", color: "#64748B" }}>Receive analytics detailing revenue, popular items, and rider performance.</span>
+                    <span style={{ fontSize: "12px", color: "#64748B" }}>Weekly analytics on revenue, popular dishes &amp; ratings.</span>
                   </div>
                   <div className={styles.switchWrapper}>
                     <label className={styles.toggleSwitch}>
@@ -2111,8 +2131,8 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
 
                 <div className={styles.hoursRow}>
                   <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                    <span className={styles.label}>Promotions &amp; Product Beta</span>
-                    <span style={{ fontSize: "12px", color: "#64748B" }}>Receive updates regarding new cloud kitchen features, partner promos, and discounts.</span>
+                    <span className={styles.label}>Promotions &amp; Product Updates</span>
+                    <span style={{ fontSize: "12px", color: "#64748B" }}>Campaign insights, promotional tools and feature updates.</span>
                   </div>
                   <div className={styles.switchWrapper}>
                     <label className={styles.toggleSwitch}>
@@ -2127,34 +2147,17 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                 </div>
               </div>
 
-              {/* 5. Bookings, Reviews & Summaries */}
+              {/* 4. Reviews & Reports */}
               <div className={styles.card}>
                 <div className={styles.cardHeaderRow}>
                   <Star size={17} className={styles.cardHeaderIcon} />
-                  <h2 className={styles.cardTitle}>Bookings, Reviews &amp; Reports</h2>
+                  <h2 className={styles.cardTitle}>Reviews &amp; Reports</h2>
                 </div>
 
                 <div className={styles.hoursRow}>
                   <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                    <span className={styles.label}>Room &amp; Table Reservations</span>
-                    <span style={{ fontSize: "12px", color: "#64748B" }}>New booking requests &amp; check-in alerts</span>
-                  </div>
-                  <div className={styles.switchWrapper}>
-                    <label className={styles.toggleSwitch}>
-                      <input
-                        type="checkbox"
-                        checked={formData.bookingRequestAlert}
-                        onChange={(e) => handleInputChange("bookingRequestAlert", e.target.checked)}
-                      />
-                      <span className={styles.toggleSlider} />
-                    </label>
-                  </div>
-                </div>
-
-                <div className={styles.hoursRow}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                    <span className={styles.label}>Critical Customer Review (≤ 2 Stars)</span>
-                    <span style={{ fontSize: "12px", color: "#64748B" }}>Urgent alert to resolve low customer feedback</span>
+                    <span className={styles.label}>Low Customer Review (≤ 2 Stars)</span>
+                    <span style={{ fontSize: "12px", color: "#64748B" }}>Urgent alert to address low customer feedback.</span>
                   </div>
                   <div className={styles.switchWrapper}>
                     <label className={styles.toggleSwitch}>
@@ -2170,8 +2173,8 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
 
                 <div className={styles.hoursRow}>
                   <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                    <span className={styles.label}>Daily Settlement &amp; Payout Email</span>
-                    <span style={{ fontSize: "12px", color: "#64748B" }}>Nightly sales digest to registered email</span>
+                    <span className={styles.label}>Daily Settlement &amp; Payout Digest</span>
+                    <span style={{ fontSize: "12px", color: "#64748B" }}>Daily sales summary sent to your registered email.</span>
                   </div>
                   <div className={styles.switchWrapper}>
                     <label className={styles.toggleSwitch}>
@@ -2179,23 +2182,6 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                         type="checkbox"
                         checked={formData.dailyDigest}
                         onChange={(e) => handleInputChange("dailyDigest", e.target.checked)}
-                      />
-                      <span className={styles.toggleSlider} />
-                    </label>
-                  </div>
-                </div>
-
-                <div className={styles.hoursRow}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                    <span className={styles.label}>SMS Customer Updates</span>
-                    <span style={{ fontSize: "12px", color: "#64748B" }}>Send customer automated SMS updates</span>
-                  </div>
-                  <div className={styles.switchWrapper}>
-                    <label className={styles.toggleSwitch}>
-                      <input
-                        type="checkbox"
-                        checked={formData.smsAlerts}
-                        onChange={(e) => handleInputChange("smsAlerts", e.target.checked)}
                       />
                       <span className={styles.toggleSlider} />
                     </label>

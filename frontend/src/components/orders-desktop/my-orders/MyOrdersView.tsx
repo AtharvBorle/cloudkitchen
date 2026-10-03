@@ -2145,35 +2145,42 @@ export default function MyOrdersView() {
                       type="button"
                       className={styles.sidebarReorderBtn}
                       onClick={() => handleReorder(selectedOrder)}
+                      style={
+                        !(selectedOrder.status === "DELIVERED" || selectedOrder.rawStatus === "DELIVERED" || selectedOrder.statusDisplay?.toLowerCase().includes("delivered"))
+                          ? { flex: 1, width: "100%" }
+                          : undefined
+                      }
                     >
                       <RotateCcw size={15} />
                       <span>Reorder</span>
                     </button>
 
-                    <button
-                      type="button"
-                      className={styles.sidebarRateBtn}
-                      onClick={() => handleRateOrder(selectedOrder)}
-                      style={
-                        selectedOrder.review
-                          ? {
-                              backgroundColor: "#ECFDF5",
-                              color: "#059669",
-                              borderColor: "#A7F3D0",
-                            }
-                          : undefined
-                      }
-                    >
-                      <Star
-                        size={15}
-                        fill={selectedOrder.review ? "#059669" : "none"}
-                      />
-                      <span>
-                        {selectedOrder.review
-                          ? `Rated ${selectedOrder.review.rating}★`
-                          : "Rate Order"}
-                      </span>
-                    </button>
+                    {(selectedOrder.status === "DELIVERED" || selectedOrder.rawStatus === "DELIVERED" || selectedOrder.statusDisplay?.toLowerCase().includes("delivered")) && (
+                      <button
+                        type="button"
+                        className={styles.sidebarRateBtn}
+                        onClick={() => handleRateOrder(selectedOrder)}
+                        style={
+                          selectedOrder.review
+                            ? {
+                                backgroundColor: "#ECFDF5",
+                                color: "#059669",
+                                borderColor: "#A7F3D0",
+                              }
+                            : undefined
+                        }
+                      >
+                        <Star
+                          size={15}
+                          fill={selectedOrder.review ? "#059669" : "none"}
+                        />
+                        <span>
+                          {selectedOrder.review
+                            ? `Rated ${selectedOrder.review.rating}★`
+                            : "Rate Order"}
+                        </span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </aside>

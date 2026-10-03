@@ -2160,38 +2160,34 @@ const loadRazorpayScript = (): Promise<boolean> => {
                       })}
                     </div>
 
-                    {/* Selected Address Confirmation Banner */}
-                    <div
-                      className={styles.selectedAddressSummary}
-                      style={isOutsideCoverage ? { backgroundColor: "#FEF2F2", borderColor: "#FCA5A5" } : undefined}
-                    >
-                      <div className={styles.selectedSummaryLeft}>
-                        {isOutsideCoverage ? (
+                    {/* Out of Coverage Warning Banner (Only displayed when address is outside delivery area) */}
+                    {isOutsideCoverage && (
+                      <div
+                        className={styles.selectedAddressSummary}
+                        style={{ backgroundColor: "#FEF2F2", borderColor: "#FCA5A5" }}
+                      >
+                        <div className={styles.selectedSummaryLeft}>
                           <AlertCircle size={20} color="#DC2626" style={{ flexShrink: 0 }} />
-                        ) : (
-                          <CheckCircle2 size={20} color="#EA580C" style={{ flexShrink: 0 }} />
-                        )}
-                        <div>
-                          <div
-                            className={styles.selectedSummaryTitle}
-                            style={isOutsideCoverage ? { color: "#991B1B" } : undefined}
-                          >
-                            {isOutsideCoverage ? "This address is outside the delivery area" : "Delivering to Selected Address"}
-                          </div>
-                          <div
-                            className={styles.selectedSummaryText}
-                            style={isOutsideCoverage ? { color: "#B91C1C" } : undefined}
-                          >
-                            {streetAddress}, {city} - {postalCode}
-                            {isOutsideCoverage && (
+                          <div>
+                            <div
+                              className={styles.selectedSummaryTitle}
+                              style={{ color: "#991B1B" }}
+                            >
+                              This address is outside the delivery area
+                            </div>
+                            <div
+                              className={styles.selectedSummaryText}
+                              style={{ color: "#B91C1C" }}
+                            >
+                              {streetAddress}, {city} - {postalCode}
                               <span style={{ display: "block", marginTop: "4px", fontWeight: 600, fontSize: "0.82rem" }}>
                                 {shopDistanceKm ? `Selected address is ${shopDistanceKm} km away. ` : ""}Maximum allowed delivery radius is {maxDeliveryRadius} km.
                               </span>
-                            )}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* Contact & Instructions fields for Saved Mode */}
                     <div className={styles.formFieldsStack}>
