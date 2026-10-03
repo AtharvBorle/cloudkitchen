@@ -5,7 +5,7 @@ export async function GET() {
     try {
         const data = await getPublicExploreData();
         const response = successResponse(data);
-        response.headers.set("Cache-Control", "public, s-maxage=30, stale-while-revalidate=15");
+        response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate");
         return response;
     } catch (error) {
         console.error("Error fetching public explore data:", error);

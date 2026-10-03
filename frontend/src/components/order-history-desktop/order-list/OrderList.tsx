@@ -1,8 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useState, useMemo } from "react";
 import styles from "./OrderList.module.css";
-import { ShoppingBag, Loader2 } from "lucide-react";
+import { ShoppingBag, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 
 export interface OrderItemData {
   id: string;
@@ -26,12 +26,22 @@ export interface OrderListProps {
   reorderingOrderId?: string | null;
 }
 
+const PAGE_SIZE = 5;
+
 export const OrderList: React.FC<OrderListProps> = ({
   orders = [],
   onViewDetails,
   onReorderMeal,
   reorderingOrderId = null,
 }) => {
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const totalPages = Math.max(1, Math.ceil(orders.length / PAGE_SIZE));
+  const paginatedOrders = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return orders.slice(start, start + PAGE_SIZE);
+  }, [orders, currentPage]);
+
   if (!orders || orders.length === 0) {
     return (
       <div style={{ textAlign: "center", padding: "64px 24px", backgroundColor: "#fff", borderRadius: "16px", border: "1px dashed #E2E8F0", marginTop: "20px" }}>
@@ -42,9 +52,12 @@ export const OrderList: React.FC<OrderListProps> = ({
     );
   }
 
+  const startIdx = (currentPage - 1) * PAGE_SIZE + 1;
+  const endIdx = Math.min(currentPage * PAGE_SIZE, orders.length);
+
   return (
     <div className={styles.ordersContainer}>
-      {orders.map((order) => {
+      {paginatedOrders.map((order) => {
         const isReorderingThis = reorderingOrderId === order.id;
 
         return (
@@ -128,9 +141,69 @@ export const OrderList: React.FC<OrderListProps> = ({
           </div>
         );
       })}
+
+      {/* Pagination Bar */}
+      {orders.length > PAGE_SIZE && (
+        <div className={styles.paginationContainer}>
+          <div className={styles.paginationInfo}>
+            Showing <span className={styles.paginationHighlight}>{startIdx}–{endIdx}</span> of{" "}
+            <span className={styles.paginationHighlight}>{orders.length}</span> orders
+          </div>
+
+          <div className={styles.paginationControls}>
+            <button
+              type="button"
+              className={`${styles.pageNavBtn} ${currentPage === 1 ? styles.pageNavBtnDisabled : ""}`}
+              onClick={() => {
+                if (currentPage > 1) {
+                  setCurrentPage((p) => p - 1);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }
+              }}
+              disabled={currentPage === 1}
+              aria-label="Previous page"
+            >
+              <ChevronLeft size={16} />
+              <span>Prev</span>
+            </button>
+
+            <div className={styles.pageNumbersList}>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  className={`${styles.pageNumberBtn} ${p === currentPage ? styles.pageNumberBtnActive : ""}`}
+                  onClick={() => {
+                    setCurrentPage(p);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  aria-current={p === currentPage ? "page" : undefined}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              className={`${styles.pageNavBtn} ${currentPage === totalPages ? styles.pageNavBtnDisabled : ""}`}
+              onClick={() => {
+                if (currentPage < totalPages) {
+                  setCurrentPage((p) => p + 1);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }
+              }}
+              disabled={currentPage === totalPages}
+              aria-label="Next page"
+            >
+              <span>Next</span>
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
-
 
 export default OrderList;

@@ -282,3 +282,123 @@
   }
 }
 
+/* Pagination Styles */
+.paginationContainer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 10px;
+  padding: 16px 20px;
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1.5px solid #f1f5f9;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.03);
+}
+
+.paginationInfo {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.paginationHighlight {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.paginationControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pageNavBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #334155;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pageNavBtn:hover:not(:disabled) {
+  background: #f8fafc;
+  color: #ea580c;
+  border-color: #cbd5e1;
+}
+
+.pageNavBtnDisabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: #f8fafc;
+}
+
+.pageNumbersList {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.pageNumberBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 6px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #475569;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pageNumberBtn:hover:not(.pageNumberBtnActive) {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #ea580c;
+}
+
+.pageNumberBtnActive {
+  background: linear-gradient(135deg, #ea580c 0%, #f97316 100%) !important;
+  color: #ffffff !important;
+  border-color: #ea580c !important;
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .paginationContainer {
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 12px;
+  }
+  .paginationControls {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .pageNavBtn {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+  .pageNumberBtn {
+    min-width: 30px;
+    height: 30px;
+    font-size: 0.8rem;
+    padding: 0 4px;
+  }
+}
+

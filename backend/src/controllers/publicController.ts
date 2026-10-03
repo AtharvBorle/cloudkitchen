@@ -172,7 +172,7 @@ export const getPublicExploreData = unstable_cache(
         return { foodItems, availableRooms, foodCategories, kitchens: activeSellersList };
     },
     ["public-explore-data"],
-    { revalidate: 30, tags: ["explore"] }
+    { revalidate: 5, tags: ["explore", "public-explore-data"] }
 );
 
 export const getPublicRoomAvailability = (id: string) => unstable_cache(

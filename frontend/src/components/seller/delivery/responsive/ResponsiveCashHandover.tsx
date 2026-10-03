@@ -12,6 +12,19 @@ export interface CashOrderLine {
   amount: string;
 }
 
+export interface DiscrepancyRecord {
+  id: string;
+  ticketId: string;
+  riderName: string;
+  expectedAmount: string;
+  actualAmount: string;
+  shortageAmount: string;
+  reason: string;
+  note: string;
+  status: "UNDER_REVIEW" | "RESOLVED" | "PENDING_VERIFICATION";
+  createdAt: string;
+}
+
 export interface ResponsiveCashHandoverProps {
   riderName?: string;
   riderInitials?: string;
@@ -39,6 +52,26 @@ export const ResponsiveCashHandover: React.FC<ResponsiveCashHandoverProps> = ({
   const [isChecked, setIsChecked] = useState(true);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isReporting, setIsReporting] = useState(false);
+
+  // Discrepancy Form States
+  const [discrepancyReason, setDiscrepancyReason] = useState("Cash shortage in handover");
+  const [actualCashReceived, setActualCashReceived] = useState("");
+  const [discrepancyNotes, setDiscrepancyNotes] = useState("");
+  const [discrepancies, setDiscrepancies] = useState<DiscrepancyRecord[]>([]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("seller_cash_discrepancies");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            setDiscrepancies(parsed);
+          }
+        }
+      } catch {}
+    }
+  }, []);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -75,9 +108,52 @@ export const ResponsiveCashHandover: React.FC<ResponsiveCashHandoverProps> = ({
     if (onReportDiscrepancy) {
       onReportDiscrepancy();
     } else {
+      setActualCashReceived("");
+      setDiscrepancyNotes("");
       setIsReporting(true);
     }
   };
+
+  const handleSubmitDiscrepancy = () => {
+    const rawExpected = parseFloat(totalCash.replace(/[^0-9.]/g, "")) || 0;
+    const rawActual = parseFloat(actualCashReceived.replace(/[^0-9.]/g, "")) || 0;
+    const rawShortage = Math.max(0, rawExpected - rawActual);
+    const ticketNum = `DISC-${Math.floor(100000 + Math.random() * 900000)}`;
+
+    const newRecord: DiscrepancyRecord = {
+      id: `disc-${Date.now()}`,
+      ticketId: ticketNum,
+      riderName,
+      expectedAmount: totalCash,
+      actualAmount: actualCashReceived ? `₹${rawActual.toLocaleString("en-IN")}` : "₹0",
+      shortageAmount: `₹${rawShortage.toLocaleString("en-IN")}`,
+      reason: discrepancyReason,
+      note: discrepancyNotes.trim() || "Mismatch reported by seller during cash handover verification.",
+      status: "UNDER_REVIEW",
+      createdAt: new Date().toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      }),
+    };
+
+    const updated = [newRecord, ...discrepancies];
+    setDiscrepancies(updated);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("seller_cash_discrepancies", JSON.stringify(updated));
+        window.dispatchEvent(new CustomEvent("seller-discrepancy-submitted", { detail: newRecord }));
+      } catch {}
+    }
+
+    setIsReporting(false);
+    showToast(`Discrepancy ticket #${ticketNum} submitted & tracked.`);
+  };
+
+  const riderDiscrepancies = discrepancies.filter((d) => d.riderName === riderName || !d.riderName);
 
   return (
     <div className={styles.screenWrapper}>
@@ -191,6 +267,36 @@ export const ResponsiveCashHandover: React.FC<ResponsiveCashHandoverProps> = ({
           >
             Report discrepancy
           </button>
+
+          {/* Tracked Discrepancy Records Section */}
+          {riderDiscrepancies.length > 0 && (
+            <section className={styles.discrepancySection}>
+              <h4 className={styles.sectionLabel}>TRACKED DISCREPANCIES ({riderDiscrepancies.length})</h4>
+              {riderDiscrepancies.map((disc) => (
+                <div key={disc.id} className={styles.discrepancyCard}>
+                  <div className={styles.discrepancyHeader}>
+                    <span className={styles.ticketId}>#{disc.ticketId}</span>
+                    <span className={disc.status === "RESOLVED" ? styles.statusBadgeResolved : styles.statusBadgeReview}>
+                      {disc.status === "RESOLVED" ? "✓ Resolved" : "⏳ Under Review"}
+                    </span>
+                  </div>
+                  <div className={styles.discrepancyRow}>
+                    <span>Reason: <strong>{disc.reason}</strong></span>
+                    <span className={styles.discrepancyAmount}>Shortage: {disc.shortageAmount}</span>
+                  </div>
+                  <div className={styles.discrepancyRow}>
+                    <span>Expected: {disc.expectedAmount} | Received: {disc.actualAmount}</span>
+                    <span style={{ fontSize: "11px", color: "#94A3B8" }}>{disc.createdAt}</span>
+                  </div>
+                  {disc.note && (
+                    <div className={styles.discrepancyNote}>
+                      Note: &ldquo;{disc.note}&rdquo;
+                    </div>
+                  )}
+                </div>
+              ))}
+            </section>
+          )}
         </main>
 
         {/* Report Discrepancy Modal */}
@@ -208,8 +314,48 @@ export const ResponsiveCashHandover: React.FC<ResponsiveCashHandoverProps> = ({
                 <h3 className={styles.modalTitle}>Report Discrepancy</h3>
               </div>
               <p className={styles.modalText}>
-                Are you noticing a mismatch in cash collected vs expected amount for {riderName}?
+                Record and track a mismatch in cash collected vs expected amount for <strong>{riderName}</strong>.
               </p>
+
+              <div className={styles.formField}>
+                <label className={styles.fieldLabel}>Discrepancy Reason</label>
+                <select
+                  className={styles.selectInput}
+                  value={discrepancyReason}
+                  onChange={(e) => setDiscrepancyReason(e.target.value)}
+                >
+                  <option value="Cash shortage in handover">Cash shortage in handover</option>
+                  <option value="Damaged or counterfeit notes">Damaged or counterfeit notes</option>
+                  <option value="Customer payment dispute">Customer payment dispute</option>
+                  <option value="Order marked delivered but unpaid">Order marked delivered but unpaid</option>
+                  <option value="Other">Other discrepancy</option>
+                </select>
+              </div>
+
+              <div className={styles.formField}>
+                <label className={styles.fieldLabel}>Actual Cash Received (₹)</label>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  className={styles.textInput}
+                  placeholder="e.g. 800"
+                  value={actualCashReceived}
+                  onChange={(e) => setActualCashReceived(e.target.value)}
+                />
+              </div>
+
+              <div className={styles.formField}>
+                <label className={styles.fieldLabel}>Notes / Explanation</label>
+                <textarea
+                  className={styles.textareaInput}
+                  placeholder="Describe the discrepancy details for operations review..."
+                  value={discrepancyNotes}
+                  onChange={(e) => setDiscrepancyNotes(e.target.value)}
+                  rows={2}
+                />
+              </div>
+
               <div className={styles.modalActions}>
                 <button
                   type="button"
@@ -221,12 +367,9 @@ export const ResponsiveCashHandover: React.FC<ResponsiveCashHandoverProps> = ({
                 <button
                   type="button"
                   className={styles.modalReportBtn}
-                  onClick={() => {
-                    setIsReporting(false);
-                    showToast("Discrepancy reported to operations desk.");
-                  }}
+                  onClick={handleSubmitDiscrepancy}
                 >
-                  Submit Report
+                  Submit &amp; Track Report
                 </button>
               </div>
             </div>
