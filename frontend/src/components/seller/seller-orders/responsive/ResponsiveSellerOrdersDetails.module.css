@@ -525,11 +525,11 @@
 
 .callRiderButton:disabled,
 .callRiderButtonDisabled {
-  background-color: #CBD5E1;
+  background-color: #E2E8F0;
   color: #94A3B8;
   cursor: not-allowed;
   box-shadow: none;
-  opacity: 0.5;
+  opacity: 0.45;
   transform: none !important;
   pointer-events: none;
 }
@@ -568,7 +568,7 @@
   color: #94A3B8;
   cursor: not-allowed;
   box-shadow: none;
-  opacity: 0.5;
+  opacity: 0.45;
   transform: none !important;
   pointer-events: none;
 }

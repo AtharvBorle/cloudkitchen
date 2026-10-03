@@ -83,6 +83,7 @@ export const ResponsiveSellerOrdersDetails: React.FC<
 
   const remainingSec = createdAt ? getRemainingSeconds(createdAt, now) : 300;
   const isExpired = currentStatus === "Order Placed" && remainingSec <= 0;
+  const isCancelled = currentStatus === "Cancelled" || isExpired;
 
   useEffect(() => {
     if (isExpired && currentStatus === "Order Placed") {
@@ -475,22 +476,24 @@ export const ResponsiveSellerOrdersDetails: React.FC<
           <div className={styles.bottomActions}>
             <button
               type="button"
-              className={`${styles.callRiderButton} ${currentStatus === "Cancelled" ? styles.callRiderButtonDisabled : ""}`}
-              disabled={currentStatus === "Cancelled"}
+              className={`${styles.callRiderButton} ${isCancelled ? styles.callRiderButtonDisabled : ""}`}
+              disabled={isCancelled}
               onClick={handleCallRider}
+              title={isCancelled ? "Order cancelled - rider calls disabled" : undefined}
             >
               Call Rider
             </button>
 
             <button
               type="button"
-              className={`${styles.assignRiderButton} ${currentStatus === "Cancelled" ? styles.assignRiderButtonDisabled : ""}`}
-              disabled={currentStatus === "Cancelled"}
+              className={`${styles.assignRiderButton} ${isCancelled ? styles.assignRiderButtonDisabled : ""}`}
+              disabled={isCancelled}
               onClick={() => {
-                if (currentStatus !== "Cancelled") {
+                if (!isCancelled) {
                   router.push(`/seller/orders/assign-rider?orderId=${encodeURIComponent(orderId)}`);
                 }
               }}
+              title={isCancelled ? "Order cancelled - rider assignment disabled" : undefined}
             >
               Assign / Reassign Rider →
             </button>
