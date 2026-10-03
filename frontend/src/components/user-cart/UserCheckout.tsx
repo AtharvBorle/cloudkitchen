@@ -19,10 +19,12 @@ import {
 import { useLocation } from "@/components/location-provider";
 import { Navbar } from "@/components/navbar";
 import { fetchApi } from "@/lib/fetch-api";
+import { useSession } from "next-auth/react";
 import styles from "./UserCheckout.module.css";
 
 export interface UserCartItem {
   id: string;
+  foodItemId?: string;
   name: string;
   description: string;
   price: number;
@@ -46,6 +48,7 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
   onProceedToCheckout,
 }) => {
   const router = useRouter();
+  const { data: session } = useSession();
   const { defaultAddress, savedAddresses, openLocationModal, selectAddress } = useLocation();
 
   // State Management
@@ -65,6 +68,9 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
     minimumCartValue?: number;
     discountLabel?: string;
     calculatedDiscount?: number;
+    appliesToProductId?: string | null;
+    appliesToSellerId?: string | null;
+    isAutoApply?: boolean;
   } | null>(null);
   const appliedCouponData = appliedCoupon;
   const [isValidatingPromo, setIsValidatingPromo] = useState<boolean>(false);
@@ -116,18 +122,22 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
     showToast(`Removed "${name}" from cart`);
   };
 
+  const [userDismissedPromo, setUserDismissedPromo] = useState<boolean>(false);
+  const activeSellerId = cartItems.find((ci) => ci.sellerId)?.sellerId || null;
+
   // Fetch available public coupons
   React.useEffect(() => {
     let isMounted = true;
     async function fetchOffers() {
-      const sellerId = cartItems.find((ci) => ci.sellerId)?.sellerId;
       try {
         setIsLoadingOffers(true);
-        const url = sellerId ? `/api/public/coupons?sellerId=${encodeURIComponent(sellerId)}` : "/api/public/coupons";
+        const url = activeSellerId
+          ? `/api/public/coupons?sellerId=${encodeURIComponent(activeSellerId)}${session?.user?.id ? `&userId=${encodeURIComponent(session.user.id)}` : ""}`
+          : `/api/public/coupons${session?.user?.id ? `?userId=${encodeURIComponent(session.user.id)}` : ""}`;
         const res = await fetchApi(url);
         if (res.ok && isMounted) {
           const json = await res.json();
-          const serverCoupons = json.data || [];
+          const serverCoupons = Array.isArray(json) ? json : (json.data?.coupons || json.coupons || json.data || []);
           if (Array.isArray(serverCoupons)) {
             setAvailableOffers(serverCoupons);
           } else {
@@ -144,14 +154,141 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [cartItems]);
+  }, [activeSellerId, session?.user?.id]);
+
+  // Price Calculations
+  const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
+
+  // Auto-apply eligible coupon when conditions are met
+  React.useEffect(() => {
+    if (userDismissedPromo || isValidatingPromo || availableOffers.length === 0) {
+      return;
+    }
+
+    if (subtotal <= 0) return;
+
+    // Filter offers configured with isAutoApply that satisfy minimum cart & scope & eligibility
+    const eligibleAutoOffers = availableOffers.filter((offer) => {
+      if (offer.isEligible === false) return false;
+      const isAuto = Boolean(offer.isAutoApply || offer.autoApply);
+      if (!isAuto) return false;
+      const minCart = offer.minimumCartValue ?? offer.minOrderAmount ?? 0;
+      if (subtotal < minCart) return false;
+
+      if (offer.appliesToSellerId && activeSellerId && offer.appliesToSellerId !== activeSellerId) {
+        return false;
+      }
+      if (offer.appliesToProductId) {
+        const hasProduct = cartItems.some(
+          (it) => it.id === offer.appliesToProductId || it.foodItemId === offer.appliesToProductId
+        );
+        if (!hasProduct) return false;
+      }
+      return true;
+    });
+
+    if (eligibleAutoOffers.length === 0) {
+      // If currently applied was auto-applied and subtotal dropped below threshold, remove it
+      if (appliedCoupon && (appliedCoupon as any).isAutoApply) {
+        setAppliedCoupon(null);
+        setAppliedPromo(null);
+        setDiscountPercent(0);
+        setPromoCode("");
+      }
+      return;
+    }
+
+    // Find the offer providing maximum discount
+    let bestOffer = eligibleAutoOffers[0];
+    let maxDiscount = 0;
+
+    for (const offer of eligibleAutoOffers) {
+      const pct = offer.discountPercentage || (offer.discountType === "PERCENTAGE" ? (offer.discountValue || 0) : 0);
+      let disc = 0;
+      if (pct > 0) {
+        disc = Math.round((subtotal * pct) / 100);
+        if (offer.maxDiscountAmount) disc = Math.min(disc, offer.maxDiscountAmount);
+      } else {
+        disc = Math.min(offer.discountAmount || offer.discountValue || 0, subtotal);
+      }
+      if (disc >= maxDiscount) {
+        maxDiscount = disc;
+        bestOffer = offer;
+      }
+    }
+
+    if (!appliedPromo || ((appliedCoupon as any)?.isAutoApply && appliedPromo !== bestOffer.code)) {
+      const pct = bestOffer.discountPercentage || (bestOffer.discountType === "PERCENTAGE" ? (bestOffer.discountValue || 0) : 0);
+      setAppliedCoupon({
+        id: bestOffer.id,
+        code: bestOffer.code,
+        description: bestOffer.description,
+        discountType: bestOffer.discountType || (pct > 0 ? "PERCENTAGE" : "FLAT"),
+        discountPercentage: pct || null,
+        discountAmount: bestOffer.discountAmount || bestOffer.discountValue || null,
+        maxDiscountAmount: bestOffer.maxDiscountAmount || null,
+        minimumCartValue: bestOffer.minimumCartValue || bestOffer.minOrderAmount || 0,
+        calculatedDiscount: maxDiscount,
+        isAutoApply: true,
+      } as any);
+      setAppliedPromo(bestOffer.code);
+      setDiscountPercent(pct);
+      setPromoCode(bestOffer.code);
+    }
+  }, [availableOffers, subtotal, userDismissedPromo, appliedPromo, appliedCoupon, isValidatingPromo, activeSellerId, cartItems]);
+
+  // Auto-remove or invalidate applied coupon whenever subtotal drops below minimum required cart value or required item is removed
+  React.useEffect(() => {
+    if (!appliedCoupon) return;
+    const minCart = Number(appliedCoupon.minimumCartValue ?? (appliedCoupon as any).minOrderAmount ?? 0);
+    if (minCart > 0 && subtotal < minCart) {
+      const code = appliedCoupon.code || appliedPromo || "Applied";
+      setAppliedCoupon(null);
+      setAppliedPromo(null);
+      setDiscountPercent(0);
+      setPromoCode("");
+      showToast(`Coupon "${code}" removed. Minimum cart value of ₹${minCart} required.`);
+      return;
+    }
+
+    if (appliedCoupon.appliesToProductId && cartItems.length > 0) {
+      const allowedKeys = String(appliedCoupon.appliesToProductId)
+        .split(",")
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean);
+      if (allowedKeys.length > 0) {
+        const hasMatchingProduct = cartItems.some((it) => {
+          const itemId = String(it.id || "").toLowerCase();
+          const foodItemId = String(it.foodItemId || "").toLowerCase();
+          const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+          const name = String(it.name || "").toLowerCase().trim();
+          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
+        });
+        if (!hasMatchingProduct) {
+          const code = appliedCoupon.code || appliedPromo || "Applied";
+          setAppliedCoupon(null);
+          setAppliedPromo(null);
+          setDiscountPercent(0);
+          setPromoCode("");
+          showToast(`Coupon "${code}" is no longer applicable as the required item was removed from the cart.`);
+          return;
+        }
+      }
+    } else if (appliedCoupon.appliesToProductId && cartItems.length === 0) {
+      setAppliedCoupon(null);
+      setAppliedPromo(null);
+      setDiscountPercent(0);
+      setPromoCode("");
+    }
+  }, [subtotal, cartItems, appliedCoupon, appliedPromo]);
 
   const handleRemovePromo = () => {
-    setAppliedPromo(null);
+    setUserDismissedPromo(true);
     setAppliedCoupon(null);
+    setAppliedPromo(null);
     setDiscountPercent(0);
     setPromoCode("");
-    showToast("Promo code removed");
+    showToast("Coupon removed");
   };
 
   // Promo Code Apply (supports typing or clicking from Best Offers)
@@ -178,6 +315,7 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
       return;
     }
 
+    setUserDismissedPromo(false);
     setPromoCode(targetCode);
     const currentSubtotal = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
 
@@ -193,12 +331,14 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           code: targetCode,
+          sellerId: activeSellerId,
           subtotal: currentSubtotal,
           items: cartItems.map((it) => ({
             id: it.id,
             price: it.price,
             quantity: it.qty,
           })),
+          userId: session?.user?.id,
         }),
       });
 
@@ -229,20 +369,37 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
     }
   };
 
-  // Price Calculations
-  const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
-
   const discountAmount = React.useMemo(() => {
-    if (!appliedCoupon || subtotal <= 0) return 0;
+    if (!appliedCoupon || subtotal <= 0 || cartItems.length === 0) return 0;
     if (appliedCoupon.minimumCartValue && subtotal < appliedCoupon.minimumCartValue) return 0;
+
+    let targetSubtotal = subtotal;
+    if (appliedCoupon.appliesToProductId) {
+      const allowedKeys = String(appliedCoupon.appliesToProductId)
+        .split(",")
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean);
+      if (allowedKeys.length > 0) {
+        const matchingItems = cartItems.filter((it) => {
+          const itemId = String(it.id || "").toLowerCase();
+          const foodItemId = String(it.foodItemId || "").toLowerCase();
+          const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+          const name = String(it.name || "").toLowerCase().trim();
+          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
+        });
+        if (matchingItems.length === 0) return 0;
+        targetSubtotal = matchingItems.reduce((acc, it) => acc + it.price * it.qty, 0);
+      }
+    }
+
     if (appliedCoupon.discountType === "PERCENTAGE" || (appliedCoupon.discountPercentage && !appliedCoupon.discountAmount)) {
       const pct = appliedCoupon.discountPercentage || 0;
-      const raw = Math.round((subtotal * pct) / 100);
+      const raw = Math.round((targetSubtotal * pct) / 100);
       return appliedCoupon.maxDiscountAmount ? Math.min(raw, appliedCoupon.maxDiscountAmount) : raw;
     }
     const flat = appliedCoupon.discountAmount || 0;
-    return Math.min(flat, subtotal);
-  }, [appliedCoupon, subtotal]);
+    return Math.min(flat, targetSubtotal);
+  }, [appliedCoupon, subtotal, cartItems]);
   const deliveryFee = 0;
   const taxesAndCharges = 0;
   const grandTotal = Math.max(0, subtotal - discountAmount);
@@ -472,12 +629,20 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
                           fontWeight: "800", 
                           color: "#15803D", 
                           letterSpacing: "0.5px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap"
                         }}
                       >
-                        {appliedCouponData?.code || appliedPromo}
+                        <span>{appliedCouponData?.code || appliedPromo}</span>
+                        {(appliedCouponData as any)?.isAutoApply && (
+                          <span style={{ fontSize: "0.68rem", backgroundColor: "#BBF7D0", color: "#15803D", padding: "1px 6px", borderRadius: "4px", fontWeight: "700", flexShrink: 0 }}>
+                            ⚡ AUTO-APPLIED
+                          </span>
+                        )}
                       </div>
                       <div style={{ fontSize: "0.75rem", color: "#166534", fontWeight: "600", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         -₹{discountAmount} discount applied {discountPercent > 0 ? `(${discountPercent}%)` : ""}
@@ -550,13 +715,19 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
                     {availableOffers.map((offer) => {
                       const isCurrentApplied = (appliedCouponData?.code || appliedPromo) === offer.code;
                       const minMet = !offer.minimumCartValue || subtotal >= offer.minimumCartValue;
+                      const isEligible = offer.isEligible !== false;
 
                       return (
                         <div
                           key={offer.id || offer.code}
                           className={`${styles.offerCard} ${isCurrentApplied ? styles.offerCardApplied : ""}`}
+                          style={!isEligible ? { opacity: 0.65 } : undefined}
                           onClick={() => {
                             if (!isCurrentApplied) {
+                              if (!isEligible) {
+                                showToast(offer.ineligibilityReason || `Coupon "${offer.code}" is not applicable to this order.`);
+                                return;
+                              }
                               handleApplyPromo(offer.code);
                             }
                           }}
@@ -569,15 +740,24 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
                               ) : offer.discountAmount ? (
                                 <span className={styles.offerSaveBadge}>FLAT ₹{offer.discountAmount} OFF</span>
                               ) : null}
+                              {!isEligible && (
+                                <span style={{ fontSize: "0.68rem", backgroundColor: "#FEE2E2", color: "#DC2626", padding: "2px 6px", borderRadius: "4px", fontWeight: 700 }}>
+                                  {offer.customerEligibility === "NEW_ONLY" ? "FIRST ORDER ONLY" : "INELIGIBLE"}
+                                </span>
+                              )}
                             </div>
                             <p className={styles.offerDescription}>
                               {offer.description || (offer.discountPercentage ? `Get ${offer.discountPercentage}% off` : `Get ₹${offer.discountAmount} flat off`)}
                             </p>
-                            {offer.minimumCartValue > 0 && (
+                            {!isEligible && offer.ineligibilityReason ? (
+                              <span style={{ fontSize: "0.75rem", color: "#DC2626", fontWeight: 600 }}>
+                                {offer.ineligibilityReason}
+                              </span>
+                            ) : offer.minimumCartValue > 0 ? (
                               <span className={`${styles.offerMinCart} ${!minMet ? styles.offerMinCartWarning : ""}`}>
                                 {minMet ? `Min cart ₹${offer.minimumCartValue}` : `Add ₹${offer.minimumCartValue - subtotal} more to unlock`}
                               </span>
-                            )}
+                            ) : null}
                           </div>
 
                           <div className={styles.offerCardRight}>
@@ -599,9 +779,13 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
                                 className={styles.offerApplyBtn}
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  if (!isEligible) {
+                                    showToast(offer.ineligibilityReason || `Coupon "${offer.code}" is not applicable to this order.`);
+                                    return;
+                                  }
                                   handleApplyPromo(offer.code);
                                 }}
-                                disabled={isValidatingPromo}
+                                disabled={isValidatingPromo || !isEligible}
                               >
                                 Apply
                               </button>

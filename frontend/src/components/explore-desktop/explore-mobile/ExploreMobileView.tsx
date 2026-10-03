@@ -252,14 +252,43 @@ export const ExploreMobileView: React.FC = () => {
   }, [homeData.rooms, categoryFilter, queryParam]);
 
   const stories = React.useMemo(() => {
+    if (homeData.reels && homeData.reels.length > 0) {
+      return homeData.reels.map((r) => ({
+        id: r.id,
+        name: r.customTitle || r.seller?.name || "Cloud Kitchen",
+        avatar: r.thumbnailUrl || r.mediaUrl || "/images/places/place-biryani.png",
+      }));
+    }
     return (homeData.kitchens || []).map((k) => ({
       id: k.id,
       name: k.name,
       avatar: k.imageUrl || "/images/places/place-biryani.png",
     }));
-  }, [homeData.kitchens]);
+  }, [homeData.reels, homeData.kitchens]);
 
   const reels: ReelModalData[] = React.useMemo(() => {
+    if (homeData.reels && homeData.reels.length > 0) {
+      return homeData.reels.map((r, idx) => ({
+        id: r.id,
+        author: r.customTitle || r.seller?.name || "Cloud Kitchen Partner",
+        authorAvatar: r.seller?.imageUrl || r.thumbnailUrl || "/images/places/place-biryani.png",
+        thumbnail: r.thumbnailUrl || r.mediaUrl || "/images/places/place-biryani.png",
+        videoUrl: r.mediaUrl,
+        caption: r.caption || `${r.seller?.name || "Kitchen"} • Fresh Kitchen Reel`,
+        hashtags: "#cloudkitchen #foodie #delicious",
+        partnerTitle: "Verified Cloud Kitchen Partner",
+        likes: r.likeCount ? `${(r.likeCount / 1000).toFixed(1)}k` : `${(3 + (idx % 4)).toFixed(1)}k`,
+        views: `${(12 + idx * 2).toFixed(1)}k views`,
+        audioTitle: `${r.seller?.name || "Original"} • Original Audio`,
+        verified: true,
+        kitchenId: r.seller?.trackingId || r.seller?.id,
+        dishId: r.foodItem?.id,
+        dishName: r.foodItem?.name,
+        dishPrice: r.foodItem?.price,
+        redirectType: r.redirectType,
+        customRedirectUrl: r.customRedirectUrl || undefined,
+      }));
+    }
     return (homeData.kitchens || []).map((k, idx) => ({
       id: k.id,
       author: k.name,
@@ -274,7 +303,7 @@ export const ExploreMobileView: React.FC = () => {
       verified: true,
       kitchenId: k.trackingId || k.id,
     }));
-  }, [homeData.kitchens]);
+  }, [homeData.reels, homeData.kitchens]);
 
   const featuredCollections = React.useMemo(() => {
     return (homeData.foodItems || []).slice(0, 4).map((f) => ({

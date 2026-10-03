@@ -356,8 +356,12 @@ export function isKitchenMatchingDiet(
   }
 
   if (norm === "non_veg") {
-    // If it is 100% Pure Veg with no non-veg dishes, exclude from non-veg filter
-    if (isDeclaredPureVeg && !isBothVegAndNonVeg && kitchenDishes.length > 0 && kitchenDishes.every((d) => !isNonVegDish(d))) {
+    if (
+      (isDeclaredPureVeg || rawFoodType === "PURE_VEG" || rawFoodType === "VEG" || rawFoodType === "VEG_ONLY" || rawFoodType === "PUREVEG" || rawFoodType === "VEGAN" || rawFoodType === "JAIN") &&
+      !isBothVegAndNonVeg &&
+      kitchenDishes.length > 0 &&
+      kitchenDishes.every((d) => !isNonVegDish(d))
+    ) {
       return false;
     }
     if (isDeclaredNonVeg || isBothVegAndNonVeg) return true;

@@ -89,11 +89,23 @@ function formatMessageTime(dateStr?: string): string {
   }
 }
 
-function mapRawMessage(m: any): TicketMessage {
+function getInitials(name?: string): string {
+  if (!name || name === "ME") return "US";
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  if (parts.length === 1 && parts[0].length >= 2) {
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+  return parts[0] ? parts[0][0].toUpperCase() : "US";
+}
+
+function mapRawMessage(m: any, ticketUser?: any): TicketMessage {
   const isMe = m.sender?.role === "SELLER" || m.sender?.role === "OWNER" || m.sender?.role === "USER";
-  const senderName = m.sender?.name || (isMe ? "You (Seller)" : "Support Team");
+  const senderName = m.sender?.name || (isMe ? (ticketUser?.name || "Seller") : "Support Team");
   const role: "customer" | "support" = isMe ? "customer" : "support";
-  const initials = isMe ? "ME" : "SP";
+  const initials = getInitials(senderName);
 
   return {
     id: m.id || `m_${Date.now()}`,
@@ -116,27 +128,22 @@ function mapRawTicket(t: any): Ticket {
       ? "Resolved"
       : "Closed";
 
+  const name = t.user?.name || "Seller";
+  const initials = getInitials(name);
+
   const rawMessages = Array.isArray(t.messages) && t.messages.length > 0 ? t.messages : [];
-  const messages: TicketMessage[] = rawMessages.map(mapRawMessage);
+  const messages: TicketMessage[] = rawMessages.map((m: any) => mapRawMessage(m, t.user));
 
   if (messages.length === 0 && t.description) {
     messages.push({
       id: `init_${t.id}`,
-      sender: t.user?.name || "You (Seller)",
+      sender: name,
       role: "customer",
-      initials: "ME",
+      initials,
       timestamp: formatMessageTime(t.createdAt),
       text: t.description,
     });
   }
-
-  const name = t.user?.name || "You (Seller)";
-  const initials = name
-    .split(" ")
-    .map((w: string) => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase() || "SE";
 
   return {
     id: t.id,
@@ -329,11 +336,12 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
     setIsSendingMessage(true);
 
     // Optimistic message update
+    const senderName = effectiveOwnerName || selectedTicket.customerName || "Seller";
     const optimisticMsg: TicketMessage = {
       id: `opt_${Date.now()}`,
-      sender: "You (Seller)",
+      sender: senderName,
       role: "customer",
-      initials: "ME",
+      initials: getInitials(senderName),
       timestamp: "Just now",
       text: msgText,
     };
@@ -620,6 +628,10 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
                       <span className={styles.ticketNumberText}>
                         {selectedTicket.ticketNumber}
                       </span>
+                      <span className={styles.breadcrumbSeparator}>•</span>
+                      <span style={{ fontSize: "0.78rem", color: "#64748B", fontWeight: "600" }}>
+                        {selectedTicket.customerName}
+                      </span>
                     </div>
                     <h2 className={styles.selectedTicketHeading}>
                       {selectedTicket.title}
@@ -656,7 +668,7 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
                         }`}
                       >
                         {!isSupport && (
-                          <div className={styles.avatarCustomer}>
+                          <div className={styles.avatarCustomer} title={msg.sender}>
                             {msg.initials}
                           </div>
                         )}
@@ -666,6 +678,11 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
                             isSupport ? styles.bubbleSupportAlign : styles.bubbleCustomerAlign
                           }`}
                         >
+                          <div className={styles.messageMeta}>
+                            <span className={styles.messageSenderName}>{msg.sender}</span>
+                            <span className={styles.messageTimestamp}>{msg.timestamp}</span>
+                          </div>
+
                           <div
                             className={`${styles.messageBubble} ${
                               isSupport ? styles.messageBubbleSupport : styles.messageBubbleCustomer
@@ -673,14 +690,10 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
                           >
                             {msg.text}
                           </div>
-
-                          <span className={styles.messageTimestamp}>
-                            {msg.timestamp}
-                          </span>
                         </div>
 
                         {isSupport && (
-                          <div className={styles.avatarSupport}>
+                          <div className={styles.avatarSupport} title={msg.sender}>
                             {msg.initials}
                           </div>
                         )}

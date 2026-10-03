@@ -289,8 +289,12 @@ export function LocationProvider({ children }: LocationProviderProps) {
         return;
       }
 
-      // If user has NO location set, keep defaultAddress as null so user selects first
+      // If user has NO location set, attempt GPS auto-detection once
       setDefaultAddress(null);
+      if (!hasAttemptedGpsRef.current && !shouldDisableLocation) {
+        hasAttemptedGpsRef.current = true;
+        detectGpsLocation();
+      }
       setIsLoading(false);
       return;
     }
@@ -362,9 +366,30 @@ export function LocationProvider({ children }: LocationProviderProps) {
             isDefault: true,
           });
         }
+      } else if (addressList.length > 0) {
+        // Fallback to default saved address for authenticated user
+        const def = addressList.find((a) => a.isDefault) || addressList[0];
+        const pinCoords = getPincodeCoordinates(def.pincode);
+        const resolvedLat = (def.latitude != null && !isNaN(Number(def.latitude))) ? Number(def.latitude) : (pinCoords?.lat ?? null);
+        const resolvedLng = (def.longitude != null && !isNaN(Number(def.longitude))) ? Number(def.longitude) : (pinCoords?.lng ?? null);
+        const resolvedLocality = def.locality || def.street || pinCoords?.locality || `PIN ${def.pincode}`;
+        const resolvedCity = def.city || pinCoords?.city || "Pune";
+
+        setDefaultAddress({
+          ...def,
+          locality: resolvedLocality,
+          city: resolvedCity,
+          latitude: resolvedLat,
+          longitude: resolvedLng,
+          isDefault: true,
+        });
       } else {
-        // If user has not chosen a location yet, leave defaultAddress as null so user selects first
+        // If user has no saved address, attempt GPS detection once
         setDefaultAddress(null);
+        if (!hasAttemptedGpsRef.current && !shouldDisableLocation) {
+          hasAttemptedGpsRef.current = true;
+          detectGpsLocation();
+        }
       }
     } catch (err) {
       console.error("Failed to fetch address for LocationProvider", err);

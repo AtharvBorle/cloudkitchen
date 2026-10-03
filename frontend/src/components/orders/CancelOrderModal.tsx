@@ -138,7 +138,15 @@ export const CancelOrderModal: React.FC<CancelOrderModalProps> = ({
           <div className={styles.refundNote}>
             <ShieldCheck size={18} className={styles.refundIcon} />
             <p className={styles.refundText}>
-              <strong>100% Refund Guarantee:</strong> Since the restaurant has not started preparing your meal yet, your order will be cancelled instantly and any online payment will be refunded to your original source.
+              {Number(totalAmount) === 0 ? (
+                <>
+                  <strong>100% Discount Applied:</strong> Since ₹0 was paid for this order, it will be cancelled immediately with ₹0 refundable amount.
+                </>
+              ) : (
+                <>
+                  <strong>100% Refund Guarantee:</strong> Since the restaurant has not started preparing your meal yet, your order will be cancelled instantly and any online payment will be refunded to your original source.
+                </>
+              )}
             </p>
           </div>
         </div>

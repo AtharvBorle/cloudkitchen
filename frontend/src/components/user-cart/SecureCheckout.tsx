@@ -46,6 +46,8 @@ export interface SavedAddressItem {
   landmark?: string | null;
   pincode: string;
   city?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   isDefault: boolean;
   recipientName?: string;
   recipientPhone?: string;
@@ -54,6 +56,7 @@ export interface SavedAddressItem {
 export interface CheckoutSummaryItem {
   id: string;
   foodItemId?: string;
+  sellerId?: string;
   name: string;
   variant: string;
   selectedAddons?: Array<{ id?: string; name: string; price: number }>;
@@ -174,6 +177,8 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
               landmark: a.landmark || "",
               pincode: a.pincode || "",
               city: a.city || "Pune",
+              latitude: a.latitude != null ? Number(a.latitude) : (getPincodeCoordinates(a.pincode)?.lat ?? null),
+              longitude: a.longitude != null ? Number(a.longitude) : (getPincodeCoordinates(a.pincode)?.lng ?? null),
               isDefault: Boolean(a.isDefault),
               recipientName: a.recipientName || session?.user?.name || "Registered User",
               recipientPhone: a.recipientPhone || (session?.user as any)?.phone || "",
@@ -272,7 +277,7 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
     };
   }, [cartItems]);
 
-  // Delivery coverage & distance validation
+  // Delivery coverage & distance validation for selected delivery address
   const { isOutsideCoverage, shopDistanceKm, maxDeliveryRadius } = React.useMemo(() => {
     if (!sellerDetails) {
       return { isOutsideCoverage: false, shopDistanceKm: null, maxDeliveryRadius: MAX_DELIVERY_RADIUS_KM };
@@ -287,16 +292,53 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
 
     let userLat: number | null = null;
     let userLng: number | null = null;
+    let activePin: string | null = null;
 
-    if (defaultAddress?.latitude && defaultAddress?.longitude) {
-      userLat = Number(defaultAddress.latitude);
-      userLng = Number(defaultAddress.longitude);
-    } else {
-      const activePin = postalCode.trim() || defaultAddress?.pincode || (typeof window !== "undefined" ? localStorage.getItem("active-selected-pincode") || localStorage.getItem("guest-pincode") : null);
-      const userCoords = getPincodeCoordinates(activePin);
-      if (userCoords) {
-        userLat = userCoords.lat;
-        userLng = userCoords.lng;
+    // 1. If in Saved Address mode and an address is selected, prioritize selected saved address
+    if (addressMode === "saved" && selectedSavedAddressId) {
+      const selectedAddr = savedAddresses.find((a) => a.id === selectedSavedAddressId);
+      if (selectedAddr) {
+        if (selectedAddr.latitude != null && selectedAddr.longitude != null && !isNaN(Number(selectedAddr.latitude)) && !isNaN(Number(selectedAddr.longitude))) {
+          userLat = Number(selectedAddr.latitude);
+          userLng = Number(selectedAddr.longitude);
+        } else if (selectedAddr.pincode) {
+          const pinCoords = getPincodeCoordinates(selectedAddr.pincode);
+          if (pinCoords) {
+            userLat = pinCoords.lat;
+            userLng = pinCoords.lng;
+          }
+        }
+        activePin = selectedAddr.pincode ? selectedAddr.pincode.trim() : null;
+      }
+    }
+
+    // 2. If in Manual Address mode or no saved address coordinates yet
+    if (userLat === null || userLng === null) {
+      if (postalCode && postalCode.trim()) {
+        activePin = postalCode.trim();
+        const pinCoords = getPincodeCoordinates(activePin);
+        if (pinCoords) {
+          userLat = pinCoords.lat;
+          userLng = pinCoords.lng;
+        }
+      }
+    }
+
+    // 3. Fallback only if no address or pincode selected at all
+    if (userLat === null || userLng === null) {
+      if (defaultAddress?.latitude && defaultAddress?.longitude) {
+        userLat = Number(defaultAddress.latitude);
+        userLng = Number(defaultAddress.longitude);
+      } else {
+        const fallbackPin = defaultAddress?.pincode || (typeof window !== "undefined" ? localStorage.getItem("active-selected-pincode") || localStorage.getItem("guest-pincode") : null);
+        if (fallbackPin) {
+          activePin = fallbackPin;
+          const userCoords = getPincodeCoordinates(fallbackPin);
+          if (userCoords) {
+            userLat = userCoords.lat;
+            userLng = userCoords.lng;
+          }
+        }
       }
     }
 
@@ -312,9 +354,8 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
     }
 
     // Pincode fallback
-    const userPin = postalCode.trim() || defaultAddress?.pincode || (typeof window !== "undefined" ? localStorage.getItem("active-selected-pincode") : "");
-    if (userPin && sellerDetails.user?.pincode) {
-      const userPinCoords = getPincodeCoordinates(userPin);
+    if (activePin && sellerDetails.user?.pincode) {
+      const userPinCoords = getPincodeCoordinates(activePin);
       const sellerPinCoords = getPincodeCoordinates(sellerDetails.user.pincode);
       if (userPinCoords && sellerPinCoords) {
         const pinDistance = calculateDistanceKm(userPinCoords.lat, userPinCoords.lng, sellerPinCoords.lat, sellerPinCoords.lng);
@@ -327,7 +368,45 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
     }
 
     return { isOutsideCoverage: false, shopDistanceKm: null, maxDeliveryRadius: maxRadius };
-  }, [sellerDetails, defaultAddress, postalCode]);
+  }, [sellerDetails, addressMode, selectedSavedAddressId, savedAddresses, postalCode, defaultAddress]);
+
+  const getActiveLocationPayload = () => {
+    let activeLat: number | null = null;
+    let activeLng: number | null = null;
+    let activePincode = postalCode.trim();
+    let addressIdToSend: string | undefined = undefined;
+
+    if (addressMode === "saved" && selectedSavedAddressId) {
+      const selectedAddr = savedAddresses.find((a) => a.id === selectedSavedAddressId);
+      if (selectedAddr) {
+        addressIdToSend = selectedAddr.id;
+        activePincode = selectedAddr.pincode?.trim() || postalCode.trim();
+        if (selectedAddr.latitude != null && selectedAddr.longitude != null && !isNaN(Number(selectedAddr.latitude)) && !isNaN(Number(selectedAddr.longitude))) {
+          activeLat = Number(selectedAddr.latitude);
+          activeLng = Number(selectedAddr.longitude);
+        } else {
+          const pinCoords = getPincodeCoordinates(activePincode);
+          if (pinCoords) {
+            activeLat = pinCoords.lat;
+            activeLng = pinCoords.lng;
+          }
+        }
+      }
+    } else {
+      const pinCoords = getPincodeCoordinates(activePincode);
+      if (pinCoords) {
+        activeLat = pinCoords.lat;
+        activeLng = pinCoords.lng;
+      }
+    }
+
+    return {
+      addressId: addressIdToSend,
+      latitude: activeLat,
+      longitude: activeLng,
+      pincode: activePincode,
+    };
+  };
 
   useEffect(() => {
     if (session?.user) {
@@ -454,6 +533,9 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
     minimumCartValue?: number;
     discountLabel?: string;
     calculatedDiscount?: number;
+    appliesToProductId?: string | null;
+    appliesToSellerId?: string | null;
+    isAutoApply?: boolean;
   } | null>(null);
   const appliedCouponData = appliedCoupon;
   const [isValidatingPromo, setIsValidatingPromo] = useState<boolean>(false);
@@ -472,7 +554,7 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
   useEffect(() => {
     try {
       if (typeof window !== "undefined") {
-        const saved = sessionStorage.getItem("appliedCoupon") || localStorage.getItem("appliedCoupon");
+        const saved = sessionStorage.getItem("applied_cart_coupon") || sessionStorage.getItem("appliedCoupon") || localStorage.getItem("appliedCoupon");
         if (saved) {
           const parsed = JSON.parse(saved);
           if (parsed && (parsed.code || parsed.id)) {
@@ -600,6 +682,8 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
         })),
         subtotal: tx.subtotal || subtotal,
         discount: tx.discountAmount || discountAmount,
+        couponCode: isPromoApplied ? (appliedCoupon?.code || promoCode) : undefined,
+        couponDiscountPercentage: isPromoApplied ? appliedCoupon?.discountPercentage : undefined,
         deliveryFee: 0,
         taxes: 0,
         grandTotal: tx.grandTotal || grandTotal,
@@ -610,6 +694,7 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
           sessionStorage.setItem("latestConfirmedOrder", JSON.stringify(confirmedOrderPayload));
           localStorage.setItem("latestConfirmedOrder", JSON.stringify(confirmedOrderPayload));
           localStorage.removeItem("pending_order_transaction");
+          sessionStorage.removeItem("applied_cart_coupon");
           sessionStorage.removeItem("appliedCoupon");
           localStorage.removeItem("appliedCoupon");
         } catch (e) {
@@ -681,51 +766,85 @@ const loadRazorpayScript = (): Promise<boolean> => {
 };
 
   // Cart Items derived from context with accurate price & selected add-ons
-  const checkoutItems: CheckoutSummaryItem[] = cartItems.length > 0
-    ? cartItems.map((ci) => ({
-        id: ci.id,
-        foodItemId: ci.foodItemId,
-        name: ci.name,
-        variant: ci.variantName || (ci.selectedAddons && ci.selectedAddons.length > 0 ? ci.selectedAddons.map(a => a.name).join(", ") : (ci.sellerName ? `From ${ci.sellerName}` : "")),
-        selectedAddons: ci.selectedAddons,
-        basePrice: ci.basePrice,
-        addonsTotal: ci.addonsTotal,
-        qty: ci.quantity,
-        price: ci.price * ci.quantity,
-        image: ci.imageUrl || ci.image || "/images/places/place-pizza.png",
-      }))
-    : items;
+  const checkoutItems: CheckoutSummaryItem[] = React.useMemo(() => {
+    return cartItems.length > 0
+      ? cartItems.map((ci) => ({
+          id: ci.id,
+          foodItemId: ci.foodItemId,
+          sellerId: ci.sellerId,
+          name: ci.name,
+          variant: ci.variantName || (ci.selectedAddons && ci.selectedAddons.length > 0 ? ci.selectedAddons.map(a => a.name).join(", ") : (ci.sellerName ? `From ${ci.sellerName}` : "")),
+          selectedAddons: ci.selectedAddons,
+          basePrice: ci.basePrice,
+          addonsTotal: ci.addonsTotal,
+          qty: ci.quantity,
+          price: ci.price * ci.quantity,
+          image: ci.imageUrl || ci.image || "/images/places/place-pizza.png",
+        }))
+      : items;
+  }, [cartItems, items]);
 
   // Pricing calculations: strictly only item prices and promo discounts
   const subtotal = checkoutItems.reduce((acc, item) => acc + item.price, 0);
   const discountAmount = React.useMemo(() => {
-    if (!isPromoApplied || !appliedCoupon || subtotal <= 0) return 0;
+    if (!isPromoApplied || !appliedCoupon || subtotal <= 0 || checkoutItems.length === 0) return 0;
     if (appliedCoupon.minimumCartValue && subtotal < appliedCoupon.minimumCartValue) return 0;
+
+    let targetSubtotal = subtotal;
+    if (appliedCoupon.appliesToProductId) {
+      const allowedKeys = String(appliedCoupon.appliesToProductId)
+        .split(",")
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean);
+      if (allowedKeys.length > 0) {
+        const matchingItems = checkoutItems.filter((it) => {
+          const itemId = String(it.id || "").toLowerCase();
+          const foodItemId = String(it.foodItemId || "").toLowerCase();
+          const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+          const name = String(it.name || "").toLowerCase().trim();
+          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
+        });
+        if (matchingItems.length === 0) return 0;
+        targetSubtotal = matchingItems.reduce((acc, it) => acc + it.price, 0);
+      }
+    }
+
     if (appliedCoupon.discountType === "PERCENTAGE" || (appliedCoupon.discountPercentage && !appliedCoupon.discountAmount)) {
       const pct = appliedCoupon.discountPercentage || 0;
-      const raw = Math.round((subtotal * pct) / 100);
+      const raw = Math.round((targetSubtotal * pct) / 100);
       return appliedCoupon.maxDiscountAmount ? Math.min(raw, appliedCoupon.maxDiscountAmount) : raw;
     }
     const flat = appliedCoupon.discountAmount || 0;
-    return Math.min(flat, subtotal);
-  }, [isPromoApplied, appliedCoupon, subtotal]);
+    return Math.min(flat, targetSubtotal);
+  }, [isPromoApplied, appliedCoupon, subtotal, checkoutItems]);
 
   const deliveryFee = 0;
   const taxesAndCharges = 0;
   const grandTotal = Math.max(0, subtotal - discountAmount);
 
-  // Fetch available public coupons for the seller / platform
+  const [userDismissedPromo, setUserDismissedPromo] = useState<boolean>(false);
+  const activeSellerId = cartItems[0]?.sellerId || (checkoutItems[0] as any)?.sellerId || null;
+
+  // Fetch available public coupons for the seller / platform with real-time sync
   useEffect(() => {
     let isMounted = true;
     async function fetchOffers() {
-      const sellerId = (checkoutItems[0] as any)?.sellerId || cartItems[0]?.sellerId;
       try {
-        setIsLoadingOffers(true);
-        const url = sellerId ? `/api/public/coupons?sellerId=${encodeURIComponent(sellerId)}` : "/api/public/coupons";
-        const res = await fetchApi(url);
+        const queryParams = new URLSearchParams();
+        if (activeSellerId) queryParams.set("sellerId", activeSellerId);
+        if (session?.user?.id) queryParams.set("userId", session.user.id);
+        queryParams.set("_t", String(Date.now()));
+        const url = `/api/public/coupons?${queryParams.toString()}`;
+        const res = await fetchApi(url, {
+          cache: "no-store",
+          headers: {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            Pragma: "no-cache",
+          },
+        });
         if (res.ok && isMounted) {
           const json = await res.json();
-          const serverCoupons = json.data || [];
+          const serverCoupons = Array.isArray(json) ? json : (json.data?.coupons || json.coupons || json.data || []);
           if (Array.isArray(serverCoupons)) {
             setAvailableOffers(serverCoupons);
           } else {
@@ -738,13 +857,216 @@ const loadRazorpayScript = (): Promise<boolean> => {
         if (isMounted) setIsLoadingOffers(false);
       }
     }
+
+    setIsLoadingOffers(true);
     fetchOffers();
+
+    // Polling every 3 seconds for instant seller changes revalidation
+    const pollInterval = setInterval(fetchOffers, 3000);
+
+    const handleFocus = () => {
+      fetchOffers();
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchOffers();
+      }
+    };
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
       isMounted = false;
+      clearInterval(pollInterval);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [checkoutItems, cartItems]);
+  }, [activeSellerId, session?.user?.id]);
+
+  // Live sync of applied coupon properties when seller changes them in real-time
+  useEffect(() => {
+    if (!appliedCoupon || !isPromoApplied || availableOffers.length === 0) return;
+
+    const matchedOffer = availableOffers.find(
+      (o) =>
+        (o.code && o.code.toUpperCase() === (appliedCoupon.code || "").toUpperCase()) ||
+        (o.id && o.id === appliedCoupon.id)
+    );
+
+    if (!matchedOffer) {
+      if ((appliedCoupon as any).isAutoApply) {
+        setIsPromoApplied(false);
+        setDiscountPercent(0);
+        setAppliedCoupon(null);
+        setPromoCode("");
+      }
+      return;
+    }
+
+    const latestPct = Number(
+      matchedOffer.discountPercentage ||
+        (matchedOffer.discountType === "PERCENTAGE" ? matchedOffer.discountValue || 0 : 0)
+    );
+    const latestAmt =
+      Number(matchedOffer.discountAmount || (matchedOffer.discountType === "FLAT" ? matchedOffer.discountValue || 0 : 0)) ||
+      null;
+    const latestMax = Number(matchedOffer.maxDiscountAmount) || null;
+    const latestMinCart = Number(matchedOffer.minimumCartValue ?? matchedOffer.minOrderAmount ?? 0);
+    const latestType = matchedOffer.discountType || (latestPct > 0 ? "PERCENTAGE" : "FLAT");
+
+    const isPctChanged = Number(appliedCoupon.discountPercentage || 0) !== latestPct;
+    const isAmtChanged = Number(appliedCoupon.discountAmount || 0) !== (latestAmt || 0);
+    const isMaxChanged = Number(appliedCoupon.maxDiscountAmount || 0) !== (latestMax || 0);
+    const isMinChanged = Number(appliedCoupon.minimumCartValue || 0) !== latestMinCart;
+    const isTypeChanged = appliedCoupon.discountType !== latestType;
+
+    if (isPctChanged || isAmtChanged || isMaxChanged || isMinChanged || isTypeChanged) {
+      let recalculatedDiscount = 0;
+      if (latestPct > 0) {
+        recalculatedDiscount = Math.round((subtotal * latestPct) / 100);
+        if (latestMax) recalculatedDiscount = Math.min(recalculatedDiscount, latestMax);
+      } else if (latestAmt) {
+        recalculatedDiscount = Math.min(latestAmt, subtotal);
+      }
+
+      const updatedCouponObj = {
+        ...appliedCoupon,
+        ...matchedOffer,
+        discountType: latestType,
+        discountPercentage: latestPct || null,
+        discountAmount: latestAmt,
+        maxDiscountAmount: latestMax,
+        minimumCartValue: latestMinCart,
+        calculatedDiscount: recalculatedDiscount,
+      };
+
+      setAppliedCoupon(updatedCouponObj);
+      setDiscountPercent(latestPct);
+    }
+  }, [availableOffers, appliedCoupon, isPromoApplied, subtotal]);
+
+  // Auto-apply eligible coupon when conditions are met
+  useEffect(() => {
+    if (userDismissedPromo || isValidatingPromo || availableOffers.length === 0) {
+      return;
+    }
+
+    if (subtotal <= 0) return;
+
+    // Filter offers configured with isAutoApply that satisfy minimum cart & scope & eligibility
+    const eligibleAutoOffers = availableOffers.filter((offer) => {
+      if (offer.isEligible === false) return false;
+      const isAuto = Boolean(offer.isAutoApply || offer.autoApply);
+      if (!isAuto) return false;
+      const minCart = Number(offer.minimumCartValue ?? offer.minOrderAmount ?? 0);
+      if (subtotal < minCart) return false;
+
+      if (offer.appliesToProductId) {
+        const hasProduct = checkoutItems.some(
+          (it) => it.id === offer.appliesToProductId || it.foodItemId === offer.appliesToProductId
+        );
+        if (!hasProduct) return false;
+      }
+      return true;
+    });
+
+    if (eligibleAutoOffers.length === 0) {
+      // If currently applied was auto-applied and subtotal dropped below threshold, remove it
+      if (appliedCoupon && (appliedCoupon as any).isAutoApply) {
+        setIsPromoApplied(false);
+        setDiscountPercent(0);
+        setAppliedCoupon(null);
+        setPromoCode("");
+      }
+      return;
+    }
+
+    // Find the offer providing maximum discount
+    let bestOffer = eligibleAutoOffers[0];
+    let maxDiscount = 0;
+
+    for (const offer of eligibleAutoOffers) {
+      const pct = offer.discountPercentage || (offer.discountType === "PERCENTAGE" ? (offer.discountValue || 0) : 0);
+      let disc = 0;
+      if (pct > 0) {
+        disc = Math.round((subtotal * pct) / 100);
+        if (offer.maxDiscountAmount) disc = Math.min(disc, offer.maxDiscountAmount);
+      } else {
+        disc = Math.min(offer.discountAmount || offer.discountValue || 0, subtotal);
+      }
+      if (disc >= maxDiscount) {
+        maxDiscount = disc;
+        bestOffer = offer;
+      }
+    }
+
+    if (!isPromoApplied || ((appliedCoupon as any)?.isAutoApply && appliedCoupon?.code !== bestOffer.code)) {
+      const pct = bestOffer.discountPercentage || (bestOffer.discountType === "PERCENTAGE" ? (bestOffer.discountValue || 0) : 0);
+      setAppliedCoupon({
+        id: bestOffer.id,
+        code: bestOffer.code,
+        description: bestOffer.description,
+        discountType: bestOffer.discountType || (pct > 0 ? "PERCENTAGE" : "FLAT"),
+        discountPercentage: pct || null,
+        discountAmount: bestOffer.discountAmount || bestOffer.discountValue || null,
+        maxDiscountAmount: bestOffer.maxDiscountAmount || null,
+        minimumCartValue: bestOffer.minimumCartValue || bestOffer.minOrderAmount || 0,
+        calculatedDiscount: maxDiscount,
+        isAutoApply: true,
+      } as any);
+      setIsPromoApplied(true);
+      setDiscountPercent(pct);
+      setPromoCode(bestOffer.code);
+    }
+  }, [availableOffers, subtotal, userDismissedPromo, isPromoApplied, appliedCoupon, isValidatingPromo, activeSellerId, checkoutItems]);
+
+  // Auto-remove or invalidate applied coupon whenever subtotal drops below minimum required cart value or required item is removed
+  useEffect(() => {
+    if (!appliedCoupon || !isPromoApplied) return;
+    const minCart = Number(appliedCoupon.minimumCartValue ?? (appliedCoupon as any).minOrderAmount ?? 0);
+    if (minCart > 0 && subtotal < minCart) {
+      const code = appliedCoupon.code || promoCode || "Applied";
+      setIsPromoApplied(false);
+      setDiscountPercent(0);
+      setAppliedCoupon(null);
+      setPromoCode("");
+      showToast(`Coupon "${code}" removed. Minimum cart value of ₹${minCart} required.`, "warning");
+      return;
+    }
+
+    if (appliedCoupon.appliesToProductId && checkoutItems.length > 0) {
+      const allowedKeys = String(appliedCoupon.appliesToProductId)
+        .split(",")
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean);
+      if (allowedKeys.length > 0) {
+        const hasMatchingProduct = checkoutItems.some((it) => {
+          const itemId = String(it.id || "").toLowerCase();
+          const foodItemId = String(it.foodItemId || "").toLowerCase();
+          const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+          const name = String(it.name || "").toLowerCase().trim();
+          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
+        });
+        if (!hasMatchingProduct) {
+          const code = appliedCoupon.code || promoCode || "Applied";
+          setIsPromoApplied(false);
+          setDiscountPercent(0);
+          setAppliedCoupon(null);
+          setPromoCode("");
+          showToast(`Coupon "${code}" is no longer applicable as the required item was removed from your cart.`, "warning");
+          return;
+        }
+      }
+    } else if (appliedCoupon.appliesToProductId && checkoutItems.length === 0) {
+      setIsPromoApplied(false);
+      setDiscountPercent(0);
+      setAppliedCoupon(null);
+      setPromoCode("");
+    }
+  }, [subtotal, checkoutItems, appliedCoupon, isPromoApplied, promoCode]);
 
   const handleRemovePromo = () => {
+    setUserDismissedPromo(true);
     setIsPromoApplied(false);
     setDiscountPercent(0);
     setAppliedCoupon(null);
@@ -765,6 +1087,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
       return;
     }
 
+    setUserDismissedPromo(false);
     setPromoCode(clean);
     setIsValidatingPromo(true);
     const currentSellerId = (checkoutItems[0] as any)?.sellerId || cartItems[0]?.sellerId;
@@ -838,7 +1161,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
 
     if (isOutsideCoverage) {
       showToast(
-        `Your delivery address is ${shopDistanceKm ? `${shopDistanceKm} km away, ` : ""}outside this restaurant's ${maxDeliveryRadius} km coverage area. Please update your delivery address.`,
+        `This address is outside the delivery area. Your selected delivery address is ${shopDistanceKm ? `${shopDistanceKm} km away, ` : ""}outside this restaurant's ${maxDeliveryRadius} km coverage area. Please select a valid delivery address within the coverage area.`,
         "error"
       );
       return;
@@ -847,6 +1170,19 @@ const loadRazorpayScript = (): Promise<boolean> => {
     if (!validateFields()) {
       showToast("Please fill in all mandatory delivery address fields.", "error");
       return;
+    }
+
+    if (isPromoApplied && appliedCoupon) {
+      const minCart = Number(appliedCoupon.minimumCartValue ?? (appliedCoupon as any).minOrderAmount ?? 0);
+      if (minCart > 0 && subtotal < minCart) {
+        setIsPromoApplied(false);
+        setDiscountPercent(0);
+        setAppliedCoupon(null);
+        setPromoCode("");
+        showToast(`Coupon "${appliedCoupon.code}" requires a minimum order of ₹${minCart}. Please add more items to use this coupon.`, "error");
+        setIsSubmitting(false);
+        return;
+      }
     }
 
     if (onPlaceOrder) {
@@ -922,12 +1258,15 @@ const loadRazorpayScript = (): Promise<boolean> => {
         }
         setPendingTx(pendingData);
 
+        const locationPayload = getActiveLocationPayload();
         const initRes = await fetchApi("/api/user/orders/initiate-payment", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             totalAmount: grandTotal,
             sellerId: sellerId || "seller",
+            deliveryAddress: fullDeliveryAddress,
+            ...locationPayload,
           }),
         });
 
@@ -982,6 +1321,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
               }
               setPendingTx(paidPendingData);
 
+              const locationPayload = getActiveLocationPayload();
               const createRes = await fetchApi("/api/user/orders", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -996,6 +1336,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
                   razorpay_payment_id: response.razorpay_payment_id,
                   razorpay_order_id: response.razorpay_order_id,
                   razorpay_signature: response.razorpay_signature,
+                  ...locationPayload,
                 }),
               });
 
@@ -1034,6 +1375,8 @@ const loadRazorpayScript = (): Promise<boolean> => {
                 })),
                 subtotal,
                 discount: discountAmount,
+                couponCode: isPromoApplied ? (appliedCoupon?.code || promoCode) : undefined,
+                couponDiscountPercentage: isPromoApplied ? appliedCoupon?.discountPercentage : undefined,
                 deliveryFee: 0,
                 taxes: 0,
                 grandTotal,
@@ -1135,6 +1478,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
       // -------------------------------------------------------------
       // FLOW 2: CASH ON DELIVERY (COD) or ZERO PAYMENT (100% OFF)
       // -------------------------------------------------------------
+      const locationPayload = getActiveLocationPayload();
       const res = await fetchApi("/api/user/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1146,6 +1490,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
           customerPhone: phoneNumber,
           paymentMethod: grandTotal === 0 ? (paymentMethod === "UPI" ? "ONLINE" : "COD") : "COD",
           appliedCouponId: isPromoApplied && appliedCoupon ? appliedCoupon.id : (isPromoApplied ? promoCode : null),
+          ...locationPayload,
         }),
       });
 
@@ -1192,6 +1537,8 @@ const loadRazorpayScript = (): Promise<boolean> => {
         })),
         subtotal,
         discount: discountAmount,
+        couponCode: isPromoApplied ? (appliedCoupon?.code || promoCode) : undefined,
+        couponDiscountPercentage: isPromoApplied ? appliedCoupon?.discountPercentage : undefined,
         deliveryFee: 0,
         taxes: 0,
         grandTotal,
@@ -1647,19 +1994,37 @@ const loadRazorpayScript = (): Promise<boolean> => {
                           (addr.type || "").toUpperCase().includes("WORK") ||
                           (addr.type || "").toUpperCase().includes("OFFICE");
 
+                        const sellerCoords = (sellerDetails?.latitude && sellerDetails?.longitude)
+                          ? { lat: Number(sellerDetails.latitude), lng: Number(sellerDetails.longitude) }
+                          : getPincodeCoordinates(sellerDetails?.user?.pincode);
+                        const sellerLat = sellerCoords?.lat ?? null;
+                        const sellerLng = sellerCoords?.lng ?? null;
+                        const addrLat = addr.latitude != null ? Number(addr.latitude) : (getPincodeCoordinates(addr.pincode)?.lat ?? null);
+                        const addrLng = addr.longitude != null ? Number(addr.longitude) : (getPincodeCoordinates(addr.pincode)?.lng ?? null);
+                        let addrDist: number | null = null;
+                        if (addrLat != null && addrLng != null && sellerLat != null && sellerLng != null) {
+                          addrDist = calculateDistanceKm(addrLat, addrLng, sellerLat, sellerLng);
+                        } else if (addr.pincode && sellerDetails?.user?.pincode) {
+                          const p1 = getPincodeCoordinates(addr.pincode);
+                          const p2 = getPincodeCoordinates(sellerDetails.user.pincode);
+                          if (p1 && p2) addrDist = calculateDistanceKm(p1.lat, p1.lng, p2.lat, p2.lng);
+                        }
+                        const isAddrOutside = Boolean(sellerDetails && addrDist !== null && addrDist > maxDeliveryRadius);
+
                         return (
                           <div
                             key={addr.id}
                             className={`${styles.savedAddressCard} ${
                               isSelected ? styles.savedAddressCardSelected : ""
                             }`}
+                            style={isAddrOutside && isSelected ? { borderColor: "#F87171", backgroundColor: "#FEF2F2" } : undefined}
                             onClick={() => selectSavedAddress(addr)}
                             role="button"
                             tabIndex={0}
-                            title="Click to select this delivery address"
+                            title={isAddrOutside ? "This address is outside the delivery area" : "Click to select this delivery address"}
                           >
                             <div className={styles.cardTopRow}>
-                              <div className={styles.tagsGroup}>
+                              <div className={styles.tagsGroup} style={{ flexWrap: "wrap", gap: "4px" }}>
                                 <span
                                   className={
                                     isHome
@@ -1680,6 +2045,11 @@ const loadRazorpayScript = (): Promise<boolean> => {
                                 </span>
                                 {addr.isDefault && (
                                   <span className={styles.defaultBadge}>DEFAULT</span>
+                                )}
+                                {isAddrOutside && (
+                                  <span style={{ fontSize: "10px", fontWeight: 700, backgroundColor: "#FEE2E2", color: "#DC2626", padding: "2px 6px", borderRadius: "4px" }}>
+                                    OUTSIDE AREA ({addrDist} km)
+                                  </span>
                                 )}
                               </div>
 
@@ -1709,15 +2079,33 @@ const loadRazorpayScript = (): Promise<boolean> => {
                     </div>
 
                     {/* Selected Address Confirmation Banner */}
-                    <div className={styles.selectedAddressSummary}>
+                    <div
+                      className={styles.selectedAddressSummary}
+                      style={isOutsideCoverage ? { backgroundColor: "#FEF2F2", borderColor: "#FCA5A5" } : undefined}
+                    >
                       <div className={styles.selectedSummaryLeft}>
-                        <CheckCircle2 size={20} color="#EA580C" />
+                        {isOutsideCoverage ? (
+                          <AlertCircle size={20} color="#DC2626" style={{ flexShrink: 0 }} />
+                        ) : (
+                          <CheckCircle2 size={20} color="#EA580C" style={{ flexShrink: 0 }} />
+                        )}
                         <div>
-                          <div className={styles.selectedSummaryTitle}>
-                            Delivering to Selected Address
+                          <div
+                            className={styles.selectedSummaryTitle}
+                            style={isOutsideCoverage ? { color: "#991B1B" } : undefined}
+                          >
+                            {isOutsideCoverage ? "This address is outside the delivery area" : "Delivering to Selected Address"}
                           </div>
-                          <div className={styles.selectedSummaryText}>
+                          <div
+                            className={styles.selectedSummaryText}
+                            style={isOutsideCoverage ? { color: "#B91C1C" } : undefined}
+                          >
                             {streetAddress}, {city} - {postalCode}
+                            {isOutsideCoverage && (
+                              <span style={{ display: "block", marginTop: "4px", fontWeight: 600, fontSize: "0.82rem" }}>
+                                {shopDistanceKm ? `Selected address is ${shopDistanceKm} km away. ` : ""}Maximum allowed delivery radius is {maxDeliveryRadius} km.
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -2205,7 +2593,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
                       <AlertCircle size={18} color="#DC2626" style={{ flexShrink: 0, marginTop: "2px" }} />
                       <div>
                         <h4 style={{ margin: 0, fontSize: "0.88rem", fontWeight: 700, color: "#991B1B" }}>
-                          Outside Delivery Coverage
+                          This address is outside the delivery area
                         </h4>
                         <p style={{ margin: "3px 0 0 0", fontSize: "0.8rem", color: "#B91C1C", lineHeight: 1.4 }}>
                           Your selected delivery address is <strong>{shopDistanceKm} km</strong> away from this restaurant. Maximum delivery distance is <strong>{maxDeliveryRadius} km</strong>.
@@ -2252,7 +2640,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
                         {isSellerClosed
                           ? "Kitchen Unavailable • Cannot Place Order"
                           : isOutsideCoverage
-                          ? `Outside 5 km Coverage (${shopDistanceKm ? `${shopDistanceKm} km` : "> 5 km"})`
+                          ? `Outside Delivery Area (${shopDistanceKm ? `${shopDistanceKm} km` : `> ${maxDeliveryRadius} km`})`
                           : isCartEmpty
                           ? "Your Cart is Empty • Add Products"
                           : isSubmitting

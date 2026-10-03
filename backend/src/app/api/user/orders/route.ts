@@ -3,6 +3,7 @@ import { successResponse, errorResponse } from "@/lib/api-response";
 import { ApiError } from "@/lib/api-error";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { autoCancelExpiredOrders } from "@/lib/order-expiry";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -16,6 +17,9 @@ export async function GET() {
         if (session.user.role !== "USER") {
             throw new ApiError("Access denied. User account required.", 403);
         }
+
+        // Auto-cancel any pending orders that exceeded the 5-minute acceptance timer
+        await autoCancelExpiredOrders({ userId: session.user.id });
 
         const orders = await db.order.findMany({
             where: { userId: session.user.id },
@@ -32,7 +36,30 @@ export async function GET() {
             }
         });
 
-        return successResponse(orders);
+        const couponIds = Array.from(new Set(orders.map(o => o.appliedCouponId).filter(Boolean))) as string[];
+        const couponsMap: Record<string, any> = {};
+        if (couponIds.length > 0) {
+            const coupons = await db.coupon.findMany({
+                where: { id: { in: couponIds } },
+                select: {
+                    id: true,
+                    code: true,
+                    discountPercentage: true,
+                    discountAmount: true,
+                    discountType: true
+                }
+            });
+            coupons.forEach(c => {
+                couponsMap[c.id] = c;
+            });
+        }
+
+        const enrichedOrders = orders.map(o => ({
+            ...o,
+            appliedCoupon: o.appliedCouponId ? couponsMap[o.appliedCouponId] || null : null
+        }));
+
+        return successResponse(enrichedOrders);
     } catch (error: any) {
         if (error instanceof ApiError) return errorResponse(error.message, error.statusCode);
         console.error("Fetch user orders error:", error);

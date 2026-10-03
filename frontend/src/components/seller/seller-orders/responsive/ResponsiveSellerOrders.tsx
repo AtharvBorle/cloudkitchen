@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -13,10 +13,13 @@ import {
   PackageCheck,
   CheckCircle2,
   XCircle,
+  Clock,
 } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import RejectOrderModal from "../RejectOrderModal";
 import ToastNotification from "../ToastNotification";
+import { getRemainingSeconds } from "../SellerOrders";
+import { fetchApi } from "@/lib/fetch-api";
 import styles from "./ResponsiveSellerOrders.module.css";
 
 export type OrderFilterTab = "New" | "Preparing" | "Out" | "Done" | "All";
@@ -33,6 +36,7 @@ export interface ResponsiveOrderItem {
   deliveredCount: number;
   cancelledCount: number;
   status: "New" | "Preparing" | "Out" | "Done" | "Cancelled";
+  createdAt?: string;
 }
 
 import { useSellerProfile } from "@/hooks/useSellerProfile";
@@ -77,6 +81,15 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   const [selectedTab, setSelectedTab] = useState<OrderFilterTab>("New");
   const [ordersList, setOrdersList] = useState<ResponsiveOrderItem[]>(orders);
+  const [now, setNow] = useState(Date.now());
+  const autoCancelledRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // In-app rejection modal & toast state
   const [orderToReject, setOrderToReject] = useState<ResponsiveOrderItem | null>(null);
@@ -97,15 +110,46 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
     }
   }, [orders]);
 
+  // Auto-cancel expired New orders in background
+  useEffect(() => {
+    ordersList.forEach((order) => {
+      if (order.status === "New") {
+        const sec = getRemainingSeconds(order.createdAt, now);
+        if (sec <= 0 && !autoCancelledRef.current.has(order.id)) {
+          autoCancelledRef.current.add(order.id);
+          if (onReject) {
+            onReject(order.id);
+          } else {
+            fetchApi(`/api/seller/orders/${order.id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ status: "CANCELLED" }),
+            }).catch(() => {});
+          }
+          setOrdersList((prev) =>
+            prev.map((o) => (o.id === order.id ? { ...o, status: "Cancelled" as const } : o))
+          );
+        }
+      }
+    });
+  }, [ordersList, now, onReject]);
+
   // Filter tab counts
-  const newCount = ordersList.filter((o) => o.status === "New").length;
+  const newCount = ordersList.filter((o) => {
+    if (o.status !== "New") return false;
+    return getRemainingSeconds(o.createdAt, now) > 0;
+  }).length;
   const preparingCount = ordersList.filter((o) => o.status === "Preparing").length;
   const outCount = ordersList.filter((o) => o.status === "Out").length;
   const doneCount = ordersList.filter((o) => o.status === "Done").length;
 
   const filteredOrders = ordersList.filter((order) => {
+    let effStatus = order.status;
+    if (effStatus === "New" && getRemainingSeconds(order.createdAt, now) <= 0) {
+      effStatus = "Cancelled";
+    }
     if (selectedTab === "All") return true;
-    return order.status === selectedTab;
+    return effStatus === selectedTab;
   });
 
   const handleCardClick = (order: ResponsiveOrderItem) => {
@@ -278,11 +322,32 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
                   className={styles.orderCard}
                   onClick={() => handleCardClick(order)}
                 >
-                  {/* Top Meta Line: #1234 • 12 min ago > */}
+                  {/* Top Meta Line: #1234 • ⏱️ 04:32 > */}
                   <div className={styles.cardTopRow}>
-                    <span className={styles.orderMetaText}>
-                      {order.orderNumber} • {order.timeAgo}
-                    </span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span className={styles.orderMetaText}>{order.orderNumber}</span>
+                      {order.status === "New" ? (
+                        (() => {
+                          const sec = getRemainingSeconds(order.createdAt, now);
+                          const mm = String(Math.floor(sec / 60)).padStart(2, "0");
+                          const ss = String(sec % 60).padStart(2, "0");
+                          const isUrgent = sec <= 60;
+                          return sec > 0 ? (
+                            <span
+                              className={`${styles.timerBadge} ${isUrgent ? styles.timerBadgeUrgent : ""}`}
+                              title={`Accept order within ${mm}:${ss}`}
+                            >
+                              <Clock size={12} style={{ display: "inline", verticalAlign: "middle", marginRight: "3px" }} />
+                              {mm}:{ss}
+                            </span>
+                          ) : (
+                            <span className={styles.cancelledBadge}>Cancelled</span>
+                          );
+                        })()
+                      ) : (
+                        <span className={styles.orderMetaText}>• {order.timeAgo}</span>
+                      )}
+                    </div>
                     <ChevronRight size={18} className={styles.chevronIcon} />
                   </div>
 
@@ -328,7 +393,7 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
                   </div>
 
                   {/* Action Buttons */}
-                  {order.status === "New" && (
+                  {order.status === "New" && getRemainingSeconds(order.createdAt, now) > 0 && (
                     <div className={styles.actionsRow}>
                       <button
                         type="button"

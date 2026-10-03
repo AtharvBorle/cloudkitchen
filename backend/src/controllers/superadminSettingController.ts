@@ -17,15 +17,10 @@ export const getSystemSetting = async (req: Request) => {
     if (!key) {
         const allSettings = await db.systemSettings.findMany();
         const settingsMap: Record<string, string> = {
-            PLATFORM_NAME: "Neo Cloud Kitchen",
-            PLATFORM_COMMISSION_PERCENTAGE: "10",
-            SUBSCRIPTION_PRICE: "199",
-            MAX_DELIVERY_RADIUS_KM: "15",
-            DEFAULT_DELIVERY_FEE: "40",
-            TAX_PERCENTAGE: "5",
             SUPPORT_EMAIL: "support@neocloudkitchen.com",
             SUPPORT_PHONE: "+91 98765 43210",
-            MAINTENANCE_MODE: "false"
+            MAINTENANCE_MODE: "false",
+            AUTO_ASSIGN_DELIVERY: "true"
         };
         for (const s of allSettings) {
             settingsMap[s.key] = s.value;

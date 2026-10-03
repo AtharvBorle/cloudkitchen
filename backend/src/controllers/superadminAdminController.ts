@@ -13,7 +13,7 @@ export const getAdmins = async () => {
     }
 
     const admins = await db.user.findMany({
-        where: { role: { in: ["AGENT", "SUPPORT"] } },
+        where: { role: { in: ["AGENT", "SUPPORT", "REEL_MANAGER"] } },
         orderBy: { createdAt: 'desc' },
         select: {
             id: true,
@@ -45,7 +45,10 @@ export const createAdmin = async (req: Request) => {
 
     const body = await req.json();
     const { name, email, phone, password, role } = body;
-    const targetRole = role === "SUPPORT" ? "SUPPORT" : "AGENT";
+    let targetRole = "AGENT";
+    if (role === "SUPPORT") targetRole = "SUPPORT";
+    else if (role === "REEL_MANAGER") targetRole = "REEL_MANAGER";
+    else if (role === "AGENT") targetRole = "AGENT";
 
     if (!name || !email || !password) {
         throw new ApiError("Name, email address, and password are required.", 400);

@@ -86,8 +86,9 @@ export default function UserOrdersList({ initialOrders }: { initialOrders: any[]
         // Initialize item ratings
         const initialItemRatings: { [key: string]: { rating: number; comment: string } } = {};
         parsedItems.forEach((item: any) => {
-            if (item.id) {
-                initialItemRatings[item.id] = { rating: 5, comment: "" };
+            const itemId = item.foodItemId || (typeof item.id === "string" && item.id.includes("_") ? item.id.split("_")[0] : item.id);
+            if (itemId) {
+                initialItemRatings[itemId] = { rating: 5, comment: "" };
             }
         });
         setItemRatings(initialItemRatings);
@@ -402,6 +403,11 @@ export default function UserOrdersList({ initialOrders }: { initialOrders: any[]
                             items = [];
                         }
 
+                        const itemsSum = Array.isArray(items)
+                            ? items.reduce((sum: number, it: any) => sum + (Number(it.price) || 0) * (Number(it.quantity) || 1), 0)
+                            : 0;
+                        const discountAmount = Math.max(0, itemsSum - Number(order.totalAmount || 0));
+
                         return (
                             <div key={order.id} style={{ backgroundColor: "white", padding: "20px", borderRadius: "12px", boxShadow: "var(--shadow-card)", borderLeft: order.status === 'CANCELLED' ? '4px solid #EF4444' : 'none', opacity: order.status === 'CANCELLED' ? 0.7 : 1 }}>
                                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "15px", borderBottom: "1px solid #EEE", paddingBottom: "10px", flexWrap: "wrap", gap: "10px" }}>
@@ -424,9 +430,15 @@ export default function UserOrdersList({ initialOrders }: { initialOrders: any[]
                                     {Array.isArray(items) && items.map((item: any, idx: number) => (
                                         <div key={idx} style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
                                             <span>{item.quantity} x {item.name}</span>
-                                            <span>₹{item.price * item.quantity}</span>
+                                            <span>₹{(item.price || 0) * (item.quantity || 1)}</span>
                                         </div>
                                     ))}
+                                    {discountAmount > 0 && (
+                                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px", color: "#16A34A", fontSize: "0.88rem", fontWeight: "600" }}>
+                                            <span>Coupon Discount {order.appliedCoupon?.code ? `(${order.appliedCoupon.code})` : ""}</span>
+                                            <span>-₹{discountAmount}</span>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {order.deliveryPerson && (
@@ -545,16 +557,16 @@ export default function UserOrdersList({ initialOrders }: { initialOrders: any[]
                                                     View Invoice
                                                 </button>
                                             )}
-                                            {(order.refund || (order.status === 'CANCELLED' && order.isPaid)) && (
+                                            {(order.refund || (order.status === 'CANCELLED' && (order.isPaid || Number(order.totalAmount) === 0))) && (
                                                 <span style={{
                                                     fontSize: '0.8rem',
                                                     fontWeight: 'bold',
                                                     padding: '2px 8px',
                                                     borderRadius: '6px',
-                                                    backgroundColor: order.refund?.status === 'APPROVED' ? '#DCFCE7' : order.refund?.status === 'REJECTED' ? '#FEE2E2' : '#FEF3C7',
-                                                    color: order.refund?.status === 'APPROVED' ? '#10B981' : order.refund?.status === 'REJECTED' ? '#EF4444' : '#D97706'
+                                                    backgroundColor: order.refund?.status === 'APPROVED' || order.refund?.status === 'PROCESSED' || (!order.refund && Number(order.totalAmount) === 0) ? '#DCFCE7' : order.refund?.status === 'REJECTED' ? '#FEE2E2' : '#FEF3C7',
+                                                    color: order.refund?.status === 'APPROVED' || order.refund?.status === 'PROCESSED' || (!order.refund && Number(order.totalAmount) === 0) ? '#10B981' : order.refund?.status === 'REJECTED' ? '#EF4444' : '#D97706'
                                                 }}>
-                                                    Refund: {order.refund?.status || 'PENDING'} (₹{order.refund?.amount || order.totalAmount})
+                                                    Refund: {order.refund?.status || (Number(order.totalAmount) === 0 ? 'PROCESSED' : 'PENDING')} (₹{typeof order.refund?.amount === 'number' ? order.refund.amount : (typeof order.totalAmount === 'number' ? order.totalAmount : 0)})
                                                 </span>
                                             )}
                                         </div>

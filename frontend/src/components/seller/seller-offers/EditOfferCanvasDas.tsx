@@ -14,6 +14,10 @@ import {
   CheckCircle2,
   ShieldCheck,
   Info,
+  Search,
+  Check,
+  Layers,
+  Utensils,
 } from "lucide-react";
 import styles from "./CreateOffer.module.css";
 
@@ -175,6 +179,7 @@ function EditOfferForm({
   const [discountValue, setDiscountValue] = useState("");
   const [minOrderValue, setMinOrderValue] = useState("");
   const [maxDiscountCap, setMaxDiscountCap] = useState("");
+  const [isAutoApply, setIsAutoApply] = useState(false);
 
   const [appliesTo, setAppliesTo] = useState<"ALL" | "CATEGORY" | "ITEMS">("ALL");
   const [customerEligibility, setCustomerEligibility] = useState<"ALL" | "NEW_ONLY">("ALL");
@@ -191,6 +196,49 @@ function EditOfferForm({
   const todayStr = new Date().toISOString().split("T")[0];
 
   const [resolvedId, setResolvedId] = useState(offerId);
+  const [menuItems, setMenuItems] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
+  const [itemSearchQuery, setItemSearchQuery] = useState("");
+  const [categorySearchQuery, setCategorySearchQuery] = useState("");
+  const [loadingMenu, setLoadingMenu] = useState(false);
+
+  useEffect(() => {
+    async function loadSellerMenu() {
+      try {
+        setLoadingMenu(true);
+        const res = await fetchApi("/api/seller/menu");
+        if (res.ok) {
+          const data = await res.json();
+          const items = Array.isArray(data.items) ? data.items : (Array.isArray(data.data?.items) ? data.data.items : (Array.isArray(data) ? data : []));
+          const cats = Array.isArray(data.foodCategories) ? data.foodCategories : (Array.isArray(data.data?.foodCategories) ? data.data.foodCategories : []);
+          setMenuItems(items);
+          setCategories(cats);
+        }
+      } catch (err) {
+        console.error("Failed to load seller menu items:", err);
+      } finally {
+        setLoadingMenu(false);
+      }
+    }
+    loadSellerMenu();
+  }, []);
+
+  const derivedCategories = React.useMemo(() => {
+    if (categories.length > 0) return categories;
+    const catMap = new Map<string, any>();
+    menuItems.forEach((it) => {
+      const catId = it.foodCategoryId || it.categoryId || it.foodCategory?.id || it.category?.id;
+      const catName = it.foodCategory?.name || it.category?.name || it.categoryName;
+      if (catId && !catMap.has(catId)) {
+        catMap.set(catId, { id: catId, name: catName || "General" });
+      } else if (catName && !catMap.has(catName)) {
+        catMap.set(catName, { id: catName, name: catName });
+      }
+    });
+    return Array.from(catMap.values());
+  }, [categories, menuItems]);
 
   // Load offer details dynamically based on offerId or codeParam
   useEffect(() => {
@@ -214,6 +262,7 @@ function EditOfferForm({
       setExpiryDate(demoMatch.expiryDate || "Runs indefinitely");
       setPerUserLimit(demoMatch.perUserLimit || "1");
       setStatus(demoMatch.status || "Active");
+      setIsAutoApply(Boolean(demoMatch.isAutoApply));
     }
 
     // 2. Fetch from backend API to override if live backend coupon exists
@@ -274,6 +323,10 @@ function EditOfferForm({
             } else {
               setNoExpiry(true);
               setExpiryDate("Runs indefinitely");
+            }
+
+            if (matched.isAutoApply !== undefined) {
+              setIsAutoApply(Boolean(matched.isAutoApply));
             }
 
             if (matched.approvalStatus === "DRAFT" || matched.status === "Draft" || matched.status === "DRAFT") {
@@ -366,12 +419,14 @@ function EditOfferForm({
         minOrderAmount: minOrderValue.trim() !== "" ? parseFloat(minOrderValue) : 0,
         maxDiscountAmount: maxDiscountCap.trim() !== "" ? parseFloat(maxDiscountCap) : null,
         appliesTo: appliesTo,
+        appliesToProductId: appliesTo === "CATEGORY" ? (selectedCategoryIds.join(",") || null) : appliesTo === "ITEMS" ? (selectedItemIds.join(",") || null) : null,
         customerEligibility: customerEligibility,
         usageLimit: usageLimit.trim() !== "" ? parseInt(usageLimit) : null,
         perUserLimit: perUserLimit.trim() !== "" ? parseInt(perUserLimit) : 1,
         noExpiry: noExpiry,
         status: finalStatus,
         isActive: finalStatus === "Active",
+        isAutoApply: isAutoApply,
       };
 
       const res = await fetchApi(`/api/seller/dashboard/offers`, {
@@ -769,6 +824,37 @@ function EditOfferForm({
                     </div>
                   </div>
                 </div>
+
+                {/* Auto Apply on Checkout Toggle */}
+                <div style={{ marginTop: "1.25rem", padding: "14px 16px", backgroundColor: "#f8fafc", borderRadius: "10px", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: "0.9rem", color: "#0f172a", display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span>Auto Apply on Checkout</span>
+                      {isAutoApply && <span style={{ fontSize: "0.7rem", backgroundColor: "#dcfce7", color: "#15803d", padding: "2px 8px", borderRadius: "10px", fontWeight: "bold" }}>ENABLED</span>}
+                    </div>
+                    <div style={{ fontSize: "0.78rem", color: "#64748b", marginTop: "4px" }}>
+                      Automatically apply this coupon in customer's cart when their order satisfies minimum conditions.
+                    </div>
+                  </div>
+                  <label style={{ position: "relative", display: "inline-block", width: "44px", height: "24px", cursor: "pointer", flexShrink: 0 }}>
+                    <input
+                      type="checkbox"
+                      checked={isAutoApply}
+                      onChange={(e) => setIsAutoApply(e.target.checked)}
+                      style={{ opacity: 0, width: 0, height: 0 }}
+                    />
+                    <span style={{
+                      position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+                      backgroundColor: isAutoApply ? "#ff5500" : "#cbd5e1",
+                      transition: ".3s", borderRadius: "24px"
+                    }}>
+                      <span style={{
+                        position: "absolute", height: "18px", width: "18px", left: isAutoApply ? "22px" : "3px", bottom: "3px",
+                        backgroundColor: "white", transition: ".3s", borderRadius: "50%"
+                      }} />
+                    </span>
+                  </label>
+                </div>
               </div>
 
               {/* Section 3: Eligibility & Schedule */}
@@ -879,6 +965,239 @@ function EditOfferForm({
                     </div>
                   </div>
                 </div>
+
+
+                {/* Specific Category Selection List */}
+                {appliesTo === "CATEGORY" && (
+                  <div style={{ marginTop: "16px", padding: "18px", backgroundColor: "#F8FAFC", borderRadius: "12px", border: "1px solid #E2E8F0" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px", flexWrap: "wrap", gap: "8px" }}>
+                      <div>
+                        <div style={{ fontSize: "0.9rem", fontWeight: 700, color: "#0F172A", display: "flex", alignItems: "center", gap: "8px" }}>
+                          <Layers size={16} color="#EA580C" />
+                          <span>Select Eligible Categories</span>
+                          {selectedCategoryIds.length > 0 && (
+                            <span style={{ fontSize: "0.72rem", backgroundColor: "#EA580C", color: "white", padding: "1px 8px", borderRadius: "10px", fontWeight: 700 }}>
+                              {selectedCategoryIds.length} Selected
+                            </span>
+                          )}
+                        </div>
+                        <p style={{ fontSize: "0.78rem", color: "#64748B", margin: "3px 0 0 0" }}>
+                          Discounts will apply only to menu items under the selected categories.
+                        </p>
+                      </div>
+                      <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedCategoryIds(derivedCategories.map((c: any) => c.id || c.name))}
+                          style={{ fontSize: "0.78rem", color: "#EA580C", background: "none", border: "none", cursor: "pointer", fontWeight: 600, padding: 0 }}
+                        >
+                          Select All
+                        </button>
+                        <span style={{ color: "#CBD5E1" }}>|</span>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedCategoryIds([])}
+                          style={{ fontSize: "0.78rem", color: "#64748B", background: "none", border: "none", cursor: "pointer", fontWeight: 600, padding: 0 }}
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+
+                    <div style={{ position: "relative", marginBottom: "12px" }}>
+                      <Search size={15} color="#94A3B8" style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)" }} />
+                      <input
+                        type="text"
+                        placeholder="Search category name..."
+                        value={categorySearchQuery}
+                        onChange={(e) => setCategorySearchQuery(e.target.value)}
+                        style={{ width: "100%", padding: "8px 12px 8px 36px", fontSize: "0.85rem", borderRadius: "8px", border: "1px solid #CBD5E1", backgroundColor: "white", boxSizing: "border-box" }}
+                      />
+                    </div>
+
+                    {derivedCategories.length === 0 ? (
+                      <p style={{ fontSize: "0.82rem", color: "#94A3B8", textAlign: "center", padding: "14px 0", margin: 0 }}>
+                        {loadingMenu ? "Loading categories..." : "No menu categories found. Please add dishes with categories to your menu."}
+                      </p>
+                    ) : (
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", maxHeight: "180px", overflowY: "auto" }}>
+                        {derivedCategories
+                          .filter((c: any) => (c.name || "").toLowerCase().includes(categorySearchQuery.toLowerCase().trim()))
+                          .map((cat: any) => {
+                            const catKey = String(cat.id || cat.name);
+                            const isSelected = selectedCategoryIds.includes(catKey);
+                            return (
+                              <div
+                                key={catKey}
+                                onClick={() => {
+                                  if (isSelected) {
+                                    setSelectedCategoryIds(prev => prev.filter(id => id !== catKey));
+                                  } else {
+                                    setSelectedCategoryIds(prev => [...prev, catKey]);
+                                  }
+                                }}
+                                style={{
+                                  padding: "8px 14px",
+                                  borderRadius: "8px",
+                                  cursor: "pointer",
+                                  fontSize: "0.85rem",
+                                  fontWeight: isSelected ? 700 : 500,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "8px",
+                                  transition: "all 0.15s ease",
+                                  backgroundColor: isSelected ? "#FFF7ED" : "white",
+                                  color: isSelected ? "#EA580C" : "#334155",
+                                  border: isSelected ? "1.5px solid #EA580C" : "1px solid #CBD5E1",
+                                  boxShadow: isSelected ? "0 1px 3px rgba(234, 88, 12, 0.15)" : "none",
+                                  userSelect: "none",
+                                }}
+                              >
+                                <div style={{
+                                  width: "16px",
+                                  height: "16px",
+                                  borderRadius: "4px",
+                                  border: isSelected ? "1.5px solid #EA580C" : "1.5px solid #94A3B8",
+                                  backgroundColor: isSelected ? "#EA580C" : "white",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  flexShrink: 0
+                                }}>
+                                  {isSelected && <Check size={11} color="white" strokeWidth={3} />}
+                                </div>
+                                <span>{cat.name}</span>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Specific Items Selection List */}
+                {appliesTo === "ITEMS" && (
+                  <div style={{ marginTop: "16px", padding: "18px", backgroundColor: "#F8FAFC", borderRadius: "12px", border: "1px solid #E2E8F0" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px", flexWrap: "wrap", gap: "8px" }}>
+                      <div>
+                        <div style={{ fontSize: "0.9rem", fontWeight: 700, color: "#0F172A", display: "flex", alignItems: "center", gap: "8px" }}>
+                          <Utensils size={16} color="#EA580C" />
+                          <span>Select Eligible Menu Items</span>
+                          {selectedItemIds.length > 0 && (
+                            <span style={{ fontSize: "0.72rem", backgroundColor: "#EA580C", color: "white", padding: "1px 8px", borderRadius: "10px", fontWeight: 700 }}>
+                              {selectedItemIds.length} Selected
+                            </span>
+                          )}
+                        </div>
+                        <p style={{ fontSize: "0.78rem", color: "#64748B", margin: "3px 0 0 0" }}>
+                          Discounts will apply only to the specific food items selected below.
+                        </p>
+                      </div>
+                      <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedItemIds(menuItems.map((i: any) => i.id))}
+                          style={{ fontSize: "0.78rem", color: "#EA580C", background: "none", border: "none", cursor: "pointer", fontWeight: 600, padding: 0 }}
+                        >
+                          Select All
+                        </button>
+                        <span style={{ color: "#CBD5E1" }}>|</span>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedItemIds([])}
+                          style={{ fontSize: "0.78rem", color: "#64748B", background: "none", border: "none", cursor: "pointer", fontWeight: 600, padding: 0 }}
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+
+                    <div style={{ position: "relative", marginBottom: "12px" }}>
+                      <Search size={15} color="#94A3B8" style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)" }} />
+                      <input
+                        type="text"
+                        placeholder="Search item name or category..."
+                        value={itemSearchQuery}
+                        onChange={(e) => setItemSearchQuery(e.target.value)}
+                        style={{ width: "100%", padding: "8px 12px 8px 36px", fontSize: "0.85rem", borderRadius: "8px", border: "1px solid #CBD5E1", backgroundColor: "white", boxSizing: "border-box" }}
+                      />
+                    </div>
+
+                    {menuItems.length === 0 ? (
+                      <p style={{ fontSize: "0.82rem", color: "#94A3B8", textAlign: "center", padding: "14px 0", margin: 0 }}>
+                        {loadingMenu ? "Loading menu items..." : "No menu items found. Please add dishes to your kitchen menu first."}
+                      </p>
+                    ) : (
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))", gap: "10px", maxHeight: "260px", overflowY: "auto", paddingRight: "4px" }}>
+                        {menuItems
+                          .filter((it: any) => 
+                            (it.name || "").toLowerCase().includes(itemSearchQuery.toLowerCase().trim()) ||
+                            (it.foodCategory?.name || it.category?.name || "").toLowerCase().includes(itemSearchQuery.toLowerCase().trim())
+                          )
+                          .map((item: any) => {
+                            const isSelected = selectedItemIds.includes(item.id);
+                            return (
+                              <div
+                                key={item.id}
+                                onClick={() => {
+                                  if (isSelected) {
+                                    setSelectedItemIds(prev => prev.filter(id => id !== item.id));
+                                  } else {
+                                    setSelectedItemIds(prev => [...prev, item.id]);
+                                  }
+                                }}
+                                style={{
+                                  padding: "10px 12px",
+                                  borderRadius: "10px",
+                                  cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                  gap: "10px",
+                                  transition: "all 0.15s ease",
+                                  backgroundColor: isSelected ? "#FFF7ED" : "white",
+                                  border: isSelected ? "1.5px solid #EA580C" : "1px solid #E2E8F0",
+                                  boxShadow: isSelected ? "0 1px 3px rgba(234, 88, 12, 0.15)" : "none",
+                                  userSelect: "none",
+                                }}
+                              >
+                                <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
+                                  <div style={{
+                                    width: "18px",
+                                    height: "18px",
+                                    borderRadius: "4px",
+                                    border: isSelected ? "1.5px solid #EA580C" : "1.5px solid #94A3B8",
+                                    backgroundColor: isSelected ? "#EA580C" : "white",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    flexShrink: 0
+                                  }}>
+                                    {isSelected && <Check size={12} color="white" strokeWidth={3} />}
+                                  </div>
+                                  {(item.imageUrl || item.image) && (
+                                    <img
+                                      src={item.imageUrl || item.image}
+                                      alt={item.name}
+                                      style={{ width: "36px", height: "36px", borderRadius: "6px", objectFit: "cover", flexShrink: 0 }}
+                                    />
+                                  )}
+                                  <div style={{ minWidth: 0, overflow: "hidden" }}>
+                                    <div style={{ fontSize: "0.85rem", fontWeight: 600, color: "#0F172A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                      {item.name}
+                                    </div>
+                                    <div style={{ fontSize: "0.72rem", color: "#64748B" }}>
+                                      ₹{item.price || 0} {item.foodCategory?.name ? `• ${item.foodCategory.name}` : ""}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Customer Eligibility & Usage Limit */}
                 <div className={styles.formGrid2}>

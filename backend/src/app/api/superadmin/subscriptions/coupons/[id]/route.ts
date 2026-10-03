@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const db = new PrismaClient();
+import { db } from "@/lib/db";
 
 // PUT update an existing subscription coupon
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

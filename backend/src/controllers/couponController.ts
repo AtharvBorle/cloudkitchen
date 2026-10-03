@@ -1,8 +1,7 @@
 import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
-import { PrismaClient } from "@prisma/client";
 import { ApiError } from "@/lib/api-error";
-import { revalidateTag } from "next/cache";
+import { revalidateTag, revalidatePath } from "next/cache";
 
 export function validateCouponCodeFormat(code: any): string {
     if (!code || typeof code !== "string" || !code.trim()) {
@@ -30,10 +29,10 @@ export const getAllCoupons = async () => {
     let coupons;
 
     if (role === "SUPERADMIN") {
-        coupons = await prisma.coupon.findMany();
+        coupons = await db.coupon.findMany();
     }
     else if (role === "SELLER") {
-        const sellerProfile = await prisma.sellerProfile.findUnique({
+        const sellerProfile = await db.sellerProfile.findUnique({
             where: { userId: session.user.id }
         });
 
@@ -41,7 +40,7 @@ export const getAllCoupons = async () => {
             throw new ApiError("Seller profile could not be found.", 404);
         }
 
-        coupons = await prisma.coupon.findMany({
+        coupons = await db.coupon.findMany({
             where: {
                 appliesToSellerId: sellerProfile.id
             }
@@ -88,7 +87,9 @@ export const createCoupon = async (req: Request) => {
         status,
         appliesToSellerId,
         appliesToProductId,
-        category
+        category,
+        isAutoApply,
+        autoApply
     } = body;
 
     const cleanCode = validateCouponCodeFormat(code);
@@ -179,7 +180,7 @@ export const createCoupon = async (req: Request) => {
     }
 
     if (role === "SELLER") {
-        const sellerProfile = await prisma.sellerProfile.findUnique({
+        const sellerProfile = await db.sellerProfile.findUnique({
             where: { userId: session.user.id }
         });
         if (!sellerProfile) throw new ApiError("A valid seller profile is required to create seller coupons.", 403);
@@ -230,16 +231,20 @@ export const createCoupon = async (req: Request) => {
             maxDiscountAmount: finalMaxCap,
             isActive: !isDraft && status !== "Expired" && status !== "Paused" && status !== "Pending",
             approvalStatus,
-            category: category || "BOTH"
+            category: category || "BOTH",
+            isAutoApply: isAutoApply !== undefined ? Boolean(isAutoApply) : (autoApply !== undefined ? Boolean(autoApply) : false)
         };
 
-        const newCoupon = await prisma.coupon.create({
+        const newCoupon = await db.coupon.create({
             data: couponData
         });
 
         try {
             revalidateTag("coupons", {});
             revalidateTag("public-coupons", {});
+            revalidatePath("/api/public/coupons");
+            revalidatePath("/api/coupons");
+            revalidatePath("/api/seller/dashboard/offers");
         } catch (e) {
             console.error("Revalidate coupons tag error:", e);
         }
@@ -264,7 +269,7 @@ export const updateCoupon = async (req: Request, couponId: string) => {
 
     const body = await req.json();
 
-    const existingCoupon = await prisma.coupon.findUnique({
+    const existingCoupon = await db.coupon.findUnique({
         where: { id: couponId }
     });
 
@@ -298,11 +303,13 @@ export const updateCoupon = async (req: Request, couponId: string) => {
         expiryDate,
         validUntil,
         status,
-        appliesToProductId
+        appliesToProductId,
+        isAutoApply,
+        autoApply
     } = body;
 
     if (role === "SELLER") {
-        const sellerProfile = await prisma.sellerProfile.findUnique({
+        const sellerProfile = await db.sellerProfile.findUnique({
             where: { userId: session.user.id }
         });
         if (!sellerProfile || (existingCoupon as any).appliesToSellerId !== sellerProfile.id) {
@@ -314,7 +321,7 @@ export const updateCoupon = async (req: Request, couponId: string) => {
     if (code !== undefined) {
         cleanUpdatedCode = validateCouponCodeFormat(code);
         if (cleanUpdatedCode !== existingCoupon.code) {
-            const codeExists = await prisma.coupon.findUnique({
+            const codeExists = await db.coupon.findUnique({
                 where: { code: cleanUpdatedCode }
             });
             if (codeExists) {
@@ -505,7 +512,13 @@ export const updateCoupon = async (req: Request, couponId: string) => {
         }
     }
 
-    const updatedCoupon = await prisma.coupon.update({
+    if (isAutoApply !== undefined) {
+        updateData.isAutoApply = Boolean(isAutoApply);
+    } else if (autoApply !== undefined) {
+        updateData.isAutoApply = Boolean(autoApply);
+    }
+
+    const updatedCoupon = await db.coupon.update({
         where: { id: couponId },
         data: updateData
     });
@@ -513,6 +526,9 @@ export const updateCoupon = async (req: Request, couponId: string) => {
     try {
         revalidateTag("coupons", {});
         revalidateTag("public-coupons", {});
+        revalidatePath("/api/public/coupons");
+        revalidatePath("/api/coupons");
+        revalidatePath("/api/seller/dashboard/offers");
     } catch (e) {
         console.error("Revalidate coupons tag error:", e);
     }
@@ -529,7 +545,7 @@ export const deleteCoupon = async (couponId: string) => {
         throw new ApiError("Access denied. You do not have permission to delete coupons.", 403);
     }
 
-    const existingCoupon = await prisma.coupon.findUnique({
+    const existingCoupon = await db.coupon.findUnique({
         where: { id: couponId }
     });
 
@@ -540,7 +556,7 @@ export const deleteCoupon = async (couponId: string) => {
     const role = session.user.role;
 
     if (role === "SELLER") {
-        const sellerProfile = await prisma.sellerProfile.findUnique({
+        const sellerProfile = await db.sellerProfile.findUnique({
             where: { userId: session.user.id }
         });
         if (!sellerProfile || (existingCoupon as any).appliesToSellerId !== sellerProfile.id) {
@@ -548,13 +564,16 @@ export const deleteCoupon = async (couponId: string) => {
         }
     }
 
-    await prisma.coupon.delete({
+    await db.coupon.delete({
         where: { id: couponId }
     });
 
     try {
         revalidateTag("coupons", {});
         revalidateTag("public-coupons", {});
+        revalidatePath("/api/public/coupons");
+        revalidatePath("/api/coupons");
+        revalidatePath("/api/seller/dashboard/offers");
     } catch (e) {
         console.error("Revalidate coupons tag error:", e);
     }

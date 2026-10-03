@@ -1,16 +1,25 @@
 import { getPublicCoupons } from "@/controllers/publicController";
-import { successResponse, errorResponse } from "@/lib/api-response";
+import { successResponse } from "@/lib/api-response";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function GET(req: Request) {
     try {
         const { searchParams } = new URL(req.url);
         const sellerId = searchParams.get("sellerId");
+        const userId = searchParams.get("userId");
 
-        const data = await getPublicCoupons(sellerId);
-        return successResponse(data);
+        const data = await getPublicCoupons(sellerId, userId);
+        const response = successResponse(data || []);
+        response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
+        response.headers.set("Pragma", "no-cache");
+        response.headers.set("Expires", "0");
+        return response;
     } catch (error: any) {
         console.error("Error fetching public coupons:", error);
-        if (error.message === "sellerId is required") return errorResponse(error.message, 400);
-        return errorResponse("An error occurred fetching coupons", 500);
+        const response = successResponse([]);
+        response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
+        return response;
     }
 }

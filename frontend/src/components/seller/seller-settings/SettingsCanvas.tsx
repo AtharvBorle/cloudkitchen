@@ -59,6 +59,7 @@ export interface SettingsFormData {
   latitude?: number | null;
   longitude?: number | null;
   isLocationPinned?: boolean;
+  deliveryRadiusKm?: number;
   language: string;
   timezone: string;
   currency: string;
@@ -68,7 +69,6 @@ export interface SettingsFormData {
   emailNotifications: boolean;
   smsAlerts: boolean;
   pushNotifications: boolean;
-  whatsappUpdates: boolean;
   enableQuietHours: boolean;
   quietHoursStart: string;
   quietHoursEnd: string;
@@ -143,6 +143,7 @@ const DEFAULT_DATA: SettingsFormData = {
   latitude: null,
   longitude: null,
   isLocationPinned: false,
+  deliveryRadiusKm: 5,
   language: "English",
   timezone: "Asia/Kolkata (UTC+5:30)",
   currency: "INR (₹)",
@@ -152,7 +153,6 @@ const DEFAULT_DATA: SettingsFormData = {
   emailNotifications: true,
   smsAlerts: true,
   pushNotifications: true,
-  whatsappUpdates: false,
   enableQuietHours: true,
   quietHoursStart: "10:00 PM",
   quietHoursEnd: "07:00 AM",
@@ -307,7 +307,7 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
   }, []);
 
   useEffect(() => {
-    if (seller.businessName || seller.email || seller.phone || seller.address || seller.latitude || seller.longitude) {
+    if (seller.businessName || seller.email || seller.phone || seller.address || seller.latitude || seller.longitude || seller.deliveryRadiusKm) {
       setFormData((prev) => ({
         ...prev,
         businessName: (!prev.businessName || prev.businessName === "Neo Cloud Kitchen & Rooms") && seller.businessName ? seller.businessName : prev.businessName,
@@ -317,9 +317,10 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
         latitude: seller.latitude !== undefined && seller.latitude !== null ? seller.latitude : prev.latitude,
         longitude: seller.longitude !== undefined && seller.longitude !== null ? seller.longitude : prev.longitude,
         isLocationPinned: seller.isLocationPinned ?? prev.isLocationPinned,
+        deliveryRadiusKm: seller.deliveryRadiusKm !== undefined ? seller.deliveryRadiusKm : prev.deliveryRadiusKm,
       }));
     }
-  }, [seller.businessName, seller.email, seller.phone, seller.address, seller.latitude, seller.longitude, seller.isLocationPinned]);
+  }, [seller.businessName, seller.email, seller.phone, seller.address, seller.latitude, seller.longitude, seller.isLocationPinned, seller.deliveryRadiusKm]);
 
   useEffect(() => {
     const tabParam = searchParams?.get("tab");
@@ -540,7 +541,6 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
     emailNotifications: "Email Notifications",
     smsAlerts: "SMS Alerts",
     pushNotifications: "Push Notifications",
-    whatsappUpdates: "WhatsApp Updates",
     enableQuietHours: "Quiet Hours & Do Not Disturb",
     orderAlerts: "New Order Incoming",
     orderCancellationAlerts: "Order Cancellation",
@@ -827,6 +827,7 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
         if (formData.latitude) fd.append("latitude", String(formData.latitude));
         if (formData.longitude) fd.append("longitude", String(formData.longitude));
         fd.append("isLocationPinned", String(Boolean(formData.latitude && formData.longitude)));
+        if (formData.deliveryRadiusKm) fd.append("deliveryRadiusKm", String(formData.deliveryRadiusKm));
         if (cardFile) fd.append("cardImageFile", cardFile);
         if (bannerFile) fd.append("bannerImageFile", bannerFile);
 
@@ -846,9 +847,11 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
             latitude: formData.latitude,
             longitude: formData.longitude,
             isLocationPinned: Boolean(formData.latitude && formData.longitude),
+            deliveryRadiusKm: formData.deliveryRadiusKm || 5,
           }),
         });
       }
+      updateCachedProfile({ deliveryRadiusKm: formData.deliveryRadiusKm || 5 });
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
@@ -1775,6 +1778,37 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                     )}
                   </div>
                 </div>
+
+                {/* Delivery Radius Slider (1 km - 15 km) */}
+                <div className={styles.fieldGroup} style={{ marginTop: "14px", padding: "14px 16px", backgroundColor: "#F8FAFC", borderRadius: "12px", border: "1px solid #E2E8F0" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                    <div>
+                      <label className={styles.label} style={{ margin: 0, fontSize: "13.5px", fontWeight: 700, color: "#0F172A" }}>
+                        Maximum Delivery Radius
+                      </label>
+                      <p style={{ fontSize: "12px", color: "#64748B", margin: "2px 0 0 0" }}>
+                        Only customers within this radius will discover and order from your kitchen
+                      </p>
+                    </div>
+                    <span style={{ fontSize: "14px", fontWeight: 700, color: "#EA580C", backgroundColor: "#FFF7ED", padding: "3px 12px", borderRadius: "8px", border: "1px solid #FED7AA" }}>
+                      {formData.deliveryRadiusKm ?? 5} km
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={1}
+                    max={15}
+                    step={1}
+                    name="deliveryRadiusKm"
+                    value={formData.deliveryRadiusKm ?? 5}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, deliveryRadiusKm: Number(e.target.value) }))}
+                    style={{ width: "100%", accentColor: "#EA580C", cursor: "pointer" }}
+                  />
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "#64748B", marginTop: "4px" }}>
+                    <span>1 km (Hyperlocal)</span>
+                    <span>15 km (Extended reach)</span>
+                  </div>
+                </div>
               </div>
 
               {/* Card 2: Language & Region */}
@@ -1923,7 +1957,6 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                   emailNotifications: formData.emailNotifications,
                   smsAlerts: formData.smsAlerts,
                   pushNotifications: formData.pushNotifications,
-                  whatsappUpdates: formData.whatsappUpdates,
                   enableQuietHours: formData.enableQuietHours,
                   quietHoursStart: formData.quietHoursStart,
                   quietHoursEnd: formData.quietHoursEnd,

@@ -144,10 +144,14 @@ export const getUserDashboard = async () => {
         include: {
             user: { select: { name: true, city: true, pincode: true, phone: true } },
             servedPincodes: true,
+            reviews: {
+                select: { rating: true, comment: true }
+            },
             foodItems: {
                 include: {
                     category: true,
-                    foodCategory: true
+                    foodCategory: true,
+                    itemRatings: true
                 }
             },
             rooms: { where: { isAvailable: true } },
@@ -168,25 +172,43 @@ export const getUserDashboard = async () => {
         );
         if (!hasActiveFoodSub) return [];
 
+        const reviewsCount = seller.reviews.length;
+        const avgRating = reviewsCount > 0
+            ? Number((seller.reviews.reduce((acc, r) => acc + r.rating, 0) / reviewsCount).toFixed(1))
+            : 0;
+
         const defaultCoords = getPincodeCoordinates(seller.user.pincode);
         const resolvedLat = seller.latitude ?? defaultCoords?.lat ?? null;
         const resolvedLng = seller.longitude ?? defaultCoords?.lng ?? null;
 
-        return seller.foodItems.map(item => ({
-            ...item,
-            sellerName: seller.businessName || seller.user.name,
-            sellerCity: seller.user.city,
-            sellerPincode: seller.user.pincode,
-            sellerLocality: seller.addressLocality,
-            sellerLandmark: seller.addressLandmark,
-            sellerTrackingId: seller.trackingId,
-            sellerIsOnline: seller.isOnline,
-            sellerFoodType: seller.foodType,
-            sellerLatitude: resolvedLat,
-            sellerLongitude: resolvedLng,
-            sellerIsLocationPinned: seller.isLocationPinned,
-            servedPincodes: seller.servedPincodes.map(p => p.pincode),
-        }));
+        return seller.foodItems.map(item => {
+            const itemRatingsList = item.itemRatings || [];
+            const itemRatingCount = itemRatingsList.length;
+            const itemAvgRating = itemRatingCount > 0
+                ? Number((itemRatingsList.reduce((acc: number, r: any) => acc + r.rating, 0) / itemRatingCount).toFixed(1))
+                : (avgRating > 0 ? avgRating : 0);
+
+            return {
+                ...item,
+                rating: itemAvgRating,
+                averageRating: itemAvgRating,
+                totalRatings: itemRatingCount,
+                reviewsCount: itemRatingCount > 0 ? itemRatingCount : reviewsCount,
+                sellerName: seller.businessName || seller.user.name,
+                sellerCity: seller.user.city,
+                sellerPincode: seller.user.pincode,
+                sellerLocality: seller.addressLocality,
+                sellerLandmark: seller.addressLandmark,
+                sellerTrackingId: seller.trackingId,
+                sellerIsOnline: seller.isOnline,
+                sellerFoodType: seller.foodType,
+                sellerLatitude: resolvedLat,
+                sellerLongitude: resolvedLng,
+                sellerIsLocationPinned: seller.isLocationPinned,
+                sellerDeliveryRadiusKm: seller.deliveryRadiusKm ?? 5.0,
+                servedPincodes: seller.servedPincodes.map(p => p.pincode),
+            };
+        });
     });
 
     const availableRooms = sellers.flatMap(seller => {
@@ -213,6 +235,7 @@ export const getUserDashboard = async () => {
             sellerLatitude: resolvedLat,
             sellerLongitude: resolvedLng,
             sellerIsLocationPinned: seller.isLocationPinned,
+            sellerDeliveryRadiusKm: seller.deliveryRadiusKm ?? 5.0,
         }));
     });
 

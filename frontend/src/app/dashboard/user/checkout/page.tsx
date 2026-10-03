@@ -303,6 +303,7 @@ function CheckoutContent() {
     const [availableCoupons, setAvailableCoupons] = useState<any[]>([]);
     const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
     const [discountAmount, setDiscountAmount] = useState(0);
+    const [userDismissedPromo, setUserDismissedPromo] = useState<boolean>(false);
 
     // Room Availability tracking
     const [bookedDates, setBookedDates] = useState<{ startDate: string, endDate: string }[]>([]);
@@ -674,10 +675,12 @@ function CheckoutContent() {
             if (!sellerId) return;
 
             try {
-                const res = await fetchApi(`/api/public/coupons?sellerId=${sellerId}`);
+                const url = `/api/public/coupons?sellerId=${sellerId}${session?.user?.id ? `&userId=${encodeURIComponent(session.user.id)}` : ""}`;
+                const res = await fetchApi(url);
                 if (res.ok) {
                     const data = await res.json();
-                    setAvailableCoupons(data);
+                    const list = Array.isArray(data) ? data : (data.data?.coupons || data.coupons || data.data || []);
+                    setAvailableCoupons(Array.isArray(list) ? list : []);
                 }
             } catch (err) {
                 console.error("Failed to fetch coupons", err);
@@ -687,7 +690,69 @@ function CheckoutContent() {
         if (isClient && (roomDetails || cartItems.length > 0)) {
             fetchCoupons();
         }
-    }, [isClient, isRoomBooking, roomDetails, cartItems]);
+    }, [isClient, isRoomBooking, roomDetails, cartItems, session?.user?.id]);
+
+    // Auto-apply eligible coupon when conditions are met
+    useEffect(() => {
+        if (userDismissedPromo || availableCoupons.length === 0) return;
+
+        const baseTotal = isRoomBooking
+            ? Math.max((roomDetails?.price || 0) * (bookingDates.end && bookingDates.start ? Math.ceil((new Date(bookingDates.end).getTime() - new Date(bookingDates.start).getTime()) / (1000 * 60 * 60 * 24)) : 1), roomDetails?.price || 0)
+            : cartTotal;
+
+        if (baseTotal <= 0) return;
+
+        const currentSellerId = isRoomBooking ? roomDetails?.sellerId : cartItems[0]?.sellerId;
+
+        const eligibleAutoOffers = availableCoupons.filter((offer) => {
+            if (offer.isEligible === false) return false;
+            const isAuto = Boolean(offer.isAutoApply || offer.autoApply);
+            if (!isAuto) return false;
+            const minCart = offer.minimumCartValue ?? offer.minOrderAmount ?? 0;
+            if (baseTotal < minCart) return false;
+            if (offer.appliesToSellerId && currentSellerId && offer.appliesToSellerId !== currentSellerId) {
+                return false;
+            }
+            if (offer.appliesToProductId && !isRoomBooking) {
+                const hasProduct = cartItems.some((it: any) => it.id === offer.appliesToProductId || it.foodItemId === offer.appliesToProductId);
+                if (!hasProduct) return false;
+            }
+            return true;
+        });
+
+        if (eligibleAutoOffers.length === 0) {
+            if (appliedCoupon && appliedCoupon.isAutoApply) {
+                setAppliedCoupon(null);
+                setDiscountAmount(0);
+            }
+            return;
+        }
+
+        let bestOffer = eligibleAutoOffers[0];
+        let maxDiscount = 0;
+
+        for (const offer of eligibleAutoOffers) {
+            const pct = offer.discountPercentage || (offer.discountType === "PERCENTAGE" ? (offer.discountValue || 0) : 0);
+            let disc = 0;
+            if (pct > 0) {
+                disc = Math.round((baseTotal * pct) / 100);
+                if (offer.maxDiscountAmount) disc = Math.min(disc, offer.maxDiscountAmount);
+            } else {
+                disc = Math.min(offer.discountAmount || offer.discountValue || 0, baseTotal);
+            }
+            if (disc >= maxDiscount) {
+                maxDiscount = disc;
+                bestOffer = offer;
+            }
+        }
+
+        if (!appliedCoupon || (appliedCoupon.isAutoApply && appliedCoupon.code !== bestOffer.code)) {
+            setAppliedCoupon({
+                ...bestOffer,
+                isAutoApply: true,
+            });
+        }
+    }, [availableCoupons, isRoomBooking, roomDetails, bookingDates, cartTotal, cartItems, userDismissedPromo, appliedCoupon]);
 
     // Recalculate discount when coupon or total changes
     useEffect(() => {
@@ -697,7 +762,7 @@ function CheckoutContent() {
         }
 
         const baseTotal = isRoomBooking
-            ? Math.max(roomDetails.price * (bookingDates.end && bookingDates.start ? Math.ceil((new Date(bookingDates.end).getTime() - new Date(bookingDates.start).getTime()) / (1000 * 60 * 60 * 24)) : 1), roomDetails.price)
+            ? Math.max((roomDetails?.price || 0) * (bookingDates.end && bookingDates.start ? Math.ceil((new Date(bookingDates.end).getTime() - new Date(bookingDates.start).getTime()) / (1000 * 60 * 60 * 24)) : 1), roomDetails?.price || 0)
             : cartTotal;
 
         // Check Minimum Cart Value
@@ -706,20 +771,81 @@ function CheckoutContent() {
             return;
         }
 
+        let targetSubtotal = baseTotal;
+        if (appliedCoupon.appliesToProductId && !isRoomBooking) {
+            const allowedKeys = String(appliedCoupon.appliesToProductId)
+                .split(",")
+                .map((s) => s.trim().toLowerCase())
+                .filter(Boolean);
+            if (allowedKeys.length > 0) {
+                const matchingItems = cartItems.filter((it: any) => {
+                    const itemId = String(it.id || "").toLowerCase();
+                    const foodItemId = String(it.foodItemId || "").toLowerCase();
+                    const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+                    const name = String(it.name || "").toLowerCase().trim();
+                    return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
+                });
+                if (matchingItems.length === 0) {
+                    setDiscountAmount(0);
+                    return;
+                }
+                targetSubtotal = matchingItems.reduce((acc: number, it: any) => acc + (it.price || 0) * (it.quantity || it.qty || 1), 0);
+            }
+        }
+
         if (appliedCoupon.discountPercentage) {
-            let calcDiscount = Math.round((baseTotal * appliedCoupon.discountPercentage) / 100);
+            let calcDiscount = Math.round((targetSubtotal * appliedCoupon.discountPercentage) / 100);
             if (appliedCoupon.maxDiscountAmount && calcDiscount > appliedCoupon.maxDiscountAmount) {
                 calcDiscount = appliedCoupon.maxDiscountAmount;
             }
-            setDiscountAmount(Math.min(calcDiscount, baseTotal));
+            setDiscountAmount(Math.min(calcDiscount, targetSubtotal));
         } else if (appliedCoupon.discountAmount) {
             let calcDiscount = appliedCoupon.discountAmount;
             if (appliedCoupon.maxDiscountAmount && calcDiscount > appliedCoupon.maxDiscountAmount) {
                 calcDiscount = appliedCoupon.maxDiscountAmount;
             }
-            setDiscountAmount(Math.min(calcDiscount, baseTotal));
+            setDiscountAmount(Math.min(calcDiscount, targetSubtotal));
         }
-    }, [appliedCoupon, cartTotal, isRoomBooking, roomDetails, bookingDates]);
+    }, [appliedCoupon, cartTotal, cartItems, isRoomBooking, roomDetails, bookingDates]);
+
+    // Auto-remove applied coupon if base total drops below minimum required value or required item removed
+    useEffect(() => {
+        if (!appliedCoupon) return;
+        const baseTotal = isRoomBooking
+            ? Math.max((roomDetails?.price || 0) * (bookingDates.end && bookingDates.start ? Math.ceil((new Date(bookingDates.end).getTime() - new Date(bookingDates.start).getTime()) / (1000 * 60 * 60 * 24)) : 1), roomDetails?.price || 0)
+            : cartTotal;
+
+        const minCart = Number(appliedCoupon.minimumCartValue ?? appliedCoupon.minOrderAmount ?? 0);
+        if (minCart > 0 && baseTotal < minCart) {
+            const code = appliedCoupon.code;
+            setAppliedCoupon(null);
+            setDiscountAmount(0);
+            setError(`Coupon "${code}" removed. Minimum cart value of ₹${minCart} required.`);
+            return;
+        }
+
+        if (appliedCoupon.appliesToProductId && !isRoomBooking && cartItems.length > 0) {
+            const allowedKeys = String(appliedCoupon.appliesToProductId)
+                .split(",")
+                .map((s) => s.trim().toLowerCase())
+                .filter(Boolean);
+            if (allowedKeys.length > 0) {
+                const hasMatchingProduct = cartItems.some((it: any) => {
+                    const itemId = String(it.id || "").toLowerCase();
+                    const foodItemId = String(it.foodItemId || "").toLowerCase();
+                    const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+                    const name = String(it.name || "").toLowerCase().trim();
+                    return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
+                });
+                if (!hasMatchingProduct) {
+                    const code = appliedCoupon.code;
+                    setAppliedCoupon(null);
+                    setDiscountAmount(0);
+                    setError(`Coupon "${code}" is no longer applicable as the required item was removed from the cart.`);
+                }
+            }
+        }
+    }, [cartTotal, cartItems, appliedCoupon, isRoomBooking, roomDetails, bookingDates]);
 
     if (status === "loading" || !isClient) {
         return (
@@ -1396,38 +1522,61 @@ function CheckoutContent() {
                                 <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                                     {availableCoupons.map((coupon) => {
                                         const isMinOrderMet = !coupon.minimumCartValue || basePayable >= coupon.minimumCartValue;
+                                        const isEligible = coupon.isEligible !== false;
+                                        const isSelectable = isMinOrderMet && isEligible;
 
                                         return (
                                             <label key={coupon.id} style={{
                                                 display: "flex",
                                                 alignItems: "flex-start",
                                                 gap: "10px",
-                                                cursor: isMinOrderMet ? "pointer" : "not-allowed",
+                                                cursor: isSelectable ? "pointer" : "not-allowed",
                                                 padding: "10px",
                                                 backgroundColor: "white",
                                                 borderRadius: "6px",
                                                 border: appliedCoupon?.id === coupon.id ? "2px solid var(--primary)" : "1px solid #EAEAEA",
-                                                opacity: isMinOrderMet ? 1 : 0.6
+                                                opacity: isSelectable ? 1 : 0.6
                                             }}>
                                                 <input
                                                     type="radio"
                                                     name="coupon"
-                                                    disabled={!isMinOrderMet}
+                                                    disabled={!isSelectable}
                                                     checked={appliedCoupon?.id === coupon.id}
-                                                    onChange={() => setAppliedCoupon(coupon)}
+                                                    onChange={() => {
+                                                        if (!isSelectable) return;
+                                                        setUserDismissedPromo(false);
+                                                        setAppliedCoupon(coupon);
+                                                    }}
                                                     style={{ marginTop: "4px" }}
                                                 />
                                                 <div style={{ flex: 1 }}>
-                                                    <div style={{ fontWeight: "bold", color: "var(--primary)" }}>{coupon.code}</div>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                                        <span style={{ fontWeight: "bold", color: "var(--primary)" }}>{coupon.code}</span>
+                                                        {(coupon.isAutoApply || (appliedCoupon?.id === coupon.id && appliedCoupon?.isAutoApply)) && (
+                                                            <span style={{ fontSize: "0.68rem", backgroundColor: "#BBF7D0", color: "#15803D", padding: "1px 6px", borderRadius: "4px", fontWeight: "700" }}>
+                                                                ⚡ AUTO-APPLIED
+                                                            </span>
+                                                        )}
+                                                        {!isEligible && (
+                                                            <span style={{ fontSize: "0.68rem", backgroundColor: "#FEE2E2", color: "#DC2626", padding: "1px 6px", borderRadius: "4px", fontWeight: "700" }}>
+                                                                {coupon.customerEligibility === "NEW_ONLY" ? "FIRST ORDER ONLY" : "INELIGIBLE"}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>{coupon.description}</div>
-                                                    {!isMinOrderMet && (
+                                                    {!isEligible && coupon.ineligibilityReason ? (
+                                                        <div style={{ fontSize: "0.8rem", color: "#EF4444", fontWeight: "600", marginTop: "4px" }}>
+                                                            {coupon.ineligibilityReason}
+                                                        </div>
+                                                    ) : !isMinOrderMet ? (
                                                         <div style={{ fontSize: "0.8rem", color: "#EF4444", fontWeight: "600", marginTop: "4px" }}>
                                                             Min. Order ₹{coupon.minimumCartValue} required
                                                         </div>
+                                                    ) : (
+                                                        <div style={{ fontSize: "0.8rem", fontWeight: "600", color: "#16a34a", marginTop: "4px" }}>
+                                                            Save {coupon.discountPercentage ? `${coupon.discountPercentage}%` : `₹${coupon.discountAmount}`}
+                                                        </div>
                                                     )}
-                                                    <div style={{ fontSize: "0.8rem", fontWeight: "600", color: isMinOrderMet ? "#16a34a" : "#94a3b8", marginTop: "4px" }}>
-                                                        Save {coupon.discountPercentage ? `${coupon.discountPercentage}%` : `₹${coupon.discountAmount}`}
-                                                    </div>
                                                 </div>
                                             </label>
                                         );
@@ -1436,7 +1585,11 @@ function CheckoutContent() {
                                 {appliedCoupon && (
                                     <button
                                         type="button"
-                                        onClick={() => setAppliedCoupon(null)}
+                                        onClick={() => {
+                                            setUserDismissedPromo(true);
+                                            setAppliedCoupon(null);
+                                            setDiscountAmount(0);
+                                        }}
                                         style={{ marginTop: "10px", fontSize: "0.85rem", color: "#EF4444", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
                                     >
                                         Remove Coupon

@@ -88,9 +88,13 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
         return null;
     }, [finalUserLat, finalUserLng, sellerLat, sellerLng]);
 
+    const maxRadiusKm = seller?.deliveryRadiusKm && Number(seller.deliveryRadiusKm) > 0
+        ? Number(seller.deliveryRadiusKm)
+        : MAX_DELIVERY_RADIUS_KM;
+
     const isDeliverable = (item?: any) => {
         if (shopDistanceKm !== null) {
-            return shopDistanceKm <= MAX_DELIVERY_RADIUS_KM;
+            return shopDistanceKm <= maxRadiusKm;
         }
         if (!userAddress || !userAddress.pincode) return true;
         const userPincode = userAddress.pincode.trim();
@@ -283,6 +287,36 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                 <span style={{ opacity: 0.8, fontSize: '0.85rem' }}>({seller.totalReviews} reviews)</span>
                             </div>
                         )}
+                        {/* Dietary Badge in Header */}
+                        {(() => {
+                            const rawFoodType = String(seller.foodType || "").toUpperCase().replace(/[\s-]/g, "_").trim();
+                            const hasNonVeg = (seller.foodItems || []).some((it: any) => {
+                                const itType = String(it.itemType || "").toUpperCase();
+                                return itType.includes("NON_VEG") || it.isVeg === false;
+                            });
+                            const isPureVeg = rawFoodType === "PURE_VEG" || rawFoodType === "VEG" || rawFoodType === "VEG_ONLY" || (!hasNonVeg && (seller.foodItems || []).length > 0);
+                            const isNonVegOnly = rawFoodType === "NON_VEG" && !(seller.foodItems || []).some((it: any) => !String(it.itemType || "").toUpperCase().includes("NON_VEG"));
+
+                            if (isPureVeg) {
+                                return (
+                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: 'rgba(16, 185, 129, 0.9)', padding: '6px 14px', borderRadius: '20px', backdropFilter: 'blur(5px)', border: '1px solid rgba(255,255,255,0.2)', fontSize: '0.85rem', fontWeight: '700', color: '#FFFFFF' }}>
+                                        <span>🌱 Pure Veg</span>
+                                    </div>
+                                );
+                            } else if (isNonVegOnly) {
+                                return (
+                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: 'rgba(239, 68, 68, 0.9)', padding: '6px 14px', borderRadius: '20px', backdropFilter: 'blur(5px)', border: '1px solid rgba(255,255,255,0.2)', fontSize: '0.85rem', fontWeight: '700', color: '#FFFFFF' }}>
+                                        <span>🍗 Non-Veg</span>
+                                    </div>
+                                );
+                            } else {
+                                return (
+                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: 'rgba(245, 158, 11, 0.9)', padding: '6px 14px', borderRadius: '20px', backdropFilter: 'blur(5px)', border: '1px solid rgba(255,255,255,0.2)', fontSize: '0.85rem', fontWeight: '700', color: '#FFFFFF' }}>
+                                        <span>🍱 Veg & Non-Veg</span>
+                                    </div>
+                                );
+                            }
+                        })()}
                         {/* Distance Badge in Header */}
                         {shopDistanceKm !== null && (
                             <div
@@ -290,7 +324,7 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                     display: 'inline-flex',
                                     alignItems: 'center',
                                     gap: '6px',
-                                    backgroundColor: shopDistanceKm <= MAX_DELIVERY_RADIUS_KM ? 'rgba(16, 185, 129, 0.85)' : 'rgba(239, 68, 68, 0.85)',
+                                    backgroundColor: shopDistanceKm <= maxRadiusKm ? 'rgba(16, 185, 129, 0.85)' : 'rgba(239, 68, 68, 0.85)',
                                     padding: '6px 14px',
                                     borderRadius: '20px',
                                     backdropFilter: 'blur(5px)',
@@ -303,7 +337,7 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                 <MapPin size={15} />
                                 <span>{formatDistance(shopDistanceKm)} away</span>
                                 <span style={{ opacity: 0.9, fontSize: '0.78rem' }}>
-                                    {shopDistanceKm <= MAX_DELIVERY_RADIUS_KM ? "• Delivering" : "• Beyond 5 km radius"}
+                                    {shopDistanceKm <= maxRadiusKm ? "• Delivering" : `• Beyond ${maxRadiusKm} km radius`}
                                 </span>
                             </div>
                         )}
@@ -393,40 +427,58 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                         {/* Menu Section */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px', borderBottom: '2px solid #EAEAEA', paddingBottom: '10px', flexWrap: 'wrap', gap: '15px' }}>
                             <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--text-main)', margin: 0 }}>Menu</h2>
-                            {seller.foodItems && seller.foodItems.length > 0 && (
-                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                                    {(["ALL", "VEG", "NON_VEG", "JAIN", "VEGAN"] as const).map((filter) => {
-                                        let label = "All";
-                                        let activeBg = "#10B981";
-                                        if (filter === "VEG") { label = "Veg 🌱"; activeBg = "#10B981"; }
-                                        else if (filter === "NON_VEG") { label = "Non-Veg 🍖"; activeBg = "#EF4444"; }
-                                        else if (filter === "JAIN") { label = "Jain 🙏"; activeBg = "#10B981"; }
-                                        else if (filter === "VEGAN") { label = "Vegan 🌿"; activeBg = "#059669"; }
+                            {seller.foodItems && seller.foodItems.length > 0 && (() => {
+                                const rawFoodType = String(seller.foodType || "").toUpperCase().replace(/[\s-]/g, "_").trim();
+                                const hasNonVeg = (seller.foodItems || []).some((it: any) => {
+                                    const itType = String(it.itemType || "").toUpperCase();
+                                    return itType.includes("NON_VEG") || it.isVeg === false;
+                                });
+                                const isVegOnlyKitchen = rawFoodType === "PURE_VEG" || rawFoodType === "VEG" || rawFoodType === "VEG_ONLY" || !hasNonVeg;
 
-                                        const isActive = foodFilter === filter;
-                                        return (
-                                            <button
-                                                key={filter}
-                                                onClick={() => setFoodFilter(filter)}
-                                                style={{
-                                                    padding: '8px 16px',
-                                                    borderRadius: '20px',
-                                                    border: isActive ? 'none' : '1px solid #D1D5DB',
-                                                    backgroundColor: isActive ? activeBg : 'white',
-                                                    color: isActive ? 'white' : 'var(--text-main)',
-                                                    fontWeight: '600',
-                                                    fontSize: '0.9rem',
-                                                    cursor: 'pointer',
-                                                    transition: 'all 0.2s',
-                                                    boxShadow: isActive ? `0 4px 10px ${activeBg}35` : 'none'
-                                                }}
-                                            >
-                                                {label}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            )}
+                                const availableFilters: Array<"ALL" | "VEG" | "NON_VEG" | "JAIN" | "VEGAN"> = ["ALL", "VEG"];
+                                if (!isVegOnlyKitchen) {
+                                    availableFilters.push("NON_VEG");
+                                }
+                                const hasJain = (seller.foodItems || []).some((it: any) => String(it.itemType || "").toUpperCase().includes("JAIN"));
+                                const hasVegan = (seller.foodItems || []).some((it: any) => String(it.itemType || "").toUpperCase().includes("VEGAN"));
+                                if (hasJain) availableFilters.push("JAIN");
+                                if (hasVegan) availableFilters.push("VEGAN");
+
+                                return (
+                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                        {availableFilters.map((filter) => {
+                                            let label = "All";
+                                            let activeBg = "#10B981";
+                                            if (filter === "VEG") { label = isVegOnlyKitchen ? "Veg Only 🌱" : "Veg 🌱"; activeBg = "#10B981"; }
+                                            else if (filter === "NON_VEG") { label = "Non-Veg 🍖"; activeBg = "#EF4444"; }
+                                            else if (filter === "JAIN") { label = "Jain 🙏"; activeBg = "#10B981"; }
+                                            else if (filter === "VEGAN") { label = "Vegan 🌿"; activeBg = "#059669"; }
+
+                                            const isActive = foodFilter === filter;
+                                            return (
+                                                <button
+                                                    key={filter}
+                                                    onClick={() => setFoodFilter(filter)}
+                                                    style={{
+                                                        padding: '8px 16px',
+                                                        borderRadius: '20px',
+                                                        border: isActive ? 'none' : '1px solid #D1D5DB',
+                                                        backgroundColor: isActive ? activeBg : 'white',
+                                                        color: isActive ? 'white' : 'var(--text-main)',
+                                                        fontWeight: '600',
+                                                        fontSize: '0.9rem',
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.2s',
+                                                        boxShadow: isActive ? `0 4px 10px ${activeBg}35` : 'none'
+                                                    }}
+                                                >
+                                                    {label}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                );
+                            })()}
                         </div>
 
                         {(() => {

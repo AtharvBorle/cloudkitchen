@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Search, RotateCw, Bike, AlertTriangle, CheckCircle2, Loader2, X } from "lucide-react";
+import { Search, RotateCw, Bike, AlertTriangle, CheckCircle2, Loader2, X, Clock } from "lucide-react";
 import ConsoleSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
 import { fetchApi } from "@/lib/fetch-api";
@@ -12,6 +12,16 @@ import { playNewOrderChime } from "@/lib/audio-chime";
 import RejectOrderModal from "./RejectOrderModal";
 import ToastNotification from "./ToastNotification";
 import styles from "./SellerOrders.module.css";
+
+export const ORDER_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
+
+export const getRemainingSeconds = (createdAt: string | Date | undefined, currentNow: number | Date): number => {
+  if (!createdAt) return ORDER_EXPIRY_MS / 1000;
+  const createdTime = new Date(createdAt).getTime();
+  const nowTime = typeof currentNow === "number" ? currentNow : new Date(currentNow).getTime();
+  if (isNaN(createdTime)) return 0;
+  return Math.max(0, Math.floor((createdTime + ORDER_EXPIRY_MS - nowTime) / 1000));
+};
 
 export type OrderStatusFilter =
   | "All"
@@ -109,6 +119,43 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
   const [loading, setLoading] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
+  // Live 1-second ticker for accurate 5-minute countdown without refresh drift
+  const [now, setNow] = useState(Date.now());
+  const autoCancelledRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Background auto-cancel detector: cancels expired pending orders when timer hits 0
+  useEffect(() => {
+    orderList.forEach((order) => {
+      const isPending = order.status === "Pending" || order.rawStatus === "PENDING";
+      if (isPending) {
+        const remainingSec = getRemainingSeconds(order.createdAt, now);
+        if (remainingSec <= 0 && !autoCancelledRef.current.has(order.id)) {
+          autoCancelledRef.current.add(order.id);
+          fetchApi(`/api/seller/orders/${order.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "CANCELLED" }),
+          })
+            .then((res) => {
+              if (res.ok) {
+                setOrderList((prev) =>
+                  prev.map((o) => (o.id === order.id ? { ...o, status: "Cancelled", rawStatus: "CANCELLED" } : o))
+                );
+              }
+            })
+            .catch((err) => console.error("Auto cancel error:", err));
+        }
+      }
+    });
+  }, [orderList, now]);
+
   // In-app rejection modal & toast state
   const [orderToReject, setOrderToReject] = useState<OrderRow | null>(null);
   const [isRejecting, setIsRejecting] = useState(false);
@@ -159,7 +206,14 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
             else if (s === "OUT_FOR_DELIVERY" || s === "ON_THE_WAY") statusVal = "Out for Delivery";
             else if (s === "DELIVERED" || s === "COMPLETED") statusVal = "Completed";
             else if (s === "CANCELLED") statusVal = "Cancelled";
-            else statusVal = "Pending";
+            else {
+              const remainingSec = getRemainingSeconds(o.createdAt, Date.now());
+              if (remainingSec <= 0) {
+                statusVal = "Cancelled";
+              } else {
+                statusVal = "Pending";
+              }
+            }
 
             const orderDateStr = formatOrderDate(o.createdAt);
             const orderTimeStr = formatOrderTime(o.createdAt);
@@ -275,6 +329,13 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
         setOrderList((prev) =>
           prev.map((o) => (o.id === orderId ? { ...o, status: "Preparing", rawStatus: "PREPARING" } : o))
         );
+        loadOrders(true);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setToast({
+          type: "error",
+          text: errData.error || errData.message || "Failed to accept order. Acceptance window may have expired.",
+        });
         loadOrders(true);
       }
     } catch (err) {
@@ -400,12 +461,17 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
       Cancelled: 0,
     };
     baseList.forEach((o) => {
-      if (map[o.status] !== undefined) {
-        map[o.status]++;
+      let effStatus: OrderStatusFilter = o.status;
+      if (effStatus === "Pending") {
+        const sec = getRemainingSeconds(o.createdAt, now);
+        if (sec <= 0) effStatus = "Cancelled";
+      }
+      if (map[effStatus] !== undefined) {
+        map[effStatus]++;
       }
     });
     return map;
-  }, [orderList, dateFilter]);
+  }, [orderList, dateFilter, now]);
 
   // Filter & Sort computation
   const filteredOrders = useMemo(() => {
@@ -413,18 +479,25 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
 
     // 1. Status Filter
     if (activeFilter !== "All") {
-      list = list.filter((order) => order.status === activeFilter);
+      list = list.filter((order) => {
+        let effStatus: OrderStatusFilter = order.status;
+        if (effStatus === "Pending") {
+          const sec = getRemainingSeconds(order.createdAt, now);
+          if (sec <= 0) effStatus = "Cancelled";
+        }
+        return effStatus === activeFilter;
+      });
     }
 
     // 2. Date Range Filter
     if (dateFilter !== "ALL") {
-      const now = new Date();
-      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-      const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-      const startOfYesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0, 0);
-      const endOfYesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59, 999);
-      const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay(), 0, 0, 0, 0);
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+      const nowDate = new Date();
+      const startOfToday = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate(), 0, 0, 0, 0);
+      const endOfToday = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate(), 23, 59, 59, 999);
+      const startOfYesterday = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate() - 1, 0, 0, 0, 0);
+      const endOfYesterday = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate() - 1, 23, 59, 59, 999);
+      const startOfWeek = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate() - nowDate.getDay(), 0, 0, 0, 0);
+      const startOfMonth = new Date(nowDate.getFullYear(), nowDate.getMonth(), 1, 0, 0, 0, 0);
 
       list = list.filter((order) => {
         const orderDate = new Date(order.createdAt);
@@ -488,7 +561,7 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
     });
 
     return list;
-  }, [orderList, activeFilter, dateFilter, searchQuery, sortBy]);
+  }, [orderList, activeFilter, dateFilter, searchQuery, sortBy, now]);
 
   const resetFilters = () => {
     setActiveFilter("All");
@@ -676,9 +749,15 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
                     </tr>
                   ) : (
                     filteredOrders.map((order) => {
-                      const isPending = order.status === "Pending";
-                      const isPreparing = order.status === "Preparing";
-                      const isOut = order.status === "Out for Delivery";
+                      const isPending = order.status === "Pending" || order.rawStatus === "PENDING";
+                      const remainingSec = isPending ? getRemainingSeconds(order.createdAt, now) : 0;
+                      const isExpired = isPending && remainingSec <= 0;
+                      const mm = String(Math.floor(remainingSec / 60)).padStart(2, "0");
+                      const ss = String(remainingSec % 60).padStart(2, "0");
+                      const isUrgent = remainingSec <= 60;
+
+                      const isPreparing = order.status === "Preparing" || order.rawStatus === "PREPARING";
+                      const isOut = order.status === "Out for Delivery" || order.rawStatus === "OUT_FOR_DELIVERY";
                       const isActionDisabled = actionLoadingId === order.id;
 
                       return (
@@ -696,14 +775,33 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
                           <td className={styles.itemsText}>{order.items}</td>
                           <td className={styles.totalText}>{order.total}</td>
                           <td className={styles.statusCell}>
-                            <div
-                              className={`${styles.statusBadge} ${getStatusBadgeClass(
-                                order.status
-                              )}`}
-                            >
-                              <span className={styles.statusDot} />
-                              <span className={styles.statusLabel}>{order.status}</span>
-                            </div>
+                            {isPending ? (
+                              !isExpired ? (
+                                <span
+                                  className={`${styles.statusBadge} ${
+                                    isUrgent ? styles.statusTimerUrgent : styles.statusTimer
+                                  }`}
+                                  title={`Accept order within ${mm}:${ss} before auto-cancellation`}
+                                >
+                                  <Clock size={12} style={{ display: "inline", verticalAlign: "middle", marginRight: "3px" }} />
+                                  {mm}:{ss}
+                                </span>
+                              ) : (
+                                <span className={`${styles.statusBadge} ${styles.statusCancelled}`} title="Auto-cancelled (acceptance time expired)">
+                                  <span className={styles.statusDot} />
+                                  <span className={styles.statusLabel}>Cancelled</span>
+                                </span>
+                              )
+                            ) : (
+                              <div
+                                className={`${styles.statusBadge} ${getStatusBadgeClass(
+                                  order.status
+                                )}`}
+                              >
+                                <span className={styles.statusDot} />
+                                <span className={styles.statusLabel}>{order.status}</span>
+                              </div>
+                            )}
                           </td>
                           <td className={styles.dateTimeCell}>
                             <div className={styles.datePrimary}>{order.date}</div>
@@ -711,7 +809,7 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
                           </td>
                           <td style={{ textAlign: "right" }} onClick={(e) => e.stopPropagation()}>
                             <div className={styles.actionBtnGroup}>
-                              {isPending && (
+                              {isPending && !isExpired && (
                                 <>
                                   <button
                                     type="button"

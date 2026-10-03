@@ -33,7 +33,6 @@ export interface SellerSettingsData {
   freeDeliveryThreshold: string;
   allowCod: boolean;
   smsAlerts: boolean;
-  whatsappUpdates: boolean;
   dailyEmailSummary: boolean;
   requirePinForRefund: boolean;
   twoFactorAuth: boolean;
@@ -50,7 +49,6 @@ const DEFAULT_SETTINGS: SellerSettingsData = {
   freeDeliveryThreshold: "₹499",
   allowCod: true,
   smsAlerts: true,
-  whatsappUpdates: true,
   dailyEmailSummary: true,
   requirePinForRefund: true,
   twoFactorAuth: false,
@@ -86,6 +84,12 @@ export const SellerSettings: React.FC<SellerSettingsProps> = ({
       }
     }
   }, [searchParams]);
+
+  React.useEffect(() => {
+    if (seller.deliveryRadiusKm && initialSettings?.deliveryRadiusKm === undefined) {
+      setSettings((prev) => ({ ...prev, deliveryRadiusKm: seller.deliveryRadiusKm! }));
+    }
+  }, [seller.deliveryRadiusKm, initialSettings?.deliveryRadiusKm]);
 
   // Card Grid Photo state (for Explore, User Dashboard & Best Places cards)
   const initialCardImg =
@@ -308,6 +312,16 @@ export const SellerSettings: React.FC<SellerSettingsProps> = ({
         await handleQuickUploadBanner();
       }
       await toggleSellerOnlineStatus(settings.storeOnline);
+
+      await fetchApi("/api/seller/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          deliveryRadiusKm: settings.deliveryRadiusKm,
+        }),
+      });
+      updateCachedProfile({ deliveryRadiusKm: settings.deliveryRadiusKm });
+
       if (onSave) onSave(settings);
       setSuccessMessage("Settings updated successfully!");
       setTimeout(() => setSuccessMessage(null), 3500);
@@ -887,19 +901,31 @@ export const SellerSettings: React.FC<SellerSettingsProps> = ({
                 </div>
 
                 {/* Delivery Radius */}
-                <div className={styles.settingItem}>
-                  <div className={styles.settingInfo}>
-                    <p className={styles.settingLabel}>Maximum Delivery Radius</p>
-                    <p className={styles.settingSubtext}>Orders beyond this radius will be restricted</p>
+                <div className={styles.settingItem} style={{ flexDirection: "column", alignItems: "flex-start", gap: "10px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", width: "100%", alignItems: "center" }}>
+                    <div className={styles.settingInfo}>
+                      <p className={styles.settingLabel}>Maximum Delivery Radius</p>
+                      <p className={styles.settingSubtext}>Only customers within this radius will discover and order from your kitchen</p>
+                    </div>
+                    <span style={{ fontSize: "15px", fontWeight: "700", color: "#EA580C", backgroundColor: "#FFF7ED", padding: "4px 12px", borderRadius: "8px", border: "1px solid #FFEDD5" }}>
+                      {settings.deliveryRadiusKm} km
+                    </span>
                   </div>
-                  <input
-                    type="number"
-                    min="1"
-                    max="50"
-                    value={settings.deliveryRadiusKm}
-                    onChange={(e) => handleValueChange("deliveryRadiusKm", Number(e.target.value))}
-                    className={styles.inputField}
-                  />
+                  <div style={{ width: "100%" }}>
+                    <input
+                      type="range"
+                      min={1}
+                      max={15}
+                      step={1}
+                      value={settings.deliveryRadiusKm}
+                      onChange={(e) => handleValueChange("deliveryRadiusKm", Number(e.target.value))}
+                      style={{ width: "100%", accentColor: "#EA580C", cursor: "pointer" }}
+                    />
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "#64748B", marginTop: "4px" }}>
+                      <span>1 km (Hyperlocal)</span>
+                      <span>15 km (Maximum reach)</span>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Free Delivery Threshold */}
@@ -949,21 +975,6 @@ export const SellerSettings: React.FC<SellerSettingsProps> = ({
                   </label>
                 </div>
 
-                {/* WhatsApp Updates */}
-                <div className={styles.settingItem}>
-                  <div className={styles.settingInfo}>
-                    <p className={styles.settingLabel}>WhatsApp Customer Updates</p>
-                    <p className={styles.settingSubtext}>Live delivery tracking link via WhatsApp</p>
-                  </div>
-                  <label className={styles.toggleSwitch}>
-                    <input
-                      type="checkbox"
-                      checked={settings.whatsappUpdates}
-                      onChange={() => handleToggle("whatsappUpdates")}
-                    />
-                    <span className={styles.toggleSlider} />
-                  </label>
-                </div>
 
                 {/* Daily Digest */}
                 <div className={styles.settingItem}>

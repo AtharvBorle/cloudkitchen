@@ -689,7 +689,7 @@ function FoodExploreContent() {
             <p style={{ margin: 0, fontSize: "0.95rem", color: "#64748B", fontWeight: "500" }}>
               {defaultAddress?.pincode ? (
                 <>
-                  Delivering near <strong style={{ color: "#FF6B00" }}>{defaultAddress.city || "Pune"} ({defaultAddress.pincode})</strong> within 5 km coverage radius
+                  Delivering near <strong style={{ color: "#FF6B00" }}>{defaultAddress.city || "Pune"} ({defaultAddress.pincode})</strong> within kitchen delivery radius
                 </>
               ) : (
                 "Discover delicious chef-crafted food and cloud kitchens nearby"
@@ -1442,9 +1442,9 @@ function FoodExploreContent() {
                           }}
                         >
                           <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                            <Star size={14} fill={isClosed ? "#94A3B8" : "#F59E0B"} color={isClosed ? "#94A3B8" : "#F59E0B"} />
+                            <Star size={14} fill={isClosed ? "#94A3B8" : (dish.rating && dish.rating > 0 ? "#F59E0B" : "#94A3B8")} color={isClosed ? "#94A3B8" : (dish.rating && dish.rating > 0 ? "#F59E0B" : "#94A3B8")} />
                             <span style={{ fontWeight: "800", color: isClosed ? "#94A3B8" : "#18181B" }}>
-                              {dish.rating || 5.0}
+                              {dish.rating && dish.rating > 0 ? Number(dish.rating).toFixed(1) : "New"}
                             </span>
                           </div>
                           <span style={{ color: "#64748B", fontWeight: "600" }}>
@@ -1908,9 +1908,9 @@ function FoodExploreContent() {
                                 {kitchen.name}
                               </h3>
                               <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                                <Star size={14} fill={isClosed ? "#94A3B8" : "#F59E0B"} color={isClosed ? "#94A3B8" : "#F59E0B"} />
+                                <Star size={14} fill={isClosed ? "#94A3B8" : (kitchen.rating && kitchen.rating > 0 ? "#F59E0B" : "#94A3B8")} color={isClosed ? "#94A3B8" : (kitchen.rating && kitchen.rating > 0 ? "#F59E0B" : "#94A3B8")} />
                                 <span style={{ fontWeight: "800", fontSize: "0.85rem", color: isClosed ? "#94A3B8" : "#18181B" }}>
-                                  {kitchen.rating || 5.0}
+                                  {kitchen.rating && kitchen.rating > 0 ? Number(kitchen.rating).toFixed(1) : "New"}
                                 </span>
                               </div>
                             </div>

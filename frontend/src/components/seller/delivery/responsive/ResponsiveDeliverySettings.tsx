@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, CheckCircle2, Bell } from "lucide-react";
+import { fetchApi } from "@/lib/fetch-api";
+import { useSellerProfile, updateCachedProfile } from "@/hooks/useSellerProfile";
 import styles from "./ResponsiveDeliverySettings.module.css";
 
 export interface DeliverySettingsData {
@@ -35,6 +37,7 @@ export const ResponsiveDeliverySettings: React.FC<
   ResponsiveDeliverySettingsProps
 > = ({ initialSettings = DEFAULT_SETTINGS, onSave, onBack }) => {
   const router = useRouter();
+  const seller = useSellerProfile();
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const [enableDelivery, setEnableDelivery] = useState(
@@ -56,6 +59,13 @@ export const ResponsiveDeliverySettings: React.FC<
     initialSettings.riderCommission ?? "₹20 per delivery"
   );
   const [enableCod, setEnableCod] = useState(initialSettings.enableCod ?? true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (seller.deliveryRadiusKm && initialSettings.deliveryRadiusKm === undefined) {
+      setDeliveryRadiusKm(seller.deliveryRadiusKm);
+    }
+  }, [seller.deliveryRadiusKm, initialSettings.deliveryRadiusKm]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -76,8 +86,9 @@ export const ResponsiveDeliverySettings: React.FC<
     }
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSaving(true);
     const data: DeliverySettingsData = {
       enableDelivery,
       deliveryRadiusKm,
@@ -88,6 +99,17 @@ export const ResponsiveDeliverySettings: React.FC<
       enableCod,
     };
 
+    try {
+      await fetchApi("/api/seller/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deliveryRadiusKm }),
+      });
+      updateCachedProfile({ deliveryRadiusKm });
+    } catch (err) {
+      console.error("Failed to persist delivery radius:", err);
+    }
+
     if (onSave) {
       onSave(data);
     } else {
@@ -96,6 +118,7 @@ export const ResponsiveDeliverySettings: React.FC<
         router.push("/seller/delivery");
       }, 900);
     }
+    setIsSaving(false);
   };
 
   return (
@@ -154,11 +177,16 @@ export const ResponsiveDeliverySettings: React.FC<
             <input
               type="range"
               min={1}
-              max={25}
+              max={15}
+              step={1}
               value={deliveryRadiusKm}
               onChange={(e) => setDeliveryRadiusKm(Number(e.target.value))}
               className={styles.rangeSlider}
             />
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "#64748B", marginTop: "4px" }}>
+              <span>1 km</span>
+              <span>15 km</span>
+            </div>
           </div>
 
           {/* 3. Delivery Fee Card */}
@@ -238,8 +266,8 @@ export const ResponsiveDeliverySettings: React.FC<
           </div>
 
           {/* Save Settings Button */}
-          <button type="submit" className={styles.saveButton}>
-            Save Settings
+          <button type="submit" className={styles.saveButton} disabled={isSaving}>
+            {isSaving ? "Saving..." : "Save Settings"}
           </button>
         </form>
 

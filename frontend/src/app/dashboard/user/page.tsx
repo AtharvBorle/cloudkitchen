@@ -2,10 +2,10 @@
 import { fetchApi } from "@/lib/fetch-api";
 
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ShoppingCart, LogIn, MapPin } from "lucide-react";
+import { ShoppingCart, LogIn, MapPin, Star } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { AddToCartButton, BookRoomButton } from "@/components/cart-buttons";
 import { useLocation } from "@/components/location-provider";
@@ -64,7 +64,7 @@ const isCurrentlyOpen = (item: any) => {
 export default function UserDashboard() {
     const { addToCart, initiateRoomBooking } = useCart();
     const router = useRouter();
-    const { defaultAddress } = useLocation();
+    const { defaultAddress, isLoading: isLocationLoading, openLocationModal } = useLocation();
     const { status } = useSession();
 
     const [vegOnly, setVegOnly] = useState(false);
@@ -74,6 +74,15 @@ export default function UserDashboard() {
     const [rooms, setRooms] = useState<any[]>([]);
     const [foodCategories, setFoodCategories] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const hasPromptedLocationRef = useRef(false);
+
+    // Auto-prompt location modal on dashboard if no location is selected
+    useEffect(() => {
+        if (!isLocationLoading && !defaultAddress && !hasPromptedLocationRef.current) {
+            hasPromptedLocationRef.current = true;
+            openLocationModal();
+        }
+    }, [isLocationLoading, defaultAddress, openLocationModal]);
 
     const userLat = defaultAddress?.latitude != null && !isNaN(Number(defaultAddress.latitude)) ? Number(defaultAddress.latitude) : null;
     const userLng = defaultAddress?.longitude != null && !isNaN(Number(defaultAddress.longitude)) ? Number(defaultAddress.longitude) : null;
@@ -273,9 +282,12 @@ export default function UserDashboard() {
         .filter(item => {
             if (!isCurrentlyOpen(item)) return false;
 
-            // 5 km delivery radius filter
+            // Dynamic delivery radius filter per seller
+            const maxRadius = item.sellerDeliveryRadiusKm && Number(item.sellerDeliveryRadiusKm) > 0
+                ? Number(item.sellerDeliveryRadiusKm)
+                : MAX_DELIVERY_RADIUS_KM;
             if (hasUserCoords && item.distanceKm !== undefined) {
-                if (item.distanceKm > MAX_DELIVERY_RADIUS_KM) return false;
+                if (item.distanceKm > maxRadius) return false;
             } else if (defaultAddress?.pincode) {
                 const guestPin = defaultAddress.pincode.trim();
                 const pins = item.deliveryPincodes ? item.deliveryPincodes.split(",").map((p: any) => p.trim()) : [];
@@ -284,8 +296,9 @@ export default function UserDashboard() {
             }
 
             if (vegOnly) {
-                if (item.itemType !== 'VEG') return false;
-                if (item.sellerFoodType !== 'VEG') return false;
+                const rawItemType = String(item.itemType || 'VEG').toUpperCase();
+                const isItemVeg = rawItemType !== 'NON_VEG' && !rawItemType.includes('NON_VEG');
+                if (!isItemVeg) return false;
             }
             return (
                 item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -328,8 +341,11 @@ export default function UserDashboard() {
             };
         })
         .filter(room => {
+            const roomRadius = room.sellerDeliveryRadiusKm && Number(room.sellerDeliveryRadiusKm) > 0
+                ? Number(room.sellerDeliveryRadiusKm)
+                : MAX_DELIVERY_RADIUS_KM;
             if (hasUserCoords && room.distanceKm !== undefined) {
-                if (room.distanceKm > MAX_DELIVERY_RADIUS_KM) return false;
+                if (room.distanceKm > roomRadius) return false;
             } else if (defaultAddress?.pincode) {
                 const guestPin = defaultAddress.pincode.trim();
                 if (room.sellerPincode !== guestPin) return false;
@@ -354,6 +370,59 @@ export default function UserDashboard() {
 
     return (
         <div>
+            {/* Location Required Banner */}
+            {!defaultAddress && (
+                <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: "16px",
+                    backgroundColor: "#FFFBEB",
+                    border: "1px solid #FDE68A",
+                    padding: "16px 24px",
+                    borderRadius: "var(--radius-xl)",
+                    marginBottom: "var(--spacing-6)",
+                    flexWrap: "wrap",
+                    boxShadow: "0 2px 10px rgba(217, 119, 6, 0.08)"
+                }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                        <div style={{
+                            backgroundColor: "#FEF3C7",
+                            padding: "10px",
+                            borderRadius: "50%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "#D97706"
+                        }}>
+                            <MapPin size={24} />
+                        </div>
+                        <div>
+                            <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: "700", color: "#92400E" }}>
+                                Delivery Location Not Selected
+                            </h3>
+                            <p style={{ margin: "3px 0 0 0", fontSize: "0.88rem", color: "#B45309" }}>
+                                Please select your delivery area to view cloud kitchens, fresh food, and rooms near you.
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={openLocationModal}
+                        className="btn btn-primary"
+                        style={{
+                            padding: "9px 24px",
+                            fontWeight: "700",
+                            fontSize: "0.9rem",
+                            width: "auto",
+                            whiteSpace: "nowrap"
+                        }}
+                    >
+                        Select Location
+                    </button>
+                </div>
+            )}
+
             {/* Greetings Banner */}
             <div style={{
                 backgroundColor: "var(--primary)",
@@ -467,8 +536,24 @@ export default function UserDashboard() {
             )}
 
             {filteredFoodItems.length === 0 ? (
-                <div style={{ backgroundColor: '#F8F9F9', padding: '40px', textAlign: 'center', borderRadius: '12px', color: 'var(--text-muted)', marginBottom: '40px' }}>
-                    No food items available in this area right now. Check back later!
+                <div style={{ backgroundColor: '#F8F9F9', padding: '40px 20px', textAlign: 'center', borderRadius: '12px', color: 'var(--text-muted)', marginBottom: '40px' }}>
+                    {!defaultAddress ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                            <p style={{ margin: 0, fontSize: '0.95rem', color: '#475569', fontWeight: '500' }}>
+                                📍 No delivery location selected. Please select your location to discover kitchens serving in your area.
+                            </p>
+                            <button
+                                type="button"
+                                onClick={openLocationModal}
+                                className="btn btn-primary"
+                                style={{ padding: '8px 22px', fontSize: '0.9rem', width: 'auto' }}
+                            >
+                                Select Delivery Location
+                            </button>
+                        </div>
+                    ) : (
+                        "No food items available in this area right now. Check back later!"
+                    )}
                 </div>
             ) : (
                 <div style={{ marginBottom: '50px' }}>
@@ -575,14 +660,22 @@ export default function UserDashboard() {
                                                             {item.itemType === 'NON_VEG' ? 'N' : 'V'}
                                                         </span>
                                                     </h4>
-                                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                        <span>By {item.sellerName}</span>
-                                                        {item.distanceText && (
-                                                            <span style={{ color: 'var(--teal)', fontWeight: '600' }}>
-                                                                📍 {item.distanceText}
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '3px', backgroundColor: isGrey ? '#F1F5F9' : (item.rating && item.rating > 0 ? '#ECFDF5' : '#F1F5F9'), padding: '1px 6px', borderRadius: '4px' }}>
+                                                            <Star size={10} fill={isGrey ? '#94A3B8' : (item.rating && item.rating > 0 ? '#10B981' : '#94A3B8')} color={isGrey ? '#94A3B8' : (item.rating && item.rating > 0 ? '#10B981' : '#94A3B8')} />
+                                                            <span style={{ fontSize: '0.72rem', fontWeight: '800', color: isGrey ? '#94A3B8' : (item.rating && item.rating > 0 ? '#047857' : '#64748B') }}>
+                                                                {item.rating && item.rating > 0 ? Number(item.rating).toFixed(1) : (item.averageRating && item.averageRating > 0 ? Number(item.averageRating).toFixed(1) : "New")}
                                                             </span>
-                                                        )}
-                                                    </p>
+                                                        </div>
+                                                        <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', margin: 0, display: 'flex', alignItems: 'center', gap: '6px', flex: 1, justifyContent: 'space-between' }}>
+                                                            <span>By {item.sellerName}</span>
+                                                            {item.distanceText && (
+                                                                <span style={{ color: 'var(--teal)', fontWeight: '600' }}>
+                                                                    📍 {item.distanceText}
+                                                                </span>
+                                                            )}
+                                                        </p>
+                                                    </div>
                                                     <p style={{ color: '#555', fontSize: '0.8rem', marginBottom: '8px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', height: '2.4rem' }}>{item.description}</p>
                                                     {isOutOfStock ? (
                                                         <div style={{ fontSize: '0.75rem', marginBottom: '10px' }}>
@@ -612,8 +705,24 @@ export default function UserDashboard() {
             </div>
 
             {filteredRooms.length === 0 ? (
-                <div style={{ backgroundColor: '#F8F9F9', padding: '40px', textAlign: 'center', borderRadius: '12px', color: 'var(--text-muted)' }}>
-                    No rooms available in this area right now.
+                <div style={{ backgroundColor: '#F8F9F9', padding: '40px 20px', textAlign: 'center', borderRadius: '12px', color: 'var(--text-muted)' }}>
+                    {!defaultAddress ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                            <p style={{ margin: 0, fontSize: '0.95rem', color: '#475569', fontWeight: '500' }}>
+                                📍 No location selected. Please select your location to view rooms available near you.
+                            </p>
+                            <button
+                                type="button"
+                                onClick={openLocationModal}
+                                className="btn btn-primary"
+                                style={{ padding: '8px 22px', fontSize: '0.9rem', width: 'auto' }}
+                            >
+                                Select Location
+                            </button>
+                        </div>
+                    ) : (
+                        "No rooms available in this area right now."
+                    )}
                 </div>
             ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '30px', marginBottom: '40px' }}>

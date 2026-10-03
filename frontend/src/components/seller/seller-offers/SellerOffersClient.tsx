@@ -317,6 +317,11 @@ export default function SellerOffersClient({ sellerId, products }: SellerOffersC
                                                     >
                                                         {offer.code}
                                                     </span>
+                                                    {offer.isAutoApply && (
+                                                        <span style={{ backgroundColor: "#DCFCE7", color: "#15803D", padding: "2px 6px", borderRadius: "4px", fontSize: "10px", fontWeight: 700, letterSpacing: "0.3px" }}>
+                                                            ⚡ AUTO
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </td>
                                             <td style={{ padding: "14px 16px", fontWeight: 600, color: "#16A34A" }}>

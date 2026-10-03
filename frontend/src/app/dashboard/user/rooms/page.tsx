@@ -18,7 +18,7 @@ import {
 
 export default function UserRoomsPage() {
     const { initiateRoomBooking } = useCart();
-    const { defaultAddress } = useLocation();
+    const { defaultAddress, openLocationModal } = useLocation();
     const { status } = useSession();
     const [rooms, setRooms] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -172,6 +172,16 @@ export default function UserRoomsPage() {
             };
         })
         .filter(room => {
+            const roomRadius = room.sellerDeliveryRadiusKm && Number(room.sellerDeliveryRadiusKm) > 0
+                ? Number(room.sellerDeliveryRadiusKm)
+                : MAX_DELIVERY_RADIUS_KM;
+            if (hasUserCoords && room.distanceKm !== undefined) {
+                if (room.distanceKm > roomRadius) return false;
+            } else if (defaultAddress?.pincode) {
+                const guestPin = defaultAddress.pincode.trim();
+                if (room.sellerPincode && room.sellerPincode !== guestPin) return false;
+            }
+
             if (!searchQuery.trim()) return true;
             const q = searchQuery.toLowerCase().trim();
             return (
@@ -215,8 +225,26 @@ export default function UserRoomsPage() {
             {loading ? (
                 <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>Loading rooms...</div>
             ) : filteredRooms.length === 0 ? (
-                <div style={{ backgroundColor: '#F8F9F9', padding: '40px', textAlign: 'center', borderRadius: '12px', color: 'var(--text-muted)' }}>
-                    {searchQuery ? "No rooms found matching your search." : "No rooms available within 5 km right now."}
+                <div style={{ backgroundColor: '#F8F9F9', padding: '40px 20px', textAlign: 'center', borderRadius: '12px', color: 'var(--text-muted)' }}>
+                    {searchQuery ? (
+                        "No rooms found matching your search."
+                    ) : !defaultAddress ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                            <p style={{ margin: 0, fontSize: '0.95rem', color: '#475569', fontWeight: '500' }}>
+                                📍 No location selected. Please select your location to view rooms available near you.
+                            </p>
+                            <button
+                                type="button"
+                                onClick={openLocationModal}
+                                className="btn btn-primary"
+                                style={{ padding: '8px 22px', fontSize: '0.9rem', width: 'auto' }}
+                            >
+                                Select Location
+                            </button>
+                        </div>
+                    ) : (
+                        "No rooms available in your area right now."
+                    )}
                 </div>
             ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '30px' }}>

@@ -43,8 +43,11 @@ export interface DynamicFoodItem {
   stockQuantity?: number;
   maxStock?: number;
   rating?: number;
+  totalRatings?: number;
+  reviewsCount?: number;
   deliveryTime?: string;
   servedPincodes?: string[];
+  sellerDeliveryRadiusKm?: number;
   isWithin5km?: boolean;
   addons?: any;
   variants?: any;
@@ -68,6 +71,7 @@ export interface DynamicRoom {
   sellerLatitude?: number | null;
   sellerLongitude?: number | null;
   sellerIsLocationPinned?: boolean;
+  sellerDeliveryRadiusKm?: number;
   distanceKm?: number;
   distanceText?: string;
 }
@@ -113,7 +117,42 @@ export interface DynamicKitchen {
   isOnline: boolean;
   foodType?: string;
   servedPincodes?: string[];
+  deliveryRadiusKm?: number;
   isWithin5km?: boolean;
+}
+
+export interface DynamicCuratedReel {
+  id: string;
+  instagramMediaId: string;
+  mediaType: string;
+  mediaUrl: string;
+  thumbnailUrl: string;
+  permalink?: string;
+  caption: string;
+  likeCount?: number;
+  commentsCount?: number;
+  displayOrder: number;
+  categoryTag?: string | null;
+  customTitle?: string | null;
+  customSubtitle?: string | null;
+  redirectType: "KITCHEN" | "DISH" | "CUSTOM_URL" | "NONE" | string;
+  customRedirectUrl?: string | null;
+  seller?: {
+    id: string;
+    name: string;
+    trackingId: string;
+    locality?: string;
+    imageUrl?: string;
+    rating?: number;
+    reviewsCount?: number;
+  } | null;
+  foodItem?: {
+    id: string;
+    name: string;
+    price: number;
+    imageUrl?: string | null;
+    itemType: string;
+  } | null;
 }
 
 export interface HomeDataFilterOptions {
@@ -135,6 +174,7 @@ export interface HomeDataState {
   kitchens: DynamicKitchen[];
   coupons: DynamicCoupon[];
   promoBanners: DynamicPromoBanner[];
+  reels: DynamicCuratedReel[];
   filteredFoodItems: DynamicFoodItem[];
   filteredKitchens: DynamicKitchen[];
   allFoodItems: DynamicFoodItem[];
@@ -155,6 +195,7 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
   const [kitchens, setKitchens] = useState<DynamicKitchen[]>([]);
   const [coupons, setCoupons] = useState<DynamicCoupon[]>([]);
   const [promoBanners, setPromoBanners] = useState<DynamicPromoBanner[]>([]);
+  const [reels, setReels] = useState<DynamicCuratedReel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isUsingFallback, setIsUsingFallback] = useState(false);
@@ -184,11 +225,16 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           .then((res) => (res.ok ? res.json() : null))
           .catch(() => null);
 
-        const [exploreRes, categoriesRes, couponsRes, bannersRes] = await Promise.all([
+        const reelsPromise = fetchApi('/api/public/reels')
+          .then((res) => (res.ok ? res.json() : null))
+          .catch(() => null);
+
+        const [exploreRes, categoriesRes, couponsRes, bannersRes, reelsRes] = await Promise.all([
           explorePromise,
           categoriesPromise,
           couponsPromise,
           bannersPromise,
+          reelsPromise,
         ]);
 
         if (!isMounted) return;
@@ -411,7 +457,9 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
               sellerLongitude: resolvedLng,
               sellerIsLocationPinned: item.sellerIsLocationPinned ?? false,
               categoryName: item.foodCategory?.name || item.category?.name || 'Food',
-              rating: typeof item.rating === "number" ? item.rating : (typeof item.averageRating === "number" ? item.averageRating : 0),
+              rating: typeof item.rating === "number" ? item.rating : (typeof item.averageRating === "number" ? item.averageRating : (Array.isArray(item.itemRatings) && item.itemRatings.length > 0 ? item.itemRatings.reduce((sum: number, r: any) => sum + (Number(r?.rating) || 0), 0) / item.itemRatings.length : 0)),
+              totalRatings: typeof item.totalRatings === "number" ? item.totalRatings : (Array.isArray(item.itemRatings) ? item.itemRatings.length : 0),
+              reviewsCount: typeof item.reviewsCount === "number" ? item.reviewsCount : (typeof item.totalRatings === "number" ? item.totalRatings : 0),
               deliveryTime: item.deliveryTime || '20-30 min',
               servedPincodes: item.servedPincodes || [],
               addons: item.addons || item.variants || [],
@@ -435,7 +483,7 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
               reviewsCount: typeof k.reviewsCount === "number" ? k.reviewsCount : (typeof k.totalReviews === "number" ? k.totalReviews : 0),
               time: k.time || '20-30 min',
               imageUrl: k.imageUrl || '',
-              category: k.type || (k.foodType === 'VEG' ? 'Pure Veg' : 'Cloud Kitchen'),
+              category: k.type || ((k.foodType === 'VEG' || k.foodType === 'PURE_VEG' || k.foodType === 'VEG_ONLY') ? 'Pure Veg' : 'Cloud Kitchen'),
               locality: k.locality,
               city: k.city,
               pincode: k.pincode,
@@ -541,6 +589,34 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           });
         }
         setPromoBanners(rawBanners);
+
+        // 6. Process Curated Reels
+        const rawReels: DynamicCuratedReel[] = [];
+        const fetchedReels = reelsRes?.data?.reels || reelsRes?.reels;
+        if (Array.isArray(fetchedReels) && fetchedReels.length > 0) {
+          fetchedReels.forEach((r: any) => {
+            rawReels.push({
+              id: r.id,
+              instagramMediaId: r.instagramMediaId,
+              mediaType: r.mediaType || "VIDEO",
+              mediaUrl: r.mediaUrl,
+              thumbnailUrl: r.thumbnailUrl || r.mediaUrl,
+              permalink: r.permalink,
+              caption: r.caption || "",
+              likeCount: r.likeCount || 0,
+              commentsCount: r.commentsCount || 0,
+              displayOrder: r.displayOrder || 0,
+              categoryTag: r.categoryTag || "ALL",
+              customTitle: r.customTitle,
+              customSubtitle: r.customSubtitle,
+              redirectType: r.redirectType || "KITCHEN",
+              customRedirectUrl: r.customRedirectUrl,
+              seller: r.seller || null,
+              foodItem: r.foodItem || null,
+            });
+          });
+        }
+        setReels(rawReels);
         setError(null);
       } catch (err: any) {
         if (isMounted) {
@@ -698,19 +774,21 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
     });
   }, [kitchens, hasUserCoords, activeUserLat, activeUserLng]);
 
-  // Helper to check 5 km distance deliverability with pincode fallback
+  // Helper to check dynamic seller delivery distance deliverability with pincode fallback
   const isSellerDeliverable = (
     sellerLat?: number | null,
     sellerLng?: number | null,
     sellerPin?: string,
     servedPins?: string[],
     locality?: string,
-    landmark?: string
+    landmark?: string,
+    sellerRadiusKm?: number | null
   ) => {
-    // 1. If coordinates exist on both sides, strictly enforce 5.0 km radius
+    // 1. If coordinates exist on both sides, strictly enforce dynamic radius
     if (hasUserCoords && sellerLat != null && sellerLng != null && !isNaN(Number(sellerLat)) && !isNaN(Number(sellerLng))) {
       const dist = calculateDistanceKm(activeUserLat!, activeUserLng!, Number(sellerLat), Number(sellerLng));
-      return dist <= MAX_DELIVERY_RADIUS_KM;
+      const maxRadius = sellerRadiusKm && Number(sellerRadiusKm) > 0 ? Number(sellerRadiusKm) : MAX_DELIVERY_RADIUS_KM;
+      return dist <= maxRadius;
     }
     // 2. Fallback: Pincode serviceability match
     if (activePincode) {
@@ -719,10 +797,10 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
     return true;
   };
 
-  // Compute filtered food items based on 5 km distance + filter options
+  // Compute filtered food items based on dynamic distance + filter options
   const filteredFoodItems = useMemo(() => {
     let list = enrichedFoodItems.filter((item) => {
-      // 1. Distance / Pincode boundary check (5 km limit)
+      // 1. Distance / Pincode boundary check (dynamic radius per seller)
       if (activePincode || hasUserCoords) {
         const deliverable = isSellerDeliverable(
           item.sellerLatitude,
@@ -730,7 +808,8 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           item.sellerPincode,
           item.servedPincodes,
           item.sellerLocality,
-          item.sellerLandmark
+          item.sellerLandmark,
+          item.sellerDeliveryRadiusKm
         );
         if (!deliverable) return false;
       }
@@ -783,10 +862,10 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
     return list;
   }, [enrichedFoodItems, activePincode, hasUserCoords, activeUserLat, activeUserLng, options]);
 
-  // Compute filtered kitchens based on 5 km distance + filter options
+  // Compute filtered kitchens based on dynamic distance + filter options
   const filteredKitchens = useMemo(() => {
     let list = enrichedKitchens.filter((k) => {
-      // 1. Distance / Pincode boundary check (5 km limit)
+      // 1. Distance / Pincode boundary check (dynamic radius per seller)
       if (activePincode || hasUserCoords) {
         const deliverable = isSellerDeliverable(
           k.latitude,
@@ -794,7 +873,8 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           k.pincode,
           k.servedPincodes,
           k.locality,
-          k.landmark
+          k.landmark,
+          k.deliveryRadiusKm
         );
         if (!deliverable) return false;
       }
@@ -844,6 +924,7 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
     kitchens: activePincode || hasUserCoords || options ? filteredKitchens : enrichedKitchens,
     coupons,
     promoBanners,
+    reels,
     filteredFoodItems,
     filteredKitchens,
     allFoodItems: enrichedFoodItems,

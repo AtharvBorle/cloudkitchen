@@ -3,6 +3,7 @@ import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { handleCodOrderDelivered } from "@/lib/delivery-wallet";
 import { emitOrderUpdated, emitSellerDashboardRefresh } from "@/lib/realtime-events";
+import { autoCancelExpiredOrders, cancelExpiredOrder, isOrderExpired } from "@/lib/order-expiry";
 import { revalidateTag } from "next/cache";
 
 export const getSellerOrders = async () => {
@@ -21,6 +22,9 @@ export const getSellerOrders = async () => {
     if (!sellerProfile) {
         throw new ApiError("Seller profile not found. Please complete seller registration.", 404);
     }
+
+    // Auto-cancel any pending orders that exceeded the 5-minute acceptance timer
+    await autoCancelExpiredOrders({ sellerId: sellerProfile.id });
 
     const orders = await db.order.findMany({
         where: { sellerId: sellerProfile.id },
@@ -110,6 +114,12 @@ export const getSellerOrderById = async (orderId: string) => {
         throw new ApiError("Order not found", 404);
     }
 
+    // Auto-cancel if pending and 5-minute acceptance window has elapsed
+    if (order.status === "PENDING" && isOrderExpired(order.createdAt)) {
+        await cancelExpiredOrder(order);
+        order.status = "CANCELLED";
+    }
+
     let appliedCoupon = null;
     if (order.appliedCouponId) {
         appliedCoupon = await db.coupon.findUnique({
@@ -167,19 +177,29 @@ export const updateSellerOrder = async (req: Request, orderId: string) => {
         throw new ApiError(`Invalid status '${status}'. Must be one of: ${validStatuses.join(", ")}`, 400);
     }
 
+    // Check 5-minute acceptance window: if seller attempts to accept an expired pending order, auto-cancel and reject
+    if (existingOrder.status === "PENDING" && status && status !== "CANCELLED") {
+        if (isOrderExpired(existingOrder.createdAt)) {
+            await cancelExpiredOrder(existingOrder);
+            throw new ApiError("Order acceptance window has expired (5-minute limit exceeded). This order has been automatically cancelled.", 400);
+        }
+    }
+
     // Restore inventory if cancelling
     if (status === "CANCELLED" && existingOrder.status !== "CANCELLED" && existingOrder.items) {
         try {
             const itemsList = typeof existingOrder.items === "string" ? JSON.parse(existingOrder.items) : existingOrder.items;
             if (Array.isArray(itemsList)) {
                 for (const item of itemsList) {
-                    if (item.id && item.quantity) {
-                        const foodItem = await db.foodItem.findUnique({ where: { id: item.id } });
+                    const itemId = item.foodItemId || item.id;
+                    const qty = Number(item.quantity) || 1;
+                    if (itemId) {
+                        const foodItem = await db.foodItem.findUnique({ where: { id: itemId } });
                         if (foodItem && foodItem.stockQuantity !== -1) {
                             await db.foodItem.update({
-                                where: { id: item.id },
+                                where: { id: itemId },
                                 data: {
-                                    stockQuantity: foodItem.stockQuantity + item.quantity,
+                                    stockQuantity: foodItem.stockQuantity + qty,
                                     isAvailable: true
                                 }
                             });
@@ -189,6 +209,17 @@ export const updateSellerOrder = async (req: Request, orderId: string) => {
             }
         } catch (error) {
             console.error("Failed to restore inventory on seller cancelOrder:", error);
+        }
+
+        if (existingOrder.appliedCouponId) {
+            try {
+                await db.coupon.update({
+                    where: { id: existingOrder.appliedCouponId },
+                    data: { currentUsersCount: { decrement: 1 } }
+                });
+            } catch (couponErr) {
+                console.error("Failed to revert coupon usage on seller cancelOrder:", couponErr);
+            }
         }
     }
 
@@ -225,16 +256,23 @@ export const updateSellerOrder = async (req: Request, orderId: string) => {
             await handleCodOrderDelivered(tx, orderId);
         }
 
-        if (status === "CANCELLED" && existingOrder.isPaid) {
+        if (status === "CANCELLED" && (existingOrder.isPaid || existingOrder.totalAmount === 0)) {
             const existingRefund = await tx.refund.findUnique({ where: { orderId } });
             if (!existingRefund) {
+                const refundAmount = Number(existingOrder.totalAmount ?? 0);
+                let reason = `Order #${orderId} was rejected / cancelled by the kitchen partner.`;
+                if (refundAmount === 0) {
+                    reason += ` 100% discount coupon applied (₹0 paid by customer). No refund required.`;
+                } else {
+                    reason += ` Auto-submitted for refund processing.`;
+                }
                 await tx.refund.create({
                     data: {
                         userId: existingOrder.userId,
                         orderId,
-                        amount: existingOrder.totalAmount,
-                        reason: `Order #${orderId} was rejected / cancelled by the kitchen partner. Auto-submitted for refund processing.`,
-                        status: "PENDING"
+                        amount: refundAmount,
+                        reason,
+                        status: refundAmount === 0 ? "PROCESSED" : "PENDING"
                     }
                 });
             }

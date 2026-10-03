@@ -10,26 +10,14 @@ import {
   RefreshCw, 
   CheckCircle2, 
   AlertCircle, 
-  ShieldCheck, 
-  Percent, 
-  IndianRupee, 
-  Truck, 
   Mail, 
   Phone, 
-  Power,
-  Store,
-  Sliders
+  Power
 } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
 import { performLogout } from "@/lib/logout";
 
 interface SystemSettingsMap {
-  PLATFORM_NAME: string;
-  PLATFORM_COMMISSION_PERCENTAGE: string;
-  SUBSCRIPTION_PRICE: string;
-  MAX_DELIVERY_RADIUS_KM: string;
-  DEFAULT_DELIVERY_FEE: string;
-  TAX_PERCENTAGE: string;
   SUPPORT_EMAIL: string;
   SUPPORT_PHONE: string;
   MAINTENANCE_MODE: string;
@@ -37,12 +25,6 @@ interface SystemSettingsMap {
 }
 
 const DEFAULT_SETTINGS: SystemSettingsMap = {
-  PLATFORM_NAME: "Neo Cloud Kitchen",
-  PLATFORM_COMMISSION_PERCENTAGE: "10",
-  SUBSCRIPTION_PRICE: "199",
-  MAX_DELIVERY_RADIUS_KM: "15",
-  DEFAULT_DELIVERY_FEE: "40",
-  TAX_PERCENTAGE: "5",
   SUPPORT_EMAIL: "support@neocloudkitchen.com",
   SUPPORT_PHONE: "+91 98765 43210",
   MAINTENANCE_MODE: "false",
@@ -73,7 +55,10 @@ export default function SuperadminSettingsPage() {
         if (data?.settingsMap) {
           setSettings((prev) => ({
             ...prev,
-            ...data.settingsMap
+            SUPPORT_EMAIL: data.settingsMap.SUPPORT_EMAIL || prev.SUPPORT_EMAIL,
+            SUPPORT_PHONE: data.settingsMap.SUPPORT_PHONE || prev.SUPPORT_PHONE,
+            MAINTENANCE_MODE: data.settingsMap.MAINTENANCE_MODE || prev.MAINTENANCE_MODE,
+            AUTO_ASSIGN_DELIVERY: data.settingsMap.AUTO_ASSIGN_DELIVERY || prev.AUTO_ASSIGN_DELIVERY,
           }));
         } else if (Array.isArray(data)) {
           const map: Record<string, string> = {};
@@ -82,7 +67,10 @@ export default function SuperadminSettingsPage() {
           });
           setSettings((prev) => ({
             ...prev,
-            ...map
+            SUPPORT_EMAIL: map.SUPPORT_EMAIL || prev.SUPPORT_EMAIL,
+            SUPPORT_PHONE: map.SUPPORT_PHONE || prev.SUPPORT_PHONE,
+            MAINTENANCE_MODE: map.MAINTENANCE_MODE || prev.MAINTENANCE_MODE,
+            AUTO_ASSIGN_DELIVERY: map.AUTO_ASSIGN_DELIVERY || prev.AUTO_ASSIGN_DELIVERY,
           }));
         }
       }
@@ -177,7 +165,7 @@ export default function SuperadminSettingsPage() {
             System Settings
           </h1>
           <p style={{ color: "#64748B", margin: "4px 0 0 0", fontSize: "0.95rem" }}>
-            Configure global platform rules, commission rates, delivery parameters, and contact info.
+            Configure platform support contact information and global system controls.
           </p>
         </div>
 
@@ -250,140 +238,9 @@ export default function SuperadminSettingsPage() {
 
       {/* Settings Form */}
       <form onSubmit={handleSave}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))", gap: "24px", marginBottom: "30px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))", gap: "24px", marginBottom: "30px" }}>
           
-          {/* Card 1: Platform & Commission */}
-          <div style={{ backgroundColor: "#FFFFFF", padding: "26px", borderRadius: "16px", boxShadow: "0 4px 15px rgba(0,0,0,0.04)", border: "1px solid #E2E8F0" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "18px" }}>
-              <div style={{ width: "36px", height: "36px", borderRadius: "10px", backgroundColor: "#EFF6FF", color: "#2563EB", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Store size={20} />
-              </div>
-              <h2 style={{ fontSize: "1.15rem", fontWeight: "700", color: "#0F172A", margin: 0 }}>
-                Platform & Revenue
-              </h2>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", color: "#475569", marginBottom: "6px" }}>
-                  Platform Name
-                </label>
-                <input
-                  type="text"
-                  value={settings.PLATFORM_NAME}
-                  onChange={(e) => handleChange("PLATFORM_NAME", e.target.value)}
-                  className="input-field"
-                  style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid #CBD5E1" }}
-                  required
-                />
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", color: "#475569", marginBottom: "6px" }}>
-                  Platform Commission (%) on Food Orders
-                </label>
-                <div style={{ position: "relative" }}>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.5"
-                    value={settings.PLATFORM_COMMISSION_PERCENTAGE}
-                    onChange={(e) => handleChange("PLATFORM_COMMISSION_PERCENTAGE", e.target.value)}
-                    style={{ width: "100%", padding: "10px 36px 10px 14px", borderRadius: "8px", border: "1px solid #CBD5E1" }}
-                    required
-                  />
-                  <Percent size={16} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "#94A3B8" }} />
-                </div>
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", color: "#475569", marginBottom: "6px" }}>
-                  Global Subscription Fee (₹/month)
-                </label>
-                <div style={{ position: "relative" }}>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={settings.SUBSCRIPTION_PRICE}
-                    onChange={(e) => handleChange("SUBSCRIPTION_PRICE", e.target.value)}
-                    style={{ width: "100%", padding: "10px 36px 10px 14px", borderRadius: "8px", border: "1px solid #CBD5E1" }}
-                    required
-                  />
-                  <IndianRupee size={16} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "#94A3B8" }} />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 2: Delivery & Logistics */}
-          <div style={{ backgroundColor: "#FFFFFF", padding: "26px", borderRadius: "16px", boxShadow: "0 4px 15px rgba(0,0,0,0.04)", border: "1px solid #E2E8F0" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "18px" }}>
-              <div style={{ width: "36px", height: "36px", borderRadius: "10px", backgroundColor: "#F0FDF4", color: "#16A34A", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Truck size={20} />
-              </div>
-              <h2 style={{ fontSize: "1.15rem", fontWeight: "700", color: "#0F172A", margin: 0 }}>
-                Delivery & Taxation
-              </h2>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", color: "#475569", marginBottom: "6px" }}>
-                  Max Delivery Radius (km)
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="100"
-                  value={settings.MAX_DELIVERY_RADIUS_KM}
-                  onChange={(e) => handleChange("MAX_DELIVERY_RADIUS_KM", e.target.value)}
-                  style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid #CBD5E1" }}
-                  required
-                />
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", color: "#475569", marginBottom: "6px" }}>
-                  Base Delivery Fee (₹)
-                </label>
-                <div style={{ position: "relative" }}>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={settings.DEFAULT_DELIVERY_FEE}
-                    onChange={(e) => handleChange("DEFAULT_DELIVERY_FEE", e.target.value)}
-                    style={{ width: "100%", padding: "10px 36px 10px 14px", borderRadius: "8px", border: "1px solid #CBD5E1" }}
-                    required
-                  />
-                  <IndianRupee size={16} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "#94A3B8" }} />
-                </div>
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", color: "#475569", marginBottom: "6px" }}>
-                  Standard Food GST / Tax (%)
-                </label>
-                <div style={{ position: "relative" }}>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.5"
-                    value={settings.TAX_PERCENTAGE}
-                    onChange={(e) => handleChange("TAX_PERCENTAGE", e.target.value)}
-                    style={{ width: "100%", padding: "10px 36px 10px 14px", borderRadius: "8px", border: "1px solid #CBD5E1" }}
-                    required
-                  />
-                  <Percent size={16} style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: "#94A3B8" }} />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 3: Support Contact Details */}
+          {/* Card 1: Support Contact Details */}
           <div style={{ backgroundColor: "#FFFFFF", padding: "26px", borderRadius: "16px", boxShadow: "0 4px 15px rgba(0,0,0,0.04)", border: "1px solid #E2E8F0" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "18px" }}>
               <div style={{ width: "36px", height: "36px", borderRadius: "10px", backgroundColor: "#FAF5FF", color: "#9333EA", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -423,7 +280,7 @@ export default function SuperadminSettingsPage() {
             </div>
           </div>
 
-          {/* Card 4: Platform Controls & Maintenance */}
+          {/* Card 2: Platform Controls & Maintenance */}
           <div style={{ backgroundColor: "#FFFFFF", padding: "26px", borderRadius: "16px", boxShadow: "0 4px 15px rgba(0,0,0,0.04)", border: "1px solid #E2E8F0" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "18px" }}>
               <div style={{ width: "36px", height: "36px", borderRadius: "10px", backgroundColor: "#FFF7ED", color: "#EA580C", display: "flex", alignItems: "center", justifyContent: "center" }}>

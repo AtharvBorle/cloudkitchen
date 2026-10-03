@@ -23,32 +23,118 @@ const STORAGE_KEY_SMS = "customer_sms_notifications";
 
 export const NOTIFICATION_PREFERENCES_EVENT = "customer-notifications-updated";
 
+function parseCookieValue(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(new RegExp("(^|;\\s*)" + name + "=([^;]*)"));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
+function writeCookie(name: string, value: string, days = 365): void {
+  if (typeof document === "undefined") return;
+  const maxAge = days * 24 * 60 * 60;
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}; SameSite=Lax`;
+}
+
+function safeGetStorage(key: string): any {
+  if (typeof window === "undefined") return null;
+  try {
+    const fromLocal = localStorage.getItem(key);
+    if (fromLocal) return JSON.parse(fromLocal);
+  } catch {}
+
+  try {
+    const fromSession = sessionStorage.getItem(key);
+    if (fromSession) return JSON.parse(fromSession);
+  } catch {}
+
+  try {
+    const fromCookie = parseCookieValue(key);
+    if (fromCookie) return JSON.parse(fromCookie);
+  } catch {}
+
+  return null;
+}
+
+function safeSetStorage(key: string, data: any): void {
+  if (typeof window === "undefined") return;
+  const serialized = JSON.stringify(data);
+  try {
+    localStorage.setItem(key, serialized);
+  } catch {}
+
+  try {
+    sessionStorage.setItem(key, serialized);
+  } catch {}
+
+  try {
+    writeCookie(key, serialized);
+  } catch {}
+}
+
+const extractBool = (...vals: any[]): boolean | undefined => {
+  for (const v of vals) {
+    if (typeof v === "boolean") return v;
+    if (v === "true") return true;
+    if (v === "false") return false;
+  }
+  return undefined;
+};
+
 /**
- * Load user's notification summary preferences from localStorage with fallback to defaults.
+ * Load user's notification summary preferences from localStorage/cookie with fallback to defaults.
  */
 export function getNotificationsSummaryPreferences(): NotificationsSummaryPreferences {
   if (typeof window === "undefined") {
     return { ...DEFAULT_NOTIFICATIONS_SUMMARY };
   }
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_SUMMARY);
-    if (!raw) {
-      return { ...DEFAULT_NOTIFICATIONS_SUMMARY };
-    }
-    const parsed = JSON.parse(raw);
-    return {
-      orderUpdates: typeof parsed.orderUpdates === "boolean" ? parsed.orderUpdates : DEFAULT_NOTIFICATIONS_SUMMARY.orderUpdates,
-      promoOffers: typeof parsed.promoOffers === "boolean" ? parsed.promoOffers : DEFAULT_NOTIFICATIONS_SUMMARY.promoOffers,
-      newMenu: typeof parsed.newMenu === "boolean" ? parsed.newMenu : DEFAULT_NOTIFICATIONS_SUMMARY.newMenu,
-      deliveryAlerts: typeof parsed.deliveryAlerts === "boolean" ? parsed.deliveryAlerts : DEFAULT_NOTIFICATIONS_SUMMARY.deliveryAlerts,
-    };
-  } catch {
-    return { ...DEFAULT_NOTIFICATIONS_SUMMARY };
-  }
+
+  const parsedSummary = safeGetStorage(STORAGE_KEY_SUMMARY);
+  const parsedPush = safeGetStorage(STORAGE_KEY_PUSH);
+
+  const orderUpdates = extractBool(
+    parsedSummary?.orderUpdates,
+    parsedSummary?.["order-updates"],
+    parsedPush?.["order-updates"],
+    parsedPush?.orderUpdates
+  );
+
+  const promoOffers = extractBool(
+    parsedSummary?.promoOffers,
+    parsedSummary?.promotionalOffers,
+    parsedSummary?.["promotional-offers"],
+    parsedSummary?.["promo-offers"],
+    parsedSummary?.["promotional_offers"],
+    parsedSummary?.["promo_offers"],
+    parsedPush?.["promotional-offers"],
+    parsedPush?.promoOffers,
+    parsedPush?.promotionalOffers
+  );
+
+  const newMenu = extractBool(
+    parsedSummary?.newMenu,
+    parsedSummary?.["new-arrivals"],
+    parsedSummary?.["new-menu"],
+    parsedPush?.["new-arrivals"],
+    parsedPush?.newMenu
+  );
+
+  const deliveryAlerts = extractBool(
+    parsedSummary?.deliveryAlerts,
+    parsedSummary?.["delivery-alerts"],
+    parsedPush?.["delivery-alerts"],
+    parsedPush?.deliveryAlerts
+  );
+
+  return {
+    orderUpdates: orderUpdates !== undefined ? orderUpdates : DEFAULT_NOTIFICATIONS_SUMMARY.orderUpdates,
+    promoOffers: promoOffers !== undefined ? promoOffers : DEFAULT_NOTIFICATIONS_SUMMARY.promoOffers,
+    newMenu: newMenu !== undefined ? newMenu : DEFAULT_NOTIFICATIONS_SUMMARY.newMenu,
+    deliveryAlerts: deliveryAlerts !== undefined ? deliveryAlerts : DEFAULT_NOTIFICATIONS_SUMMARY.deliveryAlerts,
+  };
 }
 
 /**
- * Save user's notification summary preferences to localStorage and broadcast change event.
+ * Save user's notification summary preferences to localStorage, sessionStorage & cookies and broadcast change event.
  */
 export function saveNotificationsSummaryPreferences(
   prefs: Partial<NotificationsSummaryPreferences>
@@ -60,28 +146,26 @@ export function saveNotificationsSummaryPreferences(
   };
 
   if (typeof window !== "undefined") {
+    safeSetStorage(STORAGE_KEY_SUMMARY, next);
+
+    // Also sync to push notification storage mapping
+    const existingPush = safeGetStorage(STORAGE_KEY_PUSH) || {};
+    const pushMapping: Record<string, boolean> = {
+      ...existingPush,
+      "order-updates": next.orderUpdates,
+      "promotional-offers": next.promoOffers,
+      "new-arrivals": next.newMenu,
+      "delivery-alerts": next.deliveryAlerts,
+    };
+    safeSetStorage(STORAGE_KEY_PUSH, pushMapping);
+
     try {
-      localStorage.setItem(STORAGE_KEY_SUMMARY, JSON.stringify(next));
-
-      // Also sync to push notification storage mapping
-      const pushMapping: Record<string, boolean> = {
-        "order-updates": next.orderUpdates,
-        "promotional-offers": next.promoOffers,
-        "new-arrivals": next.newMenu,
-        "delivery-alerts": next.deliveryAlerts,
-      };
-      const existingPushRaw = localStorage.getItem(STORAGE_KEY_PUSH);
-      const existingPush = existingPushRaw ? JSON.parse(existingPushRaw) : {};
-      localStorage.setItem(STORAGE_KEY_PUSH, JSON.stringify({ ...existingPush, ...pushMapping }));
-
       window.dispatchEvent(
         new CustomEvent(NOTIFICATION_PREFERENCES_EVENT, {
           detail: { type: "summary", data: next },
         })
       );
-    } catch (e) {
-      console.error("Failed to save notification preferences to localStorage:", e);
-    }
+    } catch {}
   }
 
   return next;
@@ -104,27 +188,22 @@ export function getGenericNotificationPreferences(
       ? STORAGE_KEY_EMAIL
       : STORAGE_KEY_SMS;
 
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) {
-      // If push, check if summary has values
-      if (category === "push") {
-        const summary = getNotificationsSummaryPreferences();
-        return {
-          ...defaultValues,
-          "order-updates": summary.orderUpdates,
-          "promotional-offers": summary.promoOffers,
-          "new-arrivals": summary.newMenu,
-          "delivery-alerts": summary.deliveryAlerts,
-        };
-      }
-      return { ...defaultValues };
+  const parsed = safeGetStorage(key);
+  if (!parsed) {
+    if (category === "push") {
+      const summary = getNotificationsSummaryPreferences();
+      return {
+        ...defaultValues,
+        "order-updates": summary.orderUpdates,
+        "promotional-offers": summary.promoOffers,
+        "new-arrivals": summary.newMenu,
+        "delivery-alerts": summary.deliveryAlerts,
+      };
     }
-    const parsed = JSON.parse(raw);
-    return { ...defaultValues, ...parsed };
-  } catch {
     return { ...defaultValues };
   }
+
+  return { ...defaultValues, ...parsed };
 }
 
 /**
@@ -142,34 +221,31 @@ export function saveGenericNotificationPreferences(
       : STORAGE_KEY_SMS;
 
   if (typeof window !== "undefined") {
+    const existing = safeGetStorage(key) || {};
+    const merged = { ...existing, ...updates };
+    safeSetStorage(key, merged);
+
+    // If push, sync back to summary
+    if (category === "push") {
+      const summaryUpdates: Partial<NotificationsSummaryPreferences> = {};
+      if (typeof merged["order-updates"] === "boolean") summaryUpdates.orderUpdates = merged["order-updates"];
+      if (typeof merged["promotional-offers"] === "boolean") summaryUpdates.promoOffers = merged["promotional-offers"];
+      if (typeof merged["new-arrivals"] === "boolean") summaryUpdates.newMenu = merged["new-arrivals"];
+      if (typeof merged["delivery-alerts"] === "boolean") summaryUpdates.deliveryAlerts = merged["delivery-alerts"];
+
+      const currentSummary = getNotificationsSummaryPreferences();
+      const nextSummary = { ...currentSummary, ...summaryUpdates };
+      safeSetStorage(STORAGE_KEY_SUMMARY, nextSummary);
+    }
+
     try {
-      const existingRaw = localStorage.getItem(key);
-      const existing = existingRaw ? JSON.parse(existingRaw) : {};
-      const merged = { ...existing, ...updates };
-      localStorage.setItem(key, JSON.stringify(merged));
-
-      // If push, sync back to summary
-      if (category === "push") {
-        const summaryUpdates: Partial<NotificationsSummaryPreferences> = {};
-        if (typeof merged["order-updates"] === "boolean") summaryUpdates.orderUpdates = merged["order-updates"];
-        if (typeof merged["promotional-offers"] === "boolean") summaryUpdates.promoOffers = merged["promotional-offers"];
-        if (typeof merged["new-arrivals"] === "boolean") summaryUpdates.newMenu = merged["new-arrivals"];
-        if (typeof merged["delivery-alerts"] === "boolean") summaryUpdates.deliveryAlerts = merged["delivery-alerts"];
-
-        const currentSummary = getNotificationsSummaryPreferences();
-        const nextSummary = { ...currentSummary, ...summaryUpdates };
-        localStorage.setItem(STORAGE_KEY_SUMMARY, JSON.stringify(nextSummary));
-      }
-
       window.dispatchEvent(
         new CustomEvent(NOTIFICATION_PREFERENCES_EVENT, {
           detail: { type: category, data: merged },
         })
       );
-      return merged;
-    } catch (e) {
-      console.error(`Failed to save ${category} notification preferences:`, e);
-    }
+    } catch {}
+    return merged;
   }
 
   return updates;

@@ -59,6 +59,8 @@ interface ConfirmedOrderData {
   items: ConfirmedOrderItem[];
   subtotal: number;
   discount: number;
+  couponCode?: string;
+  couponDiscountPercentage?: number;
   deliveryFee: number;
   taxes: number;
   grandTotal: number;
@@ -185,8 +187,15 @@ export default function OrderConfirmation() {
     if (parsedItems.length > 0) {
       computedItemsSubtotal = parsedItems.reduce((acc, it) => acc + (it.price * it.qty), 0);
     }
-    const finalTotal = Number(rawOrder.totalAmount) || computedItemsSubtotal;
+    const finalTotal =
+      rawOrder.totalAmount !== undefined && rawOrder.totalAmount !== null && !isNaN(Number(rawOrder.totalAmount))
+        ? Number(rawOrder.totalAmount)
+        : computedItemsSubtotal;
     const computedDiscount = Math.max(0, computedItemsSubtotal - finalTotal);
+
+    const appliedCoupon = rawOrder.appliedCoupon;
+    const couponCode = appliedCoupon?.code || rawOrder.couponCode;
+    const couponDiscountPercentage = appliedCoupon?.discountPercentage || rawOrder.couponDiscountPercentage;
 
     setOrderData({
       orderId: rawOrder.id,
@@ -202,8 +211,10 @@ export default function OrderConfirmation() {
       },
       paymentMethod: `${rawOrder.paymentMethod === "ONLINE" ? "Online Payment" : (rawOrder.paymentMethod || "COD")} ${rawOrder.isPaid ? "(Paid Online)" : "(Pay on Delivery)"}`,
       items: parsedItems,
-      subtotal: computedItemsSubtotal || finalTotal,
+      subtotal: computedItemsSubtotal > 0 ? computedItemsSubtotal : finalTotal,
       discount: computedDiscount,
+      couponCode,
+      couponDiscountPercentage,
       deliveryFee: 0,
       taxes: 0,
       grandTotal: finalTotal,
@@ -687,7 +698,10 @@ export default function OrderConfirmation() {
 
                 {orderData.discount > 0 && (
                   <div className={styles.pricingRow}>
-                    <span className={styles.discountValue}>Welcome Discount (Applied)</span>
+                    <span className={styles.discountValue}>
+                      {orderData.couponCode ? `Coupon Discount (${orderData.couponCode})` : "Discount (Applied)"}
+                      {orderData.couponDiscountPercentage ? ` • ${orderData.couponDiscountPercentage}% OFF` : ""}
+                    </span>
                     <span className={styles.discountValue}>
                       - ₹{orderData.discount.toLocaleString("en-IN")}
                     </span>
@@ -697,7 +711,7 @@ export default function OrderConfirmation() {
                 <div className={styles.pricingTotalRow}>
                   <div>
                     <span>Total Paid</span>
-                    <span className={styles.paidBadge}>PAID</span>
+                    <span className={styles.paidBadge}>{orderData.grandTotal === 0 ? "FREE" : "PAID"}</span>
                   </div>
                   <span>₹{orderData.grandTotal.toLocaleString("en-IN")}</span>
                 </div>
@@ -733,7 +747,11 @@ export default function OrderConfirmation() {
                         Order Cancellation & Refund Notice
                       </h4>
                       <p className={styles.infoText} style={{ color: "#b91c1c" }}>
-                        This order request was cancelled by the store. If you made an online payment, a full refund of ₹{orderData.grandTotal.toLocaleString("en-IN")} will be credited to your original payment method within 2-4 business hours.
+                        {orderData.grandTotal === 0 ? (
+                          "This order request was cancelled. Since a 100% discount coupon was applied (₹0 paid), no refund is required."
+                        ) : (
+                          `This order request was cancelled by the store. If you made an online payment, a full refund of ₹${orderData.grandTotal.toLocaleString("en-IN")} will be credited to your original payment method within 2-4 business hours.`
+                        )}
                       </p>
                     </div>
                   </div>
@@ -807,7 +825,7 @@ export default function OrderConfirmation() {
           </Link>
 
           {/* Secondary Continue Exploring Button */}
-          <Link href="/explore" className={styles.exploreBtn}>
+          <Link href="/food-explore" className={styles.exploreBtn}>
             <Compass size={18} color="#EA580C" />
             <span>Explore More Dishes</span>
           </Link>

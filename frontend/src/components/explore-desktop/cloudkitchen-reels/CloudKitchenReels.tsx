@@ -20,7 +20,16 @@ export interface ReelItem {
   name: string;
   subtitle: string;
   image: StaticImageData | string;
+  videoUrl?: string;
+  caption?: string;
+  likes?: string;
+  views?: string;
   kitchenId?: string;
+  dishId?: string;
+  dishName?: string;
+  dishPrice?: number;
+  redirectType?: string;
+  customRedirectUrl?: string;
 }
 
 export interface CloudKitchenReelsProps {
@@ -45,14 +54,20 @@ export const CloudKitchenReels: React.FC<CloudKitchenReelsProps> = ({
         author: r.name || "Cloud Kitchen Partner",
         authorAvatar: r.image || "/images/places/place-biryani.png",
         thumbnail: r.image || "/images/places/place-biryani.png",
-        caption: `${r.subtitle || "Fresh gourmet preparation"} • Behind the scenes kitchen stream 🍳🔥`,
+        videoUrl: r.videoUrl,
+        caption: r.caption || `${r.subtitle || "Fresh gourmet preparation"} • Behind the scenes kitchen stream 🍳🔥`,
         hashtags: "#cloudkitchen #culinaryart #foodie #freshpreparation",
         partnerTitle: "Verified Kitchen Partner",
-        likes: `${(2.1 + ((idx * 0.7) % 4)).toFixed(1)}k`,
-        views: `${(11 + idx * 2.8).toFixed(1)}k views`,
+        likes: r.likes || `${(2.1 + ((idx * 0.7) % 4)).toFixed(1)}k`,
+        views: r.views || `${(11 + idx * 2.8).toFixed(1)}k views`,
         audioTitle: `${r.name} • Original Audio`,
         verified: true,
         kitchenId: r.kitchenId,
+        dishId: r.dishId,
+        dishName: r.dishName,
+        dishPrice: r.dishPrice,
+        redirectType: r.redirectType,
+        customRedirectUrl: r.customRedirectUrl,
       };
     });
   }, [reels]);

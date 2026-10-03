@@ -271,14 +271,14 @@ export const SearchResultsSection: React.FC<SearchResultsSectionProps> = ({
                   <div className={styles.kitchenBody}>
                     <div className={styles.titleRow}>
                       <h4 className={styles.kitchenName}>{kitchen.name}</h4>
-                      <div className={styles.ratingBadge}>
+                      <div className={styles.ratingBadge} style={{ backgroundColor: kitchen.rating && kitchen.rating > 0 ? "#10B981" : "#64748B" }}>
                         <Star size={12} fill="#FFFFFF" color="#FFFFFF" />
-                        <span>{kitchen.rating || 4.8}</span>
+                        <span>{kitchen.rating && kitchen.rating > 0 ? Number(kitchen.rating).toFixed(1) : "New"}</span>
                       </div>
                     </div>
 
                     <span className={styles.kitchenCategory}>
-                      {kitchen.category || (kitchen.foodType === "VEG" ? "Pure Veg" : "Cloud Kitchen")}
+                      {kitchen.category || ((kitchen.foodType === "VEG" || kitchen.foodType === "PURE_VEG" || kitchen.foodType === "VEG_ONLY") ? "Pure Veg" : "Cloud Kitchen")}
                     </span>
 
                     <div className={styles.metaRow}>
@@ -374,9 +374,9 @@ export const SearchResultsSection: React.FC<SearchResultsSectionProps> = ({
                     </p>
 
                     <div className={styles.dishMeta}>
-                      <div className={styles.ratingBadgeSm}>
-                        <Star size={11} fill="#10B981" color="#10B981" />
-                        <span>{item.rating || 4.8}</span>
+                      <div className={styles.ratingBadgeSm} style={{ backgroundColor: item.rating && item.rating > 0 ? "#ECFDF5" : "#F1F5F9", color: item.rating && item.rating > 0 ? "#047857" : "#64748B" }}>
+                        <Star size={11} fill={item.rating && item.rating > 0 ? "#10B981" : "#94A3B8"} color={item.rating && item.rating > 0 ? "#10B981" : "#94A3B8"} />
+                        <span>{item.rating && item.rating > 0 ? Number(item.rating).toFixed(1) : "New"}</span>
                       </div>
                       {item.distanceText && (
                         <div className={styles.distanceBadge}>
