@@ -1,14 +1,59 @@
 /**
  * Utility to convert the full Seller Business Data payload into a clean, Excel / CSV compatible spreadsheet.
+ * Ensures zero #ERROR! formula injection errors and no undefined values.
  */
 
 function escapeCsvCell(value: any): string {
-  if (value === null || value === undefined) return '""';
-  const str = String(value);
-  if (str.includes(",") || str.includes('"') || str.includes("\n") || str.includes("\r")) {
-    return `"${str.replace(/"/g, '""')}"`;
+  if (value === null || value === undefined) {
+    return '""';
   }
-  return `"${str}"`;
+
+  let str = String(value).trim();
+  if (str === "undefined" || str === "null" || str === "NaN") {
+    return '""';
+  }
+
+  // Prevent Spreadsheet Formula Injection (which causes #ERROR! in Excel / Google Sheets)
+  // If string starts with '=', '+', '-', or '@' and is not a valid number:
+  if (/^[=\+\-@]/.test(str) && isNaN(Number(str))) {
+    str = str.replace(/^[=\+\-@\s]+/, "").trim();
+  }
+
+  return `"${str.replace(/"/g, '""')}"`;
+}
+
+function formatDate(dateVal: any): string {
+  if (!dateVal) return "";
+  try {
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return "";
+    return d.toLocaleString("en-IN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    });
+  } catch {
+    return "";
+  }
+}
+
+function formatDateShort(dateVal: any): string {
+  if (!dateVal) return "N/A";
+  try {
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return "N/A";
+    return d.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  } catch {
+    return "N/A";
+  }
 }
 
 export function convertBusinessDataToCSV(data: any): string {
@@ -23,7 +68,7 @@ export function convertBusinessDataToCSV(data: any): string {
   };
 
   // Section 1: Header / Metadata
-  addLine("=== BUSINESS DATA EXPORT ===");
+  addLine("BUSINESS DATA EXPORT");
   addLine("Exported At", data?.metadata?.exportedAt || new Date().toISOString());
   addLine("Platform", data?.metadata?.platform || "Neo Cloud Kitchen Business Operations Console");
   addLine("Business ID", data?.metadata?.businessId || "");
@@ -33,19 +78,23 @@ export function convertBusinessDataToCSV(data: any): string {
 
   // Section 2: Business Profile
   const profile = data?.businessProfile || {};
-  addLine("=== BUSINESS PROFILE ===");
+  const fullAddress = [profile.addressFlat, profile.addressLocality]
+    .filter((part) => Boolean(part && String(part).trim() && String(part) !== "undefined" && String(part) !== "null"))
+    .join(", ");
+
+  addLine("BUSINESS PROFILE");
   addLine("Business / Kitchen Name", profile.businessName || "");
   addLine("Owner Name", profile.ownerName || "");
   addLine("Email Address", profile.email || "");
   addLine("Phone Number", profile.phone || "");
   addLine("City", profile.city || "");
-  addLine("Address", `${profile.addressFlat ? profile.addressFlat + ", " : ""}${profile.addressLocality || ""}`);
+  addLine("Address", fullAddress || "");
   addLine("Pincode", profile.pincode || "");
-  addLine("Business Category", profile.businessCategory || "");
-  addLine("Food Type", profile.foodType || "");
+  addLine("Business Category", profile.businessCategory || "FOOD");
+  addLine("Food Type", profile.foodType || "BOTH");
   addLine("Store Online Status", profile.isOnline ? "Online" : "Offline");
-  addLine("Verification Status", profile.verificationStatus || "");
-  addLine("Joined Date", profile.joinedDate ? new Date(profile.joinedDate).toLocaleString() : "");
+  addLine("Verification Status", profile.verificationStatus || "APPROVED");
+  addLine("Joined Date", formatDate(profile.joinedDate));
   addBlank();
 
   // Section 3: Summary Metrics
@@ -53,7 +102,8 @@ export function convertBusinessDataToCSV(data: any): string {
   const reviewsData = data?.customerReviews || {};
   const menuData = data?.foodMenu || {};
   const offersData = data?.promotionalOffers || {};
-  addLine("=== BUSINESS PERFORMANCE SUMMARY ===");
+
+  addLine("BUSINESS PERFORMANCE SUMMARY");
   addLine("Total Food Menu Items", menuData.totalItems ?? 0);
   addLine("Total Orders Placed", ordersData.totalOrders ?? 0);
   addLine("Delivered Orders", ordersData.deliveredOrders ?? 0);
@@ -65,16 +115,21 @@ export function convertBusinessDataToCSV(data: any): string {
 
   // Section 4: Food Menu Items
   const foodItems = menuData.items || [];
-  addLine("=== FOOD MENU CATALOG ===");
+  addLine("FOOD MENU CATALOG");
   addLine("Item Name", "Price (INR)", "Food Type", "Availability", "Stock Quantity", "Open Time", "Close Time", "Delivery Pincodes", "Description");
   if (foodItems.length > 0) {
     foodItems.forEach((item: any) => {
+      let stockDisplay = "N/A";
+      if (item.stockQuantity !== undefined && item.stockQuantity !== null) {
+        stockDisplay = item.stockQuantity === -1 ? "Unlimited" : String(item.stockQuantity);
+      }
+
       addLine(
         item.name || "",
-        item.price ?? 0,
+        item.price !== undefined && item.price !== null ? item.price : 0,
         item.itemType || "VEG",
         item.isAvailable ? "Available" : "Unavailable",
-        item.stockQuantity === -1 ? "Unlimited" : (item.stockQuantity ?? "N/A"),
+        stockDisplay,
         item.openTime || "N/A",
         item.closeTime || "N/A",
         item.deliveryPincodes || "All",
@@ -88,22 +143,39 @@ export function convertBusinessDataToCSV(data: any): string {
 
   // Section 5: Orders & Sales
   const orders = ordersData.orders || [];
-  addLine("=== ORDERS AND SALES RECORDS ===");
+  addLine("ORDERS AND SALES RECORDS");
   addLine("Order ID", "Date", "Status", "Total Amount (INR)", "Payment Status", "Payment Method", "Delivery Address", "Items Summary");
   if (orders.length > 0) {
     orders.forEach((o: any) => {
-      const itemsSummary = Array.isArray(o.items)
-        ? o.items.map((i: any) => `${i.name || i.title || "Item"} x${i.quantity || 1}`).join("; ")
-        : String(o.items || "");
+      let itemsSummary = "";
+      if (Array.isArray(o.items)) {
+        itemsSummary = o.items
+          .map((i: any) => `${i.name || i.title || "Item"} x${i.quantity || 1}`)
+          .join("; ");
+      } else if (o.items && typeof o.items === "string") {
+        try {
+          const parsed = JSON.parse(o.items);
+          if (Array.isArray(parsed)) {
+            itemsSummary = parsed
+              .map((i: any) => `${i.name || i.title || "Item"} x${i.quantity || 1}`)
+              .join("; ");
+          } else {
+            itemsSummary = o.items;
+          }
+        } catch {
+          itemsSummary = o.items;
+        }
+      }
+
       addLine(
         o.orderId || "",
-        o.orderDate ? new Date(o.orderDate).toLocaleString() : "",
+        formatDate(o.orderDate),
         o.status || "",
-        o.totalAmount ?? 0,
+        o.totalAmount !== undefined && o.totalAmount !== null ? o.totalAmount : 0,
         o.isPaid ? "Paid" : "Pending",
         o.paymentMethod || "COD",
         o.deliveryAddress || "",
-        itemsSummary
+        itemsSummary || "N/A"
       );
     });
   } else {
@@ -113,7 +185,7 @@ export function convertBusinessDataToCSV(data: any): string {
 
   // Section 6: Promotional Offers & Coupons
   const coupons = offersData.coupons || [];
-  addLine("=== PROMOTIONAL OFFERS & COUPONS ===");
+  addLine("PROMOTIONAL OFFERS AND COUPONS");
   addLine("Coupon Code", "Description", "Discount Type", "Discount", "Min Cart Value (INR)", "Max Discount (INR)", "Usage Limit", "Status", "Valid Until");
   if (coupons.length > 0) {
     coupons.forEach((c: any) => {
@@ -125,11 +197,11 @@ export function convertBusinessDataToCSV(data: any): string {
         c.description || "",
         c.discountType || "",
         discountVal,
-        c.minimumCartValue ?? 0,
-        c.maxDiscountAmount ?? "No Cap",
-        c.usageLimit ?? "Unlimited",
+        c.minimumCartValue !== undefined && c.minimumCartValue !== null ? c.minimumCartValue : 0,
+        c.maxDiscountAmount !== undefined && c.maxDiscountAmount !== null ? c.maxDiscountAmount : "No Cap",
+        c.usageLimit !== undefined && c.usageLimit !== null ? c.usageLimit : "Unlimited",
         c.isActive ? "Active" : "Inactive",
-        c.noExpiry ? "Never Expires" : (c.validUntil ? new Date(c.validUntil).toLocaleDateString() : "N/A")
+        c.noExpiry ? "Never Expires" : formatDateShort(c.validUntil)
       );
     });
   } else {
@@ -139,15 +211,15 @@ export function convertBusinessDataToCSV(data: any): string {
 
   // Section 7: Customer Reviews
   const reviews = reviewsData.reviews || [];
-  addLine("=== CUSTOMER REVIEWS & RATINGS ===");
+  addLine("CUSTOMER REVIEWS AND RATINGS");
   addLine("Review ID", "Rating", "Review Comment", "Date");
   if (reviews.length > 0) {
     reviews.forEach((r: any) => {
       addLine(
         r.id || "",
-        `${r.rating || 0} / 5`,
+        `${r.rating !== undefined && r.rating !== null ? r.rating : 0} / 5`,
         r.comment || "",
-        r.createdAt ? new Date(r.createdAt).toLocaleString() : ""
+        formatDate(r.createdAt)
       );
     });
   } else {
@@ -157,7 +229,7 @@ export function convertBusinessDataToCSV(data: any): string {
 
   // Section 8: Subscriptions
   const subscriptions = data?.subscriptions || [];
-  addLine("=== SUBSCRIPTIONS & PLATFORM PLANS ===");
+  addLine("SUBSCRIPTIONS AND PLATFORM PLANS");
   addLine("Subscription ID", "Plan Name", "Category", "Amount Paid (INR)", "Status", "Valid Until", "Date");
   if (subscriptions.length > 0) {
     subscriptions.forEach((s: any) => {
@@ -165,16 +237,16 @@ export function convertBusinessDataToCSV(data: any): string {
         s.id || "",
         s.planName || "Standard Plan",
         s.category || "BOTH",
-        s.amountPaid ?? 0,
+        s.amountPaid !== undefined && s.amountPaid !== null ? s.amountPaid : 0,
         s.status || "ACTIVE",
-        s.validUntil ? new Date(s.validUntil).toLocaleDateString() : "N/A",
-        s.createdAt ? new Date(s.createdAt).toLocaleString() : ""
+        formatDateShort(s.validUntil),
+        formatDate(s.createdAt)
       );
     });
   } else {
     addLine("No active subscription records found");
   }
 
-  // Prepend UTF-8 BOM so Excel opens with correct character encoding
+  // Prepend UTF-8 BOM so Excel/Sheets opens with proper UTF-8 character encoding
   return "\uFEFF" + rows.join("\r\n");
 }
