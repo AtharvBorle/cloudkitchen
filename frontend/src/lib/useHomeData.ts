@@ -397,8 +397,10 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           }
         };
 
-        if (exploreRes?.foodCategories && Array.isArray(exploreRes.foodCategories) && exploreRes.foodCategories.length > 0) {
-          exploreRes.foodCategories.forEach(processCatEntry);
+        const explorePayload = exploreRes?.data || exploreRes;
+
+        if (explorePayload?.foodCategories && Array.isArray(explorePayload.foodCategories) && explorePayload.foodCategories.length > 0) {
+          explorePayload.foodCategories.forEach(processCatEntry);
         }
         if (categoriesRes?.categories && Array.isArray(categoriesRes.categories) && categoriesRes.categories.length > 0) {
           categoriesRes.categories.forEach(processCatEntry);
@@ -424,8 +426,8 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
         const rawFoodItems: DynamicFoodItem[] = [];
         const kitchenMap = new Map<string, DynamicKitchen>();
 
-        if (exploreRes?.foodItems && Array.isArray(exploreRes.foodItems) && exploreRes.foodItems.length > 0) {
-          exploreRes.foodItems.forEach((item: any) => {
+        if (explorePayload?.foodItems && Array.isArray(explorePayload.foodItems) && explorePayload.foodItems.length > 0) {
+          explorePayload.foodItems.forEach((item: any) => {
             const defaultCoords = getPincodeCoordinates(item.sellerPincode);
             const resolvedLat = item.sellerLatitude ?? defaultCoords?.lat ?? null;
             const resolvedLng = item.sellerLongitude ?? defaultCoords?.lng ?? null;
@@ -469,8 +471,8 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           });
         }
 
-        if (exploreRes?.kitchens && Array.isArray(exploreRes.kitchens) && exploreRes.kitchens.length > 0) {
-          exploreRes.kitchens.forEach((k: any) => {
+        if (explorePayload?.kitchens && Array.isArray(explorePayload.kitchens) && explorePayload.kitchens.length > 0) {
+          explorePayload.kitchens.forEach((k: any) => {
             const defaultCoords = getPincodeCoordinates(k.pincode);
             const resolvedLat = k.latitude ?? defaultCoords?.lat ?? null;
             const resolvedLng = k.longitude ?? defaultCoords?.lng ?? null;
@@ -503,8 +505,8 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
 
         // 3. Process Rooms
         const rawRooms: DynamicRoom[] = [];
-        if (exploreRes?.availableRooms && Array.isArray(exploreRes.availableRooms)) {
-          exploreRes.availableRooms.forEach((r: any) => {
+        if (explorePayload?.availableRooms && Array.isArray(explorePayload.availableRooms)) {
+          explorePayload.availableRooms.forEach((r: any) => {
             let parsedImages: string[] = [];
             if (typeof r.images === 'string') {
               try {
