@@ -283,7 +283,7 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
             <ChevronLeft size={24} />
           </button>
 
-          <h1 className={styles.headerTitle}>Add item</h1>
+          <h1 className={styles.headerTitle}>{initialItemName ? "Edit item" : "Add item"}</h1>
 
           <button
             type="button"
@@ -664,9 +664,9 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
             </div>
           </div>
 
-          {/* 10. Bottom Action: Save item */}
+          {/* 10. Bottom Action: Save / Update item */}
           <button type="submit" className={styles.saveButton}>
-            Save item
+            {initialItemName ? "Update item" : "Save item"}
           </button>
         </form>
       </div>

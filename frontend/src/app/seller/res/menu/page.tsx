@@ -100,9 +100,33 @@ export default function ResponsiveMenuPage() {
     });
   }, [menuItems]);
 
+  const handleStockChange = async (dishId: string, newStock: number) => {
+    try {
+      const formData = new FormData();
+      formData.append("stockQuantity", String(newStock));
+      formData.append("isAvailable", String(newStock > 0));
+
+      await fetchApi(`/api/seller/menu/${dishId}`, {
+        method: "PATCH",
+        body: formData,
+      });
+
+      setMenuItems((prev) =>
+        prev.map((item) =>
+          item.id === dishId
+            ? { ...item, stockQuantity: newStock, isAvailable: newStock > 0 }
+            : item
+        )
+      );
+    } catch (err) {
+      console.error("Failed to update item stock:", err);
+    }
+  };
+
   return (
     <ResponsiveMenu
       dishes={mappedDishes}
+      onStockChange={handleStockChange}
       onToggleAvailability={handleToggleAvailability}
     />
   );
