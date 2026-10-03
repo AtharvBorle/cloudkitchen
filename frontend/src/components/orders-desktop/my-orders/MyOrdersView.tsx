@@ -1500,14 +1500,16 @@ export default function MyOrdersView() {
                       </div>
 
                       <div className={styles.pastCardActionRow}>
-                        <span className={isCancelled ? styles.statusPillRed : styles.statusPillGray}>
-                          {order.statusDisplay}
-                        </span>
-                        <div className={styles.deliveredInfo}>
-                          <span className={styles.deliveredLabel}>
-                            {order.deliveredLabel || (isCancelled ? "Seller has not confirmed your order" : "Delivered")}
+                        <div className={styles.pastStatusDateRow}>
+                          <span className={isCancelled ? styles.statusPillRed : styles.statusPillGray}>
+                            {order.statusDisplay}
                           </span>
-                          <span className={styles.deliveredDateText}>{order.deliveredTime}</span>
+                          <div className={styles.deliveredInfo}>
+                            <span className={styles.deliveredLabel}>
+                              {order.deliveredLabel || (isCancelled ? "Seller has not confirmed your order" : "Delivered")}
+                            </span>
+                            <span className={styles.deliveredDateText}>{order.deliveredTime}</span>
+                          </div>
                         </div>
 
                         <div className={styles.pastButtonsGroup}>
@@ -1563,6 +1565,7 @@ export default function MyOrdersView() {
                             <>
                               {(order.refund || order.isPaid || order.price === 0) && (
                                 <span
+                                  className={styles.refundStatusBadge}
                                   style={{
                                     display: "inline-flex",
                                     alignItems: "center",
@@ -1841,7 +1844,7 @@ export default function MyOrdersView() {
                 </div>
 
                 {/* Delivery Partner Details - Real DB Data or Informative Unassigned state */}
-                {selectedOrder.status === "CANCELLED" ? (
+                {selectedOrder.status === "CANCELLED" || selectedOrder.rawStatus === "CANCELLED" || selectedOrder.rawStatus === "REJECTED" ? (
                   <div className={styles.deliveryPartnerBox} style={{ background: "#FEF2F2", border: "1px solid #FECACA" }}>
                     <div className={styles.partnerLeft}>
                       <div className={styles.partnerAvatar} style={{ background: "#FEE2E2", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "12px" }}>
@@ -1849,10 +1852,10 @@ export default function MyOrdersView() {
                       </div>
                       <div className={styles.partnerInfo}>
                         <h4 className={styles.partnerName} style={{ color: "#991B1B", fontSize: "0.92rem" }}>
-                          Order Not Confirmed
+                          Order Cancelled
                         </h4>
                         <p className={styles.partnerRole} style={{ color: "#B91C1C" }}>
-                          This order was not accepted by the kitchen partner.
+                          No delivery partner assigned. This order has been cancelled.
                         </p>
                       </div>
                     </div>
@@ -1888,6 +1891,22 @@ export default function MyOrdersView() {
                       </div>
                     )}
                   </div>
+                ) : selectedOrder.status === "DELIVERED" ? (
+                  <div className={styles.deliveryPartnerBox} style={{ background: "#F8FAFC", border: "1px solid #E2E8F0" }}>
+                    <div className={styles.partnerLeft}>
+                      <div className={styles.partnerAvatar} style={{ background: "#DCFCE7", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "12px" }}>
+                        <CheckCircle2 size={20} color="#16A34A" />
+                      </div>
+                      <div className={styles.partnerInfo}>
+                        <h4 className={styles.partnerName} style={{ color: "#15803D", fontSize: "0.92rem" }}>
+                          Order Delivered
+                        </h4>
+                        <p className={styles.partnerRole} style={{ color: "#166534" }}>
+                          Delivered to your address on {selectedOrder.deliveredTime}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 ) : (
                   <div className={styles.deliveryPartnerBox} style={{ background: "#FFFBEB", border: "1px solid #FEF3C7" }}>
                     <div className={styles.partnerLeft}>
@@ -1906,17 +1925,19 @@ export default function MyOrdersView() {
                   </div>
                 )}
 
-                {/* Live Delivery Map Graphic */}
-                <div className={styles.mapCard}>
-                  <Image
-                    src="/images/live-delivery-map.png"
-                    alt="Live Delivery Map"
-                    width={340}
-                    height={170}
-                    className={styles.mapImage}
-                    priority
-                  />
-                </div>
+                {/* Live Delivery Map Graphic (Only for active or delivered orders, never on cancelled orders) */}
+                {selectedOrder.status !== "CANCELLED" && selectedOrder.rawStatus !== "CANCELLED" && selectedOrder.rawStatus !== "REJECTED" && (
+                  <div className={styles.mapCard}>
+                    <Image
+                      src="/images/live-delivery-map.png"
+                      alt="Live Delivery Map"
+                      width={340}
+                      height={170}
+                      className={styles.mapImage}
+                      priority
+                    />
+                  </div>
+                )}
 
                 {/* Notification Alert Banner */}
                 <div className={styles.alertBox}>

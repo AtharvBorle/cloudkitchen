@@ -52,9 +52,9 @@ const DURATION_OPTIONS = [
 ];
 
 export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
-  initialPlanName = "Bronze Plan",
+  initialPlanName = "",
   initialPlanTier = "Bronze",
-  initialPrice = "499",
+  initialPrice = "",
   initialFeatures = DEFAULT_FEATURES,
   initialDuration = "1 Week",
   initialMealTimings = DEFAULT_MEAL_TIMINGS,

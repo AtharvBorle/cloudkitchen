@@ -62,10 +62,25 @@ export const ResponsiveDeliverySettings: React.FC<
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("seller_delivery_settings");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.deliveryFee !== undefined && initialSettings.deliveryFee === undefined) setDeliveryFee(parsed.deliveryFee);
+          if (parsed.enableFreeDelivery !== undefined && initialSettings.enableFreeDelivery === undefined) setEnableFreeDelivery(parsed.enableFreeDelivery);
+          if (parsed.freeDeliveryMinOrder !== undefined && initialSettings.freeDeliveryMinOrder === undefined) setFreeDeliveryMinOrder(parsed.freeDeliveryMinOrder);
+          if (parsed.riderCommission !== undefined && initialSettings.riderCommission === undefined) setRiderCommission(parsed.riderCommission);
+          if (parsed.enableDelivery !== undefined && initialSettings.enableDelivery === undefined) setEnableDelivery(parsed.enableDelivery);
+          if (parsed.enableCod !== undefined && initialSettings.enableCod === undefined) setEnableCod(parsed.enableCod);
+          if (parsed.deliveryRadiusKm !== undefined && initialSettings.deliveryRadiusKm === undefined) setDeliveryRadiusKm(parsed.deliveryRadiusKm);
+        }
+      } catch {}
+    }
     if (seller.deliveryRadiusKm && initialSettings.deliveryRadiusKm === undefined) {
       setDeliveryRadiusKm(seller.deliveryRadiusKm);
     }
-  }, [seller.deliveryRadiusKm, initialSettings.deliveryRadiusKm]);
+  }, [seller.deliveryRadiusKm, initialSettings]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -98,6 +113,15 @@ export const ResponsiveDeliverySettings: React.FC<
       riderCommission,
       enableCod,
     };
+
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("seller_delivery_settings", JSON.stringify(data));
+        window.dispatchEvent(new CustomEvent("seller-delivery-settings-updated", { detail: data }));
+      } catch (e) {
+        console.error("Failed to save delivery settings to localStorage:", e);
+      }
+    }
 
     try {
       await fetchApi("/api/seller/profile", {

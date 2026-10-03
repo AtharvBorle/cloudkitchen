@@ -500,6 +500,7 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
               reviewsCount: typeof item.reviewsCount === "number" ? item.reviewsCount : (typeof item.totalRatings === "number" ? item.totalRatings : 0),
               deliveryTime: item.deliveryTime || '20-30 min',
               servedPincodes: item.servedPincodes || [],
+              sellerDeliveryRadiusKm: item.sellerDeliveryRadiusKm !== undefined && item.sellerDeliveryRadiusKm !== null ? Number(item.sellerDeliveryRadiusKm) : (item.deliveryRadiusKm !== undefined && item.deliveryRadiusKm !== null ? Number(item.deliveryRadiusKm) : 5.0),
               addons: item.addons || item.variants || [],
               variants: item.variants || item.addons || [],
             };
@@ -531,6 +532,7 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
               isOnline: k.isOnline !== false,
               foodType: k.foodType,
               servedPincodes: k.servedPincodes || [],
+              deliveryRadiusKm: k.deliveryRadiusKm !== undefined && k.deliveryRadiusKm !== null ? Number(k.deliveryRadiusKm) : (k.sellerDeliveryRadiusKm !== undefined && k.sellerDeliveryRadiusKm !== null ? Number(k.sellerDeliveryRadiusKm) : 5.0),
             });
           });
         }
@@ -768,11 +770,19 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
     return false;
   };
 
-  // Compute active pincode from filter options or active location
-  const activePincode = (options?.pincode || defaultAddress?.pincode || '').trim() || null;
+  // Compute active location coordinates and pincode with localStorage immediate fallback
+  const localLat = typeof window !== "undefined" && localStorage.getItem("guest-lat") ? parseFloat(localStorage.getItem("guest-lat")!) : null;
+  const localLng = typeof window !== "undefined" && localStorage.getItem("guest-lng") ? parseFloat(localStorage.getItem("guest-lng")!) : null;
+  const localPin = typeof window !== "undefined" ? (localStorage.getItem("active-selected-pincode") || localStorage.getItem("guest-pincode")) : null;
 
-  const userLat = defaultAddress?.latitude != null && !isNaN(Number(defaultAddress.latitude)) ? Number(defaultAddress.latitude) : null;
-  const userLng = defaultAddress?.longitude != null && !isNaN(Number(defaultAddress.longitude)) ? Number(defaultAddress.longitude) : null;
+  const activePincode = (options?.pincode || defaultAddress?.pincode || localPin || '').trim() || null;
+
+  const userLat = (defaultAddress?.latitude != null && !isNaN(Number(defaultAddress.latitude)))
+    ? Number(defaultAddress.latitude)
+    : (localLat !== null && !isNaN(localLat) ? localLat : null);
+  const userLng = (defaultAddress?.longitude != null && !isNaN(Number(defaultAddress.longitude)))
+    ? Number(defaultAddress.longitude)
+    : (localLng !== null && !isNaN(localLng) ? localLng : null);
   const pinFallbackCoords = activePincode ? getPincodeCoordinates(activePincode) : null;
   const activeUserLat = userLat ?? pinFallbackCoords?.lat ?? null;
   const activeUserLng = userLng ?? pinFallbackCoords?.lng ?? null;
@@ -811,6 +821,21 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
       return k;
     });
   }, [kitchens, hasUserCoords, activeUserLat, activeUserLng]);
+
+  // Compute enriched rooms with accurate distances
+  const enrichedRooms = useMemo(() => {
+    return rooms.map((r) => {
+      if (hasUserCoords && r.sellerLatitude != null && r.sellerLongitude != null) {
+        const dist = calculateDistanceKm(activeUserLat!, activeUserLng!, Number(r.sellerLatitude), Number(r.sellerLongitude));
+        return {
+          ...r,
+          distanceKm: dist,
+          distanceText: formatDistance(dist),
+        };
+      }
+      return r;
+    });
+  }, [rooms, hasUserCoords, activeUserLat, activeUserLng]);
 
   // Helper to check dynamic seller delivery distance deliverability with pincode fallback
   const isSellerDeliverable = (
@@ -881,23 +906,41 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
     return true;
   };
 
+  // Strictly deliverable food items (within configured seller delivery radius)
+  const deliverableFoodItems = useMemo(() => {
+    if (!activePincode && !hasUserCoords) return enrichedFoodItems;
+    return enrichedFoodItems.filter((item) =>
+      isSellerDeliverable(
+        item.sellerLatitude,
+        item.sellerLongitude,
+        item.sellerPincode,
+        item.servedPincodes,
+        item.sellerLocality,
+        item.sellerLandmark,
+        item.sellerDeliveryRadiusKm
+      )
+    );
+  }, [enrichedFoodItems, activePincode, hasUserCoords, activeUserLat, activeUserLng]);
+
+  // Strictly deliverable kitchens (within configured seller delivery radius)
+  const deliverableKitchens = useMemo(() => {
+    if (!activePincode && !hasUserCoords) return enrichedKitchens;
+    return enrichedKitchens.filter((k) =>
+      isSellerDeliverable(
+        k.latitude,
+        k.longitude,
+        k.pincode,
+        k.servedPincodes,
+        k.locality,
+        k.landmark,
+        k.deliveryRadiusKm
+      )
+    );
+  }, [enrichedKitchens, activePincode, hasUserCoords, activeUserLat, activeUserLng]);
+
   // Compute filtered food items based on dynamic distance + filter options
   const filteredFoodItems = useMemo(() => {
-    let list = enrichedFoodItems.filter((item) => {
-      // 1. Distance / Pincode boundary check (dynamic radius per seller)
-      if (activePincode || hasUserCoords) {
-        const deliverable = isSellerDeliverable(
-          item.sellerLatitude,
-          item.sellerLongitude,
-          item.sellerPincode,
-          item.servedPincodes,
-          item.sellerLocality,
-          item.sellerLandmark,
-          item.sellerDeliveryRadiusKm
-        );
-        if (!deliverable) return false;
-      }
-
+    let list = deliverableFoodItems.filter((item) => {
       if (!options) return true;
       const { searchQuery, category, vegOnly, minPrice, maxPrice, minRating } = options;
 
@@ -944,25 +987,11 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
     }
 
     return list;
-  }, [enrichedFoodItems, activePincode, hasUserCoords, activeUserLat, activeUserLng, options]);
+  }, [deliverableFoodItems, hasUserCoords, options]);
 
   // Compute filtered kitchens based on dynamic distance + filter options
   const filteredKitchens = useMemo(() => {
-    let list = enrichedKitchens.filter((k) => {
-      // 1. Distance / Pincode boundary check (dynamic radius per seller)
-      if (activePincode || hasUserCoords) {
-        const deliverable = isSellerDeliverable(
-          k.latitude,
-          k.longitude,
-          k.pincode,
-          k.servedPincodes,
-          k.locality,
-          k.landmark,
-          k.deliveryRadiusKm
-        );
-        if (!deliverable) return false;
-      }
-
+    let list = deliverableKitchens.filter((k) => {
       if (!options) return true;
       const { searchQuery, category, vegOnly, minRating } = options;
 
@@ -999,23 +1028,23 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
     }
 
     return list;
-  }, [enrichedKitchens, activePincode, hasUserCoords, activeUserLat, activeUserLng, options]);
+  }, [deliverableKitchens, hasUserCoords, options]);
 
   return {
     categories,
-    foodItems: activePincode || hasUserCoords || options ? filteredFoodItems : enrichedFoodItems,
-    rooms,
-    kitchens: activePincode || hasUserCoords || options ? filteredKitchens : enrichedKitchens,
+    foodItems: filteredFoodItems,
+    rooms: enrichedRooms,
+    kitchens: filteredKitchens,
     coupons,
     promoBanners,
     reels,
     filteredFoodItems,
     filteredKitchens,
-    allFoodItems: enrichedFoodItems,
-    allKitchens: enrichedKitchens,
+    allFoodItems: deliverableFoodItems,
+    allKitchens: deliverableKitchens,
     activePincode,
     hasMatchingKitchens: (activePincode || hasUserCoords) ? filteredKitchens.length > 0 : enrichedKitchens.length > 0,
-    totalKitchensCount: enrichedKitchens.length,
+    totalKitchensCount: (activePincode || hasUserCoords) ? deliverableKitchens.length : enrichedKitchens.length,
     isLoading,
     error,
     isUsingFallback,
