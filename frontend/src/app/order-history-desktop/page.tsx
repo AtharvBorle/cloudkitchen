@@ -332,39 +332,11 @@ export default function OrderHistoryDesktopPage() {
     router.push(`/order-confirmation?orderId=${orderId}`);
   };
 
-  const handleReorderMeal = (orderId: string) => {
+  const handleReorderMeal = async (orderId: string) => {
     const order = formattedOrders.find((o) => o.id === orderId);
-    const rawItems = order?.rawItems || [];
-    const items: ReorderItemInfo[] = rawItems.length > 0
-      ? rawItems.map((item: any) => ({
-          id: item.foodItemId || item.id,
-          name: item.name || item.title || "Food Item",
-          quantity: item.quantity || item.qty || 1,
-          price: item.price,
-        }))
-      : [
-          {
-            name: order?.itemsOrdered || "Delicious Meal",
-            quantity: 1,
-            price: order?.totalAmount,
-          },
-        ];
-
     setPendingOrderIdForReorder(orderId);
-    setModalState({
-      isOpen: true,
-      type: "CONFIRM",
-      sellerName: order?.restaurantName || "Cloud Kitchen",
-      sellerId: order?.sellerId,
-      availableItems: items,
-    });
-  };
-
-  const handleExecuteReorderMeal = async () => {
-    if (!pendingOrderIdForReorder) return;
-    const orderId = pendingOrderIdForReorder;
-
     setReorderingOrderId(orderId);
+
     try {
       const res = await fetchApi("/api/user/orders/validate-reorder", {
         method: "POST",
@@ -389,8 +361,8 @@ export default function OrderHistoryDesktopPage() {
         setModalState({
           isOpen: true,
           type: "OFFLINE",
-          sellerName: data.sellerName || "Cloud Kitchen",
-          sellerId: data.sellerId,
+          sellerName: data.sellerName || order?.restaurantName || "Cloud Kitchen",
+          sellerId: data.sellerId || order?.sellerId,
         });
         return;
       }
@@ -400,8 +372,8 @@ export default function OrderHistoryDesktopPage() {
         setModalState({
           isOpen: true,
           type: "ALL_UNAVAILABLE",
-          sellerName: data.sellerName || "Cloud Kitchen",
-          sellerId: data.sellerId,
+          sellerName: data.sellerName || order?.restaurantName || "Cloud Kitchen",
+          sellerId: data.sellerId || order?.sellerId,
           unavailableItems: data.unavailableItems || [],
         });
         return;
@@ -412,8 +384,8 @@ export default function OrderHistoryDesktopPage() {
         setModalState({
           isOpen: true,
           type: "PARTIAL",
-          sellerName: data.sellerName || "Cloud Kitchen",
-          sellerId: data.sellerId,
+          sellerName: data.sellerName || order?.restaurantName || "Cloud Kitchen",
+          sellerId: data.sellerId || order?.sellerId,
           availableItems: data.availableItems,
           unavailableItems: data.unavailableItems,
           unavailableAddons: data.unavailableAddons || [],
@@ -427,8 +399,8 @@ export default function OrderHistoryDesktopPage() {
         setModalState({
           isOpen: true,
           type: "UNAVAILABLE_ADDONS",
-          sellerName: data.sellerName || "Cloud Kitchen",
-          sellerId: data.sellerId,
+          sellerName: data.sellerName || order?.restaurantName || "Cloud Kitchen",
+          sellerId: data.sellerId || order?.sellerId,
           availableItems: data.availableItems,
           unavailableItems: data.unavailableItems || [],
           unavailableAddons: data.unavailableAddons || [],
@@ -443,8 +415,8 @@ export default function OrderHistoryDesktopPage() {
         setModalState({
           isOpen: true,
           type: "CART_CONFLICT",
-          sellerName: data.sellerName || "Cloud Kitchen",
-          sellerId: data.sellerId,
+          sellerName: data.sellerName || order?.restaurantName || "Cloud Kitchen",
+          sellerId: data.sellerId || order?.sellerId,
           currentCartSellerName: cartItems[0].sellerName || "another kitchen",
           availableItems: data.availableItems,
           rawAvailableItems: data.availableItems,
@@ -452,19 +424,64 @@ export default function OrderHistoryDesktopPage() {
         return;
       }
 
-      // Everything is clear: Add items to cart and redirect to /cart
-      setModalState((prev) => ({ ...prev, isOpen: false }));
-      addMultipleToCart(data.availableItems, false);
-      router.push("/cart");
-    } catch (err: any) {
-      console.error("Reorder error:", err);
+      // Everything is available with live prices: Show Confirmation Dialog with live pricing
       setModalState({
         isOpen: true,
-        type: "ERROR",
-        errorMessage: err.message || "An unexpected error occurred while processing your reorder.",
+        type: "CONFIRM",
+        sellerName: data.sellerName || order?.restaurantName || "Cloud Kitchen",
+        sellerId: data.sellerId || order?.sellerId,
+        availableItems: data.availableItems,
+        rawAvailableItems: data.availableItems,
       });
+    } catch (err: any) {
+      console.error("Reorder error:", err);
+      // Fallback
+      if (order?.rawItems && order.rawItems.length > 0) {
+        const items: ReorderItemInfo[] = order.rawItems.map((item: any) => ({
+          id: item.foodItemId || item.id,
+          name: item.name || item.title || "Food Item",
+          quantity: item.quantity || item.qty || 1,
+          price: item.price,
+        }));
+        setModalState({
+          isOpen: true,
+          type: "CONFIRM",
+          sellerName: order?.restaurantName || "Cloud Kitchen",
+          sellerId: order?.sellerId,
+          availableItems: items,
+          rawAvailableItems: order.rawItems.map((item: any) => ({
+            id: item.id || `reorder-${item.name}`,
+            foodItemId: item.foodItemId || item.id,
+            name: item.name || "Delicious Meal",
+            price: item.price || 199,
+            quantity: item.quantity || item.qty || 1,
+            sellerId: item.sellerId || "k-1",
+            sellerName: order?.restaurantName || "Cloud Kitchen",
+            image: item.imageUrl || item.image || order?.imageUrl,
+            imageUrl: item.imageUrl || item.image || order?.imageUrl,
+          })),
+        });
+      } else {
+        setModalState({
+          isOpen: true,
+          type: "ERROR",
+          errorMessage: err.message || "An unexpected error occurred while validating your reorder.",
+        });
+      }
     } finally {
       setReorderingOrderId(null);
+    }
+  };
+
+  const handleExecuteReorderMeal = () => {
+    const itemsToAdd = modalState.rawAvailableItems || modalState.availableItems;
+    if (itemsToAdd && itemsToAdd.length > 0) {
+      setModalState((prev) => ({ ...prev, isOpen: false }));
+      addMultipleToCart(itemsToAdd as any, false);
+      router.push("/cart");
+    } else if (pendingOrderIdForReorder) {
+      setModalState((prev) => ({ ...prev, isOpen: false }));
+      router.push("/explore-desktop");
     }
   };
 

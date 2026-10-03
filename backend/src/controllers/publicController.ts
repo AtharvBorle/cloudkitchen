@@ -408,6 +408,13 @@ export const validateCouponForCart = async (req: Request) => {
     }
 
     const cleanCode = code.trim().toUpperCase();
+    if (cleanCode.length > 20) {
+        throw new ApiError("Coupon code cannot exceed 20 characters.", 400);
+    }
+    if (!/^[A-Z0-9_-]+$/.test(cleanCode)) {
+        throw new ApiError("Coupon code can only contain letters, numbers, hyphens, and underscores.", 400);
+    }
+
     const now = new Date();
 
     const coupon = await db.coupon.findFirst({

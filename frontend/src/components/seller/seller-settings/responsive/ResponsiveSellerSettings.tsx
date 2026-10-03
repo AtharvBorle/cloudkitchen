@@ -22,6 +22,8 @@ import {
   LayoutGrid,
   Upload,
   Save,
+  Edit2,
+  Check,
 } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import SellerNotificationChannels from "../notification-channels/SellerNotificationChannels";
@@ -32,6 +34,7 @@ import {
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import { validateEmail } from "@/lib/email-validation";
 import { validateKitchenName } from "@/lib/kitchen-validation";
+import { convertBusinessDataToCSV } from "@/lib/export-business-data-csv";
 import SellerMapPicker from "@/components/seller/seller-registration/business-information/SellerMapPicker";
 import styles from "./ResponsiveSellerSettings.module.css";
 
@@ -198,6 +201,7 @@ const INITIAL_SETTINGS: ResponsiveSellerSettingsData = {
 import { useSellerProfile, toggleSellerOnlineStatus, updateCachedProfile, computeInitials } from "@/hooks/useSellerProfile";
 import { useSellerNotifications } from "@/hooks/useSellerNotifications";
 import { fetchApi } from "@/lib/fetch-api";
+import { compressImage } from "@/lib/image-compression";
 
 export interface ResponsiveSellerSettingsProps {
   ownerName?: string;
@@ -241,17 +245,53 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
   });
 
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
-  const [formData, setFormData] = useState<ResponsiveSellerSettingsData>({
-    ...INITIAL_SETTINGS,
-    businessName: seller.businessName || INITIAL_SETTINGS.businessName,
-    phoneNumber: seller.phone || INITIAL_SETTINGS.phoneNumber,
-    businessEmail: seller.email || INITIAL_SETTINGS.businessEmail,
-    address: seller.address || INITIAL_SETTINGS.address,
-    latitude: initialData?.latitude !== undefined ? initialData.latitude : (seller.latitude ?? null),
-    longitude: initialData?.longitude !== undefined ? initialData.longitude : (seller.longitude ?? null),
-    isLocationPinned: initialData?.isLocationPinned !== undefined ? initialData.isLocationPinned : (seller.isLocationPinned ?? false),
-    storeOnline: typeof seller.isOnline === "boolean" ? seller.isOnline : INITIAL_SETTINGS.storeOnline,
-    ...initialData,
+  const [formData, setFormData] = useState<ResponsiveSellerSettingsData>(() => {
+    let savedHours = DEFAULT_OPERATING_HOURS;
+    let savedLanguage = "English";
+    let savedTimezone = "Asia/Kolkata (UTC+5:30)";
+    let savedCurrency = "INR (₹)";
+
+    if (typeof window !== "undefined") {
+      try {
+        const savedRegional = localStorage.getItem("seller_regional_settings");
+        if (savedRegional) {
+          const parsed = JSON.parse(savedRegional);
+          if (parsed.operatingHours && Array.isArray(parsed.operatingHours) && parsed.operatingHours.length > 0) {
+            savedHours = parsed.operatingHours;
+          }
+          if (parsed.language) savedLanguage = parsed.language;
+          if (parsed.timezone) savedTimezone = parsed.timezone;
+          if (parsed.currency) savedCurrency = parsed.currency;
+        } else {
+          const savedPrefs = localStorage.getItem("seller_settings_preferences");
+          if (savedPrefs) {
+            const parsed = JSON.parse(savedPrefs);
+            if (parsed.operatingHours && Array.isArray(parsed.operatingHours) && parsed.operatingHours.length > 0) {
+              savedHours = parsed.operatingHours;
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error reading initial settings in responsive:", err);
+      }
+    }
+
+    return {
+      ...INITIAL_SETTINGS,
+      operatingHours: savedHours,
+      language: savedLanguage,
+      timezone: savedTimezone,
+      currency: savedCurrency,
+      businessName: seller.businessName || INITIAL_SETTINGS.businessName,
+      phoneNumber: seller.phone || INITIAL_SETTINGS.phoneNumber,
+      businessEmail: seller.email || INITIAL_SETTINGS.businessEmail,
+      address: seller.address || INITIAL_SETTINGS.address,
+      latitude: initialData?.latitude !== undefined ? initialData.latitude : (seller.latitude ?? null),
+      longitude: initialData?.longitude !== undefined ? initialData.longitude : (seller.longitude ?? null),
+      isLocationPinned: initialData?.isLocationPinned !== undefined ? initialData.isLocationPinned : (seller.isLocationPinned ?? false),
+      storeOnline: typeof seller.isOnline === "boolean" ? seller.isOnline : INITIAL_SETTINGS.storeOnline,
+      ...initialData,
+    };
   });
 
   useEffect(() => {
@@ -265,7 +305,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
             language: parsed.language || prev.language,
             timezone: parsed.timezone || prev.timezone,
             currency: parsed.currency || prev.currency,
-            operatingHours: parsed.operatingHours || prev.operatingHours,
+            operatingHours: parsed.operatingHours && Array.isArray(parsed.operatingHours) && parsed.operatingHours.length > 0 ? parsed.operatingHours : prev.operatingHours,
           }));
         }
 
@@ -275,6 +315,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
           setFormData((prev) => ({
             ...prev,
             ...parsed,
+            operatingHours: parsed.operatingHours && Array.isArray(parsed.operatingHours) && parsed.operatingHours.length > 0 ? parsed.operatingHours : prev.operatingHours,
           }));
         }
       }
@@ -332,25 +373,33 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
     }
   }, [seller.cardImageUrl, cardFile]);
 
-  const handleCardFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCardFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      setToastData({ title: "Image size must be less than 5MB", status: "OFF" });
+    if (file.size > 10 * 1024 * 1024) {
+      setToastData({ title: "Image size must be less than 10MB", status: "OFF" });
       return;
     }
-    setCardFile(file);
     const localUrl = URL.createObjectURL(file);
     setCardPreview(localUrl);
+    setCardFile(file);
     setToastData({ title: "Card photo selected. Tap Save to apply.", status: "ON" });
+
+    try {
+      const compressed = await compressImage(file, { maxDimension: 1200, quality: 0.82 });
+      setCardFile(compressed);
+    } catch {
+      // Fallback to original file
+    }
   };
 
   const handleQuickUploadCard = async () => {
     if (!cardFile) return;
     setIsUploadingCard(true);
     try {
+      const fileToUpload = await compressImage(cardFile, { maxDimension: 1200, quality: 0.82 });
       const data = new FormData();
-      data.append("cardImageFile", cardFile);
+      data.append("cardImageFile", fileToUpload);
       data.append("businessName", formData.businessName || seller.businessName);
       data.append("phone", formData.phoneNumber || seller.phone);
       data.append("email", formData.businessEmail || seller.email);
@@ -427,25 +476,33 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
     }
   }, [seller.bannerImageUrl, bannerFile]);
 
-  const handleBannerFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBannerFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      setToastData({ title: "Image size must be less than 5MB", status: "OFF" });
+    if (file.size > 10 * 1024 * 1024) {
+      setToastData({ title: "Image size must be less than 10MB", status: "OFF" });
       return;
     }
-    setBannerFile(file);
     const localUrl = URL.createObjectURL(file);
     setBannerPreview(localUrl);
+    setBannerFile(file);
     setToastData({ title: "Banner selected. Tap Save to apply.", status: "ON" });
+
+    try {
+      const compressed = await compressImage(file, { maxDimension: 1600, quality: 0.82 });
+      setBannerFile(compressed);
+    } catch {
+      // Fallback to original file
+    }
   };
 
   const handleQuickUploadBanner = async () => {
     if (!bannerFile) return;
     setIsUploadingBanner(true);
     try {
+      const fileToUpload = await compressImage(bannerFile, { maxDimension: 1600, quality: 0.82 });
       const data = new FormData();
-      data.append("bannerImageFile", bannerFile);
+      data.append("bannerImageFile", fileToUpload);
       data.append("businessName", formData.businessName || seller.businessName);
       data.append("phone", formData.phoneNumber || seller.phone);
       data.append("email", formData.businessEmail || seller.email);
@@ -531,6 +588,75 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
   const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
+  // Address Direct Edit / Update states
+  const [isEditingAddress, setIsEditingAddress] = useState(false);
+  const [isUpdatingAddress, setIsUpdatingAddress] = useState(false);
+  const [addressUpdatedSuccess, setAddressUpdatedSuccess] = useState(false);
+  const addressTextareaRef = React.useRef<HTMLTextAreaElement>(null);
+
+  const handleToggleEditAddress = () => {
+    setIsEditingAddress(true);
+    setTimeout(() => {
+      addressTextareaRef.current?.focus();
+    }, 50);
+  };
+
+  const handleQuickUpdateAddress = async () => {
+    if (!formData.address.trim()) {
+      setToastData({ title: "Address cannot be empty", status: "OFF" });
+      return;
+    }
+
+    setIsUpdatingAddress(true);
+    try {
+      const res = await fetchApi("/api/seller/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          address: formData.address.trim(),
+          latitude: formData.latitude,
+          longitude: formData.longitude,
+          isLocationPinned: Boolean(formData.latitude && formData.longitude),
+        }),
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.message || "Failed to update address");
+      }
+
+      // Update cached profile state
+      updateCachedProfile({
+        address: formData.address.trim(),
+        latitude: formData.latitude,
+        longitude: formData.longitude,
+        isLocationPinned: Boolean(formData.latitude && formData.longitude),
+      });
+
+      // Sync localStorage
+      if (typeof window !== "undefined") {
+        try {
+          const prevPrefs = JSON.parse(localStorage.getItem("seller_settings_preferences") || "{}");
+          localStorage.setItem(
+            "seller_settings_preferences",
+            JSON.stringify({ ...prevPrefs, address: formData.address.trim() })
+          );
+        } catch {}
+        window.dispatchEvent(new CustomEvent("seller-status-updated"));
+      }
+
+      setAddressUpdatedSuccess(true);
+      setIsEditingAddress(false);
+      setToastData({ title: "Registered address updated successfully!", status: "ON" });
+      setTimeout(() => setAddressUpdatedSuccess(false), 4000);
+    } catch (err: any) {
+      console.error("Failed to update address:", err);
+      setToastData({ title: err.message || "Failed to update address", status: "OFF" });
+    } finally {
+      setIsUpdatingAddress(false);
+    }
+  };
+
   useEffect(() => {
     if (!toastData) return;
     const timer = setTimeout(() => {
@@ -573,10 +699,28 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
         isOpen: nextIsOpen,
       };
       showNotificationToast(`${targetDay.day} Schedule`, nextIsOpen);
-      return {
+      const nextFormData = {
         ...prev,
         operatingHours: updated,
       };
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem(
+            "seller_regional_settings",
+            JSON.stringify({
+              language: prev.language,
+              timezone: prev.timezone,
+              currency: prev.currency,
+              operatingHours: updated,
+            })
+          );
+          localStorage.setItem(
+            "seller_settings_preferences",
+            JSON.stringify(nextFormData)
+          );
+        } catch {}
+      }
+      return nextFormData;
     });
   };
 
@@ -603,6 +747,20 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
         });
         return;
       }
+    }
+
+    // Validate operating hours: Start Time and End Time cannot be the same
+    const invalidOperatingDay = formData.operatingHours.find(
+      (row) => row.isOpen && row.timeRange && (
+        row.timeRange.split("-")[0]?.trim() === row.timeRange.split("-")[1]?.trim()
+      )
+    );
+    if (invalidOperatingDay) {
+      setToastData({
+        title: `Start Time and End Time cannot be the same for ${invalidOperatingDay.day}.`,
+        status: "OFF",
+      });
+      return;
     }
 
     setSaving(true);
@@ -736,6 +894,48 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
         window.location.href = "/seller/login";
       }, 1500);
     }, 1200);
+  };
+
+  const [isExportingData, setIsExportingData] = useState<boolean>(false);
+
+  const handleExportBusinessData = async () => {
+    if (isExportingData) return;
+    setIsExportingData(true);
+    setToastData({ title: "Exporting Business Data...", status: "ON" });
+    try {
+      const res = await fetchApi("/api/seller/export-data", {
+        method: "GET",
+      });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.message || "Failed to export business data");
+      }
+      const json = await res.json();
+      const payload = json.data || json;
+
+      const csvContent = convertBusinessDataToCSV(payload);
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const downloadAnchor = document.createElement("a");
+      const safeName = (formData.businessName || seller.businessName || "business-data")
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "-")
+        .replace(/-+/g, "-");
+      const dateStr = new Date().toISOString().split("T")[0];
+      downloadAnchor.setAttribute("href", url);
+      downloadAnchor.setAttribute("download", `${safeName}-business-data-${dateStr}.csv`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      URL.revokeObjectURL(url);
+
+      setToastData({ title: "Business data exported and downloaded as CSV (Excel) successfully!", status: "ON" });
+    } catch (err: any) {
+      console.error("Export data error:", err);
+      setToastData({ title: err.message || "Failed to export business data", status: "OFF" });
+    } finally {
+      setIsExportingData(false);
+    }
   };
 
   return (
@@ -1405,19 +1605,141 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                 </div>
 
                 <div className={styles.fieldGroup}>
-                  <label className={styles.label}>
-                    Registered Address &amp; Building Details <span style={{ color: "#EA580C" }}>*</span>
-                  </label>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+                    <label className={styles.label} style={{ margin: 0 }}>
+                      Registered Address &amp; Building Details <span style={{ color: "#EA580C" }}>*</span>
+                    </label>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      {addressUpdatedSuccess && (
+                        <span
+                          style={{
+                            fontSize: "11px",
+                            fontWeight: 700,
+                            color: "#16A34A",
+                            backgroundColor: "#F0FDF4",
+                            padding: "3px 8px",
+                            borderRadius: "8px",
+                            border: "1px solid #BBF7D0",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
+                          }}
+                        >
+                          <CheckCircle2 size={12} /> Address Updated
+                        </span>
+                      )}
+                      {!isEditingAddress ? (
+                        <button
+                          type="button"
+                          onClick={handleToggleEditAddress}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "5px",
+                            padding: "4px 10px",
+                            borderRadius: "8px",
+                            border: "1px solid #FED7AA",
+                            backgroundColor: "#FFF7ED",
+                            color: "#EA580C",
+                            fontSize: "12px",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                          }}
+                        >
+                          <Edit2 size={12} />
+                          <span>Edit Address</span>
+                        </button>
+                      ) : (
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          <button
+                            type="button"
+                            onClick={() => setIsEditingAddress(false)}
+                            style={{
+                              padding: "4px 8px",
+                              borderRadius: "8px",
+                              border: "1px solid #E2E8F0",
+                              backgroundColor: "#FFFFFF",
+                              color: "#64748B",
+                              fontSize: "12px",
+                              fontWeight: 600,
+                              cursor: "pointer",
+                            }}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleQuickUpdateAddress}
+                            disabled={isUpdatingAddress}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "5px",
+                              padding: "4px 12px",
+                              borderRadius: "8px",
+                              border: "none",
+                              backgroundColor: "#EA580C",
+                              color: "#FFFFFF",
+                              fontSize: "12px",
+                              fontWeight: 700,
+                              cursor: isUpdatingAddress ? "not-allowed" : "pointer",
+                              boxShadow: "0 2px 6px rgba(234, 88, 12, 0.25)",
+                            }}
+                          >
+                            {isUpdatingAddress ? <Loader2 size={12} className={styles.spinner} /> : <Save size={12} />}
+                            <span>{isUpdatingAddress ? "Updating..." : "Update Address"}</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                   <textarea
+                    ref={addressTextareaRef}
                     className={styles.textarea}
                     value={formData.address}
                     onChange={(e) => handleInputChange("address", e.target.value)}
                     placeholder="Flat / Shop No., Building Name, Street / Road, Area, City, Pincode"
                     rows={3}
+                    style={
+                      isEditingAddress
+                        ? {
+                            borderColor: "#EA580C",
+                            boxShadow: "0 0 0 3px rgba(234, 88, 12, 0.15)",
+                            backgroundColor: "#FFFFFF",
+                          }
+                        : {}
+                    }
                   />
-                  <p className={styles.helperText} style={{ marginTop: "3px" }}>
-                    Shown on customer receipts and used by delivery riders for store pickup navigation.
-                  </p>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "4px", flexWrap: "wrap", gap: "6px" }}>
+                    <p className={styles.helperText} style={{ margin: 0 }}>
+                      Shown on customer receipts and used by delivery riders for store pickup navigation.
+                    </p>
+                    {isEditingAddress && (
+                      <button
+                        type="button"
+                        onClick={handleQuickUpdateAddress}
+                        disabled={isUpdatingAddress}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "5px",
+                          padding: "6px 14px",
+                          borderRadius: "8px",
+                          border: "none",
+                          backgroundColor: "#EA580C",
+                          color: "#FFFFFF",
+                          fontSize: "12px",
+                          fontWeight: 700,
+                          cursor: isUpdatingAddress ? "not-allowed" : "pointer",
+                          boxShadow: "0 2px 6px rgba(234, 88, 12, 0.25)",
+                        }}
+                      >
+                        {isUpdatingAddress ? <Loader2 size={12} className={styles.spinner} /> : <Check size={12} />}
+                        <span>Save &amp; Update Address</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -1935,15 +2257,15 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                         color: "#334155",
                         fontSize: "13px",
                         fontWeight: 600,
-                        cursor: "pointer",
+                        cursor: isExportingData ? "not-allowed" : "pointer",
+                        opacity: isExportingData ? 0.7 : 1,
                         fontFamily: "inherit",
                         width: "100%",
                       }}
-                      onClick={() => {
-                        showNotificationToast("Exporting Business Data...", true);
-                      }}
+                      disabled={isExportingData}
+                      onClick={handleExportBusinessData}
                     >
-                      Export My Business Data
+                      {isExportingData ? "Exporting Business Data..." : "Export My Business Data"}
                     </button>
                     <button
                       type="button"

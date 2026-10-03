@@ -26,6 +26,10 @@ import {
   matchesKitchenCategoryFilter,
   matchesDishCategory,
   matchesDishSearch,
+  isDishMatchingCuisine,
+  isKitchenServingCuisine,
+  isKitchenHavingOffers,
+  isDishHavingOffers,
 } from "@/lib/dietary-filter";
 
 export default function Home() {
@@ -78,24 +82,22 @@ export default function Home() {
     if (!items || items.length === 0) return undefined;
 
     const cuisineCounts: Record<string, number> = {};
-    items.forEach((item) => {
-      if (item.categoryName) {
-        cuisineCounts[item.categoryName] = (cuisineCounts[item.categoryName] || 0) + 1;
-      }
+    availableCuisines.forEach((c) => {
+      cuisineCounts[c] = items.filter((f) => isDishMatchingCuisine(c, f)).length;
     });
 
     return {
       all: items.length,
-      veg: items.filter((f) => f.itemType === "VEG" || f.itemType === "VEGAN" || f.itemType === "JAIN").length,
-      non_veg: items.filter((f) => f.itemType === "NON_VEG" || f.itemType?.includes("NON_VEG")).length,
-      vegan: items.filter((f) => f.itemType === "VEGAN").length,
-      jain: items.filter((f) => f.itemType === "JAIN").length,
+      veg: items.filter((f) => isDishMatchingDiet(f, "veg")).length,
+      non_veg: items.filter((f) => isDishMatchingDiet(f, "non_veg")).length,
+      vegan: items.filter((f) => isDishMatchingDiet(f, "vegan")).length,
+      jain: items.filter((f) => isDishMatchingDiet(f, "jain")).length,
       under150: items.filter((f) => f.price <= 150).length,
       price150to300: items.filter((f) => f.price > 150 && f.price <= 300).length,
       price300plus: items.filter((f) => f.price > 300).length,
       cuisineCounts,
     };
-  }, [homeData.foodItems, homeData.allFoodItems, homeSearchQuery]);
+  }, [homeData.foodItems, homeData.allFoodItems, availableCuisines, homeSearchQuery]);
 
   // Dynamic Kitchens / Places (and multi-dimensional filtering)
   const dynamicPlaces = useMemo(() => {
@@ -130,25 +132,29 @@ export default function Home() {
 
     // 3. Rating Filter (4.5+)
     if (activeFilters.minRating) {
-      const filtered = list.filter((k) => (k.rating || 0) >= (activeFilters.minRating || 4.5));
-      if (filtered.length > 0) list = filtered;
+      list = list.filter((k) => (k.rating || 0) >= (activeFilters.minRating || 4.5));
     }
 
     // 4. Fastest Delivery Filter (<30 min)
     if (activeFilters.fastest) {
-      const filtered = list.filter((k) => {
+      list = list.filter((k) => {
         const num = parseInt(k.time) || 30;
         return num <= 25 || k.time.includes("15") || k.time.includes("20");
       });
-      if (filtered.length > 0) list = filtered;
+    }
+
+    // 4.5 Offers & Deals Filter (Only show kitchens having offers/coupons)
+    if (activeFilters.offersOnly) {
+      list = list.filter((k) =>
+        isKitchenHavingOffers(k, homeData.coupons, sourceFoodItems)
+      );
     }
 
     // 5. Cuisines Filter
     if (activeFilters.cuisines && activeFilters.cuisines.length > 0) {
-      const filtered = list.filter((k) =>
-        activeFilters.cuisines?.some((c) => k.category?.toLowerCase().includes(c.toLowerCase()))
+      list = list.filter((k) =>
+        activeFilters.cuisines!.some((c) => isKitchenServingCuisine(c, k, sourceFoodItems))
       );
-      if (filtered.length > 0) list = filtered;
     }
 
     // 6. Price Tier Filter
@@ -217,21 +223,17 @@ export default function Home() {
     }
 
     if (activeFilters.priceTier === "under-150") {
-      const filtered = list.filter((f) => f.price <= 150);
-      if (filtered.length > 0) list = filtered;
+      list = list.filter((f) => f.price <= 150);
     } else if (activeFilters.priceTier === "150-300") {
-      const filtered = list.filter((f) => f.price > 150 && f.price <= 300);
-      if (filtered.length > 0) list = filtered;
+      list = list.filter((f) => f.price > 150 && f.price <= 300);
     } else if (activeFilters.priceTier === "300-plus") {
-      const filtered = list.filter((f) => f.price > 300);
-      if (filtered.length > 0) list = filtered;
+      list = list.filter((f) => f.price > 300);
     }
 
     if (activeFilters.cuisines && activeFilters.cuisines.length > 0) {
-      const filtered = list.filter((f) =>
-        activeFilters.cuisines?.some((c) => f.categoryName?.toLowerCase().includes(c.toLowerCase()) || f.name.toLowerCase().includes(c.toLowerCase()))
+      list = list.filter((f) =>
+        activeFilters.cuisines!.some((c) => isDishMatchingCuisine(c, f))
       );
-      if (filtered.length > 0) list = filtered;
     }
 
     if (list.length === 0) return [];
@@ -295,34 +297,25 @@ export default function Home() {
 
     // Price tier filter
     if (activeFilters.priceTier === "under-150") {
-      const filtered = list.filter((f) => f.price <= 150);
-      if (filtered.length > 0) list = filtered;
+      list = list.filter((f) => f.price <= 150);
     } else if (activeFilters.priceTier === "150-300") {
-      const filtered = list.filter((f) => f.price > 150 && f.price <= 300);
-      if (filtered.length > 0) list = filtered;
+      list = list.filter((f) => f.price > 150 && f.price <= 300);
     } else if (activeFilters.priceTier === "300-plus") {
-      const filtered = list.filter((f) => f.price > 300);
-      if (filtered.length > 0) list = filtered;
+      list = list.filter((f) => f.price > 300);
     }
 
     if (activeFilters.cuisines && activeFilters.cuisines.length > 0) {
-      const filtered = list.filter((f) =>
-        activeFilters.cuisines?.some((c) => f.categoryName?.toLowerCase().includes(c.toLowerCase()) || f.name.toLowerCase().includes(c.toLowerCase()))
+      list = list.filter((f) =>
+        activeFilters.cuisines!.some((c) => isDishMatchingCuisine(c, f))
       );
-      if (filtered.length > 0) list = filtered;
     }
 
     if (activeFilters.offersOnly) {
-      list = list.filter((f) => {
-        return homeData.coupons.some(
-          (cp: any) => !cp.appliesToSellerId || cp.appliesToSellerId === f.sellerId
-        );
-      });
+      list = list.filter((f) => isDishHavingOffers(f, homeData.coupons));
     }
 
     if (activeFilters.minRating) {
-      const filtered = list.filter((f) => (f.rating || 0) >= (activeFilters.minRating || 4.5));
-      if (filtered.length > 0) list = filtered;
+      list = list.filter((f) => (f.rating || 0) >= (activeFilters.minRating || 4.5));
     }
 
     return list.slice(0, 4).map((f) => {
@@ -374,26 +367,25 @@ export default function Home() {
     }
 
     if (activeFilters.priceTier === "under-150") {
-      const filtered = list.filter((f) => f.price <= 150);
-      if (filtered.length > 0) list = filtered;
+      list = list.filter((f) => f.price <= 150);
     } else if (activeFilters.priceTier === "150-300") {
-      const filtered = list.filter((f) => f.price > 150 && f.price <= 300);
-      if (filtered.length > 0) list = filtered;
+      list = list.filter((f) => f.price > 150 && f.price <= 300);
     } else if (activeFilters.priceTier === "300-plus") {
-      const filtered = list.filter((f) => f.price > 300);
-      if (filtered.length > 0) list = filtered;
+      list = list.filter((f) => f.price > 300);
     }
 
     if (activeFilters.cuisines && activeFilters.cuisines.length > 0) {
-      const filtered = list.filter((f) =>
-        activeFilters.cuisines?.some((c) => f.categoryName?.toLowerCase().includes(c.toLowerCase()) || f.name.toLowerCase().includes(c.toLowerCase()))
+      list = list.filter((f) =>
+        activeFilters.cuisines!.some((c) => isDishMatchingCuisine(c, f))
       );
-      if (filtered.length > 0) list = filtered;
+    }
+
+    if (activeFilters.offersOnly) {
+      list = list.filter((f) => isDishHavingOffers(f, homeData.coupons));
     }
 
     if (activeFilters.minRating) {
-      const filtered = list.filter((f) => (f.rating || 0) >= (activeFilters.minRating || 4.5));
-      if (filtered.length > 0) list = filtered;
+      list = list.filter((f) => (f.rating || 0) >= (activeFilters.minRating || 4.5));
     }
 
     return list.slice(0, 6).map((f) => ({
@@ -418,7 +410,7 @@ export default function Home() {
       addons: f.addons,
       variants: f.variants,
     }));
-  }, [homeData.foodItems, homeData.allFoodItems, selectedCategory, activeFilters, homeSearchQuery]);
+  }, [homeData.foodItems, homeData.allFoodItems, homeData.coupons, selectedCategory, activeFilters, homeSearchQuery]);
 
   // Dynamic Recommended Dishes for RecommendedForYou
   const dynamicRecommended = useMemo(() => {
@@ -439,21 +431,21 @@ export default function Home() {
     }
 
     if (activeFilters.priceTier === "under-150") {
-      const filtered = list.filter((f) => f.price <= 150);
-      if (filtered.length > 0) list = filtered;
+      list = list.filter((f) => f.price <= 150);
     } else if (activeFilters.priceTier === "150-300") {
-      const filtered = list.filter((f) => f.price > 150 && f.price <= 300);
-      if (filtered.length > 0) list = filtered;
+      list = list.filter((f) => f.price > 150 && f.price <= 300);
     } else if (activeFilters.priceTier === "300-plus") {
-      const filtered = list.filter((f) => f.price > 300);
-      if (filtered.length > 0) list = filtered;
+      list = list.filter((f) => f.price > 300);
     }
 
     if (activeFilters.cuisines && activeFilters.cuisines.length > 0) {
-      const filtered = list.filter((f) =>
-        activeFilters.cuisines?.some((c) => f.categoryName?.toLowerCase().includes(c.toLowerCase()) || f.name.toLowerCase().includes(c.toLowerCase()))
+      list = list.filter((f) =>
+        activeFilters.cuisines!.some((c) => isDishMatchingCuisine(c, f))
       );
-      if (filtered.length > 0) list = filtered;
+    }
+
+    if (activeFilters.offersOnly) {
+      list = list.filter((f) => isDishHavingOffers(f, homeData.coupons));
     }
 
     const items = list.length > 4 ? [...list].reverse() : list;

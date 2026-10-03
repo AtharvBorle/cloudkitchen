@@ -519,12 +519,27 @@ export const forgotPasswordRequest = async (req: Request) => {
         });
     }
 
+    const requestedRole = (role || "").toUpperCase();
+
+    // If account not found in database:
     if (!user) {
-        throw new ApiError("No registered account found with these details. Please check your email or sign up.", 404);
+        if (requestedRole === "SELLER") {
+            throw new ApiError("No seller found with this email ID", 404);
+        } else {
+            throw new ApiError("No user found with this email ID", 404);
+        }
     }
 
-    if (role === "SELLER" && user.role !== "SELLER") {
-        throw new ApiError("This account is not registered as an Owner/Seller account.", 403);
+    // Role Verification & Strict Separation:
+    if (requestedRole === "SELLER") {
+        if (user.role !== "SELLER") {
+            throw new ApiError("No seller found with this email ID", 403);
+        }
+    } else {
+        // Requested from User/Customer forgot password (role is "USER" or default)
+        if (user.role !== "USER") {
+            throw new ApiError("No user found with this email ID", 403);
+        }
     }
 
     return {
@@ -565,12 +580,24 @@ export const resetPasswordWithOtp = async (req: Request) => {
         where: { email: normalizedEmail }
     });
 
+    const requestedRole = (role || "").toUpperCase();
+
     if (!user) {
-        throw new ApiError("User account not found.", 404);
+        if (requestedRole === "SELLER") {
+            throw new ApiError("No seller found with this email ID", 404);
+        } else {
+            throw new ApiError("No user found with this email ID", 404);
+        }
     }
 
-    if (role === "SELLER" && user.role !== "SELLER") {
-        throw new ApiError("This account is not registered as an Owner/Seller account.", 403);
+    if (requestedRole === "SELLER") {
+        if (user.role !== "SELLER") {
+            throw new ApiError("No seller found with this email ID", 403);
+        }
+    } else {
+        if (user.role !== "USER") {
+            throw new ApiError("No user found with this email ID", 403);
+        }
     }
 
     const passwordHash = await bcrypt.hash(newPassword, 10);

@@ -150,6 +150,7 @@
   flex-direction: column;
   gap: 3px;
   min-width: 0;
+  white-space: nowrap;
 }
 
 .vendorTitle {
@@ -157,12 +158,22 @@
   font-weight: 700;
   color: #0f172a;
   margin: 0;
+  white-space: nowrap;
 }
 
 .itemSummaryText {
   font-size: 0.85rem;
   color: #64748b;
   margin: 0;
+  white-space: nowrap;
+}
+
+.itemCountText {
+  font-size: 0.76rem;
+  color: #64748b;
+  font-weight: 500;
+  margin: 0;
+  white-space: nowrap;
 }
 
 .priceAndDateRow {
@@ -172,6 +183,7 @@
   font-size: 0.85rem;
   color: #64748b;
   margin-top: 2px;
+  white-space: nowrap;
 }
 
 .priceSingleLine {
@@ -179,6 +191,7 @@
   font-weight: 700;
   color: #0f172a;
   line-height: 1.2;
+  white-space: nowrap;
 }
 
 .dateSingleLine {
@@ -186,6 +199,7 @@
   color: #94a3b8;
   line-height: 1.2;
   margin-top: 1px;
+  white-space: nowrap;
 }
 
 .priceHighlight {
@@ -412,14 +426,19 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  min-width: 0;
+  width: 250px;
+  min-width: 250px;
+  max-width: 260px;
+  flex-shrink: 0;
 }
 
 .pastCardActionRow {
   display: flex;
   align-items: center;
-  gap: 18px;
-  flex-shrink: 0;
+  gap: 16px;
+  flex: 1;
+  justify-content: space-between;
+  min-width: 0;
 }
 
 .orderCard:hover {
@@ -435,23 +454,39 @@
 .statusPillGray {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  gap: 5px;
   background: #f1f5f9;
   color: #475569;
   font-size: 0.76rem;
   font-weight: 600;
-  padding: 4px 12px;
+  padding: 4px 14px;
   border-radius: 9999px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .statusPillRed {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  gap: 5px;
   background: #fee2e2;
   color: #ef4444;
   font-size: 0.76rem;
   font-weight: 600;
-  padding: 4px 12px;
+  padding: 4px 14px;
   border-radius: 9999px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.pastCardActionRow .statusPillGray,
+.pastCardActionRow .statusPillRed {
+  width: 86px;
+  padding: 4px 8px;
 }
 
 .deliveredInfo {
@@ -459,21 +494,42 @@
   flex-direction: column;
   align-items: flex-end;
   gap: 2px;
-  min-width: 100px;
+  text-align: right;
+  width: 140px;
+  min-width: 140px;
+  max-width: 140px;
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .deliveredLabel {
-  font-size: 0.72rem;
+  font-size: 0.65rem;
   color: #94a3b8;
   font-weight: 500;
-  line-height: 1.1;
+  line-height: 1.15;
+  text-align: right;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .deliveredDateText {
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 600;
   color: #1e293b;
   line-height: 1.2;
+  white-space: nowrap;
+}
+
+.pastButtonsGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+  flex: 1;
+  min-width: 0;
 }
 
 .reorderBtn {
@@ -1884,5 +1940,153 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* ==========================================================================
+   Pagination Bar & Controls
+   ========================================================================== */
+.paginationContainer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 20px;
+  padding: 16px 22px;
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+  animation: paginationFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes paginationFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.paginationInfo {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.paginationHighlight {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.paginationControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pageNavBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #334155;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+.pageNavBtn:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #ea580c;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.pageNavBtn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.pageNavBtnDisabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #94a3b8;
+}
+
+.pageNumbersList {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pageNumberBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 8px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #475569;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+.pageNumberBtn:hover:not(.pageNumberBtnActive) {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #ea580c;
+  transform: translateY(-1px);
+}
+
+.pageNumberBtnActive {
+  background: linear-gradient(135deg, #ea580c 0%, #f97316 100%) !important;
+  color: #ffffff !important;
+  border-color: #ea580c !important;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.28);
+  transform: scale(1.05);
+}
+
+.pageEllipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 36px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #94a3b8;
+  letter-spacing: 2px;
+  user-select: none;
+}
+
+@media (max-width: 640px) {
+  .paginationContainer {
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+}
+
 
 
