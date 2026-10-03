@@ -183,9 +183,19 @@ function FoodExploreContent() {
       );
     }
 
-    // Open Only
+    // Open Only (Hides items from closed kitchens and out-of-stock items)
     if (openOnly) {
-      list = list.filter((f) => f.sellerIsOnline !== false && f.isAvailable !== false);
+      list = list.filter((f) => {
+        const rawStock = (f as any).maxStock !== undefined ? (f as any).maxStock : (f as any).stockQuantity;
+        const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
+        const isOutOfStock = stockLimit === 0 || f.isAvailable === false;
+        const isSellerClosed = f.sellerIsOnline === false;
+        const matchedKitchen = homeData.kitchens.find(
+          (k) => k.id === f.sellerId || (f.sellerTrackingId && k.trackingId === f.sellerTrackingId)
+        );
+        const isKitchenClosed = matchedKitchen && matchedKitchen.isOnline === false;
+        return !isSellerClosed && !isOutOfStock && !isKitchenClosed;
+      });
     }
 
     // Offers only
