@@ -242,19 +242,30 @@ export function HouseMapPicker({ latitude, longitude, onChange, label, height }:
         };
     }, []);
 
-    // Update marker position if coordinates change externally
+    // Update marker position and center map on searched location
     useEffect(() => {
         if (mapRef.current && markerRef.current && latitude !== null && longitude !== null) {
             const L = (window as any).L;
             if (L) {
                 try {
                     const currentLatLng = markerRef.current.getLatLng();
-                    if (currentLatLng && (currentLatLng.lat !== latitude || currentLatLng.lng !== longitude)) {
+                    if (!currentLatLng || currentLatLng.lat !== latitude || currentLatLng.lng !== longitude) {
                         markerRef.current.setLatLng([latitude, longitude]);
-                        mapRef.current.panTo([latitude, longitude]);
+                        if (typeof mapRef.current.flyTo === "function") {
+                            mapRef.current.flyTo([latitude, longitude], 16, { animate: true, duration: 0.6 });
+                        } else {
+                            mapRef.current.setView([latitude, longitude], 16);
+                        }
+                        setTimeout(() => {
+                            if (isMountedRef.current && mapRef.current) {
+                                mapRef.current.invalidateSize();
+                            }
+                        }, 150);
                     }
                 } catch (e) {
-                    // Ignore transient pan error
+                    try {
+                        mapRef.current.setView([latitude, longitude], 16);
+                    } catch {}
                 }
             }
         }
