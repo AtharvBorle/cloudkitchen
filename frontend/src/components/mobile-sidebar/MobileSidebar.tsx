@@ -32,7 +32,6 @@ import {
   Shield,
 } from "lucide-react";
 import styles from "./MobileSidebar.module.css";
-import userAvatar from "../settings-desktop/settings-sidebar/rahul-sharma-avatar.jpg";
 import logoImg from "@/components/navbar/logo-nav.png";
 
 export interface MobileSidebarProps {
@@ -98,6 +97,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
   const [isSettingsDropdownOpen, setIsSettingsDropdownOpen] = useState<boolean>(isSettingsRoute);
 
   const userName = customUserName || session?.user?.name || (session ? "User" : "Guest User");
+  const userInitial = (userName?.trim()?.charAt(0) || "U").toUpperCase();
 
   // Lock body scroll and sync dropdown state when drawer is opened
   useEffect(() => {
@@ -416,12 +416,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
           aria-label="View User Profile & Settings"
         >
           <div className={styles.avatarWrapper}>
-            <Image
-              src={userAvatar}
-              alt={userName}
-              fill
-              className={styles.avatarImg}
-            />
+            <span className={styles.avatarInitial}>{userInitial}</span>
           </div>
           <div className={styles.userInfo}>
             <h3 className={styles.userName}>{userName}</h3>
@@ -439,11 +434,6 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
               <div className={styles.goldBadge} style={{ background: '#059669', color: '#ffffff' }}>
                 <Utensils size={11} fill="#FFFFFF" color="#FFFFFF" />
                 <span>Delivery Partner</span>
-              </div>
-            ) : isGoldMember ? (
-              <div className={styles.goldBadge}>
-                <Star size={11} fill="#FFFFFF" color="#FFFFFF" />
-                <span>Gold Member</span>
               </div>
             ) : null}
           </div>
