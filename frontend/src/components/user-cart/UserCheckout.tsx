@@ -157,11 +157,23 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
 
   // Auto-apply eligible coupon when conditions are met
   React.useEffect(() => {
-    if (userDismissedPromo || isValidatingPromo || availableOffers.length === 0) {
+    if (userDismissedPromo || isValidatingPromo) {
       return;
     }
 
-    if (subtotal <= 0) return;
+    if (subtotal <= 0 || cartItems.length === 0 || !activeSellerId) {
+      if (appliedCoupon || appliedPromo) {
+        setAppliedCoupon(null);
+        setAppliedPromo(null);
+        setDiscountPercent(0);
+        setPromoCode("");
+      }
+      return;
+    }
+
+    if (availableOffers.length === 0) {
+      return;
+    }
 
     // Filter offers configured with isAutoApply that satisfy minimum cart & scope & eligibility
     const eligibleAutoOffers = availableOffers.filter((offer) => {
@@ -171,8 +183,12 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
       const minCart = offer.minimumCartValue ?? offer.minOrderAmount ?? 0;
       if (subtotal < minCart) return false;
 
-      if (offer.appliesToSellerId && activeSellerId && offer.appliesToSellerId !== activeSellerId) {
-        return false;
+      if (offer.appliesToSellerId && offer.appliesToSellerId !== "ALL" && offer.appliesToSellerId !== "GLOBAL") {
+        const cSid = String(offer.appliesToSellerId).toLowerCase().trim();
+        const curSid = String(activeSellerId || "").toLowerCase().trim();
+        if (curSid !== cSid) {
+          return false;
+        }
       }
       if (offer.appliesToProductId) {
         const hasProduct = cartItems.some(
@@ -235,7 +251,28 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
 
   // Auto-remove or invalidate applied coupon whenever subtotal drops below minimum required cart value or required item is removed
   React.useEffect(() => {
-    if (!appliedCoupon) return;
+    if (!appliedCoupon && !appliedPromo) return;
+
+    if (cartItems.length === 0 || subtotal <= 0) {
+      setAppliedCoupon(null);
+      setAppliedPromo(null);
+      setDiscountPercent(0);
+      setPromoCode("");
+      return;
+    }
+
+    if (appliedCoupon?.appliesToSellerId && appliedCoupon.appliesToSellerId !== "ALL" && appliedCoupon.appliesToSellerId !== "GLOBAL") {
+      const cSid = String(appliedCoupon.appliesToSellerId).toLowerCase().trim();
+      const curSid = String(activeSellerId || "").toLowerCase().trim();
+      if (curSid !== cSid) {
+        setAppliedCoupon(null);
+        setAppliedPromo(null);
+        setDiscountPercent(0);
+        setPromoCode("");
+        return;
+      }
+    }
+
     const minCart = Number(appliedCoupon.minimumCartValue ?? (appliedCoupon as any).minOrderAmount ?? 0);
     if (minCart > 0 && subtotal < minCart) {
       const code = appliedCoupon.code || appliedPromo || "Applied";
@@ -276,7 +313,7 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
       setDiscountPercent(0);
       setPromoCode("");
     }
-  }, [subtotal, cartItems, appliedCoupon, appliedPromo]);
+  }, [subtotal, cartItems, appliedCoupon, appliedPromo, activeSellerId]);
 
   const handleRemovePromo = () => {
     setUserDismissedPromo(true);
