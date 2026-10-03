@@ -112,7 +112,7 @@ export default function ResponsiveSellerOrdersPage() {
       if (s === "PREPARING") statusVal = "Preparing";
       else if (s === "OUT_FOR_DELIVERY" || s === "ON_THE_WAY") statusVal = "Out";
       else if (s === "DELIVERED" || s === "COMPLETED") statusVal = "Done";
-      else if (s === "CANCELLED") statusVal = "Cancelled";
+      else if (s === "CANCELLED" || s === "REJECTED" || s === "DECLINED") statusVal = "Cancelled";
       else statusVal = "New";
 
       const timeAgoStr = o.createdAt

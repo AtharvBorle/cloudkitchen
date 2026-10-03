@@ -139,7 +139,13 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
   }).length;
   const preparingCount = ordersList.filter((o) => o.status === "Preparing").length;
   const outCount = ordersList.filter((o) => o.status === "Out").length;
-  const doneCount = ordersList.filter((o) => o.status === "Done").length;
+  const doneCount = ordersList.filter((o) => {
+    let eff = o.status;
+    if (eff === "New" && getRemainingSeconds(o.createdAt, now) <= 0) {
+      eff = "Cancelled";
+    }
+    return eff === "Done" || eff === "Cancelled";
+  }).length;
 
   const filteredOrders = ordersList.filter((order) => {
     let effStatus = order.status;
@@ -147,6 +153,9 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
       effStatus = "Cancelled";
     }
     if (selectedTab === "All") return true;
+    if (selectedTab === "Done") {
+      return effStatus === "Done" || effStatus === "Cancelled";
+    }
     return effStatus === selectedTab;
   });
 
@@ -370,7 +379,7 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
                     title="View Customer Reliability Score"
                     style={{ cursor: "pointer" }}
                   >
-                    {order.status === "Cancelled" ? (
+                    {order.status === "Cancelled" || (order.status === "New" && getRemainingSeconds(order.createdAt, now) <= 0) ? (
                       <div className={styles.cancelledStat}>
                         <span className={styles.statDotRed} />
                         <span>Cancelled</span>
