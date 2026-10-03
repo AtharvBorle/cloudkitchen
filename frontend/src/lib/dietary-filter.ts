@@ -971,6 +971,125 @@ export function isKitchenServingCuisine(
 }
 
 /**
+ * Returns offer details and badge text if a dish has active seller/item-specific offers, discounts, or coupons.
+ */
+export function getDishOfferBadge(
+  dish: {
+    id?: string | null;
+    sellerId?: string | null;
+    sellerTrackingId?: string | null;
+    price?: number;
+    originalPrice?: number;
+    discountPercent?: number;
+    offerTag?: string;
+  },
+  coupons: Array<{
+    id?: string | null;
+    code?: string | null;
+    appliesToSellerId?: string | null;
+    appliesToProductId?: string | null;
+    sellerId?: string | null;
+    discountPercentage?: number | null;
+    discountAmount?: number | null;
+    isActive?: boolean;
+  }> = []
+): { hasOffer: boolean; badgeText: string | null; discountPercentage?: number | null; discountAmount?: number | null } {
+  if (!dish) return { hasOffer: false, badgeText: null };
+
+  // 1. Direct item-level discount percent
+  if (dish.discountPercent && Number(dish.discountPercent) > 0) {
+    return {
+      hasOffer: true,
+      badgeText: `${dish.discountPercent}% OFF`,
+      discountPercentage: Number(dish.discountPercent),
+    };
+  }
+
+  // 2. Direct original price vs current price discount
+  if (
+    dish.originalPrice &&
+    dish.price &&
+    Number(dish.originalPrice) > Number(dish.price)
+  ) {
+    const orig = Number(dish.originalPrice);
+    const curr = Number(dish.price);
+    const pct = Math.round(((orig - curr) / orig) * 100);
+    if (pct > 0) {
+      return {
+        hasOffer: true,
+        badgeText: `${pct}% OFF`,
+        discountPercentage: pct,
+      };
+    }
+    return {
+      hasOffer: true,
+      badgeText: `₹${orig - curr} OFF`,
+      discountAmount: orig - curr,
+    };
+  }
+
+  // 3. Direct offer tag on dish
+  if (dish.offerTag && String(dish.offerTag).trim() !== "") {
+    return {
+      hasOffer: true,
+      badgeText: String(dish.offerTag).trim(),
+    };
+  }
+
+  // 4. Coupon match (product-specific or seller/kitchen-specific)
+  if (coupons && coupons.length > 0) {
+    const dId = (dish.id || "").toLowerCase().trim();
+    const dSeller = (dish.sellerId || "").toLowerCase().trim();
+    const dTrack = (dish.sellerTrackingId || "").toLowerCase().trim();
+
+    // 4a. Product-specific coupon
+    const prodCoupon = coupons.find((cp) => {
+      if (cp.isActive === false) return false;
+      const cpProd = (cp.appliesToProductId || "").toLowerCase().trim();
+      return dId && cpProd && cpProd === dId;
+    });
+
+    if (prodCoupon) {
+      const text = prodCoupon.discountPercentage
+        ? `${prodCoupon.discountPercentage}% OFF`
+        : prodCoupon.discountAmount
+        ? `₹${prodCoupon.discountAmount} OFF`
+        : `${prodCoupon.code || "OFFER"}`;
+      return {
+        hasOffer: true,
+        badgeText: text,
+        discountPercentage: prodCoupon.discountPercentage,
+        discountAmount: prodCoupon.discountAmount,
+      };
+    }
+
+    // 4b. Seller-specific coupon
+    const sellerCoupon = coupons.find((cp) => {
+      if (cp.isActive === false) return false;
+      const target = (cp.appliesToSellerId || cp.sellerId || "").toLowerCase().trim();
+      if (!target || target === "global" || target === "all") return false;
+      return (dSeller && target === dSeller) || (dTrack && target === dTrack);
+    });
+
+    if (sellerCoupon) {
+      const text = sellerCoupon.discountPercentage
+        ? `${sellerCoupon.discountPercentage}% OFF`
+        : sellerCoupon.discountAmount
+        ? `₹${sellerCoupon.discountAmount} OFF`
+        : `${sellerCoupon.code || "OFFER"}`;
+      return {
+        hasOffer: true,
+        badgeText: text,
+        discountPercentage: sellerCoupon.discountPercentage,
+        discountAmount: sellerCoupon.discountAmount,
+      };
+    }
+  }
+
+  return { hasOffer: false, badgeText: null };
+}
+
+/**
  * Checks whether a dish has active seller/item-specific offers, discounts, or coupons.
  */
 export function isDishHavingOffers(
@@ -985,28 +1104,16 @@ export function isDishHavingOffers(
   },
   coupons: Array<{
     id?: string | null;
+    code?: string | null;
     appliesToSellerId?: string | null;
+    appliesToProductId?: string | null;
     sellerId?: string | null;
+    discountPercentage?: number | null;
+    discountAmount?: number | null;
     isActive?: boolean;
   }> = []
 ): boolean {
-  // 1. Direct item-level discount / offer
-  if (dish.originalPrice && dish.price && Number(dish.price) < Number(dish.originalPrice)) return true;
-  if (dish.discountPercent && Number(dish.discountPercent) > 0) return true;
-  if (dish.offerTag && String(dish.offerTag).trim() !== "") return true;
-
-  // 2. Coupon match (must be specifically assigned to this seller/kitchen)
-  if (!coupons || coupons.length === 0) return false;
-
-  const dSeller = (dish.sellerId || "").toLowerCase().trim();
-  const dTrack = (dish.sellerTrackingId || "").toLowerCase().trim();
-
-  return coupons.some((cp) => {
-    if (cp.isActive === false) return false;
-    const target = (cp.appliesToSellerId || cp.sellerId || "").toLowerCase().trim();
-    if (!target || target === "global" || target === "all") return false;
-    return (dSeller && target === dSeller) || (dTrack && target === dTrack);
-  });
+  return getDishOfferBadge(dish, coupons).hasOffer;
 }
 
 /**

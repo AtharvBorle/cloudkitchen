@@ -41,6 +41,7 @@ import {
   isKitchenServingCuisine,
   isKitchenHavingOffers,
   isDishHavingOffers,
+  getDishOfferBadge,
 } from "@/lib/dietary-filter";
 import Link from "next/link";
 
@@ -1435,11 +1436,7 @@ function FoodExploreContent() {
                   const isMaxStockInCart = !isClosed && stockLimit !== -1 && quantityInCart >= stockLimit;
                   const dishAddons = parseDishAddons(dish.addons || (dish as any).variants);
                   const hasAddons = dishAddons.length > 0;
-
-                  // Check if dish has an applicable coupon
-                  const matchedCoupon = homeData.coupons.find(
-                    (cp: any) => !cp.appliesToSellerId || cp.appliesToSellerId === dish.sellerId
-                  );
+                  const offerDetails = getDishOfferBadge(dish, homeData.coupons);
 
                   return (
                     <div
@@ -1467,8 +1464,8 @@ function FoodExploreContent() {
                           backgroundColor: "#F1F5F9",
                         }}
                       >
-                        {/* Offer Badge on Top Left */}
-                        {!isClosed && (
+                        {/* Offer Badge on Top Left (Only displayed when the dish has an active deal/offer/coupon) */}
+                        {!isClosed && offerDetails.hasOffer && offerDetails.badgeText && (
                           <div
                             style={{
                               position: "absolute",
@@ -1486,11 +1483,7 @@ function FoodExploreContent() {
                               zIndex: 2,
                             }}
                           >
-                            {matchedCoupon?.discountPercentage
-                              ? `${matchedCoupon.discountPercentage}% OFF`
-                              : matchedCoupon?.discountAmount
-                              ? `₹${matchedCoupon.discountAmount} OFF`
-                              : "40% OFF"}
+                            {offerDetails.badgeText}
                           </div>
                         )}
 
