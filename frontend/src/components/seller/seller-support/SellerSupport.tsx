@@ -117,6 +117,63 @@ function mapRawMessage(m: any, ticketUser?: any): TicketMessage {
   };
 }
 
+function cleanTicketText(text: string | null | undefined): string {
+  if (!text) return "";
+  return text.replace(/^\[Priority:\s*(High|Medium|Low)\]\s*\n?/i, "").trim();
+}
+
+export function resolveTicketPriority(t: any): "High" | "Medium" | "Low" {
+  if (!t) return "Medium";
+  if (t.priority && typeof t.priority === "string") {
+    const p = t.priority.trim().toUpperCase();
+    if (p === "HIGH" || p === "URGENT" || p === "CRITICAL") return "High";
+    if (p === "LOW") return "Low";
+    if (p === "MEDIUM") return "Medium";
+  }
+
+  const desc = String(t.description || t.preview || "");
+  const tagMatch = desc.match(/\[Priority:\s*(High|Medium|Low)\]/i);
+  if (tagMatch) {
+    const val = tagMatch[1].toLowerCase();
+    if (val === "high") return "High";
+    if (val === "low") return "Low";
+    return "Medium";
+  }
+
+  if (Array.isArray(t.messages)) {
+    for (let i = t.messages.length - 1; i >= 0; i--) {
+      const msg = String(t.messages[i]?.text || t.messages[i]?.message || "");
+      const msgMatch = msg.match(/Priority\s+(?:is\s+|updated\s+to\s+|set\s+to\s+)?(High|Medium|Low)/i);
+      if (msgMatch) {
+        const val = msgMatch[1].toLowerCase();
+        if (val === "high") return "High";
+        if (val === "low") return "Low";
+        return "Medium";
+      }
+    }
+  }
+
+  const allText = `${t.title || ""} ${desc} ${t.category || ""}`.toLowerCase();
+
+  if (
+    /\b(cancel|cancellation|request cancellation|out_for_delivery|out for delivery|not answering|delayed|delay|emergency|urgent|critical|refund|deduction|missing|wrong item|spoiled|contaminated)\b/i.test(
+      allText
+    )
+  ) {
+    return "High";
+  }
+
+  if (
+    /\b(faq|general query|inquiry|feedback|suggestion|feature request|menu info|profile info)\b/i.test(
+      allText
+    )
+  ) {
+    return "Low";
+  }
+
+  return "Medium";
+}
+
 function mapRawTicket(t: any): Ticket {
   const rawStatus = (t.status || "OPEN").toUpperCase();
   const status: Ticket["status"] =
@@ -132,7 +189,13 @@ function mapRawTicket(t: any): Ticket {
   const initials = getInitials(name);
 
   const rawMessages = Array.isArray(t.messages) && t.messages.length > 0 ? t.messages : [];
-  const messages: TicketMessage[] = rawMessages.map((m: any) => mapRawMessage(m, t.user));
+  const messages: TicketMessage[] = rawMessages.map((m: any) => {
+    const mapped = mapRawMessage(m, t.user);
+    return {
+      ...mapped,
+      text: cleanTicketText(mapped.text),
+    };
+  });
 
   if (messages.length === 0 && t.description) {
     messages.push({
@@ -141,7 +204,7 @@ function mapRawTicket(t: any): Ticket {
       role: "customer",
       initials,
       timestamp: formatMessageTime(t.createdAt),
-      text: t.description,
+      text: cleanTicketText(t.description),
     });
   }
 
@@ -150,12 +213,12 @@ function mapRawTicket(t: any): Ticket {
     ticketNumber: `#TKT-${t.id.slice(-4).toUpperCase()}`,
     category: t.category || "Operations",
     title: t.title || "Support Request",
-    preview: t.description || "",
+    preview: cleanTicketText(t.description),
     customerName: name,
     customerInitials: initials,
     time: formatRelativeTime(t.createdAt),
     status,
-    priority: (t.priority as any) || "Medium",
+    priority: resolveTicketPriority(t),
     messages,
   };
 }
@@ -280,6 +343,30 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
     loadTicketDetails(id);
   };
 
+  const handleUpdatePriority = async (ticketId: string, newPri: "High" | "Medium" | "Low") => {
+    if (!ticketId) return;
+    // Optimistic update
+    setTickets((prev) =>
+      prev.map((t) => (t.id === ticketId ? { ...t, priority: newPri } : t))
+    );
+    try {
+      const res = await fetchApi(`/api/tickets/${ticketId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ priority: newPri }),
+      });
+      if (res.ok) {
+        showToast(`Ticket priority updated to ${newPri}`, "success");
+        await loadTicketDetails(ticketId);
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        showToast(errJson.message || "Failed to update ticket priority", "error");
+      }
+    } catch (err: any) {
+      showToast(err.message || "Failed to update priority", "error");
+    }
+  };
+
   const handleCreateTicket = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim()) {
@@ -300,6 +387,7 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
           title: newTitle.trim(),
           category: newCategory,
           description: newDescription.trim(),
+          priority: newPriority,
         }),
       });
 
@@ -462,13 +550,37 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
               {/* Mobile Chat Priority Row */}
               <div className={styles.mobileChatPriorityBar}>
                 <span className={styles.priorityLabel}>Priority</span>
-                <span
+                <select
+                  value={selectedTicket?.priority || "Medium"}
+                  onChange={(e) => {
+                    const newP = e.target.value as "High" | "Medium" | "Low";
+                    if (selectedTicket) {
+                      handleUpdatePriority(selectedTicket.id, newP);
+                    }
+                  }}
                   className={`${styles.priorityBadge} ${getPriorityBadgeStyle(
-                    selectedTicket?.priority || "High"
+                    selectedTicket?.priority || "Medium"
                   )}`}
+                  style={{
+                    cursor: "pointer",
+                    border: "none",
+                    outline: "none",
+                    appearance: "none",
+                    WebkitAppearance: "none",
+                    MozAppearance: "none",
+                    paddingRight: "18px",
+                    backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                    backgroundRepeat: "no-repeat",
+                    backgroundPosition: "right 5px center",
+                    backgroundSize: "9px 9px",
+                  }}
+                  aria-label="Change ticket priority"
+                  title="Click to change ticket priority"
                 >
-                  {selectedTicket?.priority || "High"}
-                </span>
+                  <option value="High">High</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Low">Low</option>
+                </select>
               </div>
             </div>
           ) : (
@@ -568,6 +680,14 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
                       >
                         <div className={styles.ticketCardHeader}>
                           <span className={styles.ticketCategory}>{ticket.category}</span>
+                          <span
+                            className={`${styles.priorityBadge} ${getPriorityBadgeStyle(
+                              ticket.priority
+                            )}`}
+                            style={{ fontSize: "0.68rem", padding: "1px 8px" }}
+                          >
+                            {ticket.priority}
+                          </span>
                           <span className={styles.ticketTime}>{ticket.time}</span>
                         </div>
 
@@ -639,13 +759,35 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
                   </div>
 
                   <div className={styles.chatHeaderBadges}>
-                    <span
+                    <select
+                      value={selectedTicket.priority}
+                      onChange={(e) => {
+                        const newP = e.target.value as "High" | "Medium" | "Low";
+                        handleUpdatePriority(selectedTicket.id, newP);
+                      }}
                       className={`${styles.priorityBadge} ${getPriorityBadgeStyle(
                         selectedTicket.priority
                       )}`}
+                      style={{
+                        cursor: "pointer",
+                        border: "none",
+                        outline: "none",
+                        appearance: "none",
+                        WebkitAppearance: "none",
+                        MozAppearance: "none",
+                        paddingRight: "18px",
+                        backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                        backgroundRepeat: "no-repeat",
+                        backgroundPosition: "right 5px center",
+                        backgroundSize: "9px 9px",
+                      }}
+                      aria-label="Change ticket priority"
+                      title="Click to change ticket priority"
                     >
-                      {selectedTicket.priority}
-                    </span>
+                      <option value="High">High</option>
+                      <option value="Medium">Medium</option>
+                      <option value="Low">Low</option>
+                    </select>
                     <span
                       className={`${styles.statusBadge} ${getStatusBadgeStyle(
                         selectedTicket.status
@@ -797,6 +939,21 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
                         {cat}
                       </option>
                     ))}
+                  </select>
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>
+                    Priority <span className={styles.formLabelRequired}>*</span>
+                  </label>
+                  <select
+                    value={newPriority}
+                    onChange={(e) => setNewPriority(e.target.value as "High" | "Medium" | "Low")}
+                    className={styles.formSelect}
+                  >
+                    <option value="High">High (Urgent Issue)</option>
+                    <option value="Medium">Medium (Standard Request)</option>
+                    <option value="Low">Low (General Query)</option>
                   </select>
                 </div>
 
