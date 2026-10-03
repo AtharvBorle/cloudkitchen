@@ -32,6 +32,7 @@ import {
 import {
   isKitchenMatchingDiet,
   isDishMatchingDiet,
+  isNonVegDish,
   matchesKitchenOrDishSearch,
   matchesDishSearch,
   matchesDishCategory,
@@ -1583,12 +1584,81 @@ function FoodExploreContent() {
                           </Link>
                         </div>
 
-                        {/* Dietary Tags inside Food Menu Description */}
+                        {/* Dietary Tag inside Food Menu Description (Shows only the seller-specified category) */}
                         <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", margin: "2px 0" }}>
                           {(() => {
-                            const itemTypeUpper = (dish.itemType || "").toUpperCase();
-                            const isVeg = itemTypeUpper === "VEG" || (!itemTypeUpper && !dish.name.toLowerCase().includes("chicken") && !dish.name.toLowerCase().includes("mutton") && !dish.name.toLowerCase().includes("egg") && !dish.name.toLowerCase().includes("fish") && !dish.name.toLowerCase().includes("biryani") && !dish.name.toLowerCase().includes("meat"));
-                            return isVeg ? (
+                            const rawType = String(dish.itemType || "").toUpperCase();
+                            const catName = String(dish.categoryName || (dish as any).category || "").toUpperCase();
+                            const nameUpper = String(dish.name || "").toUpperCase();
+
+                            const isExplicitVegan = rawType.includes("VEGAN") || catName.includes("VEGAN") || nameUpper.includes("VEGAN");
+                            const isExplicitJain = rawType.includes("JAIN") || catName.includes("JAIN") || nameUpper.includes("JAIN");
+                            const isNonVeg = !isExplicitVegan && !isExplicitJain && isNonVegDish(dish);
+
+                            if (isExplicitVegan) {
+                              return (
+                                <span
+                                  style={{
+                                    backgroundColor: "#ECFDF5",
+                                    color: "#047857",
+                                    fontSize: "11px",
+                                    fontWeight: "700",
+                                    padding: "2px 8px",
+                                    borderRadius: "6px",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "4px",
+                                  }}
+                                >
+                                  <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#10B981" }} />
+                                  Vegan
+                                </span>
+                              );
+                            }
+
+                            if (isExplicitJain) {
+                              return (
+                                <span
+                                  style={{
+                                    backgroundColor: "#ECFDF5",
+                                    color: "#047857",
+                                    fontSize: "11px",
+                                    fontWeight: "700",
+                                    padding: "2px 8px",
+                                    borderRadius: "6px",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "4px",
+                                  }}
+                                >
+                                  <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#10B981" }} />
+                                  Jain
+                                </span>
+                              );
+                            }
+
+                            if (isNonVeg) {
+                              return (
+                                <span
+                                  style={{
+                                    backgroundColor: "#FEF2F2",
+                                    color: "#B91C1C",
+                                    fontSize: "11px",
+                                    fontWeight: "700",
+                                    padding: "2px 8px",
+                                    borderRadius: "6px",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "4px",
+                                  }}
+                                >
+                                  <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#EF4444" }} />
+                                  Non-Veg
+                                </span>
+                              );
+                            }
+
+                            return (
                               <span
                                 style={{
                                   backgroundColor: "#ECFDF5",
@@ -1605,59 +1675,7 @@ function FoodExploreContent() {
                                 <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#10B981" }} />
                                 Veg
                               </span>
-                            ) : (
-                              <span
-                                style={{
-                                  backgroundColor: "#FEF2F2",
-                                  color: "#B91C1C",
-                                  fontSize: "11px",
-                                  fontWeight: "700",
-                                  padding: "2px 8px",
-                                  borderRadius: "6px",
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  gap: "4px",
-                                }}
-                              >
-                                <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#EF4444" }} />
-                                Non-Veg
-                              </span>
                             );
-                          })()}
-                          {(() => {
-                            const itemTypeUpper = (dish.itemType || "").toUpperCase();
-                            const isVeg = itemTypeUpper === "VEG" || (!itemTypeUpper && !dish.name.toLowerCase().includes("chicken") && !dish.name.toLowerCase().includes("mutton") && !dish.name.toLowerCase().includes("egg") && !dish.name.toLowerCase().includes("fish") && !dish.name.toLowerCase().includes("biryani") && !dish.name.toLowerCase().includes("meat"));
-                            if (isVeg) {
-                              return (
-                                <>
-                                  <span
-                                    style={{
-                                      backgroundColor: "#ECFDF5",
-                                      color: "#047857",
-                                      fontSize: "11px",
-                                      fontWeight: "700",
-                                      padding: "2px 8px",
-                                      borderRadius: "6px",
-                                    }}
-                                  >
-                                    Vegan
-                                  </span>
-                                  <span
-                                    style={{
-                                      backgroundColor: "#ECFDF5",
-                                      color: "#047857",
-                                      fontSize: "11px",
-                                      fontWeight: "700",
-                                      padding: "2px 8px",
-                                      borderRadius: "6px",
-                                    }}
-                                  >
-                                    Jain
-                                  </span>
-                                </>
-                              );
-                            }
-                            return null;
                           })()}
                         </div>
 
