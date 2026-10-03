@@ -61,14 +61,18 @@ function DetailsContent() {
     : undefined;
 
   const mapStatusToStep = (st: string) => {
-    switch (st) {
+    switch ((st || "").toUpperCase()) {
       case "OUT_FOR_DELIVERY":
+      case "ON_THE_WAY":
         return "On the way" as const;
       case "DELIVERED":
+      case "COMPLETED":
         return "Delivered" as const;
       case "PREPARING":
         return "Preparing" as const;
       case "CANCELLED":
+      case "REJECTED":
+      case "DECLINED":
         return "Cancelled" as const;
       default:
         return "Order Placed" as const;
