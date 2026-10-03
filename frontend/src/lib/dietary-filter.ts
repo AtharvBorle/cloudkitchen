@@ -356,6 +356,7 @@ export function isKitchenMatchingDiet(
   }
 
   if (norm === "non_veg") {
+    // If it is 100% Pure Veg with no non-veg dishes, exclude from non-veg filter
     if (
       (isDeclaredPureVeg || rawFoodType === "PURE_VEG" || rawFoodType === "VEG" || rawFoodType === "VEG_ONLY" || rawFoodType === "PUREVEG" || rawFoodType === "VEGAN" || rawFoodType === "JAIN") &&
       !isBothVegAndNonVeg &&
@@ -1065,8 +1066,24 @@ export function getDishOfferBadge(
       const cpCleanCode = rawCode.replace(/[^a-z]/g, "");
       const cpDesc = String(cp.description || "").toLowerCase();
 
-      // Check direct product ID match
-      const isProductMatch = cpProd && dId && cpProd === dId;
+      const cpAppliesTo = String((cp as any).appliesTo || "").toUpperCase();
+      const cpCatId = String((cp as any).appliesToCategoryId || "").toLowerCase().trim();
+      const cpProdList = cpProd.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+      const cpCatList = cpCatId.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+      const dCatId = String((dish as any).categoryId || "").toLowerCase().trim();
+
+      // Check direct product ID match (single or comma-separated or appliesTo=ITEMS)
+      const isProductMatch = (cpProd && dId && (cpProd === dId || cpProdList.includes(dId))) ||
+        (cpAppliesTo === "ITEMS" && cpProdList.includes(dId));
+
+      // Check direct category match (appliesTo=CATEGORY or categoryId/categoryName match)
+      const isCategoryCouponMatch =
+        (cpAppliesTo === "CATEGORY" || cpCatList.length > 0) &&
+        (
+          (dCatId && cpCatList.includes(dCatId)) ||
+          (dCategory && cpCatList.includes(dCategory)) ||
+          (cpProdList.length > 0 && (cpProdList.includes(dCatId) || cpProdList.includes(dCategory)))
+        );
 
       // Check seller match
       const isSellerMatch = cpSeller && cpSeller !== "global" && cpSeller !== "all" && (
@@ -1092,7 +1109,7 @@ export function getDishOfferBadge(
 
       // ONLY match coupons that are specifically attached to this product OR specifically target this item category!
       // (Do NOT slap general store/cart coupons onto random dishes)
-      if (!isProductMatch && !isKeywordItemMatch) {
+      if (!isProductMatch && !isCategoryCouponMatch && !isKeywordItemMatch) {
         continue;
       }
 

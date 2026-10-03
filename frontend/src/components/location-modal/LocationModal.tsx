@@ -20,7 +20,7 @@ import { useLocation } from "@/components/location-provider";
 import { fetchApi } from "@/lib/fetch-api";
 import { usePathname } from "next/navigation";
 import { HouseMapPicker } from "@/components/house-map-picker";
-import { getPincodeCoordinates } from "@/lib/geo-distance";
+import { getPincodeCoordinates, PINCODE_COORDINATES } from "@/lib/geo-distance";
 import { findDuplicateAddress } from "@/lib/address-validation";
 import styles from "./LocationModal.module.css";
 
@@ -35,6 +35,8 @@ const POPULAR_AREAS = [
   { pincode: "411028", name: "Hadapsar, Pune", lat: 18.5089, lng: 73.9259 },
   { pincode: "411006", name: "Kalyani Nagar, Pune", lat: 18.5463, lng: 73.9033 },
   { pincode: "411030", name: "Sadashiv Peth, Pune", lat: 18.5126, lng: 73.8478 },
+  { pincode: "411021", name: "Bavdhan, Pune", lat: 18.5330, lng: 73.7745 },
+  { pincode: "411061", name: "Wakad, Pune", lat: 18.6015, lng: 73.7885 },
 ];
 
 export const LocationModal: React.FC = () => {
@@ -80,7 +82,12 @@ export const LocationModal: React.FC = () => {
     lat: number;
     lng: number;
   } | null>(null);
+  const [mapLat, setMapLat] = useState<number>(18.5016);
+  const [mapLng, setMapLng] = useState<number>(73.8216);
+  const [resolvedPincode, setResolvedPincode] = useState<string>("411051");
+  const [resolvedLocality, setResolvedLocality] = useState<string>("Karve Nagar, Pune");
   const [isLocatingGps, setIsLocatingGps] = useState(false);
+  const [isSearchingLocation, setIsSearchingLocation] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -100,11 +107,27 @@ export const LocationModal: React.FC = () => {
       const pin =
         defaultAddress?.pincode ||
         (typeof window !== "undefined"
-          ? localStorage.getItem("active-selected-pincode") || localStorage.getItem("guest-pincode") || ""
-          : "");
+          ? localStorage.getItem("active-selected-pincode") || localStorage.getItem("guest-pincode") || "411051"
+          : "411051");
       setPincodeInput(pin);
+      setResolvedPincode(pin);
+
+      const pinCoords = getPincodeCoordinates(pin);
+      const initialLat = defaultAddress?.latitude != null && !isNaN(Number(defaultAddress.latitude))
+        ? Number(defaultAddress.latitude)
+        : (pinCoords?.lat ?? 18.5016);
+      const initialLng = defaultAddress?.longitude != null && !isNaN(Number(defaultAddress.longitude))
+        ? Number(defaultAddress.longitude)
+        : (pinCoords?.lng ?? 73.8216);
+
+      setMapLat(initialLat);
+      setMapLng(initialLng);
+      setLatitude(initialLat);
+      setLongitude(initialLng);
+
       const matched = POPULAR_AREAS.find((a) => a.pincode === pin) || null;
       setSelectedAreaInfo(matched);
+      setResolvedLocality(defaultAddress?.locality || defaultAddress?.street || matched?.name || pinCoords?.locality || "Pune Area");
       setShowAddForm(false);
       setFeedback(null);
       setIsApplying(false);
@@ -120,26 +143,23 @@ export const LocationModal: React.FC = () => {
     }, 4000);
   };
 
-  // 1. Handle Manual Pincode / Area Submission (Instant, Smooth, Optimistic)
-  const handleApplyLocation = (
+  // 1. Handle Pincode / Area Selection (Centers Map on Area & Updates Pin)
+  const handleSelectAreaOrPin = async (
     targetInput: string,
     areaOverride?: { pincode: string; name: string; lat: number; lng: number } | null
   ) => {
     const raw = (targetInput || "").trim();
     if (!raw && !areaOverride) {
-      showNotification("error", "Please enter a 6-digit pincode or select an area");
+      showNotification("error", "Please enter a pincode or area name to search");
       return;
     }
 
-    setIsApplying(true);
-
     let cleanPin = "";
     let localityName = "";
-    let city = "Pune";
     let finalLat: number | null = null;
     let finalLng: number | null = null;
 
-    if (areaOverride && (areaOverride.pincode === raw || raw.toLowerCase().includes(areaOverride.name.toLowerCase().split(",")[0].trim()))) {
+    if (areaOverride) {
       cleanPin = areaOverride.pincode;
       localityName = areaOverride.name;
       finalLat = areaOverride.lat;
@@ -151,12 +171,11 @@ export const LocationModal: React.FC = () => {
         const matched = POPULAR_AREAS.find((a) => a.pincode === cleanPin);
         const pinInfo = getPincodeCoordinates(cleanPin);
         localityName = matched?.name || pinInfo?.locality || `PIN ${cleanPin}`;
-        city = pinInfo?.city || "Pune";
-        finalLat = (matched?.lat != null) ? matched.lat : (pinInfo?.lat ?? null);
-        finalLng = (matched?.lng != null) ? matched.lng : (pinInfo?.lng ?? null);
+        finalLat = matched?.lat ?? pinInfo?.lat ?? null;
+        finalLng = matched?.lng ?? pinInfo?.lng ?? null;
       } else {
-        // Match by Area Name (e.g., "Kothrud", "Baner", "Hinjawadi", "Deccan", "Viman Nagar")
         const lower = raw.toLowerCase();
+        // 1. Match from POPULAR_AREAS
         const matched = POPULAR_AREAS.find(
           (a) =>
             a.name.toLowerCase().includes(lower) ||
@@ -165,20 +184,91 @@ export const LocationModal: React.FC = () => {
         if (matched) {
           cleanPin = matched.pincode;
           localityName = matched.name;
-          city = "Pune";
           finalLat = matched.lat;
           finalLng = matched.lng;
         } else {
-          showNotification("error", "Please enter a valid 6-digit pincode (e.g. 411038) or choose a Pune area below");
-          setIsApplying(false);
-          return;
+          // 2. Match from all known Pune PINCODE_COORDINATES
+          for (const [pin, info] of Object.entries(PINCODE_COORDINATES)) {
+            const locLower = info.locality.toLowerCase();
+            const segments = locLower.split(/[\/,]/).map((s) => s.trim());
+            if (
+              locLower.includes(lower) ||
+              lower.includes(locLower) ||
+              segments.some((seg) => seg && (seg.includes(lower) || lower.includes(seg)))
+            ) {
+              cleanPin = pin;
+              localityName = `${info.locality}, ${info.city}`;
+              finalLat = info.lat;
+              finalLng = info.lng;
+              break;
+            }
+          }
+        }
+      }
+
+      // 3. Fallback: Online forward geocoding via OpenStreetMap Nominatim
+      if (finalLat === null || finalLng === null) {
+        setIsSearchingLocation(true);
+        try {
+          const searchQuery = `${raw}, Pune, Maharashtra, India`;
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+              searchQuery
+            )}&countrycodes=in&limit=1`,
+            { headers: { "Accept-Language": "en" } }
+          );
+          if (res.ok) {
+            const results = await res.json();
+            if (results && results.length > 0) {
+              const item = results[0];
+              finalLat = parseFloat(item.lat);
+              finalLng = parseFloat(item.lon);
+              const displayName = item.display_name || raw;
+              const parts = displayName.split(",");
+              localityName = parts.slice(0, 2).join(",").trim() || raw;
+              const matchPin = displayName.match(/\b\d{6}\b/);
+              if (matchPin) {
+                cleanPin = matchPin[0];
+              }
+            }
+          }
+        } catch (geoErr) {
+          console.warn("Forward geocoding error:", geoErr);
+        } finally {
+          setIsSearchingLocation(false);
         }
       }
     }
 
-    // 1. Optimistically set location immediately (0ms delay for seamless response)
-    setGuestLocation(cleanPin, localityName, city, finalLat, finalLng);
-    showNotification("success", `Location updated to ${localityName || `PIN ${cleanPin}`}`);
+    if (finalLat === null || finalLng === null) {
+      showNotification("error", "Location not found. Please enter a valid 6-digit pincode (e.g. 411038) or choose an area below");
+      return;
+    }
+
+    const effectivePin = cleanPin || resolvedPincode || "411051";
+    setPincodeInput(effectivePin);
+    setResolvedPincode(effectivePin);
+    setResolvedLocality(localityName || `PIN ${effectivePin}`);
+    setMapLat(finalLat);
+    setMapLng(finalLng);
+    setLatitude(finalLat);
+    setLongitude(finalLng);
+    setSelectedAreaInfo(areaOverride || POPULAR_AREAS.find((a) => a.pincode === effectivePin) || null);
+    showNotification("success", `Map centered on ${localityName || effectivePin}. Adjust the pin to your exact doorstep.`);
+  };
+
+  // 2. Handle Confirming Pinned Delivery Location
+  const handleConfirmPinnedLocation = () => {
+    setIsApplying(true);
+    const cleanPin = (resolvedPincode || pincodeInput || "").replace(/\D/g, "").slice(0, 6) || "411051";
+    const locName = resolvedLocality || (selectedAreaInfo?.name ?? `PIN ${cleanPin}`);
+    const city = "Pune";
+    const finalLat = mapLat;
+    const finalLng = mapLng;
+
+    // 1. Optimistically set location immediately with exact GPS coordinates
+    setGuestLocation(cleanPin, locName, city, finalLat, finalLng);
+    showNotification("success", `Delivery pin set: ${locName} (${cleanPin})`);
 
     // 2. Sync to database in background if user is authenticated
     if (session?.user) {
@@ -199,10 +289,10 @@ export const LocationModal: React.FC = () => {
         const el = document.getElementById("places-section");
         if (el) el.scrollIntoView({ behavior: "smooth" });
       }
-    }, 180);
+    }, 250);
   };
 
-  // 2. Handle GPS Auto Detection
+  // 3. Handle GPS Auto Detection
   const handleDetectGps = () => {
     if (!navigator.geolocation) {
       showNotification("error", "Geolocation is not supported by your browser");
@@ -213,15 +303,19 @@ export const LocationModal: React.FC = () => {
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const { latitude: lat, longitude: lng } = pos.coords;
+        setMapLat(lat);
+        setMapLng(lng);
+        setLatitude(lat);
+        setLongitude(lng);
+
         try {
-          // Reverse geocode via OpenStreetMap Nominatim
           const res = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
           );
           if (res.ok) {
             const data = await res.json();
             const addr = data.address || {};
-            const pin = (addr.postcode || "").replace(/\D/g, "").slice(0, 6);
+            const pin = (addr.postcode || "").replace(/\D/g, "").slice(0, 6) || "411001";
             const locality =
               addr.suburb ||
               addr.neighbourhood ||
@@ -231,30 +325,15 @@ export const LocationModal: React.FC = () => {
               addr.town ||
               addr.city ||
               "Current Location";
-            const city = addr.city || addr.town || addr.state_district || addr.state || "Pune";
 
-            if (pin && pin.length === 6) {
-              setGuestLocation(pin, locality, city, lat, lng);
-              if (session?.user) {
-                await fetchApi("/api/user/location", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ pincode: pin, lat, lng }),
-                }).catch(() => {});
-                await refreshAddress();
-              }
-
-              showNotification("success", `GPS Location Detected: ${locality} (${pin})`);
-              setTimeout(() => closeLocationModal(), 800);
-            } else {
-              showNotification("error", "Could not detect a 6-digit postal pincode for your GPS coordinates. Please enter your pincode below.");
-            }
-          } else {
-            showNotification("error", "Failed to retrieve address from GPS. Please enter your pincode manually.");
+            setPincodeInput(pin);
+            setResolvedPincode(pin);
+            setResolvedLocality(locality);
+            showNotification("success", `GPS Location Detected! Adjust the pin below and click Confirm.`);
           }
         } catch (err) {
           console.error("GPS Reverse Geocode Error:", err);
-          showNotification("error", "Error connecting to location service. Please enter pincode manually.");
+          showNotification("error", "Error connecting to location service. You can drag the pin manually.");
         } finally {
           setIsLocatingGps(false);
         }
@@ -262,7 +341,7 @@ export const LocationModal: React.FC = () => {
       (error) => {
         setIsLocatingGps(false);
         console.warn("Geolocation permission error:", error);
-        showNotification("error", "Location permission denied. Please enter pincode manually.");
+        showNotification("error", "Location permission denied. Please enter pincode or choose an area.");
       },
       { enableHighAccuracy: true, timeout: 8000 }
     );
@@ -459,7 +538,7 @@ export const LocationModal: React.FC = () => {
                     if (e.key === "Enter") {
                       e.preventDefault();
                       if (pincodeInput.trim()) {
-                        handleApplyLocation(pincodeInput, selectedAreaInfo);
+                        handleSelectAreaOrPin(pincodeInput, selectedAreaInfo);
                       }
                     }
                   }}
@@ -469,13 +548,13 @@ export const LocationModal: React.FC = () => {
               <button
                 type="button"
                 className={styles.applyBtn}
-                disabled={!pincodeInput.trim() || isApplying}
-                onClick={() => handleApplyLocation(pincodeInput, selectedAreaInfo)}
+                disabled={!pincodeInput.trim() || isSearchingLocation}
+                onClick={() => handleSelectAreaOrPin(pincodeInput, selectedAreaInfo)}
               >
-                {isApplying ? (
+                {isSearchingLocation ? (
                   <Loader2 className="animate-spin" size={16} />
                 ) : (
-                  "Apply"
+                  "Search"
                 )}
               </button>
             </div>
@@ -493,9 +572,7 @@ export const LocationModal: React.FC = () => {
                     type="button"
                     className={`${styles.chipBtn} ${isActive ? styles.chipBtnActive : ""}`}
                     onClick={() => {
-                      setPincodeInput(area.pincode);
-                      setSelectedAreaInfo(area);
-                      handleApplyLocation(area.pincode, area);
+                      handleSelectAreaOrPin(area.pincode, area);
                     }}
                   >
                     <MapPin size={12} />
@@ -504,6 +581,78 @@ export const LocationModal: React.FC = () => {
                 );
               })}
             </div>
+          </div>
+
+          {/* Interactive Doorstep Map Pin Picker Section */}
+          <div className={styles.mapPinSection}>
+            <div className={styles.mapPinHeader}>
+              <h4 className={styles.mapPinTitle}>
+                <MapPin size={16} color="#FF6B00" />
+                <span>Exact Delivery Pinpoint (Doorstep)</span>
+              </h4>
+              <p className={styles.mapPinSub}>
+                Drag the map pin to your exact delivery doorstep for accurate kitchen distance filtering & delivery routing.
+              </p>
+            </div>
+
+            <HouseMapPicker
+              latitude={mapLat}
+              longitude={mapLng}
+              height="200px"
+              onChange={(newLat, newLng, details) => {
+                setMapLat(newLat);
+                setMapLng(newLng);
+                setLatitude(newLat);
+                setLongitude(newLng);
+                if (details?.pincode) {
+                  const p = details.pincode.replace(/\D/g, "").slice(0, 6);
+                  if (p.length === 6) {
+                    setResolvedPincode(p);
+                    setPincodeInput(p);
+                  }
+                }
+                if (details && (details.street || (details as any).suburb || (details as any).locality)) {
+                  const loc = details.street || (details as any).suburb || (details as any).locality || "";
+                  if (loc) setResolvedLocality(loc);
+                }
+              }}
+            />
+
+            <div className={styles.mapPinInfoCard}>
+              <div className={styles.mapPinInfoRow}>
+                <span className={styles.mapPinInfoLabel}>Location:</span>
+                <span className={styles.mapPinInfoVal}>{resolvedLocality || "Pune Area"}</span>
+              </div>
+              <div className={styles.mapPinInfoRow}>
+                <span className={styles.mapPinInfoLabel}>PIN Code:</span>
+                <span className={styles.mapPinInfoVal}>{resolvedPincode || pincodeInput || "411051"}</span>
+              </div>
+              <div className={styles.mapPinInfoRow}>
+                <span className={styles.mapPinInfoLabel}>GPS Coordinates:</span>
+                <span className={styles.mapPinInfoVal}>
+                  {mapLat.toFixed(4)}, {mapLng.toFixed(4)}
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className={styles.confirmPinBtn}
+              disabled={isApplying}
+              onClick={handleConfirmPinnedLocation}
+            >
+              {isApplying ? (
+                <>
+                  <Loader2 className="animate-spin" size={18} />
+                  <span>Setting Delivery Location...</span>
+                </>
+              ) : (
+                <>
+                  <Check size={18} strokeWidth={3} />
+                  <span>Confirm & Set Delivery Location</span>
+                </>
+              )}
+            </button>
           </div>
 
           <div className={styles.divider} />

@@ -29,6 +29,29 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ message: "Code and at least one discount type are required" }, { status: 400 });
         }
 
+        let parsedPercent: number | null = null;
+        let parsedAmount: number | null = null;
+
+        if (discountPercentage !== undefined && discountPercentage !== null && discountPercentage !== "") {
+            parsedPercent = parseFloat(discountPercentage);
+            if (isNaN(parsedPercent) || parsedPercent <= 0 || parsedPercent > 100) {
+                return NextResponse.json({ message: "Discount percentage must be between 1% and 100%." }, { status: 400 });
+            }
+        }
+
+        if (discountAmount !== undefined && discountAmount !== null && discountAmount !== "") {
+            parsedAmount = parseFloat(discountAmount);
+            if (isNaN(parsedAmount) || parsedAmount <= 0) {
+                return NextResponse.json({ message: "Flat discount amount must be greater than 0." }, { status: 400 });
+            }
+            if (planId) {
+                const plan = await db.subscriptionPlan.findUnique({ where: { id: planId } });
+                if (plan && parsedAmount > plan.price) {
+                    return NextResponse.json({ message: `Flat discount amount (₹${parsedAmount}) cannot exceed the selected subscription plan price (₹${plan.price}).` }, { status: 400 });
+                }
+            }
+        }
+
         // Check if code already exists
         const existing = await db.subscriptionCoupon.findUnique({
             where: { code: code.toUpperCase() }
@@ -43,8 +66,8 @@ export async function POST(req: NextRequest) {
             data: {
                 code: code.toUpperCase(),
                 description: description || "",
-                discountPercentage: discountPercentage ? parseFloat(discountPercentage) : null,
-                discountAmount: discountAmount ? parseFloat(discountAmount) : null,
+                discountPercentage: parsedPercent,
+                discountAmount: parsedAmount,
                 planId: planId || null,
                 maxUsage: maxUsage ? parseInt(maxUsage) : 0,
                 isActive: isActive !== undefined ? isActive : true,

@@ -17,7 +17,6 @@ export function validateCouponCodeFormat(code: any): string {
     return clean;
 }
 
-const prisma = db;
 
 export const getAllCoupons = async () => {
     const session = await getAuthSession();

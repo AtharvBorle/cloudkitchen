@@ -734,20 +734,20 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                               <td className={styles.statusCell}>
                                 {isPending ? (
                                   !isExpired ? (
-                                    <span
+                                    <div
                                       className={`${styles.statusBadge} ${
                                         isUrgent ? styles.statusTimerUrgent : styles.statusTimer
                                       }`}
                                       title={`Acceptance window expires in ${mm}:${ss}`}
                                     >
                                       <Clock size={12} style={{ display: "inline", verticalAlign: "middle", marginRight: "3px" }} />
-                                      {mm}:{ss}
-                                    </span>
+                                      <span className={styles.statusLabel}>{mm}:{ss}</span>
+                                    </div>
                                   ) : (
-                                    <span className={`${styles.statusBadge} ${styles.statusCancelled}`}>
+                                    <div className={`${styles.statusBadge} ${styles.statusCancelled}`}>
                                       <span className={styles.statusDot} />
                                       <span className={styles.statusLabel}>Cancelled</span>
-                                    </span>
+                                    </div>
                                   )
                                 ) : (
                                   <div

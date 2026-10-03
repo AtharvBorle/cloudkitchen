@@ -314,7 +314,6 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
       showToast("Coupon code can only contain letters, numbers, hyphens, and underscores");
       return;
     }
-
     setUserDismissedPromo(false);
     setPromoCode(targetCode);
     const currentSubtotal = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);

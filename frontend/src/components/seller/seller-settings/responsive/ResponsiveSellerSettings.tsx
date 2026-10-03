@@ -56,6 +56,7 @@ export interface ResponsiveSellerSettingsData {
   latitude?: number | null;
   longitude?: number | null;
   isLocationPinned?: boolean;
+  deliveryRadiusKm?: number;
 
   // General - Operating Hours
   operatingHours: OperatingHoursDay[];
@@ -241,8 +242,34 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
       );
       if (matched) return matched;
     }
+    if (typeof window !== "undefined") {
+      try {
+        const savedTab = localStorage.getItem("seller_settings_active_tab");
+        if (savedTab) {
+          const matched = (["General", "Notifications", "Security", "Preferences"] as SettingsTabType[]).find(
+            (t) => t.toLowerCase() === savedTab.toLowerCase()
+          );
+          if (matched) return matched;
+        }
+      } catch {}
+    }
     return initialTab;
   });
+
+  const [isEditingGeneral, setIsEditingGeneral] = useState(false);
+  const [originalGeneralData, setOriginalGeneralData] = useState<ResponsiveSellerSettingsData | null>(null);
+
+  const handleTabChange = (tab: SettingsTabType) => {
+    setActiveTab(tab);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("seller_settings_active_tab", tab.toLowerCase());
+        const url = new URL(window.location.href);
+        url.searchParams.set("tab", tab.toLowerCase());
+        window.history.replaceState(null, "", url.toString());
+      } catch {}
+    }
+  };
 
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   const [formData, setFormData] = useState<ResponsiveSellerSettingsData>(() => {
@@ -289,6 +316,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
       latitude: initialData?.latitude !== undefined ? initialData.latitude : (seller.latitude ?? null),
       longitude: initialData?.longitude !== undefined ? initialData.longitude : (seller.longitude ?? null),
       isLocationPinned: initialData?.isLocationPinned !== undefined ? initialData.isLocationPinned : (seller.isLocationPinned ?? false),
+      deliveryRadiusKm: initialData?.deliveryRadiusKm !== undefined ? initialData.deliveryRadiusKm : (seller.deliveryRadiusKm ?? 5),
       storeOnline: typeof seller.isOnline === "boolean" ? seller.isOnline : INITIAL_SETTINGS.storeOnline,
       ...initialData,
     };
@@ -331,7 +359,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
   }, [seller.isOnline]);
 
   useEffect(() => {
-    if (seller.businessName || seller.phone || seller.email || seller.address || seller.latitude || seller.longitude) {
+    if (seller.businessName || seller.phone || seller.email || seller.address || seller.latitude || seller.longitude || seller.deliveryRadiusKm !== undefined) {
       setFormData((prev) => ({
         ...prev,
         businessName: (!prev.businessName || prev.businessName === "Neo Cloud Kitchen & Rooms") && seller.businessName ? seller.businessName : prev.businessName,
@@ -341,9 +369,10 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
         latitude: seller.latitude !== undefined && seller.latitude !== null ? seller.latitude : prev.latitude,
         longitude: seller.longitude !== undefined && seller.longitude !== null ? seller.longitude : prev.longitude,
         isLocationPinned: seller.isLocationPinned ?? prev.isLocationPinned,
+        deliveryRadiusKm: seller.deliveryRadiusKm !== undefined && seller.deliveryRadiusKm !== null ? seller.deliveryRadiusKm : prev.deliveryRadiusKm,
       }));
     }
-  }, [seller.businessName, seller.phone, seller.email, seller.address, seller.latitude, seller.longitude, seller.isLocationPinned]);
+  }, [seller.businessName, seller.phone, seller.email, seller.address, seller.latitude, seller.longitude, seller.isLocationPinned, seller.deliveryRadiusKm]);
 
   useEffect(() => {
     const tabParam = searchParams?.get("tab");
@@ -353,6 +382,9 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
       );
       if (matched) {
         setActiveTab(matched);
+        try {
+          localStorage.setItem("seller_settings_active_tab", matched.toLowerCase());
+        } catch {}
       }
     }
   }, [searchParams]);
@@ -798,6 +830,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
         if (formData.latitude) fd.append("latitude", String(formData.latitude));
         if (formData.longitude) fd.append("longitude", String(formData.longitude));
         fd.append("isLocationPinned", String(Boolean(formData.latitude && formData.longitude)));
+        if (formData.deliveryRadiusKm) fd.append("deliveryRadiusKm", String(formData.deliveryRadiusKm));
         if (cardFile) fd.append("cardImageFile", cardFile);
         if (bannerFile) fd.append("bannerImageFile", bannerFile);
 
@@ -817,9 +850,11 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
             latitude: formData.latitude,
             longitude: formData.longitude,
             isLocationPinned: Boolean(formData.latitude && formData.longitude),
+            deliveryRadiusKm: formData.deliveryRadiusKm || 5,
           }),
         });
       }
+      updateCachedProfile({ deliveryRadiusKm: formData.deliveryRadiusKm || 5 });
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
@@ -873,6 +908,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
       if (onSave) {
         onSave(formData);
       }
+      setIsEditingGeneral(false);
       setToastData({ title: "Settings updated successfully!", status: "ON" });
     } catch (err: any) {
       console.error("Error saving settings:", err);
@@ -880,6 +916,13 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleCancelGeneral = () => {
+    if (isEditingGeneral && originalGeneralData) {
+      setFormData(originalGeneralData);
+    }
+    setIsEditingGeneral(false);
   };
 
   const handleConfirmDeleteAccount = () => {
@@ -1000,7 +1043,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
               key={tab}
               type="button"
               className={`${styles.pillBtn} ${activeTab === tab ? styles.activePill : ""}`}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => handleTabChange(tab)}
             >
               {tab}
             </button>
@@ -1011,6 +1054,92 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
         <main className={styles.contentArea}>
           {activeTab === "General" && (
             <>
+              {/* General Edit / Read-Only Header Banner */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  backgroundColor: isEditingGeneral ? "#FFF7ED" : "#FFFFFF",
+                  border: `1.5px solid ${isEditingGeneral ? "#FED7AA" : "#E2E8F0"}`,
+                  borderRadius: "12px",
+                  padding: "12px 16px",
+                  marginBottom: "12px",
+                  boxShadow: "0 2px 6px rgba(0,0,0,0.03)",
+                  flexWrap: "wrap",
+                  gap: "10px",
+                }}
+              >
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span style={{ fontSize: "13.5px", fontWeight: 700, color: "#0F172A" }}>
+                      General Settings
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "10px",
+                        fontWeight: 700,
+                        padding: "2px 6px",
+                        borderRadius: "6px",
+                        backgroundColor: isEditingGeneral ? "#EA580C" : "#F1F5F9",
+                        color: isEditingGeneral ? "#FFFFFF" : "#64748B",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      {isEditingGeneral ? "Editing Mode" : "Read-Only"}
+                    </span>
+                  </div>
+                  <p style={{ margin: "2px 0 0", fontSize: "11.5px", color: isEditingGeneral ? "#C2410C" : "#64748B" }}>
+                    {isEditingGeneral
+                      ? "Fields unlocked. Tap Save Changes at the bottom."
+                      : "Information is locked in read-only mode."}
+                  </p>
+                </div>
+                {!isEditingGeneral ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOriginalGeneralData(formData);
+                      setIsEditingGeneral(true);
+                    }}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "5px",
+                      padding: "7px 14px",
+                      backgroundColor: "#EA580C",
+                      color: "#FFFFFF",
+                      borderRadius: "8px",
+                      border: "none",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      boxShadow: "0 2px 6px rgba(234, 88, 12, 0.25)",
+                    }}
+                  >
+                    <Edit2 size={13} />
+                    <span>Edit Details</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleCancelGeneral}
+                    style={{
+                      padding: "6px 12px",
+                      backgroundColor: "#FFFFFF",
+                      border: "1px solid #CBD5E1",
+                      borderRadius: "8px",
+                      color: "#475569",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+
               {/* 0A. Kitchen Card Grid Photo Card */}
               <div className={styles.card}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
@@ -1171,88 +1300,94 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                 </div>
 
                 {/* Mobile Card Action Buttons */}
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    marginTop: "12px",
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <input
-                    type="file"
-                    id="res-card-file-input"
-                    accept="image/png, image/jpeg, image/jpg, image/webp"
-                    style={{ display: "none" }}
-                    onChange={handleCardFileSelect}
-                  />
-                  <label
-                    htmlFor="res-card-file-input"
+                {isEditingGeneral ? (
+                  <div
                     style={{
-                      display: "inline-flex",
+                      display: "flex",
                       alignItems: "center",
-                      gap: "5px",
-                      padding: "7px 13px",
-                      backgroundColor: "#EA580C",
-                      color: "#FFFFFF",
-                      borderRadius: "7px",
-                      fontSize: "12px",
-                      fontWeight: 600,
-                      cursor: "pointer",
+                      gap: "8px",
+                      marginTop: "12px",
+                      flexWrap: "wrap",
                     }}
                   >
-                    <Upload size={13} />
-                    <span>{cardPreview ? "Replace Photo" : "Upload Photo"}</span>
-                  </label>
-
-                  {cardFile && (
-                    <button
-                      type="button"
-                      onClick={handleQuickUploadCard}
-                      disabled={isUploadingCard}
+                    <input
+                      type="file"
+                      id="res-card-file-input"
+                      accept="image/png, image/jpeg, image/jpg, image/webp"
+                      style={{ display: "none" }}
+                      onChange={handleCardFileSelect}
+                    />
+                    <label
+                      htmlFor="res-card-file-input"
                       style={{
                         display: "inline-flex",
                         alignItems: "center",
                         gap: "5px",
-                        padding: "7px 11px",
-                        backgroundColor: "#16A34A",
+                        padding: "7px 13px",
+                        backgroundColor: "#EA580C",
                         color: "#FFFFFF",
-                        borderRadius: "7px",
-                        fontSize: "12px",
-                        fontWeight: 600,
-                        border: "none",
-                        cursor: isUploadingCard ? "not-allowed" : "pointer",
-                      }}
-                    >
-                      {isUploadingCard ? <Loader2 size={13} className={styles.spinner} /> : <Save size={13} />}
-                      <span>{isUploadingCard ? "Saving..." : "Save Photo"}</span>
-                    </button>
-                  )}
-
-                  {cardPreview && (
-                    <button
-                      type="button"
-                      onClick={handleResetCard}
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "4px",
-                        padding: "7px 10px",
-                        backgroundColor: "#FFF1F2",
-                        color: "#E11D48",
-                        border: "1px solid #FECDD3",
                         borderRadius: "7px",
                         fontSize: "12px",
                         fontWeight: 600,
                         cursor: "pointer",
                       }}
                     >
-                      <Trash2 size={13} />
-                      <span>Reset</span>
-                    </button>
-                  )}
-                </div>
+                      <Upload size={13} />
+                      <span>{cardPreview ? "Replace Photo" : "Upload Photo"}</span>
+                    </label>
+
+                    {cardFile && (
+                      <button
+                        type="button"
+                        onClick={handleQuickUploadCard}
+                        disabled={isUploadingCard}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "5px",
+                          padding: "7px 11px",
+                          backgroundColor: "#16A34A",
+                          color: "#FFFFFF",
+                          borderRadius: "7px",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          border: "none",
+                          cursor: isUploadingCard ? "not-allowed" : "pointer",
+                        }}
+                      >
+                        {isUploadingCard ? <Loader2 size={13} className={styles.spinner} /> : <Save size={13} />}
+                        <span>{isUploadingCard ? "Saving..." : "Save Photo"}</span>
+                      </button>
+                    )}
+
+                    {cardPreview && (
+                      <button
+                        type="button"
+                        onClick={handleResetCard}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          padding: "7px 10px",
+                          backgroundColor: "#FFF1F2",
+                          color: "#E11D48",
+                          border: "1px solid #FECDD3",
+                          borderRadius: "7px",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                        }}
+                      >
+                        <Trash2 size={13} />
+                        <span>Reset</span>
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <p style={{ fontSize: "11.5px", color: "#94A3B8", margin: "10px 0 0 0", fontStyle: "italic" }}>
+                    🔒 Photo modification is locked in read-only mode.
+                  </p>
+                )}
               </div>
 
               {/* 0B. Storefront Cover Banner Card */}
@@ -1367,93 +1502,99 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                 </div>
 
                 {/* Action buttons */}
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    flexWrap: "wrap",
-                    gap: "8px",
-                    marginTop: "12px",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                    <input
-                      type="file"
-                      id="mobile-banner-file-input"
-                      accept="image/png, image/jpeg, image/jpg, image/webp"
-                      style={{ display: "none" }}
-                      onChange={handleBannerFileSelect}
-                    />
-                    <label
-                      htmlFor="mobile-banner-file-input"
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "5px",
-                        padding: "7px 13px",
-                        backgroundColor: "#EA580C",
-                        color: "#FFFFFF",
-                        borderRadius: "7px",
-                        fontSize: "12px",
-                        fontWeight: 600,
-                        cursor: "pointer",
-                      }}
-                    >
-                      <Upload size={13} />
-                      <span>{bannerPreview ? "Replace" : "Upload"}</span>
-                    </label>
-
-                    {bannerFile && (
-                      <button
-                        type="button"
-                        onClick={handleQuickUploadBanner}
-                        disabled={isUploadingBanner}
+                {isEditingGeneral ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      flexWrap: "wrap",
+                      gap: "8px",
+                      marginTop: "12px",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                      <input
+                        type="file"
+                        id="mobile-banner-file-input"
+                        accept="image/png, image/jpeg, image/jpg, image/webp"
+                        style={{ display: "none" }}
+                        onChange={handleBannerFileSelect}
+                      />
+                      <label
+                        htmlFor="mobile-banner-file-input"
                         style={{
                           display: "inline-flex",
                           alignItems: "center",
                           gap: "5px",
-                          padding: "7px 12px",
-                          backgroundColor: "#16A34A",
+                          padding: "7px 13px",
+                          backgroundColor: "#EA580C",
                           color: "#FFFFFF",
                           borderRadius: "7px",
                           fontSize: "12px",
                           fontWeight: 600,
-                          border: "none",
+                          cursor: "pointer",
                         }}
                       >
-                        {isUploadingBanner ? <Loader2 size={13} className={styles.spinner} /> : <Save size={13} />}
-                        <span>{isUploadingBanner ? "Saving..." : "Apply"}</span>
-                      </button>
-                    )}
+                        <Upload size={13} />
+                        <span>{bannerPreview ? "Replace" : "Upload"}</span>
+                      </label>
 
-                    {bannerPreview && (
-                      <button
-                        type="button"
-                        onClick={handleResetBanner}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "4px",
-                          padding: "7px 10px",
-                          backgroundColor: "#FFF1F2",
-                          color: "#E11D48",
-                          border: "1px solid #FECDD3",
-                          borderRadius: "7px",
-                          fontSize: "12px",
-                          fontWeight: 600,
-                        }}
-                      >
-                        <Trash2 size={13} />
-                        <span>Reset</span>
-                      </button>
-                    )}
+                      {bannerFile && (
+                        <button
+                          type="button"
+                          onClick={handleQuickUploadBanner}
+                          disabled={isUploadingBanner}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "5px",
+                            padding: "7px 12px",
+                            backgroundColor: "#16A34A",
+                            color: "#FFFFFF",
+                            borderRadius: "7px",
+                            fontSize: "12px",
+                            fontWeight: 600,
+                            border: "none",
+                          }}
+                        >
+                          {isUploadingBanner ? <Loader2 size={13} className={styles.spinner} /> : <Save size={13} />}
+                          <span>{isUploadingBanner ? "Saving..." : "Apply"}</span>
+                        </button>
+                      )}
+
+                      {bannerPreview && (
+                        <button
+                          type="button"
+                          onClick={handleResetBanner}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            padding: "7px 10px",
+                            backgroundColor: "#FFF1F2",
+                            color: "#E11D48",
+                            border: "1px solid #FECDD3",
+                            borderRadius: "7px",
+                            fontSize: "12px",
+                            fontWeight: 600,
+                          }}
+                        >
+                          <Trash2 size={13} />
+                          <span>Reset</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <span style={{ fontSize: "10px", color: "#94A3B8" }}>
+                      3:1 (1200x400) Max 5MB
+                    </span>
                   </div>
-
-                  <span style={{ fontSize: "10px", color: "#94A3B8" }}>
-                    3:1 (1200x400) Max 5MB
-                  </span>
-                </div>
+                ) : (
+                  <p style={{ fontSize: "11.5px", color: "#94A3B8", margin: "10px 0 0 0", fontStyle: "italic" }}>
+                    🔒 Banner modification is locked in read-only mode.
+                  </p>
+                )}
               </div>
 
               {/* 1. Restaurant Information */}
@@ -1467,8 +1608,11 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                     maxLength={50}
                     className={styles.input}
                     value={formData.businessName}
+                    readOnly={!isEditingGeneral}
+                    disabled={!isEditingGeneral}
                     onChange={(e) => handleInputChange("businessName", e.target.value)}
                     placeholder="e.g. Spice Symphony, Mama's Kitchen"
+                    style={!isEditingGeneral ? { backgroundColor: "#F8FAFC", color: "#475569", cursor: "not-allowed" } : {}}
                   />
                 </div>
 
@@ -1478,8 +1622,11 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                     type="email"
                     className={styles.input}
                     value={formData.businessEmail}
+                    readOnly={!isEditingGeneral}
+                    disabled={!isEditingGeneral}
                     onChange={(e) => handleInputChange("businessEmail", e.target.value)}
                     placeholder="e.g. hello@neocloudbite.com"
+                    style={!isEditingGeneral ? { backgroundColor: "#F8FAFC", color: "#475569", cursor: "not-allowed" } : {}}
                   />
                 </div>
 
@@ -1488,6 +1635,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                     id="res-settings-phone"
                     label="Phone Number"
                     value={formData.phoneNumber}
+                    disabled={!isEditingGeneral}
                     onChange={(val) => handleInputChange("phoneNumber", val)}
                     placeholder="98765 43210"
                   />
@@ -1589,19 +1737,21 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                     )}
                   </div>
 
-                  <SellerMapPicker
-                    latitude={formData.latitude ?? null}
-                    longitude={formData.longitude ?? null}
-                    isPinned={formData.isLocationPinned}
-                    onChange={(lat, lng, formattedAddress) => {
-                      handleInputChange("latitude", lat);
-                      handleInputChange("longitude", lng);
-                      handleInputChange("isLocationPinned", true);
-                      if (formattedAddress) {
-                        handleInputChange("address", formattedAddress);
-                      }
-                    }}
-                  />
+                  <div style={{ pointerEvents: isEditingGeneral ? "auto" : "none", opacity: isEditingGeneral ? 1 : 0.85 }}>
+                    <SellerMapPicker
+                      latitude={formData.latitude ?? null}
+                      longitude={formData.longitude ?? null}
+                      isPinned={formData.isLocationPinned}
+                      onChange={(lat, lng, formattedAddress) => {
+                        handleInputChange("latitude", lat);
+                        handleInputChange("longitude", lng);
+                        handleInputChange("isLocationPinned", true);
+                        if (formattedAddress) {
+                          handleInputChange("address", formattedAddress);
+                        }
+                      }}
+                    />
+                  </div>
                 </div>
 
                 <div className={styles.fieldGroup}>
@@ -1609,100 +1759,106 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                     <label className={styles.label} style={{ margin: 0 }}>
                       Registered Address &amp; Building Details <span style={{ color: "#EA580C" }}>*</span>
                     </label>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      {addressUpdatedSuccess && (
-                        <span
-                          style={{
-                            fontSize: "11px",
-                            fontWeight: 700,
-                            color: "#16A34A",
-                            backgroundColor: "#F0FDF4",
-                            padding: "3px 8px",
-                            borderRadius: "8px",
-                            border: "1px solid #BBF7D0",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "4px",
-                          }}
-                        >
-                          <CheckCircle2 size={12} /> Address Updated
-                        </span>
-                      )}
-                      {!isEditingAddress ? (
-                        <button
-                          type="button"
-                          onClick={handleToggleEditAddress}
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "5px",
-                            padding: "4px 10px",
-                            borderRadius: "8px",
-                            border: "1px solid #FED7AA",
-                            backgroundColor: "#FFF7ED",
-                            color: "#EA580C",
-                            fontSize: "12px",
-                            fontWeight: 700,
-                            cursor: "pointer",
-                            transition: "all 0.15s ease",
-                          }}
-                        >
-                          <Edit2 size={12} />
-                          <span>Edit Address</span>
-                        </button>
-                      ) : (
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                          <button
-                            type="button"
-                            onClick={() => setIsEditingAddress(false)}
+                    {isEditingGeneral && (
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        {addressUpdatedSuccess && (
+                          <span
                             style={{
-                              padding: "4px 8px",
+                              fontSize: "11px",
+                              fontWeight: 700,
+                              color: "#16A34A",
+                              backgroundColor: "#F0FDF4",
+                              padding: "3px 8px",
                               borderRadius: "8px",
-                              border: "1px solid #E2E8F0",
-                              backgroundColor: "#FFFFFF",
-                              color: "#64748B",
-                              fontSize: "12px",
-                              fontWeight: 600,
-                              cursor: "pointer",
+                              border: "1px solid #BBF7D0",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "4px",
                             }}
                           >
-                            Cancel
-                          </button>
+                            <CheckCircle2 size={12} /> Address Updated
+                          </span>
+                        )}
+                        {!isEditingAddress ? (
                           <button
                             type="button"
-                            onClick={handleQuickUpdateAddress}
-                            disabled={isUpdatingAddress}
+                            onClick={handleToggleEditAddress}
                             style={{
                               display: "inline-flex",
                               alignItems: "center",
                               gap: "5px",
-                              padding: "4px 12px",
+                              padding: "4px 10px",
                               borderRadius: "8px",
-                              border: "none",
-                              backgroundColor: "#EA580C",
-                              color: "#FFFFFF",
+                              border: "1px solid #FED7AA",
+                              backgroundColor: "#FFF7ED",
+                              color: "#EA580C",
                               fontSize: "12px",
                               fontWeight: 700,
-                              cursor: isUpdatingAddress ? "not-allowed" : "pointer",
-                              boxShadow: "0 2px 6px rgba(234, 88, 12, 0.25)",
+                              cursor: "pointer",
+                              transition: "all 0.15s ease",
                             }}
                           >
-                            {isUpdatingAddress ? <Loader2 size={12} className={styles.spinner} /> : <Save size={12} />}
-                            <span>{isUpdatingAddress ? "Updating..." : "Update Address"}</span>
+                            <Edit2 size={12} />
+                            <span>Edit Address</span>
                           </button>
-                        </div>
-                      )}
-                    </div>
+                        ) : (
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <button
+                              type="button"
+                              onClick={() => setIsEditingAddress(false)}
+                              style={{
+                                padding: "4px 8px",
+                                borderRadius: "8px",
+                                border: "1px solid #E2E8F0",
+                                backgroundColor: "#FFFFFF",
+                                color: "#64748B",
+                                fontSize: "12px",
+                                fontWeight: 600,
+                                cursor: "pointer",
+                              }}
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleQuickUpdateAddress}
+                              disabled={isUpdatingAddress}
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "5px",
+                                padding: "4px 12px",
+                                borderRadius: "8px",
+                                border: "none",
+                                backgroundColor: "#EA580C",
+                                color: "#FFFFFF",
+                                fontSize: "12px",
+                                fontWeight: 700,
+                                cursor: isUpdatingAddress ? "not-allowed" : "pointer",
+                                boxShadow: "0 2px 6px rgba(234, 88, 12, 0.25)",
+                              }}
+                            >
+                              {isUpdatingAddress ? <Loader2 size={12} className={styles.spinner} /> : <Save size={12} />}
+                              <span>{isUpdatingAddress ? "Updating..." : "Update Address"}</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <textarea
                     ref={addressTextareaRef}
                     className={styles.textarea}
                     value={formData.address}
+                    readOnly={!isEditingGeneral}
+                    disabled={!isEditingGeneral}
                     onChange={(e) => handleInputChange("address", e.target.value)}
                     placeholder="Flat / Shop No., Building Name, Street / Road, Area, City, Pincode"
                     rows={3}
                     style={
-                      isEditingAddress
+                      !isEditingGeneral
+                        ? { backgroundColor: "#F8FAFC", color: "#475569", cursor: "not-allowed" }
+                        : isEditingAddress
                         ? {
                             borderColor: "#EA580C",
                             boxShadow: "0 0 0 3px rgba(234, 88, 12, 0.15)",
@@ -1715,7 +1871,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                     <p className={styles.helperText} style={{ margin: 0 }}>
                       Shown on customer receipts and used by delivery riders for store pickup navigation.
                     </p>
-                    {isEditingAddress && (
+                    {isEditingGeneral && isEditingAddress && (
                       <button
                         type="button"
                         onClick={handleQuickUpdateAddress}
@@ -1741,6 +1897,46 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                     )}
                   </div>
                 </div>
+
+                {/* Delivery Radius Slider (1 km - 15 km) */}
+                <div style={{ marginTop: "14px", padding: "14px 16px", backgroundColor: "#F8FAFC", borderRadius: "12px", border: "1px solid #E2E8F0" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                    <div>
+                      <label style={{ marginBottom: "2px", fontWeight: 700, fontSize: "14px", color: "#1E293B", display: "block" }}>
+                        Maximum Delivery Radius
+                      </label>
+                      <p style={{ margin: 0, fontSize: "12px", color: "#64748B" }}>
+                        Only customers within this radius will discover and order from your kitchen
+                      </p>
+                    </div>
+                    <span style={{ fontSize: "14px", fontWeight: 700, color: "#EA580C", backgroundColor: "#FFF7ED", padding: "3px 12px", borderRadius: "8px", border: "1px solid #FED7AA" }}>
+                      {formData.deliveryRadiusKm ?? 5} km
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="1"
+                    max="15"
+                    step="0.5"
+                    name="deliveryRadiusKm"
+                    value={formData.deliveryRadiusKm ?? 5}
+                    disabled={!isEditingGeneral}
+                    onChange={(e) => {
+                      setFormData((prev) => ({ ...prev, deliveryRadiusKm: Number(e.target.value) }));
+                    }}
+                    style={{
+                      width: "100%",
+                      accentColor: "#EA580C",
+                      cursor: !isEditingGeneral ? "not-allowed" : "pointer",
+                      height: "6px",
+                      borderRadius: "4px",
+                    }}
+                  />
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "#64748B", marginTop: "4px" }}>
+                    <span>1 km (Hyperlocal)</span>
+                    <span>15 km (Extended reach)</span>
+                  </div>
+                </div>
               </div>
 
               {/* 2. Operating Hours */}
@@ -1757,55 +1953,15 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                           <input
                             type="checkbox"
                             checked={item.isOpen}
+                            disabled={!isEditingGeneral}
                             onChange={() => handleDayToggle(idx)}
                             aria-label={`Toggle ${item.day} status`}
                           />
-                          <span className={styles.toggleSlider} />
+                          <span className={styles.toggleSlider} style={!isEditingGeneral ? { opacity: 0.6, cursor: "not-allowed" } : {}} />
                         </label>
                       </div>
                     </div>
                   ))}
-                </div>
-              </div>
-
-              {/* 3. Language & Region */}
-              <div className={styles.card}>
-                <h2 className={styles.cardTitle}>Language &amp; Region</h2>
-
-                {/* Language (Commented out for now) */}
-                {/*
-                <div className={styles.fieldGroup}>
-                  <label className={styles.label}>Language</label>
-                  <input
-                    type="text"
-                    className={styles.input}
-                    value={formData.language}
-                    onChange={(e) => handleInputChange("language", e.target.value)}
-                    placeholder="e.g. English"
-                  />
-                </div>
-                */}
-
-                <div className={styles.fieldGroup}>
-                  <label className={styles.label}>Timezone</label>
-                  <input
-                    type="text"
-                    className={styles.input}
-                    value={formData.timezone}
-                    onChange={(e) => handleInputChange("timezone", e.target.value)}
-                    placeholder="e.g. Asia/Kolkata (UTC+5:30)"
-                  />
-                </div>
-
-                <div className={styles.fieldGroup}>
-                  <label className={styles.label}>Currency</label>
-                  <input
-                    type="text"
-                    className={styles.input}
-                    value={formData.currency}
-                    onChange={(e) => handleInputChange("currency", e.target.value)}
-                    placeholder="e.g. INR (₹)"
-                  />
                 </div>
               </div>
             </>
@@ -2297,21 +2453,72 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
 
         {/* Sticky Bottom Save Changes Action Bar */}
         <div className={styles.bottomActionContainer}>
-          <button
-            type="button"
-            disabled={saving}
-            className={styles.saveChangesBtn}
-            onClick={() => handleSave()}
-          >
-            {saving ? (
-              <>
-                <Loader2 size={18} style={{ animation: "spin 1s linear infinite" }} />
-                <span>Saving Changes...</span>
-              </>
-            ) : (
-              <span>Save Changes</span>
-            )}
-          </button>
+          {activeTab === "General" && !isEditingGeneral ? (
+            <button
+              type="button"
+              className={styles.saveChangesBtn}
+              onClick={() => {
+                setOriginalGeneralData(formData);
+                setIsEditingGeneral(true);
+              }}
+              style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
+            >
+              <Edit2 size={16} />
+              <span>Edit Information</span>
+            </button>
+          ) : activeTab === "General" && isEditingGeneral ? (
+            <div style={{ display: "flex", gap: "10px", width: "100%" }}>
+              <button
+                type="button"
+                onClick={handleCancelGeneral}
+                style={{
+                  flex: 1,
+                  padding: "12px",
+                  borderRadius: "10px",
+                  border: "1.5px solid #CBD5E1",
+                  backgroundColor: "#FFFFFF",
+                  color: "#475569",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={saving}
+                className={styles.saveChangesBtn}
+                style={{ flex: 2 }}
+                onClick={() => handleSave()}
+              >
+                {saving ? (
+                  <>
+                    <Loader2 size={18} style={{ animation: "spin 1s linear infinite" }} />
+                    <span>Saving Changes...</span>
+                  </>
+                ) : (
+                  <span>Save Changes</span>
+                )}
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              disabled={saving}
+              className={styles.saveChangesBtn}
+              onClick={() => handleSave()}
+            >
+              {saving ? (
+                <>
+                  <Loader2 size={18} style={{ animation: "spin 1s linear infinite" }} />
+                  <span>Saving Changes...</span>
+                </>
+              ) : (
+                <span>Save Changes</span>
+              )}
+            </button>
+          )}
         </div>
 
         {/* Delete Account Confirmation Modal */}

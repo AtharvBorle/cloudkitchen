@@ -13,9 +13,11 @@ interface HouseMapPickerProps {
     latitude: number | null;
     longitude: number | null;
     onChange: (lat: number, lng: number, details?: AddressDetails) => void;
+    label?: string;
+    height?: string;
 }
 
-export function HouseMapPicker({ latitude, longitude, onChange }: HouseMapPickerProps) {
+export function HouseMapPicker({ latitude, longitude, onChange, label, height }: HouseMapPickerProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<any>(null);
     const markerRef = useRef<any>(null);
@@ -240,19 +242,30 @@ export function HouseMapPicker({ latitude, longitude, onChange }: HouseMapPicker
         };
     }, []);
 
-    // Update marker position if coordinates change externally
+    // Update marker position and center map on searched location
     useEffect(() => {
         if (mapRef.current && markerRef.current && latitude !== null && longitude !== null) {
             const L = (window as any).L;
             if (L) {
                 try {
                     const currentLatLng = markerRef.current.getLatLng();
-                    if (currentLatLng && (currentLatLng.lat !== latitude || currentLatLng.lng !== longitude)) {
+                    if (!currentLatLng || currentLatLng.lat !== latitude || currentLatLng.lng !== longitude) {
                         markerRef.current.setLatLng([latitude, longitude]);
-                        mapRef.current.panTo([latitude, longitude]);
+                        if (typeof mapRef.current.flyTo === "function") {
+                            mapRef.current.flyTo([latitude, longitude], 16, { animate: true, duration: 0.6 });
+                        } else {
+                            mapRef.current.setView([latitude, longitude], 16);
+                        }
+                        setTimeout(() => {
+                            if (isMountedRef.current && mapRef.current) {
+                                mapRef.current.invalidateSize();
+                            }
+                        }, 150);
                     }
                 } catch (e) {
-                    // Ignore transient pan error
+                    try {
+                        mapRef.current.setView([latitude, longitude], 16);
+                    } catch {}
                 }
             }
         }
@@ -260,13 +273,15 @@ export function HouseMapPicker({ latitude, longitude, onChange }: HouseMapPicker
 
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "6px", width: "100%" }}>
-            <label style={{ display: "block", fontSize: "0.85rem", marginBottom: "2px", fontWeight: "bold" }}>
-                1. Select House Location on Map *
-            </label>
+            {label !== "" && (
+                <label style={{ display: "block", fontSize: "0.85rem", marginBottom: "2px", fontWeight: "bold" }}>
+                    {label || "1. Select House Location on Map *"}
+                </label>
+            )}
             <div
                 ref={mapContainerRef}
                 style={{
-                    height: "180px",
+                    height: height || "180px",
                     width: "100%",
                     borderRadius: "8px",
                     border: "1px solid #CBD5E1",
@@ -275,11 +290,11 @@ export function HouseMapPicker({ latitude, longitude, onChange }: HouseMapPicker
             />
             {latitude && longitude ? (
                 <div style={{ fontSize: "0.75rem", color: "#16A34A", fontWeight: "600" }}>
-                    📍 House coordinates set: {latitude.toFixed(6)}, {longitude.toFixed(6)}
+                    📍 Coordinates set: {latitude.toFixed(6)}, {longitude.toFixed(6)}
                 </div>
             ) : (
                 <div style={{ fontSize: "0.75rem", color: "#DC2626", fontWeight: "600" }}>
-                    ⚠️ Map pin of house is required! Drag the marker or click on the map.
+                    ⚠️ Map pin of location is required! Drag the marker or click on the map.
                 </div>
             )}
         </div>

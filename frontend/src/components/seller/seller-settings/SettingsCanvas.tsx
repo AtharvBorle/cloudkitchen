@@ -226,8 +226,34 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
       );
       if (matched) return matched;
     }
+    if (typeof window !== "undefined") {
+      try {
+        const savedTab = localStorage.getItem("seller_settings_active_tab");
+        if (savedTab) {
+          const matched = (["General", "Notifications", "Security", "Preferences"] as SettingsTab[]).find(
+            (t) => t.toLowerCase() === savedTab.toLowerCase()
+          );
+          if (matched) return matched;
+        }
+      } catch {}
+    }
     return initialTab;
   });
+
+  const [isEditingGeneral, setIsEditingGeneral] = useState(false);
+  const [originalGeneralData, setOriginalGeneralData] = useState<SettingsFormData | null>(null);
+
+  const handleTabChange = (tab: SettingsTab) => {
+    setActiveTab(tab);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("seller_settings_active_tab", tab.toLowerCase());
+        const url = new URL(window.location.href);
+        url.searchParams.set("tab", tab.toLowerCase());
+        window.history.replaceState(null, "", url.toString());
+      } catch {}
+    }
+  };
   const [formData, setFormData] = useState<SettingsFormData>(() => {
     let savedHours = DEFAULT_HOURS;
     let savedLanguage = "English";
@@ -330,6 +356,9 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
       );
       if (matched) {
         setActiveTab(matched);
+        try {
+          localStorage.setItem("seller_settings_active_tab", matched.toLowerCase());
+        } catch {}
       }
     }
   }, [searchParams]);
@@ -903,6 +932,7 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
         onSave(formData);
       }
 
+      setIsEditingGeneral(false);
       setToastData({ title: "Settings saved successfully!", status: "ON" });
     } catch (err: any) {
       console.error("Error saving settings:", err);
@@ -913,12 +943,15 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
   };
 
   const handleCancelClick = () => {
-    if (onCancel) {
+    if (isEditingGeneral && originalGeneralData) {
+      setFormData(originalGeneralData);
+    } else if (onCancel) {
       onCancel();
     } else {
       setFormData({ ...DEFAULT_DATA, ...initialData });
       setToastData({ title: "Changes reverted", status: null });
     }
+    setIsEditingGeneral(false);
   };
 
   const handleConfirmDeleteAccount = () => {
@@ -994,7 +1027,7 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
             role="tab"
             aria-selected={activeTab === tab}
             className={`${styles.tabBtn} ${activeTab === tab ? styles.activeTab : ""}`}
-            onClick={() => setActiveTab(tab)}
+            onClick={() => handleTabChange(tab)}
           >
             {tab}
           </button>
@@ -1006,7 +1039,117 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
         {/* Tab 1: General (Matches the Exact Provided Image) */}
         {activeTab === "General" && (
           <div className={styles.mainGrid}>
-            {/* Left Column: Storefront Banner & Restaurant Info & Language */}
+            <div style={{ gridColumn: "1 / -1", marginBottom: "6px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  backgroundColor: isEditingGeneral ? "#FFF7ED" : "#FFFFFF",
+                  border: `1.5px solid ${isEditingGeneral ? "#FED7AA" : "#E2E8F0"}`,
+                  borderRadius: "14px",
+                  padding: "14px 20px",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
+                  flexWrap: "wrap",
+                  gap: "12px",
+                }}
+              >
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <h3 style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "#0F172A" }}>
+                      General Kitchen Information
+                    </h3>
+                    <span
+                      style={{
+                        fontSize: "11px",
+                        fontWeight: 700,
+                        padding: "3px 8px",
+                        borderRadius: "6px",
+                        backgroundColor: isEditingGeneral ? "#EA580C" : "#F1F5F9",
+                        color: isEditingGeneral ? "#FFFFFF" : "#64748B",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      {isEditingGeneral ? "Editing Mode" : "Read-Only"}
+                    </span>
+                  </div>
+                  <p style={{ margin: "3px 0 0", fontSize: "12.5px", color: isEditingGeneral ? "#C2410C" : "#64748B" }}>
+                    {isEditingGeneral
+                      ? "Fields are unlocked. Make your changes and click 'Save Changes' below to update."
+                      : "Saved kitchen details are displayed in a read-only state. Click 'Edit Information' to update."}
+                  </p>
+                </div>
+                {!isEditingGeneral ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOriginalGeneralData(formData);
+                      setIsEditingGeneral(true);
+                    }}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "9px 18px",
+                      backgroundColor: "#EA580C",
+                      color: "#FFFFFF",
+                      borderRadius: "10px",
+                      border: "none",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      boxShadow: "0 2px 8px rgba(234, 88, 12, 0.25)",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    <Edit2 size={14} />
+                    <span>Edit Information</span>
+                  </button>
+                ) : (
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <button
+                      type="button"
+                      onClick={handleCancelClick}
+                      style={{
+                        padding: "8px 14px",
+                        backgroundColor: "#FFFFFF",
+                        border: "1.5px solid #CBD5E1",
+                        borderRadius: "10px",
+                        color: "#475569",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSubmit}
+                      disabled={saving}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        padding: "8px 18px",
+                        backgroundColor: "#EA580C",
+                        color: "#FFFFFF",
+                        borderRadius: "10px",
+                        border: "none",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                        cursor: saving ? "not-allowed" : "pointer",
+                        boxShadow: "0 2px 8px rgba(234, 88, 12, 0.25)",
+                      }}
+                    >
+                      {saving && <Loader2 size={14} className="spinner" />}
+                      <span>Save Changes</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+            {/* Left Column: Storefront Banner & Restaurant Info */}
             <div className={styles.leftColumn}>
               {/* Card 0A: Kitchen Card Grid Photo (Dashboard & Explore Listings) */}
               <div className={styles.card}>
@@ -1181,30 +1324,32 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                         id="card-file-input"
                         accept="image/png, image/jpeg, image/jpg, image/webp"
                         style={{ display: "none" }}
+                        disabled={!isEditingGeneral}
                         onChange={handleCardFileSelect}
                       />
                       <label
-                        htmlFor="card-file-input"
+                        htmlFor={isEditingGeneral ? "card-file-input" : undefined}
                         style={{
                           display: "inline-flex",
                           alignItems: "center",
                           gap: "6px",
                           padding: "8px 16px",
-                          backgroundColor: "#EA580C",
+                          backgroundColor: !isEditingGeneral ? "#CBD5E1" : "#EA580C",
                           color: "#FFFFFF",
                           borderRadius: "8px",
                           fontSize: "13px",
                           fontWeight: 600,
-                          cursor: "pointer",
+                          cursor: !isEditingGeneral ? "not-allowed" : "pointer",
+                          pointerEvents: !isEditingGeneral ? "none" : "auto",
                           transition: "background-color 0.15s ease",
-                          boxShadow: "0 2px 8px rgba(234, 88, 12, 0.25)",
+                          boxShadow: isEditingGeneral ? "0 2px 8px rgba(234, 88, 12, 0.25)" : "none",
                         }}
                       >
                         <Upload size={14} />
                         <span>{cardPreview ? "Replace Card Photo" : "Upload Card Photo"}</span>
                       </label>
 
-                      {cardFile && (
+                      {cardFile && isEditingGeneral && (
                         <button
                           type="button"
                           onClick={handleQuickUploadCard}
@@ -1228,7 +1373,7 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                         </button>
                       )}
 
-                      {cardPreview && (
+                      {cardPreview && isEditingGeneral && (
                         <button
                           type="button"
                           onClick={handleResetCard}
@@ -1406,30 +1551,32 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                       id="banner-file-input"
                       accept="image/png, image/jpeg, image/jpg, image/webp"
                       style={{ display: "none" }}
+                      disabled={!isEditingGeneral}
                       onChange={handleBannerFileSelect}
                     />
                     <label
-                      htmlFor="banner-file-input"
+                      htmlFor={isEditingGeneral ? "banner-file-input" : undefined}
                       style={{
                         display: "inline-flex",
                         alignItems: "center",
                         gap: "6px",
                         padding: "8px 16px",
-                        backgroundColor: "#EA580C",
+                        backgroundColor: !isEditingGeneral ? "#CBD5E1" : "#EA580C",
                         color: "#FFFFFF",
                         borderRadius: "8px",
                         fontSize: "13px",
                         fontWeight: 600,
-                        cursor: "pointer",
+                        cursor: !isEditingGeneral ? "not-allowed" : "pointer",
+                        pointerEvents: !isEditingGeneral ? "none" : "auto",
                         transition: "background-color 0.15s ease",
-                        boxShadow: "0 2px 8px rgba(234, 88, 12, 0.25)",
+                        boxShadow: isEditingGeneral ? "0 2px 8px rgba(234, 88, 12, 0.25)" : "none",
                       }}
                     >
                       <Upload size={14} />
                       <span>{bannerPreview ? "Replace Banner" : "Upload Banner"}</span>
                     </label>
 
-                    {bannerFile && (
+                    {bannerFile && isEditingGeneral && (
                       <button
                         type="button"
                         onClick={handleQuickUploadBanner}
@@ -1453,7 +1600,7 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                       </button>
                     )}
 
-                    {bannerPreview && (
+                    {bannerPreview && isEditingGeneral && (
                       <button
                         type="button"
                         onClick={handleResetBanner}
@@ -1485,7 +1632,23 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
 
               {/* Card 1: Restaurant Information */}
               <div className={styles.card}>
-                <h2 className={styles.cardTitle}>Restaurant Information</h2>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+                  <h2 className={styles.cardTitle} style={{ margin: 0 }}>Restaurant Information</h2>
+                  {!isEditingGeneral && (
+                    <span
+                      style={{
+                        fontSize: "11px",
+                        fontWeight: 600,
+                        color: "#64748B",
+                        backgroundColor: "#F1F5F9",
+                        padding: "2px 8px",
+                        borderRadius: "6px",
+                      }}
+                    >
+                      Locked (Read-Only)
+                    </span>
+                  )}
+                </div>
 
                 {/* Business / Kitchen Name */}
                 <div className={styles.fieldGroup}>
@@ -1494,10 +1657,12 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                     type="text"
                     name="businessName"
                     maxLength={50}
+                    disabled={!isEditingGeneral}
                     value={formData.businessName}
                     onChange={handleInputChange}
                     className={styles.input}
                     placeholder="e.g. Spice Symphony, Mama's Kitchen"
+                    style={!isEditingGeneral ? { backgroundColor: "#F8FAFC", cursor: "not-allowed", color: "#334155" } : undefined}
                   />
                 </div>
 
@@ -1507,10 +1672,12 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                   <input
                     type="email"
                     name="businessEmail"
+                    disabled={!isEditingGeneral}
                     value={formData.businessEmail}
                     onChange={handleInputChange}
                     className={styles.input}
                     placeholder="Enter business email"
+                    style={!isEditingGeneral ? { backgroundColor: "#F8FAFC", cursor: "not-allowed", color: "#334155" } : undefined}
                   />
                 </div>
 
@@ -1519,10 +1686,12 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                   <PhoneInput
                     id="settings-phone"
                     label="Phone Number"
+                    disabled={!isEditingGeneral}
                     value={formData.phoneNumber}
-                    onChange={(val) =>
-                      setFormData((prev) => ({ ...prev, phoneNumber: val }))
-                    }
+                    onChange={(val) => {
+                      if (!isEditingGeneral) return;
+                      setFormData((prev) => ({ ...prev, phoneNumber: val }));
+                    }}
                     placeholder="98765 43210"
                   />
                 </div>
@@ -1623,20 +1792,23 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                     )}
                   </div>
 
-                  <SellerMapPicker
-                    latitude={formData.latitude ?? null}
-                    longitude={formData.longitude ?? null}
-                    isPinned={formData.isLocationPinned}
-                    onChange={(lat, lng, formattedAddress) => {
-                      setFormData((prev) => ({
-                        ...prev,
-                        latitude: lat,
-                        longitude: lng,
-                        isLocationPinned: true,
-                        address: formattedAddress || prev.address,
-                      }));
-                    }}
-                  />
+                  <div style={{ pointerEvents: isEditingGeneral ? "auto" : "none", opacity: isEditingGeneral ? 1 : 0.88 }}>
+                    <SellerMapPicker
+                      latitude={formData.latitude ?? null}
+                      longitude={formData.longitude ?? null}
+                      isPinned={formData.isLocationPinned}
+                      onChange={(lat, lng, formattedAddress) => {
+                        if (!isEditingGeneral) return;
+                        setFormData((prev) => ({
+                          ...prev,
+                          latitude: lat,
+                          longitude: lng,
+                          isLocationPinned: true,
+                          address: formattedAddress || prev.address,
+                        }));
+                      }}
+                    />
+                  </div>
                 </div>
 
                 {/* Address */}
@@ -1733,19 +1905,24 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                   <textarea
                     ref={addressTextareaRef}
                     name="address"
+                    disabled={!isEditingGeneral && !isEditingAddress}
                     value={formData.address}
                     onChange={handleInputChange}
                     className={styles.textarea}
                     placeholder="Flat / Shop No., Building Name, Street / Road, Area, City, Pincode"
                     rows={3}
                     style={
-                      isEditingAddress
+                      isEditingAddress || isEditingGeneral
                         ? {
                             borderColor: "#EA580C",
                             boxShadow: "0 0 0 3px rgba(234, 88, 12, 0.15)",
                             backgroundColor: "#FFFFFF",
                           }
-                        : {}
+                        : {
+                            backgroundColor: "#F8FAFC",
+                            cursor: "not-allowed",
+                            color: "#334155",
+                          }
                     }
                   />
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "4px", flexWrap: "wrap", gap: "6px" }}>
@@ -1799,75 +1976,23 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                     min={1}
                     max={15}
                     step={1}
+                    disabled={!isEditingGeneral}
                     name="deliveryRadiusKm"
                     value={formData.deliveryRadiusKm ?? 5}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, deliveryRadiusKm: Number(e.target.value) }))}
-                    style={{ width: "100%", accentColor: "#EA580C", cursor: "pointer" }}
+                    onChange={(e) => {
+                      if (!isEditingGeneral) return;
+                      setFormData((prev) => ({ ...prev, deliveryRadiusKm: Number(e.target.value) }));
+                    }}
+                    style={{
+                      width: "100%",
+                      accentColor: isEditingGeneral ? "#EA580C" : "#94A3B8",
+                      cursor: isEditingGeneral ? "pointer" : "not-allowed",
+                      opacity: isEditingGeneral ? 1 : 0.6,
+                    }}
                   />
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "#64748B", marginTop: "4px" }}>
                     <span>1 km (Hyperlocal)</span>
                     <span>15 km (Extended reach)</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 2: Language & Region */}
-              <div className={styles.card}>
-                <h2 className={styles.cardTitle}>Language &amp; Region</h2>
-
-                {/* Language (Commented out for now) */}
-                {/*
-                <div className={styles.fieldGroup}>
-                  <label className={styles.label}>Language</label>
-                  <div className={styles.selectWrapper}>
-                    <select
-                      name="language"
-                      value={formData.language}
-                      onChange={handleInputChange}
-                      className={styles.select}
-                    >
-                      <option value="English">English</option>
-                      <option value="Hindi">Hindi</option>
-                      <option value="Marathi">Marathi</option>
-                    </select>
-                    <ChevronDown size={18} className={styles.selectChevron} />
-                  </div>
-                </div>
-                */}
-
-                {/* Timezone */}
-                <div className={styles.fieldGroup}>
-                  <label className={styles.label}>Timezone</label>
-                  <div className={styles.selectWrapper}>
-                    <select
-                      name="timezone"
-                      value={formData.timezone}
-                      onChange={handleInputChange}
-                      className={styles.select}
-                    >
-                      <option value="Asia/Kolkata (UTC+5:30)">Asia/Kolkata (UTC+5:30)</option>
-                      <option value="Asia/Dubai (UTC+4:00)">Asia/Dubai (UTC+4:00)</option>
-                      <option value="UTC (UTC+0:00)">UTC (UTC+0:00)</option>
-                    </select>
-                    <ChevronDown size={18} className={styles.selectChevron} />
-                  </div>
-                </div>
-
-                {/* Currency */}
-                <div className={styles.fieldGroup}>
-                  <label className={styles.label}>Currency</label>
-                  <div className={styles.selectWrapper}>
-                    <select
-                      name="currency"
-                      value={formData.currency}
-                      onChange={handleInputChange}
-                      className={styles.select}
-                    >
-                      <option value="INR (₹)">INR (₹)</option>
-                      <option value="USD ($)">USD ($)</option>
-                      <option value="AED (AED)">AED (AED)</option>
-                    </select>
-                    <ChevronDown size={18} className={styles.selectChevron} />
                   </div>
                 </div>
               </div>
@@ -1876,7 +2001,23 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
             {/* Right Column: Operating Hours */}
             <div className={styles.rightColumn}>
               <div className={styles.card}>
-                <h2 className={styles.cardTitle}>Operating Hours</h2>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+                  <h2 className={styles.cardTitle} style={{ margin: 0 }}>Operating Hours</h2>
+                  {!isEditingGeneral && (
+                    <span
+                      style={{
+                        fontSize: "11px",
+                        fontWeight: 600,
+                        color: "#64748B",
+                        backgroundColor: "#F1F5F9",
+                        padding: "2px 8px",
+                        borderRadius: "6px",
+                      }}
+                    >
+                      Locked
+                    </span>
+                  )}
+                </div>
 
                 <div className={styles.hoursTable}>
                   {/* Table Column Headers */}
@@ -1896,10 +2037,14 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                       <div className={styles.timeSelectWrapper}>
                         <select
                           value={row.openTime}
-                          disabled={!row.isOpen}
-                          onChange={(e) => handleTimeChange(idx, "openTime", e.target.value)}
+                          disabled={!isEditingGeneral || !row.isOpen}
+                          onChange={(e) => isEditingGeneral && handleTimeChange(idx, "openTime", e.target.value)}
                           className={styles.timeSelect}
-                          style={{ opacity: row.isOpen ? 1 : 0.5 }}
+                          style={{
+                            opacity: isEditingGeneral && row.isOpen ? 1 : 0.5,
+                            cursor: isEditingGeneral && row.isOpen ? "pointer" : "not-allowed",
+                            backgroundColor: !isEditingGeneral ? "#F8FAFC" : undefined,
+                          }}
                         >
                           {TIME_OPTIONS.map((t) => (
                             <option key={t} value={t} disabled={t === row.closeTime}>
@@ -1914,10 +2059,14 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                       <div className={styles.timeSelectWrapper}>
                         <select
                           value={row.closeTime}
-                          disabled={!row.isOpen}
-                          onChange={(e) => handleTimeChange(idx, "closeTime", e.target.value)}
+                          disabled={!isEditingGeneral || !row.isOpen}
+                          onChange={(e) => isEditingGeneral && handleTimeChange(idx, "closeTime", e.target.value)}
                           className={styles.timeSelect}
-                          style={{ opacity: row.isOpen ? 1 : 0.5 }}
+                          style={{
+                            opacity: isEditingGeneral && row.isOpen ? 1 : 0.5,
+                            cursor: isEditingGeneral && row.isOpen ? "pointer" : "not-allowed",
+                            backgroundColor: !isEditingGeneral ? "#F8FAFC" : undefined,
+                          }}
                         >
                           {TIME_OPTIONS.map((t) => (
                             <option key={t} value={t} disabled={t === row.openTime}>
@@ -1930,11 +2079,12 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
 
                       {/* Status Toggle Switch */}
                       <div className={styles.switchWrapper}>
-                        <label className={styles.toggleSwitch}>
+                        <label className={styles.toggleSwitch} style={{ opacity: isEditingGeneral ? 1 : 0.65, cursor: isEditingGeneral ? "pointer" : "not-allowed" }}>
                           <input
                             type="checkbox"
                             checked={row.isOpen}
-                            onChange={() => handleToggleOperatingDay(idx)}
+                            disabled={!isEditingGeneral}
+                            onChange={() => isEditingGeneral && handleToggleOperatingDay(idx)}
                           />
                           <span className={styles.toggleSlider} />
                         </label>
@@ -2370,22 +2520,39 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
 
         {/* 4. Bottom Action Buttons: Cancel & Save Changes */}
         <div className={styles.actionsBar}>
-          <button
-            type="button"
-            className={styles.cancelBtn}
-            onClick={handleCancelClick}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={saving}
-            className={styles.saveBtn}
-          >
-            {saving && <Loader2 size={16} className="spinner" />}
-            <span>Save Changes</span>
-          </button>
+          {activeTab === "General" && !isEditingGeneral ? (
+            <button
+              type="button"
+              onClick={() => {
+                setOriginalGeneralData(formData);
+                setIsEditingGeneral(true);
+              }}
+              className={styles.saveBtn}
+              style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}
+            >
+              <Edit2 size={16} />
+              <span>Edit Information</span>
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                className={styles.cancelBtn}
+                onClick={handleCancelClick}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={saving}
+                className={styles.saveBtn}
+              >
+                {saving && <Loader2 size={16} className="spinner" />}
+                <span>Save Changes</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
 

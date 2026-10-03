@@ -99,6 +99,11 @@ export const authConfig: NextAuthConfig = {
                         throw new CustomAuthError("USER_NOT_FOUND");
                     }
 
+                    if (user.isActive === false) {
+                        console.log("Account is inactive for phone:", phoneDigits);
+                        throw new CustomAuthError("ACCOUNT_INACTIVE");
+                    }
+
                     console.log("OTP login successful for user:", user.name, "phone:", user.phone);
                     return {
                         id: user.id,
@@ -155,6 +160,12 @@ export const authConfig: NextAuthConfig = {
                     throw new CustomAuthError("INVALID_PASSWORD");
                 }
 
+                // Check if account is active
+                if (user.isActive === false) {
+                    console.log("Account is inactive for user:", rawIdentifier);
+                    throw new CustomAuthError("ACCOUNT_INACTIVE");
+                }
+
                 // Verify role mismatch
                 if (loginType === "USER" && user.role !== "USER") {
                     console.log(`Role mismatch: User role is ${user.role}, but tried to login as USER`);
@@ -196,7 +207,14 @@ export const authConfig: NextAuthConfig = {
             return token;
         },
         async session({ session, token }) {
-            if (session.user) {
+            if (session.user && token?.id) {
+                const dbUser = await db.user.findUnique({
+                    where: { id: token.id as string },
+                    select: { isActive: true }
+                });
+                if (dbUser && !dbUser.isActive) {
+                    return null as any;
+                }
                 session.user.role = token.role as string;
                 session.user.id = token.id as string;
                 session.user.email = (token.email as string) || "";

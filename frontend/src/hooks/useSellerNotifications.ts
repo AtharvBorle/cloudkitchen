@@ -261,6 +261,7 @@ export function broadcastDeliveryAlert(payload: {
 }) {
   const isOut = payload.status === "OUT_FOR_DELIVERY" || payload.status === "ON_THE_WAY";
   const rawTimestamp = payload.timestamp || new Date().toISOString();
+  const cleanId = payload.orderId ? payload.orderId.replace(/^ORD-/, "").trim() : "";
   const notifItem: SellerNotificationItem = {
     id: `notif-deliv-${payload.orderId || Date.now()}`,
     category: "delivery",
@@ -275,7 +276,7 @@ export function broadcastDeliveryAlert(payload: {
     isRead: false,
     severity: "info",
     actionLabel: "Track Dispatch",
-    actionHref: "/seller/delivery",
+    actionHref: cleanId ? `/seller/orders/details?orderId=${cleanId}` : "/seller/orders",
   };
 
   addSellerNotification(notifItem);

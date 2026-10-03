@@ -777,20 +777,20 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
                           <td className={styles.statusCell}>
                             {isPending ? (
                               !isExpired ? (
-                                <span
+                                <div
                                   className={`${styles.statusBadge} ${
                                     isUrgent ? styles.statusTimerUrgent : styles.statusTimer
                                   }`}
                                   title={`Accept order within ${mm}:${ss} before auto-cancellation`}
                                 >
                                   <Clock size={12} style={{ display: "inline", verticalAlign: "middle", marginRight: "3px" }} />
-                                  {mm}:{ss}
-                                </span>
+                                  <span className={styles.statusLabel}>{mm}:{ss}</span>
+                                </div>
                               ) : (
-                                <span className={`${styles.statusBadge} ${styles.statusCancelled}`} title="Auto-cancelled (acceptance time expired)">
+                                <div className={`${styles.statusBadge} ${styles.statusCancelled}`} title="Auto-cancelled (acceptance time expired)">
                                   <span className={styles.statusDot} />
                                   <span className={styles.statusLabel}>Cancelled</span>
-                                </span>
+                                </div>
                               )
                             ) : (
                               <div

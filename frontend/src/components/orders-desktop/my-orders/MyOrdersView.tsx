@@ -1522,7 +1522,7 @@ export default function MyOrdersView() {
 
                           {isCancelled && (
                             <>
-                              {(order.refund || order.isPaid) && (
+                              {(order.refund || order.isPaid || order.price === 0) && (
                                 <span
                                   style={{
                                     display: "inline-flex",
@@ -1533,19 +1533,19 @@ export default function MyOrdersView() {
                                     fontSize: "0.75rem",
                                     fontWeight: 700,
                                     backgroundColor:
-                                      order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED"
+                                      order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED" || (!order.refund && order.price === 0)
                                         ? "#DCFCE7"
                                         : order.refund?.status === "REJECTED"
                                         ? "#FEE2E2"
                                         : "#FEF3C7",
                                     color:
-                                      order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED"
+                                      order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED" || (!order.refund && order.price === 0)
                                         ? "#15803D"
                                         : order.refund?.status === "REJECTED"
                                         ? "#B91C1C"
                                         : "#B45309",
                                     border: `1px solid ${
-                                      order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED"
+                                      order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED" || (!order.refund && order.price === 0)
                                         ? "#BBF7D0"
                                         : order.refund?.status === "REJECTED"
                                         ? "#FECACA"
@@ -1553,11 +1553,11 @@ export default function MyOrdersView() {
                                     }`,
                                   }}
                                 >
-                                  {order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED"
-                                    ? `✓ Refund: Processed (₹${order.refund.amount || order.price})`
+                                  {order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED" || (!order.refund && order.price === 0)
+                                    ? `✓ Refund: Processed (₹${typeof order.refund?.amount === "number" ? order.refund.amount : order.price})`
                                     : order.refund?.status === "REJECTED"
                                     ? `✕ Refund: Rejected`
-                                    : `⏳ Refund: Processing (₹${order.price})`}
+                                    : `⏳ Refund: Processing (₹${typeof order.refund?.amount === "number" ? order.refund.amount : order.price})`}
                                 </span>
                               )}
                               <button

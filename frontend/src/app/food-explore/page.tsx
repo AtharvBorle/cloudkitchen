@@ -606,6 +606,11 @@ function FoodExploreContent() {
       stockQuantity: stockLimit,
       maxStock: stockLimit,
       itemType: dish.itemType,
+      categoryId: (dish as any).categoryId,
+      foodCategoryId: (dish as any).foodCategoryId,
+      category: (dish as any).category,
+      foodCategory: (dish as any).foodCategory,
+      categoryName: (dish as any).categoryName || (dish as any).category?.name || (dish as any).foodCategory?.name,
       addons: parsedAddons,
     }, false, () => {
       if (showAnimation) {
@@ -2255,6 +2260,11 @@ function FoodExploreContent() {
               stockQuantity: stockLimit,
               maxStock: stockLimit,
               itemType: addonModalDish.itemType,
+              categoryId: (addonModalDish as any).categoryId,
+              foodCategoryId: (addonModalDish as any).foodCategoryId,
+              category: (addonModalDish as any).category,
+              foodCategory: (addonModalDish as any).foodCategory,
+              categoryName: (addonModalDish as any).categoryName || (addonModalDish as any).category?.name || (addonModalDish as any).foodCategory?.name,
               addons: addonModalDish.parsedAddons,
             }, false, () => {
               setAddedIds((prev) => ({ ...prev, [savedDishId]: true }));

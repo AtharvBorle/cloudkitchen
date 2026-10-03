@@ -351,7 +351,11 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
                   <div className={styles.cardFooter}>
                     {item.actionLabel && item.actionHref ? (
                       <Link
-                        href={item.actionHref}
+                        href={
+                          item.actionLabel === "Track Dispatch" && item.actionHref === "/seller/delivery"
+                            ? "/seller/orders"
+                            : item.actionHref
+                        }
                         className={styles.cardActionLink}
                         onClick={(e) => {
                           e.stopPropagation();

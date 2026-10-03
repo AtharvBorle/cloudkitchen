@@ -114,6 +114,11 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
       stockQuantity: stockLimit,
       maxStock: stockLimit,
       itemType: item.itemType,
+      categoryId: (item as any).categoryId,
+      foodCategoryId: (item as any).foodCategoryId,
+      category: (item as any).category,
+      foodCategory: (item as any).foodCategory,
+      categoryName: (item as any).categoryName || (item as any).category?.name || (item as any).foodCategory?.name,
       addons: item.addons,
     });
   };
@@ -435,6 +440,11 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
               stockQuantity: stockLimit,
               maxStock: stockLimit,
               itemType: modalItem.itemType,
+              categoryId: (modalItem as any).categoryId,
+              foodCategoryId: (modalItem as any).foodCategoryId,
+              category: (modalItem as any).category,
+              foodCategory: (modalItem as any).foodCategory,
+              categoryName: (modalItem as any).categoryName || (modalItem as any).category?.name || (modalItem as any).foodCategory?.name,
               addons: modalItem.addons,
             });
             setModalItem(null);

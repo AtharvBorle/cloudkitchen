@@ -6,6 +6,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { performLogout } from "@/lib/logout";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
+import { X, CheckCircle2 } from "lucide-react";
 
 const formatDisplayName = (name: string) => {
     return name
@@ -130,7 +131,7 @@ export default function SuperadminSellersPage() {
                     isActive: editIsActive,
                     businessName: editBusinessName,
                     type: editType,
-                    verificationStatus: editVerificationStatus,
+                    verificationStatus: editingSeller?.verificationStatus === "APPROVED" ? "APPROVED" : editVerificationStatus,
                     isOnline: editIsOnline,
                     foodVerificationStatus: editFoodVerificationStatus,
                     propertyVerificationStatus: editPropertyVerificationStatus
@@ -415,146 +416,230 @@ export default function SuperadminSellersPage() {
 
             {/* Edit Modal */}
             {editingSeller && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, backdropFilter: 'blur(4px)' }}>
-                    <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '16px', width: '100%', maxWidth: '560px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', maxHeight: '90vh', overflowY: 'auto' }}>
-                        <h2 style={{ fontSize: '1.4rem', fontWeight: 'bold', marginBottom: '5px', color: 'var(--text-main)' }}>Edit Seller Profile</h2>
-                        <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '25px' }}>Modifying details for {editBusinessName || editName}</p>
-
-                        <form onSubmit={handleUpdateSeller}>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '15px', marginBottom: '15px' }}>
-                                <div className="input-group" style={{ marginBottom: 0 }}>
-                                    <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Business Name</label>
-                                    <input type="text" value={editBusinessName} onChange={e => setEditBusinessName(e.target.value)} className="input-field" required />
-                                </div>
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, backdropFilter: 'blur(4px)', padding: '20px' }}>
+                    <style>{`
+                        @keyframes popInCheck {
+                            0% { transform: scale(0.3); opacity: 0; }
+                            70% { transform: scale(1.2); }
+                            100% { transform: scale(1); opacity: 1; }
+                        }
+                    `}</style>
+                    <div style={{ backgroundColor: '#ffffff', borderRadius: '20px', width: '100%', maxWidth: '680px', boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.25)', maxHeight: '92vh', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+                        {/* Modal Header */}
+                        <div style={{ padding: '24px 28px 18px 28px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px' }}>
+                            <div>
+                                <h2 style={{ fontSize: '1.35rem', fontWeight: '800', margin: '0 0 4px 0', color: '#0f172a', letterSpacing: '-0.3px' }}>Edit Seller Profile</h2>
+                                <p style={{ fontSize: '0.88rem', color: '#64748b', margin: 0 }}>Modifying details for <strong style={{ color: '#334155' }}>{editBusinessName || editName}</strong></p>
                             </div>
+                            <button
+                                type="button"
+                                onClick={() => setEditingSeller(null)}
+                                style={{
+                                    background: '#f8fafc',
+                                    border: '1px solid #e2e8f0',
+                                    borderRadius: '10px',
+                                    padding: '6px',
+                                    cursor: 'pointer',
+                                    color: '#64748b',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    transition: 'all 0.15s ease',
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#fee2e2';
+                                    e.currentTarget.style.borderColor = '#fca5a5';
+                                    e.currentTarget.style.color = '#dc2626';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#f8fafc';
+                                    e.currentTarget.style.borderColor = '#e2e8f0';
+                                    e.currentTarget.style.color = '#64748b';
+                                }}
+                                title="Close modal"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
-                                <div className="input-group" style={{ marginBottom: 0 }}>
-                                    <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Owner Name</label>
-                                    <input type="text" value={editName} onChange={e => setEditName(e.target.value)} className="input-field" required />
-                                </div>
-
-                                <div className="input-group" style={{ marginBottom: 0 }}>
-                                    <PhoneInput
-                                        label="Phone"
-                                        value={editPhone}
-                                        onChange={(val) => setEditPhone(val)}
-                                        placeholder="98765 43210"
+                        {/* Modal Body */}
+                        <form onSubmit={handleUpdateSeller} style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                            {/* Row 1: Business Name & Category Type */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '6px', color: '#334155', fontWeight: '600' }}>
+                                        Business Name <span style={{ color: '#ef4444' }}>*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={editBusinessName}
+                                        onChange={e => setEditBusinessName(e.target.value)}
+                                        style={{
+                                            width: '100%',
+                                            height: '44px',
+                                            padding: '0 14px',
+                                            borderRadius: '10px',
+                                            border: '1.5px solid #cbd5e1',
+                                            fontSize: '0.9rem',
+                                            color: '#0f172a',
+                                            backgroundColor: '#ffffff',
+                                            outline: 'none',
+                                            boxSizing: 'border-box',
+                                        }}
+                                        placeholder="Enter business name"
                                         required
                                     />
                                 </div>
-                            </div>
 
-                            {/* Category Type Multi-Select Checklist */}
-                            <div className="input-group" style={{ marginBottom: '20px' }}>
-                                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '6px', color: '#475569', fontWeight: '600' }}>
-                                    Category Types <span style={{ fontSize: '0.8rem', fontWeight: 'normal', color: '#64748B' }}>(Select multiple applicable categories)</span>
-                                </label>
-                                
-                                <div style={{
-                                    maxHeight: '160px',
-                                    overflowY: 'auto',
-                                    border: '1px solid #CBD5E1',
-                                    borderRadius: '8px',
-                                    padding: '10px 12px',
-                                    backgroundColor: '#F8FAFC',
-                                    display: 'grid',
-                                    gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-                                    gap: '8px'
-                                }}>
-                                    {categories.map((cat) => {
-                                        const isChecked = selectedTypes.some(t => t.toLowerCase() === cat.name.toLowerCase());
-                                        return (
-                                            <label
-                                                key={cat.id}
-                                                style={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: '8px',
-                                                    padding: '6px 10px',
-                                                    borderRadius: '6px',
-                                                    backgroundColor: isChecked ? '#EFF6FF' : '#FFFFFF',
-                                                    border: isChecked ? '1px solid #3B82F6' : '1px solid #E2E8F0',
-                                                    cursor: 'pointer',
-                                                    fontSize: '0.85rem',
-                                                    fontWeight: isChecked ? '600' : '400',
-                                                    color: isChecked ? '#1D4ED8' : '#334155',
-                                                    transition: 'all 0.15s ease'
-                                                }}
-                                            >
-                                                <input
-                                                    type="checkbox"
-                                                    checked={isChecked}
-                                                    onChange={() => handleToggleCategoryType(cat.name)}
-                                                    style={{ accentColor: '#2563EB', cursor: 'pointer' }}
-                                                />
-                                                <span>{formatDisplayName(cat.name)}</span>
-                                                <span style={{ fontSize: '0.7rem', color: '#94A3B8' }}>({cat.type})</span>
-                                            </label>
-                                        );
-                                    })}
-
-                                    {/* Legacy / Unmatched Selected Types */}
-                                    {selectedTypes
-                                        .filter(t => !categories.some(c => c.name.toLowerCase() === t.toLowerCase()))
-                                        .map((legacyType) => (
-                                            <label
-                                                key={legacyType}
-                                                style={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: '8px',
-                                                    padding: '6px 10px',
-                                                    borderRadius: '6px',
-                                                    backgroundColor: '#FEF3C7',
-                                                    border: '1px solid #F59E0B',
-                                                    cursor: 'pointer',
-                                                    fontSize: '0.85rem',
-                                                    fontWeight: '600',
-                                                    color: '#B45309'
-                                                }}
-                                            >
-                                                <input
-                                                    type="checkbox"
-                                                    checked={true}
-                                                    onChange={() => handleToggleCategoryType(legacyType)}
-                                                    style={{ accentColor: '#D97706', cursor: 'pointer' }}
-                                                />
-                                                <span>{formatDisplayName(legacyType)}</span>
-                                                <span style={{ fontSize: '0.7rem', color: '#92400E' }}>(Legacy)</span>
-                                            </label>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '6px', color: '#334155', fontWeight: '600' }}>
+                                        Category Type <span style={{ color: '#ef4444' }}>*</span>
+                                    </label>
+                                    <select
+                                        value={editType}
+                                        onChange={e => setEditType(e.target.value)}
+                                        style={{
+                                            width: '100%',
+                                            height: '44px',
+                                            padding: '0 12px',
+                                            borderRadius: '10px',
+                                            border: '1.5px solid #cbd5e1',
+                                            fontSize: '0.9rem',
+                                            color: '#0f172a',
+                                            backgroundColor: '#ffffff',
+                                            outline: 'none',
+                                            appearance: 'auto',
+                                            boxSizing: 'border-box',
+                                        }}
+                                        required
+                                    >
+                                        <option value="">Select Category...</option>
+                                        {categories.map(cat => (
+                                            <option key={cat.id} value={cat.name}>{formatDisplayName(cat.name)}</option>
                                         ))}
+                                        {editType && !categories.some(c => c.name === editType) && (
+                                            <option value={editType}>{formatDisplayName(editType)} (Legacy)</option>
+                                        )}
+                                    </select>
                                 </div>
-
-                                {selectedTypes.length > 0 ? (
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px', alignItems: 'center' }}>
-                                        <span style={{ fontSize: '0.75rem', color: '#64748B' }}>Selected:</span>
-                                        {selectedTypes.map((st) => (
-                                            <span
-                                                key={st}
-                                                style={{
-                                                    fontSize: '0.75rem',
-                                                    backgroundColor: '#E0F2FE',
-                                                    color: '#0369A1',
-                                                    padding: '2px 8px',
-                                                    borderRadius: '12px',
-                                                    fontWeight: '600'
-                                                }}
-                                            >
-                                                {formatDisplayName(st)}
-                                            </span>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <p style={{ fontSize: '0.75rem', color: '#EF4444', margin: '6px 0 0 0' }}>
-                                        Please select at least one category for this seller.
-                                    </p>
-                                )}
                             </div>
 
-                            <div style={{ backgroundColor: '#f8fafc', padding: '15px', borderRadius: '8px', marginBottom: '20px', border: '1px solid #e2e8f0' }}>
-                                <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#64748b', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Category & Document Verifications</div>
+                            {/* Row 2: Owner Name & Phone Number */}
+                            {(() => {
+                                const cleanDigits = (editPhone || '').replace(/\D/g, '');
+                                const isPhoneValid = cleanDigits.length === 10;
+                                return (
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                        <div>
+                                            <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '6px', color: '#334155', fontWeight: '600' }}>
+                                                Owner Name <span style={{ color: '#ef4444' }}>*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={editName}
+                                                onChange={e => setEditName(e.target.value)}
+                                                style={{
+                                                    width: '100%',
+                                                    height: '44px',
+                                                    padding: '0 14px',
+                                                    borderRadius: '10px',
+                                                    border: '1.5px solid #cbd5e1',
+                                                    fontSize: '0.9rem',
+                                                    color: '#0f172a',
+                                                    backgroundColor: '#ffffff',
+                                                    outline: 'none',
+                                                    boxSizing: 'border-box',
+                                                }}
+                                                placeholder="Enter owner name"
+                                                required
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '6px', color: '#334155', fontWeight: '600' }}>
+                                                Phone <span style={{ color: '#ef4444' }}>*</span>
+                                            </label>
+                                            <div style={{
+                                                position: 'relative',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                width: '100%',
+                                                height: '44px',
+                                                borderRadius: '10px',
+                                                border: isPhoneValid ? '1.5px solid #10b981' : '1.5px solid #cbd5e1',
+                                                boxShadow: isPhoneValid ? '0 0 0 3px rgba(16, 185, 129, 0.15)' : 'none',
+                                                backgroundColor: '#ffffff',
+                                                overflow: 'hidden',
+                                                boxSizing: 'border-box',
+                                                transition: 'all 0.2s ease',
+                                            }}>
+                                                <div style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '4px',
+                                                    padding: '0 12px',
+                                                    height: '100%',
+                                                    backgroundColor: '#f8fafc',
+                                                    borderRight: isPhoneValid ? '1.5px solid #10b981' : '1.5px solid #cbd5e1',
+                                                    color: '#334155',
+                                                    fontSize: '0.88rem',
+                                                    fontWeight: '700',
+                                                    userSelect: 'none',
+                                                    flexShrink: 0,
+                                                    transition: 'border-color 0.2s ease',
+                                                }}>
+                                                    <span>IN +91</span>
+                                                </div>
+                                                <input
+                                                    type="tel"
+                                                    value={editPhone}
+                                                    onChange={e => {
+                                                        const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                                        setEditPhone(val);
+                                                    }}
+                                                    style={{
+                                                        flex: 1,
+                                                        minWidth: 0,
+                                                        height: '100%',
+                                                        padding: isPhoneValid ? '0 38px 0 14px' : '0 14px',
+                                                        border: 'none',
+                                                        outline: 'none',
+                                                        fontSize: '0.9rem',
+                                                        color: '#0f172a',
+                                                        backgroundColor: 'transparent',
+                                                        boxSizing: 'border-box',
+                                                        letterSpacing: '0.02em',
+                                                        fontWeight: isPhoneValid ? '600' : '400',
+                                                    }}
+                                                    placeholder="98765 43210"
+                                                    maxLength={10}
+                                                    required
+                                                />
+                                                {isPhoneValid && (
+                                                    <div style={{
+                                                        position: 'absolute',
+                                                        right: '12px',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        pointerEvents: 'none',
+                                                        color: '#10b981',
+                                                        animation: 'popInCheck 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                                                    }}>
+                                                        <CheckCircle2 size={18} />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+
+                            {/* Section: Category & Document Verifications */}
+                            <div style={{ backgroundColor: '#f8fafc', padding: '18px 20px', borderRadius: '14px', border: '1.5px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                                <div style={{ fontSize: '0.8rem', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                                    Category & Document Verifications
+                                </div>
                                 
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
                                     <div className="input-group" style={{ marginBottom: 0 }}>
@@ -575,6 +660,7 @@ export default function SuperadminSellersPage() {
                                             <option value="REJECTED">Rejected</option>
                                         </select>
                                     </div>
+
                                 </div>
 
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>

@@ -459,6 +459,10 @@ export const loginUser = async (req: Request) => {
         throw new ApiError("Invalid email or password. Please check your credentials and try again.", 401);
     }
 
+    if (user.isActive === false) {
+        throw new ApiError("Your account is inactive. Please contact the administrator.", 403);
+    }
+
     // Use NEXTAUTH_SECRET as the JWT secret, or a fallback for dev
     const secret = process.env.NEXTAUTH_SECRET || "fallback_secret_for_development_only";
 
@@ -636,7 +640,7 @@ export const checkEmailAvailability = async (req: Request) => {
 
     const existingUser = await db.user.findUnique({
         where: { email: normalizedEmail },
-        select: { id: true, email: true, role: true }
+        select: { id: true, email: true, role: true, isActive: true }
     });
 
     if (existingUser) {
@@ -644,6 +648,7 @@ export const checkEmailAvailability = async (req: Request) => {
             available: false,
             exists: true,
             email: normalizedEmail,
+            isActive: existingUser.isActive,
             message: "An account with this email address already exists. Please sign in or use a different email."
         };
     }
