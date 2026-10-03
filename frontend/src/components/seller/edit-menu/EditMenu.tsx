@@ -29,6 +29,66 @@ export interface DaySchedule {
   isOpen: boolean;
 }
 
+export function normalizeTimeTo24h(timeStr: string): string {
+  if (!timeStr || !timeStr.trim()) return '';
+  const clean = timeStr.trim();
+  if (/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(clean)) {
+    const [h, m] = clean.split(':');
+    return `${h.padStart(2, '0')}:${m.padStart(2, '0')}`;
+  }
+  const match = clean.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+  if (match) {
+    let hours = parseInt(match[1], 10);
+    const minutes = match[2];
+    const modifier = match[3] ? match[3].toUpperCase() : null;
+    if (modifier === 'PM' && hours < 12) hours += 12;
+    if (modifier === 'AM' && hours === 12) hours = 0;
+    return `${String(hours).padStart(2, '0')}:${minutes}`;
+  }
+  return clean;
+}
+
+export function parseTimeToMinutes(timeStr: string): number | null {
+  const norm = normalizeTimeTo24h(timeStr);
+  if (!norm || !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(norm)) return null;
+  const [h, m] = norm.split(':').map(Number);
+  return h * 60 + m;
+}
+
+export function validateDaySchedules(schedules: DaySchedule[]): { valid: boolean; error?: string } {
+  for (const s of schedules) {
+    if (s.isOpen) {
+      if (!s.openTime || !s.closeTime || !s.openTime.trim() || !s.closeTime.trim()) {
+        return {
+          valid: false,
+          error: `Please set valid Start Time and End Time for ${s.day}, or turn off the toggle if the item is not available on ${s.day}.`,
+        };
+      }
+      const openMin = parseTimeToMinutes(s.openTime);
+      const closeMin = parseTimeToMinutes(s.closeTime);
+      if (openMin === null) {
+        return {
+          valid: false,
+          error: `Invalid Start Time "${s.openTime}" for ${s.day}. Please enter a valid time.`,
+        };
+      }
+      if (closeMin === null) {
+        return {
+          valid: false,
+          error: `Invalid End Time "${s.closeTime}" for ${s.day}. Please enter a valid time.`,
+        };
+      }
+      if (closeMin <= openMin) {
+        return {
+          valid: false,
+          error: `Invalid operational hours for ${s.day}: End Time (${s.closeTime}) must be later than Start Time (${s.openTime}).`,
+        };
+      }
+    }
+  }
+  return { valid: true };
+}
+
 export interface EditMenuProps {
   ownerName?: string;
   partnerRole?: string;
@@ -81,13 +141,13 @@ function EditMenuInner({
 
   // Day-wise Operational Hours
   const [schedules, setSchedules] = useState<DaySchedule[]>([
-    { day: 'Monday', openTime: '', closeTime: '', isOpen: true },
-    { day: 'Tuesday', openTime: '', closeTime: '', isOpen: true },
-    { day: 'Wednesday', openTime: '', closeTime: '', isOpen: true },
-    { day: 'Thursday', openTime: '', closeTime: '', isOpen: true },
-    { day: 'Friday', openTime: '', closeTime: '', isOpen: true },
-    { day: 'Saturday', openTime: '', closeTime: '', isOpen: true },
-    { day: 'Sunday', openTime: '', closeTime: '', isOpen: true },
+    { day: 'Monday', openTime: '09:00', closeTime: '22:00', isOpen: true },
+    { day: 'Tuesday', openTime: '09:00', closeTime: '22:00', isOpen: true },
+    { day: 'Wednesday', openTime: '09:00', closeTime: '22:00', isOpen: true },
+    { day: 'Thursday', openTime: '09:00', closeTime: '22:00', isOpen: true },
+    { day: 'Friday', openTime: '09:00', closeTime: '22:00', isOpen: true },
+    { day: 'Saturday', openTime: '09:00', closeTime: '22:00', isOpen: true },
+    { day: 'Sunday', openTime: '09:00', closeTime: '22:00', isOpen: true },
   ]);
 
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -302,6 +362,12 @@ function EditMenuInner({
 
     if (!imageFile && !existingImageUrl) {
       alert("Dish image is mandatory. Please upload an image.");
+      return;
+    }
+
+    const scheduleValidation = validateDaySchedules(schedules);
+    if (!scheduleValidation.valid) {
+      alert(scheduleValidation.error);
       return;
     }
 
@@ -715,23 +781,25 @@ function EditMenuInner({
                     <span className={styles.scheduleDay}>{schedule.day}</span>
                     <div className={styles.timeRangeWrapper}>
                       <input
-                        type="text"
+                        type="time"
                         className={styles.timeInput}
-                        value={schedule.openTime}
-                        placeholder="09:00 AM"
+                        value={normalizeTimeTo24h(schedule.openTime)}
+                        disabled={!schedule.isOpen}
                         onChange={(e) =>
                           handleTimeChange(schedule.day, 'openTime', e.target.value)
                         }
+                        aria-label={`${schedule.day} start time`}
                       />
                       <span className={styles.toText}>to</span>
                       <input
-                        type="text"
+                        type="time"
                         className={styles.timeInput}
-                        value={schedule.closeTime}
-                        placeholder="10:00 PM"
+                        value={normalizeTimeTo24h(schedule.closeTime)}
+                        disabled={!schedule.isOpen}
                         onChange={(e) =>
                           handleTimeChange(schedule.day, 'closeTime', e.target.value)
                         }
+                        aria-label={`${schedule.day} end time`}
                       />
                     </div>
                     <button

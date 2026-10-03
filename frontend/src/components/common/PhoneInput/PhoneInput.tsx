@@ -114,7 +114,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
           autoComplete={autoComplete}
           className={`${styles.phoneField} ${
             size === "compact" ? styles.compactField : ""
-          } ${inputClassName}`}
+          } ${rightAction ? styles.phoneFieldWithAction : ""} ${inputClassName}`}
         />
 
         {rightAction ? (

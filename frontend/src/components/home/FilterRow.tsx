@@ -403,8 +403,10 @@ export default function FilterRow({
                 padding: "8px",
                 boxShadow: "0 16px 36px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.08)",
                 border: "1px solid #E2E8F0",
-                zIndex: 1000,
+                zIndex: 9999,
                 minWidth: "185px",
+                maxWidth: "calc(100vw - 32px)",
+                boxSizing: "border-box",
                 display: "flex",
                 flexDirection: "column",
                 gap: "4px",
@@ -502,8 +504,10 @@ export default function FilterRow({
                 padding: "8px",
                 boxShadow: "0 16px 36px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.08)",
                 border: "1px solid #E2E8F0",
-                zIndex: 1000,
+                zIndex: 9999,
                 minWidth: "180px",
+                maxWidth: "calc(100vw - 32px)",
+                boxSizing: "border-box",
                 display: "flex",
                 flexDirection: "column",
                 gap: "4px",
@@ -600,8 +604,10 @@ export default function FilterRow({
                 padding: "10px",
                 boxShadow: "0 16px 36px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.08)",
                 border: "1px solid #E2E8F0",
-                zIndex: 1000,
+                zIndex: 9999,
                 minWidth: "230px",
+                maxWidth: "calc(100vw - 32px)",
+                boxSizing: "border-box",
                 maxHeight: "280px",
                 overflowY: "auto",
                 display: "flex",
@@ -671,7 +677,19 @@ export default function FilterRow({
         }
         @media (max-width: 768px) {
           .filter-row-section {
-            display: none !important;
+            padding: 0 16px !important;
+            margin: 0 0 14px 0 !important;
+          }
+          .filter-row-container {
+            flex-wrap: nowrap !important;
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            padding-bottom: 6px !important;
+            width: 100% !important;
+          }
+          .filter-row-container::-webkit-scrollbar {
+            display: none;
           }
         }
       `}</style>

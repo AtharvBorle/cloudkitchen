@@ -117,6 +117,7 @@ function MySubscriptionContent() {
 
   // Active Subscription State
   const [userSubs, setUserSubs] = useState<UserActiveMealSubscription[]>([]);
+  const activeSubs = useMemo(() => userSubs.filter((s) => s.status === "ACTIVE"), [userSubs]);
   const [selectedSubId, setSelectedSubId] = useState<string | null>(null);
   const [subscription, setSubscription] = useState<UserActiveMealSubscription | null>(null);
   const [isLoadingActive, setIsLoadingActive] = useState<boolean>(true);
@@ -180,10 +181,15 @@ function MySubscriptionContent() {
         const subs = await fetchUserMealSubscriptions();
         if (isMounted) {
           setUserSubs(subs);
-          if (subs.length > 0) {
-            const active = (selectedSubId ? subs.find((s) => s.id === selectedSubId) : null) || subs.find((s) => s.status === "ACTIVE") || subs[0];
+          const activeList = subs.filter((s) => s.status === "ACTIVE");
+          if (activeList.length > 0) {
+            const active = (selectedSubId ? activeList.find((s) => s.id === selectedSubId) : null) || activeList[0];
             setSubscription(active);
             setSelectedSubId(active.id);
+          } else if (subs.length > 0) {
+            const first = (selectedSubId ? subs.find((s) => s.id === selectedSubId) : null) || subs[0];
+            setSubscription(first);
+            setSelectedSubId(first.id);
           } else {
             setSubscription(null);
             setSelectedSubId(null);
@@ -796,18 +802,16 @@ function MySubscriptionContent() {
                 }}
               >
                 <Calendar size={17} />
-                <span>My Active Subscription{userSubs.length > 1 ? "s" : ""}</span>
-                {userSubs.length > 0 && (
-                  <span
-                    className={
-                      activeTab === "active"
-                        ? styles.tabCountBadge
-                        : `${styles.tabCountBadge} ${styles.tabCountBadgeInactive}`
-                    }
-                  >
-                    {userSubs.length > 1 ? `${userSubs.length} Active` : (subscription?.status || "Active")}
-                  </span>
-                )}
+                <span>My Active Subscription{activeSubs.length !== 1 ? "s" : ""}</span>
+                <span
+                  className={
+                    activeTab === "active"
+                      ? styles.tabCountBadge
+                      : `${styles.tabCountBadge} ${styles.tabCountBadgeInactive}`
+                  }
+                >
+                  {activeSubs.length > 1 ? `${activeSubs.length} Active` : activeSubs.length === 1 ? "1 Active" : "0 Active"}
+                </span>
               </button>
 
               <button
@@ -913,7 +917,7 @@ function MySubscriptionContent() {
                     {userSubs.length > 1 && (
                       <div style={{ marginBottom: "16px" }}>
                         <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "#64748B", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                          Active Subscriptions ({userSubs.length}) — Select a plan to manage:
+                          {activeSubs.length > 0 ? `Active Subscriptions (${activeSubs.length})` : `Subscriptions (${userSubs.length})`} — Select a plan to manage:
                         </div>
                         <div style={{ display: "flex", gap: "10px", overflowX: "auto", paddingBottom: "6px" }}>
                           {userSubs.map((s) => {
