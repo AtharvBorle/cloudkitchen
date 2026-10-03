@@ -546,8 +546,17 @@ export default function ChatbotWidget() {
         };
     }, [status, session]);
 
-    // Hide chatbot on Superadmin, Admin, Support, and Seller pages
-    if (pathname?.startsWith("/dashboard/superadmin") || pathname?.startsWith("/dashboard/admin") || pathname?.startsWith("/admin") || pathname?.startsWith("/dashboard/support") || pathname?.startsWith("/seller")) {
+    // Hide chatbot on Superadmin, Admin, Admin Login, Support, Reel Manager, and Seller pages
+    const lowerPath = pathname?.toLowerCase() || "";
+    if (
+        lowerPath.startsWith("/dashboard/superadmin") ||
+        lowerPath.startsWith("/dashboard/admin") ||
+        lowerPath.startsWith("/admin") ||
+        lowerPath.startsWith("/auth/login/admin") ||
+        lowerPath.startsWith("/dashboard/support") ||
+        lowerPath.startsWith("/dashboard/reel-manager") ||
+        lowerPath.startsWith("/seller")
+    ) {
         return null;
     }
 

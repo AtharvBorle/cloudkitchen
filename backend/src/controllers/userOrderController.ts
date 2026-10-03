@@ -392,21 +392,61 @@ export const createOrder = async (req: Request) => {
             throw new ApiError(`Coupon "${validatedCoupon.code}" is exclusive to ${couponKitchenName} and cannot be applied to ${currentKitchenName}.`, 400);
         }
 
-        // Specific Item check
+        // Specific Item or Category check
         if (validatedCoupon.appliesToProductId) {
             const allowedKeys = String(validatedCoupon.appliesToProductId)
                 .split(",")
                 .map((s: string) => s.trim().toLowerCase())
                 .filter(Boolean);
-            const hasProduct = items.some((it: any) => {
-                const itemId = String(it.id || "").toLowerCase();
-                const foodItemId = String(it.foodItemId || "").toLowerCase();
-                const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
-                const name = String(it.name || "").toLowerCase().trim();
-                return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
-            });
-            if (!hasProduct) {
-                throw new ApiError(`Coupon "${validatedCoupon.code}" is only valid on specific items not found in your cart`, 400);
+
+            if (validatedCoupon.appliesTo === "CATEGORY") {
+                const itemIds = items.map((it: any) => {
+                    const rawId = String(it.foodItemId || it.id || "");
+                    return rawId.includes("_") ? rawId.split("_")[0] : rawId;
+                }).filter(Boolean);
+
+                const matchingFoodItems = await db.foodItem.findMany({
+                    where: {
+                        id: { in: itemIds },
+                        OR: [
+                            { foodCategoryId: { in: allowedKeys } },
+                            { categoryId: { in: allowedKeys } },
+                            { foodCategory: { name: { in: allowedKeys, mode: "insensitive" } } },
+                            { category: { name: { in: allowedKeys, mode: "insensitive" } } }
+                        ]
+                    }
+                });
+
+                const matchingItemIds = new Set(matchingFoodItems.map(f => f.id.toLowerCase()));
+                items.forEach((it: any) => {
+                    const itemId = String(it.id || "").toLowerCase();
+                    const foodItemId = String(it.foodItemId || "").toLowerCase();
+                    const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+                    const catId = String(it.foodCategoryId || it.categoryId || "").toLowerCase();
+                    const catName = String(it.categoryName || it.foodCategory?.name || it.category?.name || it.foodCategory || it.category || "").toLowerCase().trim();
+                    const itemName = String(it.name || "").toLowerCase().trim();
+
+                    if (allowedKeys.some(k => k === catId || k === catName || (catName && catName.includes(k)) || (k && catName && k.includes(catName)) || (itemName && itemName.includes(k)))) {
+                        if (itemId) matchingItemIds.add(itemId);
+                        if (foodItemId) matchingItemIds.add(foodItemId);
+                        if (baseId) matchingItemIds.add(baseId);
+                    }
+                });
+
+                if (matchingItemIds.size === 0) {
+                    throw new ApiError(`Coupon "${validatedCoupon.code}" is only valid for items in specific categories not found in your cart.`, 400);
+                }
+            } else {
+                const hasProduct = items.some((it: any) => {
+                    const itemId = String(it.id || "").toLowerCase();
+                    const foodItemId = String(it.foodItemId || "").toLowerCase();
+                    const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+                    const name = String(it.name || "").toLowerCase().trim();
+                    return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
+                });
+                if (!hasProduct) {
+                    throw new ApiError(`Coupon "${validatedCoupon.code}" is only valid on specific items not found in your cart`, 400);
+                }
             }
         }
 
@@ -1105,12 +1145,16 @@ export const validateReorder = async (orderId: string) => {
             ? Number(foodItem.price) 
             : (item.basePrice !== undefined ? Number(item.basePrice) : (Number(item.price) || 0));
         const finalUnitPrice = currentBasePrice + validAddonsTotal;
+        const prevUnitPrice = Number(item.price) || (Number(item.basePrice) || 0);
+        const priceChanged = prevUnitPrice > 0 && Math.abs(prevUnitPrice - finalUnitPrice) > 0.01;
 
         const availItem = {
             id: foodItem.id,
             foodItemId: foodItem.id,
             name: foodItem.name,
             price: finalUnitPrice,
+            previousPrice: prevUnitPrice > 0 ? prevUnitPrice : finalUnitPrice,
+            priceChanged,
             basePrice: currentBasePrice,
             quantity: finalQty,
             sellerId: seller?.id || order.sellerId,

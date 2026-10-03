@@ -408,6 +408,13 @@ export const validateCouponForCart = async (req: Request) => {
     }
 
     const cleanCode = code.trim().toUpperCase();
+    if (cleanCode.length > 20) {
+        throw new ApiError("Coupon code cannot exceed 20 characters.", 400);
+    }
+    if (!/^[A-Z0-9_-]+$/.test(cleanCode)) {
+        throw new ApiError("Coupon code can only contain letters, numbers, hyphens, and underscores.", 400);
+    }
+
     const now = new Date();
 
     const coupon = await db.coupon.findFirst({
@@ -507,6 +514,9 @@ export const validateCouponForCart = async (req: Request) => {
 
     // Check specific item or category restrictions
     let matchingProductSubtotal = 0;
+    let applicableCategoryName: string | null = null;
+    let matchingItemIdsList: string[] = [];
+
     if (coupon.appliesToProductId) {
         if (!Array.isArray(items) || items.length === 0) {
             throw new ApiError(`Coupon "${coupon.code}" is only valid on specific items not present in your cart.`, 400);
@@ -514,29 +524,83 @@ export const validateCouponForCart = async (req: Request) => {
         const allowedKeys = coupon.appliesToProductId.split(',').map((s: string) => s.trim().toLowerCase()).filter(Boolean);
         if (allowedKeys.length > 0) {
             if (coupon.appliesTo === "CATEGORY") {
-                const itemIds = items.map((it: any) => it.foodItemId || it.id).filter(Boolean);
+                const itemIds = items.map((it: any) => {
+                    const rawId = String(it.foodItemId || it.id || "");
+                    return rawId.includes("_") ? rawId.split("_")[0] : rawId;
+                }).filter(Boolean);
+
                 const matchingFoodItems = await db.foodItem.findMany({
                     where: {
                         id: { in: itemIds },
                         OR: [
                             { foodCategoryId: { in: allowedKeys } },
                             { categoryId: { in: allowedKeys } },
-                            { foodCategory: { name: { in: allowedKeys, mode: "insensitive" } } }
+                            { foodCategory: { name: { in: allowedKeys, mode: "insensitive" } } },
+                            { category: { name: { in: allowedKeys, mode: "insensitive" } } }
+                        ]
+                    },
+                    include: {
+                        foodCategory: true,
+                        category: true
+                    }
+                });
+
+                // Find human-readable category name
+                const matchedCategories = await db.foodCategory.findMany({
+                    where: {
+                        OR: [
+                            { id: { in: allowedKeys } },
+                            { name: { in: allowedKeys, mode: "insensitive" } }
                         ]
                     }
                 });
-                if (matchingFoodItems.length === 0) {
-                    throw new ApiError(`Coupon "${coupon.code}" is only valid for items in specific categories not present in your cart.`, 400);
-                }
+                const matchedGeneralCategories = await db.category.findMany({
+                    where: {
+                        OR: [
+                            { id: { in: allowedKeys } },
+                            { name: { in: allowedKeys, mode: "insensitive" } }
+                        ]
+                    }
+                });
+
+                applicableCategoryName = matchedCategories[0]?.name || matchedGeneralCategories[0]?.name || allowedKeys[0];
+
                 const matchingItemIds = new Set(matchingFoodItems.map(f => f.id.toLowerCase()));
+
+                items.forEach((it: any) => {
+                    const itemId = String(it.id || "").toLowerCase();
+                    const foodItemId = String(it.foodItemId || "").toLowerCase();
+                    const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+                    const catId = String(it.foodCategoryId || it.categoryId || "").toLowerCase();
+                    const catName = String(it.categoryName || it.foodCategory?.name || it.category?.name || it.foodCategory || it.category || "").toLowerCase().trim();
+                    const itemName = String(it.name || "").toLowerCase().trim();
+
+                    if (allowedKeys.some(k => k === catId || k === catName || (catName && catName.includes(k)) || (k && catName && k.includes(catName)) || (itemName && itemName.includes(k)))) {
+                        if (itemId) matchingItemIds.add(itemId);
+                        if (foodItemId) matchingItemIds.add(foodItemId);
+                        if (baseId) matchingItemIds.add(baseId);
+                    }
+                });
+
+                if (matchingItemIds.size === 0) {
+                    throw new ApiError(`Coupon "${coupon.code}" is only valid for items in "${applicableCategoryName || "specific"}" category not present in your cart.`, 400);
+                }
+
                 matchingProductSubtotal = items.reduce((sum: number, it: any) => {
                     const itemId = String(it.id || "").toLowerCase();
                     const foodItemId = String(it.foodItemId || "").toLowerCase();
-                    if (matchingItemIds.has(itemId) || matchingItemIds.has(foodItemId)) {
+                    const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+                    if (matchingItemIds.has(itemId) || matchingItemIds.has(foodItemId) || matchingItemIds.has(baseId)) {
                         return sum + (Number(it.price) || 0) * (Number(it.quantity || it.qty || 1));
                     }
                     return sum;
                 }, 0);
+
+                if (matchingProductSubtotal <= 0) {
+                    throw new ApiError(`Coupon "${coupon.code}" is only valid for items in "${applicableCategoryName || "specific"}" category not present in your cart.`, 400);
+                }
+
+                matchingItemIdsList = Array.from(matchingItemIds);
             } else {
                 const matchingItems = items.filter((it: any) => {
                     const itemId = String(it.id || "").toLowerCase();
@@ -551,6 +615,7 @@ export const validateCouponForCart = async (req: Request) => {
                 matchingProductSubtotal = matchingItems.reduce((sum: number, it: any) => {
                     return sum + (Number(it.price) || 0) * (Number(it.quantity || it.qty || 1));
                 }, 0);
+                matchingItemIdsList = matchingItems.map((it: any) => String(it.foodItemId || it.id).toLowerCase());
             }
         }
     }
@@ -630,8 +695,11 @@ export const validateCouponForCart = async (req: Request) => {
         maxDiscountAmount: coupon.maxDiscountAmount,
         minimumCartValue: coupon.minimumCartValue || 0,
         appliesToProductId: coupon.appliesToProductId || null,
-        appliesTo: coupon.appliesTo || "ALL",
+        appliesTo: coupon.appliesTo || (coupon.appliesToProductId ? "ITEMS" : "ALL"),
         appliesToSellerId: coupon.appliesToSellerId || null,
+        applicableCategoryName,
+        matchingProductSubtotal,
+        matchingItemIds: matchingItemIdsList,
         calculatedDiscount,
         discountLabel,
         isAutoApply: Boolean(coupon.isAutoApply),

@@ -29,8 +29,38 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         const updateData: any = {};
         if (code !== undefined) updateData.code = code.toUpperCase();
         if (description !== undefined) updateData.description = description;
-        if (discountPercentage !== undefined) updateData.discountPercentage = discountPercentage ? parseFloat(discountPercentage) : null;
-        if (discountAmount !== undefined) updateData.discountAmount = discountAmount ? parseFloat(discountAmount) : null;
+
+        if (discountPercentage !== undefined) {
+            if (discountPercentage === null || discountPercentage === "") {
+                updateData.discountPercentage = null;
+            } else {
+                const parsed = parseFloat(discountPercentage);
+                if (isNaN(parsed) || parsed <= 0 || parsed > 100) {
+                    return NextResponse.json({ message: "Discount percentage must be between 1% and 100%." }, { status: 400 });
+                }
+                updateData.discountPercentage = parsed;
+            }
+        }
+
+        const targetPlanId = planId !== undefined ? planId : existing.planId;
+        if (discountAmount !== undefined) {
+            if (discountAmount === null || discountAmount === "") {
+                updateData.discountAmount = null;
+            } else {
+                const parsed = parseFloat(discountAmount);
+                if (isNaN(parsed) || parsed <= 0) {
+                    return NextResponse.json({ message: "Flat discount amount must be greater than 0." }, { status: 400 });
+                }
+                if (targetPlanId) {
+                    const plan = await db.subscriptionPlan.findUnique({ where: { id: targetPlanId } });
+                    if (plan && parsed > plan.price) {
+                        return NextResponse.json({ message: `Flat discount amount (₹${parsed}) cannot exceed the selected subscription plan price (₹${plan.price}).` }, { status: 400 });
+                    }
+                }
+                updateData.discountAmount = parsed;
+            }
+        }
+
         if (planId !== undefined) updateData.planId = planId || null;
         if (maxUsage !== undefined) updateData.maxUsage = parseInt(maxUsage);
         if (isActive !== undefined) updateData.isActive = isActive;

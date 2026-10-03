@@ -4,9 +4,16 @@ import { fetchApi } from "@/lib/fetch-api";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { performLogout } from "@/lib/logout";
+import { CheckCircle2, AlertCircle } from "lucide-react";
 
 export default function SuperadminSubscriptionsPage() {
     const router = useRouter();
+    const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+    const showToast = (message: string, type: "success" | "error" = "success") => {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 3500);
+    };
+
     const [coupons, setCoupons] = useState<any[]>([]);
     const [subscriptions, setSubscriptions] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
@@ -47,6 +54,79 @@ export default function SuperadminSubscriptionsPage() {
     const [editSubCouponPlanId, setEditSubCouponPlanId] = useState("");
     const [editSubCouponMaxUsage, setEditSubCouponMaxUsage] = useState("");
     const [editSubCouponIsActive, setEditSubCouponIsActive] = useState(true);
+
+    const handleDiscountKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        // Block scientific notation 'e', signs '+', '-', which are allowed by default in number inputs
+        if (['e', 'E', '+', '-'].includes(e.key)) {
+            e.preventDefault();
+        }
+    };
+
+    const handlePercentChange = (val: string) => {
+        setNewDiscountAmount("");
+        if (!val) {
+            setNewDiscountPercent("");
+            return;
+        }
+        const clean = val.replace(/[^0-9.]/g, "");
+        const num = parseFloat(clean);
+        if (!isNaN(num) && num > 100) {
+            showToast("Discount percentage cannot exceed 100%.", "error");
+            setNewDiscountPercent("100");
+            return;
+        }
+        setNewDiscountPercent(clean);
+    };
+
+    const handleAmountChange = (val: string) => {
+        setNewDiscountPercent("");
+        if (!val) {
+            setNewDiscountAmount("");
+            return;
+        }
+        const clean = val.replace(/[^0-9.]/g, "");
+        const num = parseFloat(clean);
+        const selectedPlan = plans.find(p => p.id === newPlanId);
+        if (selectedPlan && !isNaN(num) && num > selectedPlan.price) {
+            showToast(`Flat discount amount (₹${num}) cannot exceed selected plan price (₹${selectedPlan.price}).`, "error");
+            setNewDiscountAmount(String(selectedPlan.price));
+            return;
+        }
+        setNewDiscountAmount(clean);
+    };
+
+    const handleEditPercentChange = (val: string) => {
+        setEditSubCouponAmount("");
+        if (!val) {
+            setEditSubCouponPercent("");
+            return;
+        }
+        const clean = val.replace(/[^0-9.]/g, "");
+        const num = parseFloat(clean);
+        if (!isNaN(num) && num > 100) {
+            showToast("Discount percentage cannot exceed 100%.", "error");
+            setEditSubCouponPercent("100");
+            return;
+        }
+        setEditSubCouponPercent(clean);
+    };
+
+    const handleEditAmountChange = (val: string) => {
+        setEditSubCouponPercent("");
+        if (!val) {
+            setEditSubCouponAmount("");
+            return;
+        }
+        const clean = val.replace(/[^0-9.]/g, "");
+        const num = parseFloat(clean);
+        const selectedPlan = plans.find(p => p.id === editSubCouponPlanId);
+        if (selectedPlan && !isNaN(num) && num > selectedPlan.price) {
+            showToast(`Flat discount amount (₹${num}) cannot exceed selected plan price (₹${selectedPlan.price}).`, "error");
+            setEditSubCouponAmount(String(selectedPlan.price));
+            return;
+        }
+        setEditSubCouponAmount(clean);
+    };
 
     const fetchData = async () => {
         try {
@@ -89,7 +169,10 @@ export default function SuperadminSubscriptionsPage() {
 
     const handleCreatePlan = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newPlanName || !newPlanPrice || !newPlanDuration) return;
+        if (!newPlanName || !newPlanPrice || !newPlanDuration) {
+            showToast("Please fill all required plan fields.", "error");
+            return;
+        }
         setSavingPlan(true);
         try {
             const res = await fetchApi("/api/superadmin/plans", {
@@ -104,7 +187,7 @@ export default function SuperadminSubscriptionsPage() {
                 })
             });
             if (res.ok) {
-                alert("Plan created successfully!");
+                showToast("Subscription plan created successfully!", "success");
                 setNewPlanName("");
                 setNewPlanPrice("");
                 setNewPlanDuration("");
@@ -112,10 +195,12 @@ export default function SuperadminSubscriptionsPage() {
                 setNewPlanCategory("BOTH");
                 fetchData();
             } else {
-                alert("Failed to create plan.");
+                const data = await res.json().catch(() => ({}));
+                showToast(data.message || "Failed to create subscription plan.", "error");
             }
         } catch (error) {
             console.error(error);
+            showToast("Failed to create subscription plan.", "error");
         } finally {
             setSavingPlan(false);
         }
@@ -126,20 +211,53 @@ export default function SuperadminSubscriptionsPage() {
         try {
             const res = await fetchApi(`/api/superadmin/plans/${id}`, { method: "DELETE" });
             if (res.ok) {
+                showToast("Subscription plan deleted successfully.", "success");
                 fetchData();
             } else {
-                alert("Failed to delete plan.");
+                showToast("Failed to delete plan.", "error");
             }
         } catch (error) {
             console.error(error);
+            showToast("Failed to delete plan.", "error");
         }
     };
 
     const handleCreateCoupon = async (e: React.FormEvent) => {
         e.preventDefault();
-        setLoading(true);
+
+        if (!newCode.trim()) {
+            showToast("Please enter a coupon code.", "error");
+            return;
+        }
+
+        if (!newDiscountPercent && !newDiscountAmount) {
+            showToast("Please enter either a discount percentage or flat discount amount.", "error");
+            return;
+        }
 
         const selectedPlan = plans.find(p => p.id === newPlanId);
+
+        if (newDiscountPercent) {
+            const pct = parseFloat(newDiscountPercent);
+            if (isNaN(pct) || pct <= 0 || pct > 100) {
+                showToast("Discount percentage must be between 1% and 100%.", "error");
+                return;
+            }
+        }
+
+        if (newDiscountAmount) {
+            const amt = parseFloat(newDiscountAmount);
+            if (isNaN(amt) || amt <= 0) {
+                showToast("Flat discount amount must be greater than 0.", "error");
+                return;
+            }
+            if (selectedPlan && amt > selectedPlan.price) {
+                showToast(`Flat discount amount (₹${amt}) cannot exceed the selected plan price (₹${selectedPlan.price}).`, "error");
+                return;
+            }
+        }
+
+        setLoading(true);
         const resolvedCategory = selectedPlan ? (selectedPlan.category || "BOTH") : "BOTH";
 
         try {
@@ -147,7 +265,7 @@ export default function SuperadminSubscriptionsPage() {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    code: newCode,
+                    code: newCode.trim().toUpperCase(),
                     discountPercentage: newDiscountPercent ? parseFloat(newDiscountPercent) : null,
                     discountAmount: newDiscountAmount ? parseFloat(newDiscountAmount) : null,
                     maxUsage: newMaxUsage ? parseInt(newMaxUsage) : 0,
@@ -157,14 +275,16 @@ export default function SuperadminSubscriptionsPage() {
             });
 
             if (res.ok) {
+                showToast("Subscription coupon created successfully!", "success");
                 setNewCode(""); setNewDiscountPercent(""); setNewDiscountAmount(""); setNewMaxUsage(""); setNewPlanId("");
                 fetchData();
             } else {
                 const data = await res.json();
-                alert(data.message || "Failed to create coupon or code already exists");
+                showToast(data.message || "Failed to create coupon or code already exists.", "error");
             }
         } catch (error) {
             console.error(error);
+            showToast("Failed to create coupon.", "error");
         } finally {
             setLoading(false);
         }
@@ -175,16 +295,18 @@ export default function SuperadminSubscriptionsPage() {
         try {
             const res = await fetchApi(`/api/superadmin/subscriptions/coupons/${id}`, { method: "DELETE" });
             if (res.ok) {
+                showToast("Subscription coupon deleted successfully.", "success");
                 fetchData();
             } else {
-                alert("Failed to delete coupon");
+                showToast("Failed to delete coupon.", "error");
             }
         } catch (error) {
             console.error(error);
+            showToast("Failed to delete coupon.", "error");
         }
     };
 
-        const handleOpenEditPlan = (plan: any) => {
+    const handleOpenEditPlan = (plan: any) => {
         setEditingPlan(plan);
         setEditPlanName(plan.name);
         setEditPlanPrice(String(plan.price));
@@ -215,14 +337,15 @@ export default function SuperadminSubscriptionsPage() {
                 })
             });
             if (res.ok) {
-                alert("Plan updated successfully!");
+                showToast("Subscription plan updated successfully!", "success");
                 setEditingPlan(null);
                 fetchData();
             } else {
-                alert("Failed to update plan.");
+                showToast("Failed to update plan.", "error");
             }
         } catch (error) {
             console.error(error);
+            showToast("Failed to update plan.", "error");
         }
     };
 
@@ -236,12 +359,14 @@ export default function SuperadminSubscriptionsPage() {
                 })
             });
             if (res.ok) {
+                showToast(`Subscription plan ${!plan.isActive ? "activated" : "deactivated"} successfully.`, "success");
                 fetchData();
             } else {
-                alert("Failed to update plan status.");
+                showToast("Failed to update plan status.", "error");
             }
         } catch (error) {
             console.error(error);
+            showToast("Failed to update plan status.", "error");
         }
     };
 
@@ -261,6 +386,27 @@ export default function SuperadminSubscriptionsPage() {
         if (!editingSubCoupon) return;
 
         const selectedPlan = plans.find(p => p.id === editSubCouponPlanId);
+
+        if (editSubCouponPercent) {
+            const pct = parseFloat(editSubCouponPercent);
+            if (isNaN(pct) || pct <= 0 || pct > 100) {
+                showToast("Discount percentage must be between 1% and 100%.", "error");
+                return;
+            }
+        }
+
+        if (editSubCouponAmount) {
+            const amt = parseFloat(editSubCouponAmount);
+            if (isNaN(amt) || amt <= 0) {
+                showToast("Flat discount amount must be greater than 0.", "error");
+                return;
+            }
+            if (selectedPlan && amt > selectedPlan.price) {
+                showToast(`Flat discount amount (₹${amt}) cannot exceed the selected plan price (₹${selectedPlan.price}).`, "error");
+                return;
+            }
+        }
+
         const resolvedCategory = selectedPlan ? (selectedPlan.category || "BOTH") : "BOTH";
 
         try {
@@ -268,7 +414,7 @@ export default function SuperadminSubscriptionsPage() {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    code: editSubCouponCode,
+                    code: editSubCouponCode.trim().toUpperCase(),
                     description: editSubCouponDesc,
                     discountPercentage: editSubCouponPercent ? parseFloat(editSubCouponPercent) : null,
                     discountAmount: editSubCouponAmount ? parseFloat(editSubCouponAmount) : null,
@@ -279,15 +425,16 @@ export default function SuperadminSubscriptionsPage() {
                 })
             });
             if (res.ok) {
-                alert("Subscription coupon updated successfully!");
+                showToast("Subscription coupon updated successfully!", "success");
                 setEditingSubCoupon(null);
                 fetchData();
             } else {
                 const data = await res.json();
-                alert(data.message || "Failed to update coupon.");
+                showToast(data.message || "Failed to update coupon.", "error");
             }
         } catch (error) {
             console.error(error);
+            showToast("Failed to update coupon.", "error");
         }
     };
 
@@ -301,12 +448,14 @@ export default function SuperadminSubscriptionsPage() {
                 })
             });
             if (res.ok) {
+                showToast(`Subscription coupon ${!coupon.isActive ? "activated" : "deactivated"} successfully.`, "success");
                 fetchData();
             } else {
-                alert("Failed to update coupon status.");
+                showToast("Failed to update coupon status.", "error");
             }
         } catch (error) {
             console.error(error);
+            showToast("Failed to update coupon status.", "error");
         }
     };
 
@@ -377,6 +526,31 @@ export default function SuperadminSubscriptionsPage() {
 
     return (
         <div style={{ minHeight: '100vh', backgroundColor: '#F0F2F5', padding: '40px', fontFamily: "var(--font-sans)" }}>
+            {/* Toast Notification */}
+            {toast && (
+                <div
+                    style={{
+                        position: "fixed",
+                        top: "24px",
+                        right: "24px",
+                        zIndex: 99999,
+                        backgroundColor: toast.type === "success" ? "#10B981" : "#EF4444",
+                        color: "#FFFFFF",
+                        padding: "12px 20px",
+                        borderRadius: "10px",
+                        boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.2)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        fontWeight: "600",
+                        fontSize: "0.9rem",
+                    }}
+                >
+                    {toast.type === "success" ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+                    <span>{toast.message}</span>
+                </div>
+            )}
+
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
                 <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--text-main)' }}>Subscriptions & Coupons</h1>
                 <button onClick={handleLogout} style={{ background: 'none', border: 'none', fontWeight: 'bold', color: 'var(--text-main)', cursor: 'pointer', fontSize: '1rem' }}>
@@ -476,20 +650,54 @@ export default function SuperadminSubscriptionsPage() {
                         <input type="text" value={newCode} onChange={e => setNewCode(e.target.value)} className="input-field" placeholder="Code (e.g., SAVE50)" style={{ flex: 1, minWidth: '150px', textTransform: 'uppercase', marginBottom: 0 }} required />
 
                         <div style={{ display: 'flex', gap: '10px', flex: 2, minWidth: '250px' }}>
-                            <input type="number" value={newDiscountPercent} onChange={e => { setNewDiscountPercent(e.target.value); setNewDiscountAmount(""); }} className="input-field" placeholder="Discount %" style={{ flex: 1, marginBottom: 0 }} min="1" max="100" />
+                            <input
+                                type="number"
+                                value={newDiscountPercent}
+                                onKeyDown={handleDiscountKeyDown}
+                                onChange={e => handlePercentChange(e.target.value)}
+                                className="input-field"
+                                placeholder="Discount %"
+                                style={{ flex: 1, marginBottom: 0 }}
+                                min="1"
+                                max="100"
+                            />
                             <span style={{ alignSelf: 'center', color: '#555', fontWeight: 'bold' }}>OR</span>
-                            <input type="number" value={newDiscountAmount} onChange={e => { setNewDiscountAmount(e.target.value); setNewDiscountPercent(""); }} className="input-field" placeholder="Flat Discount ₹" style={{ flex: 1, marginBottom: 0 }} min="1" />
+                            <input
+                                type="number"
+                                value={newDiscountAmount}
+                                onKeyDown={handleDiscountKeyDown}
+                                onChange={e => handleAmountChange(e.target.value)}
+                                className="input-field"
+                                placeholder="Flat Discount ₹"
+                                style={{ flex: 1, marginBottom: 0 }}
+                                min="1"
+                            />
                         </div>
                     </div>
 
                     <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
-                        <select value={newPlanId} onChange={e => setNewPlanId(e.target.value)} className="input-field" style={{ flex: 2, minWidth: '200px', marginBottom: 0 }}>
+                        <select
+                            value={newPlanId}
+                            onChange={e => {
+                                const pId = e.target.value;
+                                setNewPlanId(pId);
+                                if (pId && newDiscountAmount) {
+                                    const selPlan = plans.find(p => p.id === pId);
+                                    if (selPlan && parseFloat(newDiscountAmount) > selPlan.price) {
+                                        showToast(`Flat discount adjusted to match selected plan price (₹${selPlan.price}).`, "error");
+                                        setNewDiscountAmount(String(selPlan.price));
+                                    }
+                                }
+                            }}
+                            className="input-field"
+                            style={{ flex: 2, minWidth: '200px', marginBottom: 0 }}
+                        >
                             <option value="">All Plans (Global)</option>
                             {plans.map((plan: any) => (
                                 <option key={plan.id} value={plan.id}>{plan.name} (₹{plan.price})</option>
                             ))}
                         </select>
-                        <input type="number" value={newMaxUsage} onChange={e => setNewMaxUsage(e.target.value)} className="input-field" placeholder="Max Usage (0 for unlimited)" style={{ flex: 1, minWidth: '150px', marginBottom: 0 }} min="0" />
+                        <input type="number" value={newMaxUsage} onKeyDown={handleDiscountKeyDown} onChange={e => setNewMaxUsage(e.target.value.replace(/[^0-9]/g, ''))} className="input-field" placeholder="Max Usage (0 for unlimited)" style={{ flex: 1, minWidth: '150px', marginBottom: 0 }} min="0" />
                     </div>
 
                     <button type="submit" className="btn btn-teal" style={{ width: '200px', padding: '14px 25px' }} disabled={loading}>
@@ -684,16 +892,45 @@ export default function SuperadminSubscriptionsPage() {
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                                 <div className="input-group">
                                     <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Discount %</label>
-                                    <input type="number" value={editSubCouponPercent} onChange={e => { setEditSubCouponPercent(e.target.value); setEditSubCouponAmount(""); }} className="input-field" min="1" max="100" />
+                                    <input
+                                        type="number"
+                                        value={editSubCouponPercent}
+                                        onKeyDown={handleDiscountKeyDown}
+                                        onChange={e => handleEditPercentChange(e.target.value)}
+                                        className="input-field"
+                                        min="1"
+                                        max="100"
+                                    />
                                 </div>
                                 <div className="input-group">
                                     <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Flat Discount ₹</label>
-                                    <input type="number" value={editSubCouponAmount} onChange={e => { setEditSubCouponAmount(e.target.value); setEditSubCouponPercent(""); }} className="input-field" min="1" />
+                                    <input
+                                        type="number"
+                                        value={editSubCouponAmount}
+                                        onKeyDown={handleDiscountKeyDown}
+                                        onChange={e => handleEditAmountChange(e.target.value)}
+                                        className="input-field"
+                                        min="1"
+                                    />
                                 </div>
                             </div>
                             <div className="input-group">
                                 <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Applicable Plan</label>
-                                <select value={editSubCouponPlanId} onChange={e => setEditSubCouponPlanId(e.target.value)} className="input-field">
+                                <select
+                                    value={editSubCouponPlanId}
+                                    onChange={e => {
+                                        const pId = e.target.value;
+                                        setEditSubCouponPlanId(pId);
+                                        if (pId && editSubCouponAmount) {
+                                            const selPlan = plans.find(p => p.id === pId);
+                                            if (selPlan && parseFloat(editSubCouponAmount) > selPlan.price) {
+                                                showToast(`Flat discount adjusted to match selected plan price (₹${selPlan.price}).`, "error");
+                                                setEditSubCouponAmount(String(selPlan.price));
+                                            }
+                                        }
+                                    }}
+                                    className="input-field"
+                                >
                                     <option value="">All Plans (Global)</option>
                                     {plans.map((plan: any) => (
                                         <option key={plan.id} value={plan.id}>{plan.name} (₹{plan.price})</option>
@@ -703,7 +940,7 @@ export default function SuperadminSubscriptionsPage() {
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '15px' }}>
                                 <div className="input-group">
                                     <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Max Usage</label>
-                                    <input type="number" value={editSubCouponMaxUsage} onChange={e => setEditSubCouponMaxUsage(e.target.value)} className="input-field" min="0" required />
+                                    <input type="number" value={editSubCouponMaxUsage} onKeyDown={handleDiscountKeyDown} onChange={e => setEditSubCouponMaxUsage(e.target.value.replace(/[^0-9]/g, ''))} className="input-field" min="0" required />
                                 </div>
                             </div>
                             <div className="input-group">

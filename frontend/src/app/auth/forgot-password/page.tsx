@@ -73,7 +73,7 @@ function ForgotPasswordForm() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     email: validation.normalizedEmail,
-                    role: isSeller ? "SELLER" : undefined,
+                    role: isSeller ? "SELLER" : "USER",
                 }),
             });
 
@@ -108,7 +108,7 @@ function ForgotPasswordForm() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     email: email.trim().toLowerCase(),
-                    role: isSeller ? "SELLER" : undefined,
+                    role: isSeller ? "SELLER" : "USER",
                 }),
             });
 
@@ -164,7 +164,7 @@ function ForgotPasswordForm() {
                     otp: otp.trim(),
                     newPassword: newPassword.trim(),
                     confirmPassword: confirmPassword.trim(),
-                    role: isSeller ? "SELLER" : undefined,
+                    role: isSeller ? "SELLER" : "USER",
                 }),
             });
 

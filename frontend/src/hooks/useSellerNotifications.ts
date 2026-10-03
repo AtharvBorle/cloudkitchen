@@ -6,6 +6,7 @@ import {
   NotificationCategory,
   INITIAL_SELLER_NOTIFICATIONS,
   createSampleAlert,
+  formatNotificationTime,
 } from "@/components/seller/seller-notifications/notificationData";
 
 const STORAGE_KEY = "seller_notifications_store_v4";
@@ -136,6 +137,7 @@ export function addSellerNotification(
     return current.find((n) => n.id === newItemId)!;
   }
 
+  const rawTimestamp = item.timestamp || new Date().toISOString();
   const newItem: SellerNotificationItem = {
     id: newItemId,
     category: item.category,
@@ -143,8 +145,8 @@ export function addSellerNotification(
     title: item.title,
     message: item.message,
     details: item.details,
-    timestamp: item.timestamp || new Date().toISOString(),
-    timeAgo: item.timeAgo || "Just now",
+    timestamp: rawTimestamp,
+    timeAgo: formatNotificationTime(rawTimestamp, item.timeAgo || "Just now"),
     isRead: item.isRead !== undefined ? item.isRead : false,
     severity: item.severity || "info",
     actionLabel: item.actionLabel,
@@ -163,6 +165,8 @@ export interface PlacedOrderNotificationPayload {
   totalAmount: number | string;
   paymentMethod?: string;
   sellerId?: string;
+  createdAt?: string;
+  timestamp?: string;
 }
 
 /**
@@ -179,6 +183,7 @@ export function broadcastOrderToSellerNotifications(payload: PlacedOrderNotifica
   const customer = payload.customerName || "Customer";
   const phone = payload.customerPhone ? ` • Phone: ${payload.customerPhone}` : "";
   const address = payload.deliveryAddress ? ` • Address: ${payload.deliveryAddress}` : "";
+  const rawTimestamp = payload.createdAt || payload.timestamp || new Date().toISOString();
 
   const notifItem: SellerNotificationItem = {
     id: `notif-order-${payload.orderId || Date.now()}`,
@@ -187,8 +192,8 @@ export function broadcastOrderToSellerNotifications(payload: PlacedOrderNotifica
     title: `New Order Received #${payload.orderId}`,
     message: `${itemsText}. Total: ${totalStr} (${payMethod}).`,
     details: `Customer: ${customer}${phone}${address}`,
-    timestamp: new Date().toISOString(),
-    timeAgo: "Just now",
+    timestamp: rawTimestamp,
+    timeAgo: formatNotificationTime(rawTimestamp, "Just now"),
     isRead: false,
     severity: "success",
     actionLabel: "View Order",
@@ -252,8 +257,10 @@ export function broadcastDeliveryAlert(payload: {
   riderPhone?: string;
   status?: string;
   eta?: string;
+  timestamp?: string;
 }) {
   const isOut = payload.status === "OUT_FOR_DELIVERY" || payload.status === "ON_THE_WAY";
+  const rawTimestamp = payload.timestamp || new Date().toISOString();
   const notifItem: SellerNotificationItem = {
     id: `notif-deliv-${payload.orderId || Date.now()}`,
     category: "delivery",
@@ -263,8 +270,8 @@ export function broadcastDeliveryAlert(payload: {
       ? `Delivery partner ${payload.riderName} has dispatched parcel for Order #${payload.orderId}. ETA: ${payload.eta || "15 mins"}.`
       : `${payload.riderName} accepted dispatch for Order #${payload.orderId}. Arriving at kitchen soon.`,
     details: `Rider Contact: ${payload.riderPhone || "+91 98765 12345"}`,
-    timestamp: new Date().toISOString(),
-    timeAgo: "Just now",
+    timestamp: rawTimestamp,
+    timeAgo: formatNotificationTime(rawTimestamp, "Just now"),
     isRead: false,
     severity: "info",
     actionLabel: "Track Dispatch",
@@ -495,6 +502,7 @@ function setupGlobalNotificationListeners() {
         title: `New Incoming Order #${orderId}`,
         message: `${itemsSummary || "1x Food Item"}. Total: ₹${o.totalAmount || 0}.`,
         details: `Customer: ${customer}${phone ? ` • Phone: ${phone}` : ""}${address ? ` • Address: ${address}` : ""}`,
+        timestamp: o.createdAt || new Date().toISOString(),
         severity: "success",
         actionLabel: "View Order",
         actionHref: "/seller/orders",

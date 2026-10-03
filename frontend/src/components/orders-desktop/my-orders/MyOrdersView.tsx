@@ -19,6 +19,7 @@ import {
   Check,
   X,
   Bell,
+  ChevronLeft,
   ChevronRight,
   Clock,
   ShoppingBag,
@@ -42,6 +43,8 @@ export interface OrderItemData {
   id: string;
   orderId: string;
   vendorName: string;
+  dishName?: string;
+  itemCountText?: string;
   itemSummary: string;
   itemsDetail?: string;
   price: number;
@@ -160,9 +163,9 @@ function parseOrderFromDb(o: any): OrderItemData {
 
   const firstItem = parsedItems[0] || {};
   const totalCount = parsedItems.reduce((acc, it) => acc + (it.quantity || it.qty || 1), 0);
-  const itemSummary = firstItem.name
-    ? `${firstItem.name} • ${totalCount} Item${totalCount > 1 ? "s" : ""}`
-    : "Food Order • 1 Item";
+  const dishName = firstItem.name || "Food Order";
+  const itemCountText = `${totalCount} Item${totalCount > 1 ? "s" : ""}`;
+  const itemSummary = `${dishName} • ${itemCountText}`;
 
   const itemsDetail = parsedItems.length > 0
     ? parsedItems.map((it) => `${it.quantity || it.qty || 1}x ${it.name}`).join(", ")
@@ -259,6 +262,8 @@ function parseOrderFromDb(o: any): OrderItemData {
     id: o.id,
     orderId: (o.id || "").slice(0, 8).toUpperCase(),
     vendorName,
+    dishName,
+    itemCountText,
     itemSummary,
     itemsDetail,
     price: totalPaid,
@@ -266,7 +271,7 @@ function parseOrderFromDb(o: any): OrderItemData {
     status,
     rawStatus,
     statusDisplay,
-    deliveredLabel: status === "CANCELLED" ? "Order cancelled" : "Delivered",
+    deliveredLabel: status === "CANCELLED" ? "Seller has not confirmed your order" : "Delivered",
     deliveredTime,
     arrivingIn,
     imageUrl,
@@ -400,6 +405,20 @@ export default function MyOrdersView() {
   const [foodFilter, setFoodFilter] = useState<FoodFilterType>("ALL");
   const [roomFilter, setRoomFilter] = useState<RoomFilterType>("ALL");
 
+  // Pagination states (5 items per page)
+  const PAGE_SIZE = 5;
+  const [orderPage, setOrderPage] = useState(1);
+  const [bookingPage, setBookingPage] = useState(1);
+
+  // Reset pagination to page 1 on filter or tab change
+  useEffect(() => {
+    setOrderPage(1);
+  }, [foodFilter, mainCategory]);
+
+  useEffect(() => {
+    setBookingPage(1);
+  }, [roomFilter, mainCategory]);
+
   // Selected item states
   const [selectedOrder, setSelectedOrder] = useState<OrderItemData | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<RoomBookingData | null>(null);
@@ -503,6 +522,13 @@ export default function MyOrdersView() {
     });
   }, [orders, foodFilter]);
 
+  // Paginated Food Orders (5 items per page)
+  const totalOrderPages = Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE));
+  const paginatedOrders = useMemo(() => {
+    const start = (orderPage - 1) * PAGE_SIZE;
+    return filteredOrders.slice(start, start + PAGE_SIZE);
+  }, [filteredOrders, orderPage]);
+
   // Filtered Room Bookings
   const filteredBookings = useMemo(() => {
     return bookings.filter((booking) => {
@@ -513,6 +539,112 @@ export default function MyOrdersView() {
       return true;
     });
   }, [bookings, roomFilter]);
+
+  // Paginated Room Bookings (5 items per page)
+  const totalBookingPages = Math.max(1, Math.ceil(filteredBookings.length / PAGE_SIZE));
+  const paginatedBookings = useMemo(() => {
+    const start = (bookingPage - 1) * PAGE_SIZE;
+    return filteredBookings.slice(start, start + PAGE_SIZE);
+  }, [filteredBookings, bookingPage]);
+
+  const getPageNumbers = (currentPage: number, totalPages: number): (number | string)[] => {
+    if (totalPages <= 5) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    const pages: (number | string)[] = [];
+    if (currentPage <= 3) {
+      pages.push(1, 2, 3, 4, "...", totalPages);
+    } else if (currentPage >= totalPages - 2) {
+      pages.push(1, "...", totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+    } else {
+      pages.push(1, "...", currentPage - 1, currentPage, currentPage + 1, "...", totalPages);
+    }
+    return pages;
+  };
+
+  const renderPagination = (
+    currentPage: number,
+    totalPages: number,
+    totalItems: number,
+    onPageChange: (page: number) => void,
+    itemLabel: string
+  ) => {
+    if (totalItems <= PAGE_SIZE) return null;
+
+    const startIdx = (currentPage - 1) * PAGE_SIZE + 1;
+    const endIdx = Math.min(currentPage * PAGE_SIZE, totalItems);
+    const pageNumbers = getPageNumbers(currentPage, totalPages);
+
+    return (
+      <div className={styles.paginationContainer}>
+        <div className={styles.paginationInfo}>
+          Showing <span className={styles.paginationHighlight}>{startIdx}–{endIdx}</span> of{" "}
+          <span className={styles.paginationHighlight}>{totalItems}</span> {itemLabel}
+        </div>
+
+        <div className={styles.paginationControls}>
+          <button
+            type="button"
+            className={`${styles.pageNavBtn} ${currentPage === 1 ? styles.pageNavBtnDisabled : ""}`}
+            onClick={() => {
+              if (currentPage > 1) {
+                onPageChange(currentPage - 1);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }
+            }}
+            disabled={currentPage === 1}
+            aria-label="Previous page"
+          >
+            <ChevronLeft size={16} />
+            <span>Prev</span>
+          </button>
+
+          <div className={styles.pageNumbersList}>
+            {pageNumbers.map((p, idx) => {
+              if (typeof p === "string") {
+                return (
+                  <span key={`ellipsis-${idx}`} className={styles.pageEllipsis}>
+                    {p}
+                  </span>
+                );
+              }
+              const isActive = p === currentPage;
+              return (
+                <button
+                  key={`page-${p}`}
+                  type="button"
+                  className={`${styles.pageNumberBtn} ${isActive ? styles.pageNumberBtnActive : ""}`}
+                  onClick={() => {
+                    onPageChange(p);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  aria-current={isActive ? "page" : undefined}
+                >
+                  {p}
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            type="button"
+            className={`${styles.pageNavBtn} ${currentPage === totalPages ? styles.pageNavBtnDisabled : ""}`}
+            onClick={() => {
+              if (currentPage < totalPages) {
+                onPageChange(currentPage + 1);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }
+            }}
+            disabled={currentPage === totalPages}
+            aria-label="Next page"
+          >
+            <span>Next</span>
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   const handleCopyId = (id: string) => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
@@ -532,37 +664,8 @@ export default function MyOrdersView() {
     setIsSidebarOpen(true);
   };
 
-  const handleReorder = (order: OrderItemData) => {
-    const rawItems = order.rawItems || [];
-    const items: ReorderItemInfo[] = rawItems.length > 0
-      ? rawItems.map((item: any) => ({
-          id: item.foodItemId || item.id,
-          name: item.name || "Food Item",
-          quantity: item.quantity || item.qty || 1,
-          price: item.price,
-        }))
-      : [
-          {
-            name: order.itemSummary || order.itemsDetail || "Delicious Meal",
-            quantity: 1,
-            price: order.price || order.billBreakdown?.totalPaid || 0,
-          },
-        ];
-
+  const handleReorder = async (order: OrderItemData) => {
     setPendingOrderForReorder(order);
-    setModalState({
-      isOpen: true,
-      type: "CONFIRM",
-      sellerName: order.vendorName,
-      sellerId: order.vendorName,
-      availableItems: items,
-    });
-  };
-
-  const handleExecuteReorder = async () => {
-    if (!pendingOrderForReorder) return;
-    const order = pendingOrderForReorder;
-
     setIsReorderValidating(true);
     try {
       const res = await fetchApi("/api/user/orders/validate-reorder", {
@@ -651,17 +754,32 @@ export default function MyOrdersView() {
         return;
       }
 
-      // Everything is clear: Add items to cart and redirect to /cart
-      setModalState((prev) => ({ ...prev, isOpen: false }));
-      addMultipleToCart(data.availableItems, false);
-      router.push("/cart");
+      // Everything is available with live prices: Show Confirmation Dialog with live pricing
+      setModalState({
+        isOpen: true,
+        type: "CONFIRM",
+        sellerName: data.sellerName || order.vendorName,
+        sellerId: data.sellerId,
+        availableItems: data.availableItems,
+        rawAvailableItems: data.availableItems,
+      });
     } catch (err: any) {
-      console.error("Reorder error:", err);
+      console.error("Reorder validation error:", err);
       // Fallback
       if (order.rawItems && order.rawItems.length > 0) {
-        setModalState((prev) => ({ ...prev, isOpen: false }));
-        addMultipleToCart(
-          order.rawItems.map((item) => ({
+        const items: ReorderItemInfo[] = order.rawItems.map((item: any) => ({
+          id: item.foodItemId || item.id,
+          name: item.name || "Food Item",
+          quantity: item.quantity || item.qty || 1,
+          price: item.price,
+        }));
+        setModalState({
+          isOpen: true,
+          type: "CONFIRM",
+          sellerName: order.vendorName,
+          sellerId: order.vendorName,
+          availableItems: items,
+          rawAvailableItems: order.rawItems.map((item) => ({
             id: item.id || `reorder-${item.name}`,
             foodItemId: item.foodItemId || item.id,
             name: item.name || "Delicious Meal",
@@ -672,15 +790,28 @@ export default function MyOrdersView() {
             image: item.imageUrl || item.image || order.imageUrl,
             imageUrl: item.imageUrl || item.image || order.imageUrl,
           })),
-          false
-        );
-        router.push("/cart");
+        });
       } else {
-        setModalState((prev) => ({ ...prev, isOpen: false }));
-        router.push("/explore-desktop");
+        setModalState({
+          isOpen: true,
+          type: "ERROR",
+          errorMessage: "Failed to validate order for reorder. Please try again.",
+        });
       }
     } finally {
       setIsReorderValidating(false);
+    }
+  };
+
+  const handleExecuteReorder = () => {
+    const itemsToAdd = modalState.rawAvailableItems || modalState.availableItems;
+    if (itemsToAdd && itemsToAdd.length > 0) {
+      setModalState((prev) => ({ ...prev, isOpen: false }));
+      addMultipleToCart(itemsToAdd as any, false);
+      router.push("/cart");
+    } else if (pendingOrderForReorder) {
+      setModalState((prev) => ({ ...prev, isOpen: false }));
+      router.push("/explore-desktop");
     }
   };
 
@@ -766,7 +897,7 @@ export default function MyOrdersView() {
             status: "CANCELLED",
             rawStatus: "CANCELLED",
             statusDisplay: "Cancelled",
-            deliveredLabel: "Order cancelled",
+            deliveredLabel: "Seller has not confirmed your order",
             deliveredTime: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }),
             arrivingIn: "Cancelled",
           };
@@ -811,7 +942,7 @@ export default function MyOrdersView() {
         status: "CANCELLED",
         rawStatus: "CANCELLED",
         statusDisplay: "Cancelled",
-        deliveredLabel: "Order cancelled",
+        deliveredLabel: "Seller has not confirmed your order",
         deliveredTime: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }),
         arrivingIn: "Cancelled",
         refund: refundData,
@@ -1127,375 +1258,371 @@ export default function MyOrdersView() {
                 </Link>
               </div>
             ) : (
-              filteredOrders.map((order) => {
-                const isOngoing = order.status === "ONGOING";
-                const isDelivered = order.status === "DELIVERED";
-                const isCancelled = order.status === "CANCELLED";
-                const isSelected = selectedOrder?.id === order.id;
+              <>
+                {paginatedOrders.map((order) => {
+                  const isOngoing = order.status === "ONGOING";
+                  const isDelivered = order.status === "DELIVERED";
+                  const isCancelled = order.status === "CANCELLED";
+                  const isSelected = selectedOrder?.id === order.id;
 
-                if (isOngoing) {
-                  const currentStep = getOrderStepIndex(order.rawStatus, order.partner);
+                  if (isOngoing) {
+                    const currentStep = getOrderStepIndex(order.rawStatus, order.partner);
 
+                    return (
+                      <article
+                        key={order.id}
+                        className={`${styles.activeOrderCard} ${isSelected ? styles.orderCardSelected : ""}`}
+                        onClick={() => handleSelectOrder(order)}
+                      >
+                        {/* Top Details */}
+                        <div className={styles.activeCardTopRow}>
+                          <div className={styles.activeCardTopLeft}>
+                            <div className={styles.cardImageWrapper}>
+                              <Image
+                                src={order.imageUrl}
+                                alt={order.vendorName}
+                                width={64}
+                                height={64}
+                                className={styles.cardImage}
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = "/images/places/place-pizza.png";
+                                }}
+                              />
+                            </div>
+                            <div className={styles.cardMetaInfo}>
+                              <h3 className={styles.vendorTitle}>{order.vendorName}</h3>
+                              <p className={styles.itemSummaryText}>{order.dishName || order.itemSummary}</p>
+                              <span className={styles.itemCountText}>{order.itemCountText}</span>
+                              <span className={styles.priceHighlight}>₹{order.price}</span>
+                              <span className={styles.dateSingleLine}>{order.orderDate}</span>
+                            </div>
+                          </div>
+
+                          <div className={styles.activeCardTopRight}>
+                            <span
+                              className={styles.statusPillGreen}
+                              style={
+                                order.rawStatus === "PENDING" || order.rawStatus === "PLACED"
+                                  ? { background: "#FEF3C7", color: "#D97706", border: "1px solid #FDE68A" }
+                                  : {}
+                              }
+                            >
+                              {order.statusDisplay}
+                            </span>
+                            <div className={styles.arrivingBox}>
+                              <span className={styles.arrivingLabel}>Arriving in</span>
+                              <span className={styles.arrivingTime}>{order.arrivingIn}</span>
+                            </div>
+                            <div className={styles.chevronBtn}>
+                              <ChevronRight size={18} />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 5-Stage Dynamic Status Tracker */}
+                        <div className={styles.stepperContainer}>
+                          <div className={styles.stepperRow}>
+                            {/* 1. Placed / Confirmed */}
+                            <div className={styles.trackerStep}>
+                              <div
+                                className={
+                                  currentStep >= 1
+                                    ? styles.stepCircleFilledDone
+                                    : styles.stepCircleActiveNav
+                                }
+                              >
+                                <CheckCircle2 size={16} strokeWidth={2.4} />
+                              </div>
+                              <span className={currentStep >= 1 ? styles.stepTextDone : styles.stepTextActiveNav}>
+                                {currentStep >= 1 ? "Confirmed" : "Placed"}
+                              </span>
+                            </div>
+
+                            <div className={currentStep >= 1 ? styles.stepperLineDone : styles.stepperLinePending} />
+
+                            {/* 2. Preparing */}
+                            <div className={styles.trackerStep}>
+                              <div
+                                className={
+                                  currentStep > 1
+                                    ? styles.stepCircleFilledDone
+                                    : currentStep === 1
+                                    ? styles.stepCircleActiveNav
+                                    : styles.stepCirclePendingHome
+                                }
+                              >
+                                <CookingPot size={15} strokeWidth={2.4} />
+                              </div>
+                              <span
+                                className={
+                                  currentStep > 1
+                                    ? styles.stepTextDone
+                                    : currentStep === 1
+                                    ? styles.stepTextActiveNav
+                                    : styles.stepTextPending
+                                }
+                              >
+                                Preparing
+                              </span>
+                            </div>
+
+                            <div className={currentStep >= 2 ? styles.stepperLineDone : styles.stepperLinePending} />
+
+                            {/* 3. Picked Up */}
+                            <div className={styles.trackerStep}>
+                              <div
+                                className={
+                                  currentStep >= 3
+                                    ? styles.stepCircleFilledDone
+                                    : currentStep === 2
+                                    ? styles.stepCircleActiveNav
+                                    : styles.stepCirclePendingHome
+                                }
+                              >
+                                <Truck size={14} strokeWidth={2.4} />
+                              </div>
+                              <span
+                                className={
+                                  currentStep >= 3
+                                    ? styles.stepTextDone
+                                    : currentStep === 2
+                                    ? styles.stepTextActiveNav
+                                    : styles.stepTextPending
+                                }
+                              >
+                                Picked Up
+                              </span>
+                            </div>
+
+                            <div className={currentStep >= 3 ? styles.stepperLineDone : styles.stepperLinePending} />
+
+                            {/* 4. On the way */}
+                            <div className={styles.trackerStep}>
+                              <div
+                                className={
+                                  currentStep >= 3
+                                    ? styles.stepCircleFilledDone
+                                    : styles.stepCirclePendingHome
+                                }
+                              >
+                                <Navigation size={14} strokeWidth={2.2} />
+                              </div>
+                              <span
+                                className={
+                                  currentStep >= 3
+                                    ? styles.stepTextDone
+                                    : styles.stepTextPending
+                                }
+                              >
+                                On the way
+                              </span>
+                            </div>
+
+                            <div className={currentStep >= 4 ? styles.stepperLineDone : currentStep === 3 ? styles.stepperLineHalf : styles.stepperLinePending} />
+
+                            {/* 5. Delivered */}
+                            <div className={styles.trackerStep}>
+                              <div
+                                className={
+                                  currentStep >= 4
+                                    ? styles.stepCircleFilledDone
+                                    : styles.stepCirclePendingHome
+                                }
+                              >
+                                <Home size={15} strokeWidth={2} />
+                              </div>
+                              <span className={currentStep >= 4 ? styles.stepTextDone : styles.stepTextPending}>
+                                Delivered
+                              </span>
+                            </div>
+                          </div>
+
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+                            {(order.rawStatus === "PENDING" || order.rawStatus === "PLACED") && (
+                              <button
+                                type="button"
+                                className={styles.cancelOrderBtn}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCancelModalOrder(order);
+                                  setCancelError(null);
+                                }}
+                              >
+                                <X size={14} strokeWidth={2.5} />
+                                <span>Cancel Order</span>
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              className={styles.trackLiveBtn}
+                              style={{ marginBottom: (order.rawStatus === "PENDING" || order.rawStatus === "PLACED") ? "14px" : undefined }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSelectOrder(order);
+                              }}
+                            >
+                              <Navigation size={14} strokeWidth={2.5} />
+                              <span>Track Live</span>
+                            </button>
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  }
+
+                  // Past / Completed or Cancelled Order Card
                   return (
                     <article
                       key={order.id}
-                      className={`${styles.activeOrderCard} ${isSelected ? styles.orderCardSelected : ""}`}
+                      className={`${styles.pastOrderCard} ${isSelected ? styles.orderCardSelected : ""}`}
                       onClick={() => handleSelectOrder(order)}
                     >
-                      {/* Top Details */}
-                      <div className={styles.activeCardTopRow}>
-                        <div className={styles.activeCardTopLeft}>
-                          <div className={styles.cardImageWrapper}>
-                            <Image
-                              src={order.imageUrl}
-                              alt={order.vendorName}
-                              width={64}
-                              height={64}
-                              className={styles.cardImage}
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src = "/images/places/place-pizza.png";
-                              }}
-                            />
-                          </div>
-                          <div className={styles.cardMetaInfo}>
-                            <h3 className={styles.vendorTitle}>{order.vendorName}</h3>
-                            <p className={styles.itemSummaryText}>{order.itemSummary}</p>
-                            <span className={styles.priceHighlight}>₹{order.price}</span>
-                            <span className={styles.dateSingleLine}>{order.orderDate}</span>
-                          </div>
+                      <div className={styles.pastCardTopLeft}>
+                        <div className={styles.cardImageWrapper}>
+                          <Image
+                            src={order.imageUrl}
+                            alt={order.vendorName}
+                            width={72}
+                            height={72}
+                            className={styles.cardImage}
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = "/images/places/place-pizza.png";
+                            }}
+                          />
                         </div>
-
-                        <div className={styles.activeCardTopRight}>
-                          <span
-                            className={styles.statusPillGreen}
-                            style={
-                              order.rawStatus === "PENDING" || order.rawStatus === "PLACED"
-                                ? { background: "#FEF3C7", color: "#D97706", border: "1px solid #FDE68A" }
-                                : {}
-                            }
-                          >
-                            {order.statusDisplay}
-                          </span>
-                          <div className={styles.arrivingBox}>
-                            <span className={styles.arrivingLabel}>Arriving in</span>
-                            <span className={styles.arrivingTime}>{order.arrivingIn}</span>
-                          </div>
-                          <div className={styles.chevronBtn}>
-                            <ChevronRight size={18} />
-                          </div>
+                        <div className={styles.cardMetaInfo}>
+                          <h3 className={styles.vendorTitle}>{order.vendorName}</h3>
+                          <p className={styles.itemSummaryText}>{order.dishName || order.itemSummary}</p>
+                          <span className={styles.itemCountText}>{order.itemCountText}</span>
+                          <span className={styles.priceSingleLine}>₹{order.price}</span>
+                          <span className={styles.dateSingleLine}>{order.orderDate}</span>
                         </div>
                       </div>
 
-                      {/* 5-Stage Dynamic Status Tracker */}
-                      <div className={styles.stepperContainer}>
-                        <div className={styles.stepperRow}>
-                          {/* 1. Placed / Confirmed */}
-                          <div className={styles.trackerStep}>
-                            <div
-                              className={
-                                currentStep >= 1
-                                  ? styles.stepCircleFilledDone
-                                  : styles.stepCircleActiveNav
-                              }
-                            >
-                              <CheckCircle2 size={16} strokeWidth={2.4} />
-                            </div>
-                            <span className={currentStep >= 1 ? styles.stepTextDone : styles.stepTextActiveNav}>
-                              {currentStep >= 1 ? "Confirmed" : "Placed"}
-                            </span>
-                          </div>
-
-                          <div className={currentStep >= 1 ? styles.stepperLineDone : styles.stepperLinePending} />
-
-                          {/* 2. Preparing */}
-                          <div className={styles.trackerStep}>
-                            <div
-                              className={
-                                currentStep > 1
-                                  ? styles.stepCircleFilledDone
-                                  : currentStep === 1
-                                  ? styles.stepCircleActiveNav
-                                  : styles.stepCirclePendingHome
-                              }
-                            >
-                              <CookingPot size={15} strokeWidth={2.4} />
-                            </div>
-                            <span
-                              className={
-                                currentStep > 1
-                                  ? styles.stepTextDone
-                                  : currentStep === 1
-                                  ? styles.stepTextActiveNav
-                                  : styles.stepTextPending
-                              }
-                            >
-                              Preparing
-                            </span>
-                          </div>
-
-                          <div className={currentStep >= 2 ? styles.stepperLineDone : styles.stepperLinePending} />
-
-                          {/* 3. Picked Up */}
-                          <div className={styles.trackerStep}>
-                            <div
-                              className={
-                                currentStep >= 3
-                                  ? styles.stepCircleFilledDone
-                                  : currentStep === 2
-                                  ? styles.stepCircleActiveNav
-                                  : styles.stepCirclePendingHome
-                              }
-                            >
-                              <Truck size={14} strokeWidth={2.4} />
-                            </div>
-                            <span
-                              className={
-                                currentStep >= 3
-                                  ? styles.stepTextDone
-                                  : currentStep === 2
-                                  ? styles.stepTextActiveNav
-                                  : styles.stepTextPending
-                              }
-                            >
-                              Picked Up
-                            </span>
-                          </div>
-
-                          <div className={currentStep >= 3 ? styles.stepperLineDone : styles.stepperLinePending} />
-
-                          {/* 4. On the way */}
-                          <div className={styles.trackerStep}>
-                            <div
-                              className={
-                                currentStep >= 3
-                                  ? styles.stepCircleFilledDone
-                                  : styles.stepCirclePendingHome
-                              }
-                            >
-                              <Navigation size={14} strokeWidth={2.2} />
-                            </div>
-                            <span
-                              className={
-                                currentStep >= 3
-                                  ? styles.stepTextDone
-                                  : styles.stepTextPending
-                              }
-                            >
-                              On the way
-                            </span>
-                          </div>
-
-                          <div className={currentStep >= 4 ? styles.stepperLineDone : currentStep === 3 ? styles.stepperLineHalf : styles.stepperLinePending} />
-
-                          {/* 5. Delivered */}
-                          <div className={styles.trackerStep}>
-                            <div
-                              className={
-                                currentStep >= 4
-                                  ? styles.stepCircleFilledDone
-                                  : styles.stepCirclePendingHome
-                              }
-                            >
-                              <Home size={15} strokeWidth={2} />
-                            </div>
-                            <span className={currentStep >= 4 ? styles.stepTextDone : styles.stepTextPending}>
-                              Delivered
-                            </span>
-                          </div>
+                      <div className={styles.pastCardActionRow}>
+                        <span className={isCancelled ? styles.statusPillRed : styles.statusPillGray}>
+                          {order.statusDisplay}
+                        </span>
+                        <div className={styles.deliveredInfo}>
+                          <span className={styles.deliveredLabel}>
+                            {order.deliveredLabel || (isCancelled ? "Seller has not confirmed your order" : "Delivered")}
+                          </span>
+                          <span className={styles.deliveredDateText}>{order.deliveredTime}</span>
                         </div>
 
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
-                          {(order.rawStatus === "PENDING" || order.rawStatus === "PLACED") && (
-                            <button
-                              type="button"
-                              className={styles.cancelOrderBtn}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setCancelModalOrder(order);
-                                setCancelError(null);
-                              }}
-                            >
-                              <X size={14} strokeWidth={2.5} />
-                              <span>Cancel Order</span>
-                            </button>
+                        <div className={styles.pastButtonsGroup}>
+                          {isDelivered && (
+                            <>
+                              <button
+                                type="button"
+                                className={styles.reorderBtn}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRateOrder(order);
+                                }}
+                                style={
+                                  order.review
+                                    ? {
+                                        backgroundColor: "#ECFDF5",
+                                        color: "#059669",
+                                        borderColor: "#A7F3D0",
+                                      }
+                                    : {
+                                        backgroundColor: "#FFF7ED",
+                                        color: "#EA580C",
+                                        borderColor: "#FFEDD5",
+                                      }
+                                }
+                              >
+                                <Star
+                                  size={14}
+                                  fill={order.review ? "#059669" : "none"}
+                                  color={order.review ? "#059669" : "#EA580C"}
+                                />
+                                <span>
+                                  {order.review
+                                    ? `Rated ${order.review.rating}★`
+                                    : "Rate Order"}
+                                </span>
+                              </button>
+                              <button
+                                type="button"
+                                className={styles.reorderBtn}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleReorder(order);
+                                }}
+                              >
+                                <RotateCcw size={14} />
+                                <span>Reorder</span>
+                              </button>
+                            </>
                           )}
-                          <button
-                            type="button"
-                            className={styles.trackLiveBtn}
-                            style={{ marginBottom: (order.rawStatus === "PENDING" || order.rawStatus === "PLACED") ? "14px" : undefined }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSelectOrder(order);
-                            }}
-                          >
-                            <Navigation size={14} strokeWidth={2.5} />
-                            <span>Track Live</span>
-                          </button>
+
+                          {isCancelled && (
+                            <>
+                              {(order.refund || order.isPaid || order.price === 0) && (
+                                <span
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "4px",
+                                    padding: "4px 9px",
+                                    borderRadius: "6px",
+                                    fontSize: "0.75rem",
+                                    fontWeight: 700,
+                                    backgroundColor:
+                                      order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED" || (!order.refund && order.price === 0)
+                                        ? "#DCFCE7"
+                                        : order.refund?.status === "REJECTED"
+                                        ? "#FEE2E2"
+                                        : "#FEF3C7",
+                                    color:
+                                      order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED" || (!order.refund && order.price === 0)
+                                        ? "#15803D"
+                                        : order.refund?.status === "REJECTED"
+                                        ? "#B91C1C"
+                                        : "#B45309",
+                                    border: `1px solid ${
+                                      order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED" || (!order.refund && order.price === 0)
+                                        ? "#BBF7D0"
+                                        : order.refund?.status === "REJECTED"
+                                        ? "#FECACA"
+                                        : "#FDE68A"
+                                    }`,
+                                  }}
+                                >
+                                  {order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED" || (!order.refund && order.price === 0)
+                                    ? `✓ Refund: Processed (₹${typeof order.refund?.amount === "number" ? order.refund.amount : order.price})`
+                                    : order.refund?.status === "REJECTED"
+                                    ? `✕ Refund: Rejected`
+                                    : `⏳ Refund: Processing (₹${typeof order.refund?.amount === "number" ? order.refund.amount : order.price})`}
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                className={styles.viewDetailsBtn}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSelectOrder(order);
+                                }}
+                              >
+                                <span>View Details</span>
+                              </button>
+                            </>
+                          )}
+                        </div>
+
+                        <div className={styles.chevronBtn}>
+                          <ChevronRight size={18} />
                         </div>
                       </div>
                     </article>
                   );
-                }
+})}
+                {renderPagination(orderPage, totalOrderPages, filteredOrders.length, setOrderPage, "orders")}
+              </>
 
-                // Past / Completed or Cancelled Order Card
-                return (
-                  <article
-                    key={order.id}
-                    className={`${styles.pastOrderCard} ${isSelected ? styles.orderCardSelected : ""}`}
-                    onClick={() => handleSelectOrder(order)}
-                  >
-                    <div className={styles.pastCardTopLeft}>
-                      <div className={styles.cardImageWrapper}>
-                        <Image
-                          src={order.imageUrl}
-                          alt={order.vendorName}
-                          width={72}
-                          height={72}
-                          className={styles.cardImage}
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = "/images/places/place-pizza.png";
-                          }}
-                        />
-                      </div>
-                      <div className={styles.cardMetaInfo}>
-                        <h3 className={styles.vendorTitle}>{order.vendorName}</h3>
-                        <p className={styles.itemSummaryText}>{order.itemSummary}</p>
-                        {order.billBreakdown.discount !== undefined && order.billBreakdown.discount > 0 ? (
-                          <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", marginTop: "2px", marginBottom: "2px" }}>
-                            <span className={styles.priceSingleLine}>₹{order.price}</span>
-                            <span style={{ fontSize: "0.8rem", textDecoration: "line-through", color: "#94A3B8", fontWeight: 500 }}>
-                              ₹{order.billBreakdown.itemTotal}
-                            </span>
-                            <span style={{ fontSize: "0.72rem", color: "#16A34A", fontWeight: 700, backgroundColor: "#DCFCE7", padding: "1px 6px", borderRadius: "4px" }}>
-                              ₹{order.billBreakdown.discount} OFF
-                            </span>
-                          </div>
-                        ) : (
-                          <span className={styles.priceSingleLine}>₹{order.price}</span>
-                        )}
-                        <span className={styles.dateSingleLine}>{order.orderDate}</span>
-                      </div>
-                    </div>
-
-                    <div className={styles.pastCardActionRow}>
-                      {isDelivered && (
-                        <>
-                          <span className={styles.statusPillGray}>{order.statusDisplay}</span>
-                          <div className={styles.deliveredInfo}>
-                            <span className={styles.deliveredLabel}>{order.deliveredLabel || "Delivered"}</span>
-                            <span className={styles.deliveredDateText}>{order.deliveredTime}</span>
-                          </div>
-                          <button
-                            type="button"
-                            className={styles.reorderBtn}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRateOrder(order);
-                            }}
-                            style={
-                              order.review
-                                ? {
-                                    backgroundColor: "#ECFDF5",
-                                    color: "#059669",
-                                    borderColor: "#A7F3D0",
-                                  }
-                                : {
-                                    backgroundColor: "#FFF7ED",
-                                    color: "#EA580C",
-                                    borderColor: "#FFEDD5",
-                                  }
-                            }
-                          >
-                            <Star
-                              size={14}
-                              fill={order.review ? "#059669" : "none"}
-                              color={order.review ? "#059669" : "#EA580C"}
-                            />
-                            <span>
-                              {order.review
-                                ? `Rated ${order.review.rating}★`
-                                : "Rate Order"}
-                            </span>
-                          </button>
-                          <button
-                            type="button"
-                            className={styles.reorderBtn}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleReorder(order);
-                            }}
-                          >
-                            <RotateCcw size={14} />
-                            <span>Reorder</span>
-                          </button>
-                        </>
-                      )}
-
-                      {isCancelled && (
-                        <>
-                          <span className={styles.statusPillRed}>{order.statusDisplay}</span>
-                          <div className={styles.deliveredInfo}>
-                            <span className={styles.deliveredLabel}>{order.deliveredLabel || "Order cancelled"}</span>
-                            <span className={styles.deliveredDateText}>{order.deliveredTime}</span>
-                          </div>
-                          {(order.refund || order.isPaid || order.price === 0) && (
-                            <span
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "4px",
-                                padding: "4px 9px",
-                                borderRadius: "6px",
-                                fontSize: "0.75rem",
-                                fontWeight: 700,
-                                backgroundColor:
-                                  order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED" || (!order.refund && order.price === 0)
-                                    ? "#DCFCE7"
-                                    : order.refund?.status === "REJECTED"
-                                    ? "#FEE2E2"
-                                    : "#FEF3C7",
-                                color:
-                                  order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED" || (!order.refund && order.price === 0)
-                                    ? "#15803D"
-                                    : order.refund?.status === "REJECTED"
-                                    ? "#B91C1C"
-                                    : "#B45309",
-                                border: `1px solid ${
-                                  order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED" || (!order.refund && order.price === 0)
-                                    ? "#BBF7D0"
-                                    : order.refund?.status === "REJECTED"
-                                    ? "#FECACA"
-                                    : "#FDE68A"
-                                }`,
-                              }}
-                            >
-                              {order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED" || (!order.refund && order.price === 0)
-                                ? `✓ Refund: Processed (₹${typeof order.refund?.amount === "number" ? order.refund.amount : order.price})`
-                                : order.refund?.status === "REJECTED"
-                                ? `✕ Refund: Rejected`
-                                : `⏳ Refund: Processing (₹${typeof order.refund?.amount === "number" ? order.refund.amount : order.price})`}
-                            </span>
-                          )}
-                          <button
-                            type="button"
-                            className={styles.viewDetailsBtn}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSelectOrder(order);
-                            }}
-                          >
-                            <span>View Details</span>
-                          </button>
-                        </>
-                      )}
-
-                      <div className={styles.chevronBtn}>
-                        <ChevronRight size={18} />
-                      </div>
-                    </div>
-                  </article>
-                );
-              })
             )
           ) : (
             /* ROOM BOOKINGS TAB CONTENT */
@@ -1519,102 +1646,105 @@ export default function MyOrdersView() {
                 </Link>
               </div>
             ) : (
-              filteredBookings.map((booking) => {
-                const isSelected = selectedBooking?.id === booking.id;
+              <>
+                {paginatedBookings.map((booking) => {
+                  const isSelected = selectedBooking?.id === booking.id;
 
-                return (
-                  <article
-                    key={booking.id}
-                    className={`${styles.roomBookingCard} ${isSelected ? styles.roomBookingCardSelected : ""}`}
-                    onClick={() => handleSelectBooking(booking)}
-                  >
-                    {/* Top Row: Room info & Status badge */}
-                    <div className={styles.roomCardTopRow}>
-                      <div className={styles.pastCardTopLeft}>
-                        <div className={styles.cardImageWrapper}>
-                          <Image
-                            src={booking.imageUrl}
-                            alt={booking.roomTitle}
-                            width={72}
-                            height={72}
-                            className={styles.cardImage}
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src = "/images/places/place-biryani.png";
-                            }}
-                          />
+                  return (
+                    <article
+                      key={booking.id}
+                      className={`${styles.roomBookingCard} ${isSelected ? styles.roomBookingCardSelected : ""}`}
+                      onClick={() => handleSelectBooking(booking)}
+                    >
+                      {/* Top Row: Room info & Status badge */}
+                      <div className={styles.roomCardTopRow}>
+                        <div className={styles.pastCardTopLeft}>
+                          <div className={styles.cardImageWrapper}>
+                            <Image
+                              src={booking.imageUrl}
+                              alt={booking.roomTitle}
+                              width={72}
+                              height={72}
+                              className={styles.cardImage}
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = "/images/places/place-biryani.png";
+                              }}
+                            />
+                          </div>
+                          <div className={styles.cardMetaInfo}>
+                            <h3 className={styles.vendorTitle}>{booking.roomTitle}</h3>
+                            <p className={styles.itemSummaryText}>
+                              <MapPin size={13} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} />
+                              {booking.locality}, {booking.city} • Host: {booking.hostName}
+                            </p>
+                            <span className={styles.dateSingleLine}>Ref: #{booking.bookingRef}</span>
+                          </div>
                         </div>
-                        <div className={styles.cardMetaInfo}>
-                          <h3 className={styles.vendorTitle}>{booking.roomTitle}</h3>
-                          <p className={styles.itemSummaryText}>
-                            <MapPin size={13} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "4px" }} />
-                            {booking.locality}, {booking.city} • Host: {booking.hostName}
-                          </p>
-                          <span className={styles.dateSingleLine}>Ref: #{booking.bookingRef}</span>
-                        </div>
-                      </div>
 
-                      <div>
-                        {booking.status === "CONFIRMED" && (
-                          <span className={styles.roomStatusConfirmed}>
-                            <CheckCircle2 size={14} /> Confirmed
-                          </span>
-                        )}
-                        {booking.status === "PENDING" && (
-                          <span className={styles.roomStatusPending}>
-                            <Clock size={14} /> Pending Host Confirmation
-                          </span>
-                        )}
-                        {booking.status === "CANCELLED" && (
-                          <span className={styles.roomStatusCancelled}>
-                            <X size={14} /> Cancelled
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Middle Row: Dates & Guests Pill */}
-                    <div className={styles.roomCardMiddle}>
-                      <div className={styles.roomDatesBox}>
-                        <Calendar size={15} color="#EA580C" />
-                        <span>{booking.checkInFormatted} &rarr; {booking.checkOutFormatted}</span>
-                        <span className={styles.dotSeparator}>•</span>
-                        <span>{booking.nights} {booking.nights === 1 ? "Night" : "Nights"}</span>
-                      </div>
-
-                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                        <span style={{ fontSize: "0.82rem", color: "#64748B", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                          <Users size={14} /> Max {booking.capacity} {booking.capacity === 1 ? "Guest" : "Guests"}
-                        </span>
-                        <span className={`${styles.roomPaymentBadge} ${booking.isPaid ? styles.paymentPaid : styles.paymentPending}`}>
-                          {booking.isPaid ? "Paid Online" : "Pay at Property"}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Footer Row: Price and View Listing Button */}
-                    <div className={styles.roomFooterRow}>
-                      <div>
-                        <span className={styles.roomPriceTotal}>₹{booking.totalAmount}</span>
-                        <span className={styles.roomDurationLabel}>total for {booking.nights} {booking.nights === 1 ? "night" : "nights"}</span>
-                      </div>
-
-                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                        <Link
-                          href={`/room-booking/${booking.roomId}`}
-                          className={styles.viewRoomBtn}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <ExternalLink size={14} />
-                          <span>View Room</span>
-                        </Link>
-                        <div className={styles.chevronBtn}>
-                          <ChevronRight size={18} />
+                        <div>
+                          {booking.status === "CONFIRMED" && (
+                            <span className={styles.roomStatusConfirmed}>
+                              <CheckCircle2 size={14} /> Confirmed
+                            </span>
+                          )}
+                          {booking.status === "PENDING" && (
+                            <span className={styles.roomStatusPending}>
+                              <Clock size={14} /> Pending Host Confirmation
+                            </span>
+                          )}
+                          {booking.status === "CANCELLED" && (
+                            <span className={styles.roomStatusCancelled}>
+                              <X size={14} /> Cancelled
+                            </span>
+                          )}
                         </div>
                       </div>
-                    </div>
-                  </article>
-                );
-              })
+
+                      {/* Middle Row: Dates & Guests Pill */}
+                      <div className={styles.roomCardMiddle}>
+                        <div className={styles.roomDatesBox}>
+                          <Calendar size={15} color="#EA580C" />
+                          <span>{booking.checkInFormatted} &rarr; {booking.checkOutFormatted}</span>
+                          <span className={styles.dotSeparator}>•</span>
+                          <span>{booking.nights} {booking.nights === 1 ? "Night" : "Nights"}</span>
+                        </div>
+
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                          <span style={{ fontSize: "0.82rem", color: "#64748B", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                            <Users size={14} /> Max {booking.capacity} {booking.capacity === 1 ? "Guest" : "Guests"}
+                          </span>
+                          <span className={`${styles.roomPaymentBadge} ${booking.isPaid ? styles.paymentPaid : styles.paymentPending}`}>
+                            {booking.isPaid ? "Paid Online" : "Pay at Property"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Footer Row: Price and View Listing Button */}
+                      <div className={styles.roomFooterRow}>
+                        <div>
+                          <span className={styles.roomPriceTotal}>₹{booking.totalAmount}</span>
+                          <span className={styles.roomDurationLabel}>total for {booking.nights} {booking.nights === 1 ? "night" : "nights"}</span>
+                        </div>
+
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                          <Link
+                            href={`/room-booking/${booking.roomId}`}
+                            className={styles.viewRoomBtn}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <ExternalLink size={14} />
+                            <span>View Room</span>
+                          </Link>
+                          <div className={styles.chevronBtn}>
+                            <ChevronRight size={18} />
+                          </div>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+                {renderPagination(bookingPage, totalBookingPages, filteredBookings.length, setBookingPage, "bookings")}
+              </>
             )
           )}
         </div>
@@ -1647,7 +1777,22 @@ export default function MyOrdersView() {
                         : {}
                     }
                   >
-                    • {selectedOrder.statusDisplay}
+                    <span
+                      style={{
+                        display: "inline-block",
+                        width: "6px",
+                        height: "6px",
+                        borderRadius: "50%",
+                        backgroundColor:
+                          selectedOrder.status === "CANCELLED"
+                            ? "#EF4444"
+                            : selectedOrder.status === "DELIVERED"
+                            ? "#10B981"
+                            : "#D97706",
+                        flexShrink: 0,
+                      }}
+                    />
+                    <span>{selectedOrder.statusDisplay}</span>
                   </span>
                   <button
                     type="button"
@@ -1696,7 +1841,23 @@ export default function MyOrdersView() {
                 </div>
 
                 {/* Delivery Partner Details - Real DB Data or Informative Unassigned state */}
-                {selectedOrder.partner ? (
+                {selectedOrder.status === "CANCELLED" ? (
+                  <div className={styles.deliveryPartnerBox} style={{ background: "#FEF2F2", border: "1px solid #FECACA" }}>
+                    <div className={styles.partnerLeft}>
+                      <div className={styles.partnerAvatar} style={{ background: "#FEE2E2", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "12px" }}>
+                        <X size={20} color="#DC2626" />
+                      </div>
+                      <div className={styles.partnerInfo}>
+                        <h4 className={styles.partnerName} style={{ color: "#991B1B", fontSize: "0.92rem" }}>
+                          Order Not Confirmed
+                        </h4>
+                        <p className={styles.partnerRole} style={{ color: "#B91C1C" }}>
+                          This order was not accepted by the kitchen partner.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : selectedOrder.partner ? (
                   <div className={styles.deliveryPartnerBox} style={{ background: "#F0FDF4", border: "1px solid #BBF7D0" }}>
                     <div className={styles.partnerLeft}>
                       <div className={styles.partnerAvatar} style={{ background: "#DCFCE7", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "12px" }}>
@@ -1759,13 +1920,13 @@ export default function MyOrdersView() {
 
                 {/* Notification Alert Banner */}
                 <div className={styles.alertBox}>
-                  <Bell size={18} color="#047857" style={{ flexShrink: 0 }} />
+                  <Bell size={18} color={selectedOrder.status === "CANCELLED" ? "#DC2626" : "#047857"} style={{ flexShrink: 0 }} />
                   <div className={styles.alertText}>
                     <span className={styles.alertTitle}>
                       {selectedOrder.status === "DELIVERED"
                         ? "Order has been delivered successfully"
                         : selectedOrder.status === "CANCELLED"
-                        ? "This order was cancelled"
+                        ? "Seller has not confirmed your order"
                         : selectedOrder.rawStatus === "PENDING" || selectedOrder.rawStatus === "PLACED"
                         ? "Waiting for confirmation by seller"
                         : selectedOrder.partner?.name
@@ -1776,7 +1937,7 @@ export default function MyOrdersView() {
                       {selectedOrder.status === "DELIVERED"
                         ? `Delivered on ${selectedOrder.deliveredTime}`
                         : selectedOrder.status === "CANCELLED"
-                        ? "Contact support if you need assistance"
+                        ? "The kitchen partner was unable to confirm this order. Any online payment will be refunded."
                         : selectedOrder.rawStatus === "PENDING" || selectedOrder.rawStatus === "PLACED"
                         ? "The seller will review and accept your order shortly"
                         : `Expected arrival in ${selectedOrder.arrivingIn || "15-25 minutes"}`}
@@ -2030,8 +2191,24 @@ export default function MyOrdersView() {
                         ? styles.roomStatusPending
                         : styles.roomStatusCancelled
                     }
+                    style={{ display: "inline-flex", alignItems: "center", gap: "6px", whiteSpace: "nowrap" }}
                   >
-                    • {selectedBooking.status === "CONFIRMED" ? "Confirmed Booking" : selectedBooking.status === "PENDING" ? "Pending Approval" : "Cancelled Booking"}
+                    <span
+                      style={{
+                        display: "inline-block",
+                        width: "6px",
+                        height: "6px",
+                        borderRadius: "50%",
+                        backgroundColor:
+                          selectedBooking.status === "CONFIRMED"
+                            ? "#10B981"
+                            : selectedBooking.status === "PENDING"
+                            ? "#D97706"
+                            : "#EF4444",
+                        flexShrink: 0,
+                      }}
+                    />
+                    <span>{selectedBooking.status === "CONFIRMED" ? "Confirmed Booking" : selectedBooking.status === "PENDING" ? "Pending Approval" : "Cancelled Booking"}</span>
                   </span>
                   <button
                     type="button"

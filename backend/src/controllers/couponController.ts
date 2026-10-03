@@ -3,6 +3,21 @@ import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { revalidateTag, revalidatePath } from "next/cache";
 
+export function validateCouponCodeFormat(code: any): string {
+    if (!code || typeof code !== "string" || !code.trim()) {
+        throw new ApiError("Please enter a valid coupon code.", 400);
+    }
+    const clean = code.trim().toUpperCase();
+    if (clean.length > 20) {
+        throw new ApiError("Coupon code cannot exceed 20 characters.", 400);
+    }
+    if (!/^[A-Z0-9_-]+$/.test(clean)) {
+        throw new ApiError("Coupon code can only contain letters, numbers, hyphens, and underscores.", 400);
+    }
+    return clean;
+}
+
+
 export const getAllCoupons = async () => {
     const session = await getAuthSession();
     if (!session || !session.user) {
@@ -76,9 +91,7 @@ export const createCoupon = async (req: Request) => {
         autoApply
     } = body;
 
-    if (!code || !code.trim()) {
-        throw new ApiError("Coupon code is required.", 400);
-    }
+    const cleanCode = validateCouponCodeFormat(code);
 
     // Determine discount values
     let finalDiscountType = discountType || (discountPercentage ? "PERCENTAGE" : "FLAT");
@@ -196,7 +209,7 @@ export const createCoupon = async (req: Request) => {
 
     try {
         const couponData: any = {
-            code: code.trim().toUpperCase(),
+            code: cleanCode,
             description: description || "",
             discountType: finalDiscountType,
             discountPercentage: finalDiscountPercentage,
@@ -303,18 +316,22 @@ export const updateCoupon = async (req: Request, couponId: string) => {
         }
     }
 
-    if (code && code.toUpperCase() !== existingCoupon.code) {
-        const codeExists = await db.coupon.findUnique({
-            where: { code: code.toUpperCase() }
-        });
-        if (codeExists) {
-            throw new ApiError("A coupon with this code already exists. Please choose a different code.", 400);
+    let cleanUpdatedCode: string | undefined = undefined;
+    if (code !== undefined) {
+        cleanUpdatedCode = validateCouponCodeFormat(code);
+        if (cleanUpdatedCode !== existingCoupon.code) {
+            const codeExists = await db.coupon.findUnique({
+                where: { code: cleanUpdatedCode }
+            });
+            if (codeExists) {
+                throw new ApiError("A coupon with this code already exists. Please choose a different code.", 400);
+            }
         }
     }
 
     const updateData: any = {};
 
-    if (code !== undefined) updateData.code = code.toUpperCase();
+    if (cleanUpdatedCode !== undefined) updateData.code = cleanUpdatedCode;
     if (description !== undefined) updateData.description = description;
     if (category !== undefined) updateData.category = category;
     if (appliesTo !== undefined) updateData.appliesTo = appliesTo;

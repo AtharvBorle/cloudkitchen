@@ -105,7 +105,8 @@ export async function middleware(request: NextRequest) {
     pathname === "/privacy" ||
     pathname === "/about" ||
     pathname === "/contact" ||
-    pathname.startsWith("/auth/forgot-password");
+    pathname.startsWith("/auth/forgot-password") ||
+    pathname.startsWith("/auth/forget-password");
 
   // ──────────────────────────────────────────
   // 3b. USER-FACING CONSUMER PAGES — only for USER role & unauthenticated visitors

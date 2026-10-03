@@ -412,6 +412,11 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
       stockQuantity: stockLimit,
       maxStock: stockLimit,
       itemType: (item as any).itemType,
+      categoryId: (item as any).categoryId,
+      foodCategoryId: (item as any).foodCategoryId,
+      category: (item as any).category,
+      foodCategory: (item as any).foodCategory,
+      categoryName: (item as any).categoryName || (item as any).category?.name || (item as any).foodCategory?.name,
       addons: item.addons,
     });
   };
@@ -688,6 +693,11 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
               stockQuantity: stockLimit,
               maxStock: stockLimit,
               itemType: (addonModalItem as any).itemType,
+              categoryId: (addonModalItem as any).categoryId,
+              foodCategoryId: (addonModalItem as any).foodCategoryId,
+              category: (addonModalItem as any).category,
+              foodCategory: (addonModalItem as any).foodCategory,
+              categoryName: (addonModalItem as any).categoryName || (addonModalItem as any).category?.name || (addonModalItem as any).foodCategory?.name,
               addons: addonModalItem.addons,
             });
             setAddonModalItem(null);

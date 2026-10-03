@@ -24,6 +24,8 @@ export interface ReorderItemInfo {
   name: string;
   quantity?: number;
   price?: number;
+  previousPrice?: number;
+  priceChanged?: boolean;
   basePrice?: number;
   addonsTotal?: number;
   selectedAddons?: Array<{ id?: string; name: string; price: number }>;
@@ -188,12 +190,24 @@ export const ReorderModal: React.FC<ReorderModalProps> = ({
                       <div key={idx} className={`${styles.itemCard} ${styles.itemCardAvailable}`}>
                         <div className={styles.itemInfo}>
                           <span className={styles.itemName}>{item.name}</span>
+                          {item.priceChanged && item.previousPrice !== undefined && item.previousPrice !== item.price && (
+                            <span style={{ fontSize: "0.72rem", color: "#e11d48", fontWeight: 600, backgroundColor: "#ffe4e6", padding: "1px 6px", borderRadius: "4px", width: "fit-content", marginTop: "2px" }}>
+                              Live price updated
+                            </span>
+                          )}
                           {item.warning && <span className={styles.itemWarning}>{item.warning}</span>}
                         </div>
                         <div className={styles.itemMeta}>
                           <span style={{ color: "#64748b" }}>Qty: {item.quantity || 1}</span>
                           {item.price !== undefined && item.price > 0 && (
-                            <span className={styles.itemPrice}>₹{item.price * (item.quantity || 1)}</span>
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
+                              <span className={styles.itemPrice}>₹{item.price * (item.quantity || 1)}</span>
+                              {item.priceChanged && item.previousPrice !== undefined && item.previousPrice !== item.price && (
+                                <span style={{ fontSize: "0.72rem", color: "#e11d48", textDecoration: "line-through", fontWeight: 500 }}>
+                                  was ₹{item.previousPrice * (item.quantity || 1)}
+                                </span>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>
@@ -298,6 +312,11 @@ export const ReorderModal: React.FC<ReorderModalProps> = ({
                       <div key={idx} className={`${styles.itemCard} ${styles.itemCardAvailable}`}>
                         <div className={styles.itemInfo}>
                           <span className={styles.itemName}>{item.name}</span>
+                          {item.priceChanged && item.previousPrice !== undefined && item.previousPrice !== item.price && (
+                            <span style={{ fontSize: "0.72rem", color: "#e11d48", fontWeight: 600, backgroundColor: "#ffe4e6", padding: "1px 6px", borderRadius: "4px", width: "fit-content", marginTop: "2px" }}>
+                              Live price updated
+                            </span>
+                          )}
                           {item.selectedAddons && item.selectedAddons.length > 0 ? (
                             <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "3px" }}>
                               {item.selectedAddons.map((a, aIdx) => (
@@ -324,7 +343,14 @@ export const ReorderModal: React.FC<ReorderModalProps> = ({
                         <div className={styles.itemMeta}>
                           <span style={{ color: "#64748b" }}>Qty: {item.quantity || 1}</span>
                           {item.price !== undefined && (
-                            <span className={styles.itemPrice}>₹{item.price * (item.quantity || 1)}</span>
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
+                              <span className={styles.itemPrice}>₹{item.price * (item.quantity || 1)}</span>
+                              {item.priceChanged && item.previousPrice !== undefined && item.previousPrice !== item.price && (
+                                <span style={{ fontSize: "0.72rem", color: "#e11d48", textDecoration: "line-through", fontWeight: 500 }}>
+                                  was ₹{item.previousPrice * (item.quantity || 1)}
+                                </span>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>
@@ -404,6 +430,11 @@ export const ReorderModal: React.FC<ReorderModalProps> = ({
                       <div key={idx} className={`${styles.itemCard} ${styles.itemCardAvailable}`}>
                         <div className={styles.itemInfo}>
                           <span className={styles.itemName}>{item.name}</span>
+                          {item.priceChanged && item.previousPrice !== undefined && item.previousPrice !== item.price && (
+                            <span style={{ fontSize: "0.72rem", color: "#e11d48", fontWeight: 600, backgroundColor: "#ffe4e6", padding: "1px 6px", borderRadius: "4px", width: "fit-content", marginTop: "2px" }}>
+                              Live price updated
+                            </span>
+                          )}
                           {item.selectedAddons && item.selectedAddons.length > 0 && (
                             <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "3px" }}>
                               {item.selectedAddons.map((a, aIdx) => (
@@ -433,7 +464,14 @@ export const ReorderModal: React.FC<ReorderModalProps> = ({
                         <div className={styles.itemMeta}>
                           <span style={{ color: "#64748b" }}>Qty: {item.quantity || 1}</span>
                           {item.price !== undefined && (
-                            <span className={styles.itemPrice}>₹{item.price * (item.quantity || 1)}</span>
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
+                              <span className={styles.itemPrice}>₹{item.price * (item.quantity || 1)}</span>
+                              {item.priceChanged && item.previousPrice !== undefined && item.previousPrice !== item.price && (
+                                <span style={{ fontSize: "0.72rem", color: "#e11d48", textDecoration: "line-through", fontWeight: 500 }}>
+                                  was ₹{item.previousPrice * (item.quantity || 1)}
+                                </span>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>

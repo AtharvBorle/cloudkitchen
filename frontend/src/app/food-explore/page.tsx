@@ -33,6 +33,10 @@ import {
   matchesDishSearch,
   matchesDishCategory,
   matchesKitchenCategoryFilter,
+  isDishMatchingCuisine,
+  isKitchenServingCuisine,
+  isKitchenHavingOffers,
+  isDishHavingOffers,
 } from "@/lib/dietary-filter";
 import Link from "next/link";
 
@@ -118,10 +122,8 @@ function FoodExploreContent() {
     if (!items || items.length === 0) return { all: 0, veg: 0, non_veg: 0, vegan: 0, jain: 0, under150: 0, price150to300: 0, price300plus: 0, cuisineCounts: {} };
 
     const cuisineCounts: Record<string, number> = {};
-    items.forEach((item) => {
-      if (item.categoryName) {
-        cuisineCounts[item.categoryName] = (cuisineCounts[item.categoryName] || 0) + 1;
-      }
+    availableCuisines.forEach((c) => {
+      cuisineCounts[c] = items.filter((f) => isDishMatchingCuisine(c, f)).length;
     });
 
     return {
@@ -135,7 +137,7 @@ function FoodExploreContent() {
       price300plus: items.filter((f) => f.price > 300).length,
       cuisineCounts,
     };
-  }, [homeData.foodItems, homeData.allFoodItems, searchQuery]);
+  }, [homeData.foodItems, homeData.allFoodItems, availableCuisines, searchQuery]);
 
   // Filter and sort food items
   const filteredFoodItems = useMemo(() => {
@@ -171,7 +173,7 @@ function FoodExploreContent() {
     // Cuisines
     if (selectedCuisines.length > 0) {
       list = list.filter((f) =>
-        selectedCuisines.some((c) => matchesDishCategory(c, f))
+        selectedCuisines.some((c) => isDishMatchingCuisine(c, f))
       );
     }
 
@@ -182,22 +184,62 @@ function FoodExploreContent() {
 
     // Offers only
     if (offersOnly) {
-      list = list.filter((f) => {
-        return homeData.coupons.some(
-          (cp: any) => !cp.appliesToSellerId || cp.appliesToSellerId === f.sellerId
-        );
-      });
+      list = list.filter((f) => isDishHavingOffers(f, homeData.coupons));
     }
 
     // Sort
+    const getDishDeliveryMinutes = (f: DynamicFoodItem): number => {
+      if (f.distanceKm != null && !isNaN(f.distanceKm)) {
+        return f.distanceKm * 6 + 10;
+      }
+      if (f.deliveryTime) {
+        const m = f.deliveryTime.match(/\d+/);
+        if (m) return parseInt(m[0], 10);
+      }
+      return 40;
+    };
+
     if (sortBy === "rating") {
-      list = [...list].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+      list = [...list].sort((a, b) => {
+        const rA = Number(a.rating) || 0;
+        const rB = Number(b.rating) || 0;
+        if (rB !== rA) return rB - rA;
+        return (a.distanceKm ?? 999) - (b.distanceKm ?? 999);
+      });
     } else if (sortBy === "price_asc") {
-      list = [...list].sort((a, b) => a.price - b.price);
+      list = [...list].sort((a, b) => {
+        const pA = Number(a.price) || 0;
+        const pB = Number(b.price) || 0;
+        if (pA !== pB) return pA - pB;
+        return (Number(b.rating) || 0) - (Number(a.rating) || 0);
+      });
     } else if (sortBy === "price_desc") {
-      list = [...list].sort((a, b) => b.price - a.price);
+      list = [...list].sort((a, b) => {
+        const pA = Number(a.price) || 0;
+        const pB = Number(b.price) || 0;
+        if (pB !== pA) return pB - pA;
+        return (Number(b.rating) || 0) - (Number(a.rating) || 0);
+      });
     } else if (sortBy === "fastest") {
-      list = [...list].sort((a, b) => (a.distanceKm ?? 999) - (b.distanceKm ?? 999));
+      list = [...list].sort((a, b) => {
+        if ((a.sellerIsOnline === false) !== (b.sellerIsOnline === false)) {
+          return a.sellerIsOnline === false ? 1 : -1;
+        }
+        const timeA = getDishDeliveryMinutes(a);
+        const timeB = getDishDeliveryMinutes(b);
+        if (timeA !== timeB) return timeA - timeB;
+        return (a.distanceKm ?? 999) - (b.distanceKm ?? 999);
+      });
+    } else if (sortBy === "popular") {
+      list = [...list].sort((a, b) => {
+        if ((a.sellerIsOnline === false) !== (b.sellerIsOnline === false)) {
+          return a.sellerIsOnline === false ? 1 : -1;
+        }
+        const rA = Number(a.rating) || 0;
+        const rB = Number(b.rating) || 0;
+        if (rB !== rA) return rB - rA;
+        return (a.distanceKm ?? 999) - (b.distanceKm ?? 999);
+      });
     }
 
     return list;
@@ -246,13 +288,19 @@ function FoodExploreContent() {
     if (selectedCuisines.length > 0) {
       list = list.filter((k) =>
         selectedCuisines.some((c) =>
-          k.category?.toLowerCase().includes(c.toLowerCase())
+          isKitchenServingCuisine(c, k, sourceFoodItems)
         )
       );
     }
 
     if (openOnly) {
       list = list.filter((k) => k.isOnline !== false);
+    }
+
+    if (offersOnly) {
+      list = list.filter((k) =>
+        isKitchenHavingOffers(k, homeData.coupons, sourceFoodItems)
+      );
     }
 
     if (selectedPrice && selectedPrice !== "all") {
@@ -282,10 +330,96 @@ function FoodExploreContent() {
       });
     }
 
+    const getKitchenMinPrice = (k: DynamicKitchen): number => {
+      const kId = (k.id || "").toLowerCase().trim();
+      const kTracking = (k.trackingId || "").toLowerCase().trim();
+      const kName = (k.name || "").toLowerCase().trim();
+
+      const kDishes = sourceFoodItems.filter((f) => {
+        const fSellerId = (f.sellerId || "").toLowerCase().trim();
+        const fTracking = (f.sellerTrackingId || "").toLowerCase().trim();
+        const fSellerName = (f.sellerName || "").toLowerCase().trim();
+        return (
+          (kId && fSellerId && (fSellerId === kId || fTracking === kId)) ||
+          (kTracking && (fTracking === kTracking || fSellerId === kTracking)) ||
+          (kName && fSellerName && (kName === fSellerName || kName.includes(fSellerName) || fSellerName.includes(kName)))
+        );
+      });
+      const prices = kDishes.map((d) => Number(d.price) || 0).filter((p) => p > 0);
+      return prices.length > 0 ? Math.min(...prices) : 999999;
+    };
+
+    const getKitchenMaxPrice = (k: DynamicKitchen): number => {
+      const kId = (k.id || "").toLowerCase().trim();
+      const kTracking = (k.trackingId || "").toLowerCase().trim();
+      const kName = (k.name || "").toLowerCase().trim();
+
+      const kDishes = sourceFoodItems.filter((f) => {
+        const fSellerId = (f.sellerId || "").toLowerCase().trim();
+        const fTracking = (f.sellerTrackingId || "").toLowerCase().trim();
+        const fSellerName = (f.sellerName || "").toLowerCase().trim();
+        return (
+          (kId && fSellerId && (fSellerId === kId || fTracking === kId)) ||
+          (kTracking && (fTracking === kTracking || fSellerId === kTracking)) ||
+          (kName && fSellerName && (kName === fSellerName || kName.includes(fSellerName) || fSellerName.includes(kName)))
+        );
+      });
+      const prices = kDishes.map((d) => Number(d.price) || 0).filter((p) => p > 0);
+      return prices.length > 0 ? Math.max(...prices) : 0;
+    };
+
+    const getKitchenDeliveryMinutes = (k: DynamicKitchen): number => {
+      if (k.distanceKm != null && !isNaN(k.distanceKm)) {
+        return k.distanceKm * 6 + 10;
+      }
+      if (k.time) {
+        const m = k.time.match(/\d+/);
+        if (m) return parseInt(m[0], 10);
+      }
+      return 40;
+    };
+
     if (sortBy === "rating") {
-      list = [...list].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+      list = [...list].sort((a, b) => {
+        const rA = Number(a.rating) || 0;
+        const rB = Number(b.rating) || 0;
+        if (rB !== rA) return rB - rA;
+        return (Number(b.reviewsCount) || 0) - (Number(a.reviewsCount) || 0);
+      });
+    } else if (sortBy === "price_asc") {
+      list = [...list].sort((a, b) => {
+        const pA = getKitchenMinPrice(a);
+        const pB = getKitchenMinPrice(b);
+        if (pA !== pB) return pA - pB;
+        return (Number(b.rating) || 0) - (Number(a.rating) || 0);
+      });
+    } else if (sortBy === "price_desc") {
+      list = [...list].sort((a, b) => {
+        const pA = getKitchenMaxPrice(a);
+        const pB = getKitchenMaxPrice(b);
+        if (pB !== pA) return pB - pA;
+        return (Number(b.rating) || 0) - (Number(a.rating) || 0);
+      });
     } else if (sortBy === "fastest") {
-      list = [...list].sort((a, b) => (a.distanceKm ?? 999) - (b.distanceKm ?? 999));
+      list = [...list].sort((a, b) => {
+        if ((a.isOnline === false) !== (b.isOnline === false)) {
+          return a.isOnline === false ? 1 : -1;
+        }
+        const timeA = getKitchenDeliveryMinutes(a);
+        const timeB = getKitchenDeliveryMinutes(b);
+        if (timeA !== timeB) return timeA - timeB;
+        return (a.distanceKm ?? 999) - (b.distanceKm ?? 999);
+      });
+    } else if (sortBy === "popular") {
+      list = [...list].sort((a, b) => {
+        if ((a.isOnline === false) !== (b.isOnline === false)) {
+          return a.isOnline === false ? 1 : -1;
+        }
+        const rA = Number(a.rating) || 0;
+        const rB = Number(b.rating) || 0;
+        if (rB !== rA) return rB - rA;
+        return (Number(b.reviewsCount) || 0) - (Number(a.reviewsCount) || 0);
+      });
     }
 
     return list;
@@ -294,12 +428,14 @@ function FoodExploreContent() {
     homeData.allKitchens,
     homeData.foodItems,
     homeData.allFoodItems,
+    homeData.coupons,
     searchQuery,
     selectedCategory,
     selectedDiet,
     selectedCuisines,
     selectedPrice,
     openOnly,
+    offersOnly,
     sortBy,
   ]);
 
@@ -454,6 +590,11 @@ function FoodExploreContent() {
       stockQuantity: stockLimit,
       maxStock: stockLimit,
       itemType: dish.itemType,
+      categoryId: (dish as any).categoryId,
+      foodCategoryId: (dish as any).foodCategoryId,
+      category: (dish as any).category,
+      foodCategory: (dish as any).foodCategory,
+      categoryName: (dish as any).categoryName || (dish as any).category?.name || (dish as any).foodCategory?.name,
       addons: parsedAddons,
     }, false, () => {
       if (showAnimation) {
@@ -1886,6 +2027,11 @@ function FoodExploreContent() {
               stockQuantity: stockLimit,
               maxStock: stockLimit,
               itemType: addonModalDish.itemType,
+              categoryId: (addonModalDish as any).categoryId,
+              foodCategoryId: (addonModalDish as any).foodCategoryId,
+              category: (addonModalDish as any).category,
+              foodCategory: (addonModalDish as any).foodCategory,
+              categoryName: (addonModalDish as any).categoryName || (addonModalDish as any).category?.name || (addonModalDish as any).foodCategory?.name,
               addons: addonModalDish.parsedAddons,
             }, false, () => {
               setAddedIds((prev) => ({ ...prev, [savedDishId]: true }));

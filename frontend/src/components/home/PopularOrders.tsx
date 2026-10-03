@@ -109,6 +109,11 @@ export default function PopularOrders({
       stockQuantity: stockLimit,
       maxStock: stockLimit,
       itemType: offer.itemType,
+      categoryId: (offer as any).categoryId,
+      foodCategoryId: (offer as any).foodCategoryId,
+      category: (offer as any).category,
+      foodCategory: (offer as any).foodCategory,
+      categoryName: (offer as any).categoryName || (offer as any).category?.name || (offer as any).foodCategory?.name,
     }, false, () => {
       setAddedId(offer.id);
       setTimeout(() => setAddedId(null), 1800);

@@ -209,7 +209,11 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                 maxUsers: maxUsers ? parseInt(maxUsers) : null,
                 minimumCartValue: minimumCartValue ? parseFloat(minimumCartValue) : null,
                 category: couponCategory,
-                isAutoApply: isAutoApply
+                isAutoApply: isAutoApply,
+                appliesTo: appliesTo,
+                appliesToProductId: appliesTo === "CATEGORY" ? selectedCategoryIds.join(",") : appliesTo === "ITEMS" ? selectedItemIds.join(",") : null,
+                maxDiscountAmount: maxDiscountCap ? parseFloat(maxDiscountCap) : null,
+                customerEligibility: customerEligibility
             };
 
             const res = await fetchApi("/api/coupons", {
@@ -287,6 +291,19 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
         setEditCouponCategory((coupon as any).category || "BOTH");
         setEditIsAutoApply(Boolean(coupon.isAutoApply));
         setEditIsActive(coupon.isActive);
+        setEditAppliesTo(((coupon as any).appliesTo as any) || "ALL");
+        setEditMaxDiscountCap(coupon.maxDiscountAmount ? String(coupon.maxDiscountAmount) : "");
+        setEditCustomerEligibility(((coupon as any).customerEligibility as any) || "ALL");
+        if ((coupon as any).appliesTo === "CATEGORY" && coupon.appliesToProductId) {
+            setEditSelectedCategoryIds(coupon.appliesToProductId.split(",").map((s: string) => s.trim()).filter(Boolean));
+            setEditSelectedItemIds([]);
+        } else if ((coupon as any).appliesTo === "ITEMS" && coupon.appliesToProductId) {
+            setEditSelectedItemIds(coupon.appliesToProductId.split(",").map((s: string) => s.trim()).filter(Boolean));
+            setEditSelectedCategoryIds([]);
+        } else {
+            setEditSelectedCategoryIds([]);
+            setEditSelectedItemIds([]);
+        }
     };
 
     const handleUpdateCoupon = async (e: React.FormEvent) => {
@@ -367,7 +384,11 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                 minimumCartValue: editMinimumCartValue ? parseFloat(editMinimumCartValue) : null,
                 category: editCouponCategory,
                 isAutoApply: editIsAutoApply,
-                isActive: editIsActive
+                isActive: editIsActive,
+                appliesTo: editAppliesTo,
+                appliesToProductId: editAppliesTo === "CATEGORY" ? editSelectedCategoryIds.join(",") : editAppliesTo === "ITEMS" ? editSelectedItemIds.join(",") : null,
+                maxDiscountAmount: editMaxDiscountCap ? parseFloat(editMaxDiscountCap) : null,
+                customerEligibility: editCustomerEligibility
             };
 
             const res = await fetchApi(`/api/coupons/${editingCoupon.id}`, {
@@ -649,7 +670,7 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                         {/* Advanced Rules */}
                         <div>
                             <h4 style={{ fontSize: "1rem", fontWeight: "600", color: "#334155", marginBottom: "1rem" }}>Advanced Rules (Optional)</h4>
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1.5rem" }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1.5rem" }}>
                                 <div>
                                     <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", color: "#475569", marginBottom: "8px" }}>Minimum Cart Value (₹)</label>
                                     <input
@@ -663,6 +684,20 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                                         style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
                                     />
                                     <p style={{ fontSize: "0.75rem", color: "#94a3b8", marginTop: "4px" }}>Leave empty for no minimum.</p>
+                                </div>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", color: "#475569", marginBottom: "8px" }}>Max Discount Cap (₹)</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        step="1"
+                                        value={maxDiscountCap}
+                                        onKeyDown={(e) => { if (['-', '+', 'e', 'E'].includes(e.key)) e.preventDefault(); }}
+                                        onChange={(e) => setMaxDiscountCap(e.target.value)}
+                                        placeholder="e.g. 150"
+                                        style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                                    />
+                                    <p style={{ fontSize: "0.75rem", color: "#94a3b8", marginTop: "4px" }}>Max cap for percentage discount.</p>
                                 </div>
                                 <div>
                                     <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", color: "#475569", marginBottom: "8px" }}>Max Usages Per User</label>
@@ -692,6 +727,120 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                                     />
                                     <p style={{ fontSize: "0.75rem", color: "#94a3b8", marginTop: "4px" }}>Total users who can use this. Leave empty for unlimited.</p>
                                 </div>
+                            </div>
+
+                            {/* Applicability Scope: All items / Specific Category / Specific Items */}
+                            <div style={{ marginTop: "1.25rem", padding: "16px", backgroundColor: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "700", color: "#334155", marginBottom: "8px" }}>
+                                    Applies To (Item / Category Scope)
+                                </label>
+                                <div style={{ display: "flex", gap: "10px", marginBottom: "1rem" }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setAppliesTo("ALL");
+                                            setSelectedCategoryIds([]);
+                                            setSelectedItemIds([]);
+                                        }}
+                                        style={{ flex: 1, padding: "10px", borderRadius: "8px", border: `1px solid ${appliesTo === "ALL" ? "var(--primary)" : "#cbd5e1"}`, backgroundColor: appliesTo === "ALL" ? "#fff0f0" : "white", color: appliesTo === "ALL" ? "var(--primary)" : "#64748b", fontWeight: "600", cursor: "pointer" }}
+                                    >
+                                        All Items in Cart
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setAppliesTo("CATEGORY")}
+                                        style={{ flex: 1, padding: "10px", borderRadius: "8px", border: `1px solid ${appliesTo === "CATEGORY" ? "var(--primary)" : "#cbd5e1"}`, backgroundColor: appliesTo === "CATEGORY" ? "#fff0f0" : "white", color: appliesTo === "CATEGORY" ? "var(--primary)" : "#64748b", fontWeight: "600", cursor: "pointer" }}
+                                    >
+                                        Specific Categories (e.g. Cake)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setAppliesTo("ITEMS")}
+                                        style={{ flex: 1, padding: "10px", borderRadius: "8px", border: `1px solid ${appliesTo === "ITEMS" ? "var(--primary)" : "#cbd5e1"}`, backgroundColor: appliesTo === "ITEMS" ? "#fff0f0" : "white", color: appliesTo === "ITEMS" ? "var(--primary)" : "#64748b", fontWeight: "600", cursor: "pointer" }}
+                                    >
+                                        Specific Food Items
+                                    </button>
+                                </div>
+
+                                {appliesTo === "CATEGORY" && (
+                                    <div style={{ backgroundColor: "white", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "12px" }}>
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                                            <span style={{ fontSize: "0.85rem", fontWeight: "600", color: "#334155" }}>Choose Applicable Categories:</span>
+                                            <span style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: "600" }}>{selectedCategoryIds.length} category selected</span>
+                                        </div>
+                                        <input
+                                            type="text"
+                                            placeholder="Search categories (e.g. Cake, Dessert)..."
+                                            value={categorySearchQuery}
+                                            onChange={(e) => setCategorySearchQuery(e.target.value)}
+                                            style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "0.85rem", marginBottom: "8px" }}
+                                        />
+                                        <div style={{ maxHeight: "150px", overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "6px" }}>
+                                            {allFoodCategories
+                                                .filter((cat) => (cat.name || "").toLowerCase().includes(categorySearchQuery.toLowerCase()))
+                                                .map((cat) => {
+                                                    const checked = selectedCategoryIds.includes(cat.name) || selectedCategoryIds.includes(cat.id);
+                                                    return (
+                                                        <label key={cat.id} style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", cursor: "pointer", padding: "6px 8px", borderRadius: "6px", backgroundColor: checked ? "#fee2e2" : "#f8fafc", border: `1px solid ${checked ? "#fca5a5" : "#e2e8f0"}` }}>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={checked}
+                                                                onChange={(e) => {
+                                                                    const val = cat.name || cat.id;
+                                                                    if (e.target.checked) {
+                                                                        setSelectedCategoryIds([...selectedCategoryIds, val]);
+                                                                    } else {
+                                                                        setSelectedCategoryIds(selectedCategoryIds.filter((x) => x !== val && x !== cat.id && x !== cat.name));
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <span style={{ fontWeight: checked ? "700" : "500", color: checked ? "#991b1b" : "#334155" }}>{cat.name}</span>
+                                                        </label>
+                                                    );
+                                                })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {appliesTo === "ITEMS" && (
+                                    <div style={{ backgroundColor: "white", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "12px" }}>
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                                            <span style={{ fontSize: "0.85rem", fontWeight: "600", color: "#334155" }}>Choose Applicable Food Items:</span>
+                                            <span style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: "600" }}>{selectedItemIds.length} item selected</span>
+                                        </div>
+                                        <input
+                                            type="text"
+                                            placeholder="Search items (e.g. Paneer Makhni)..."
+                                            value={itemSearchQuery}
+                                            onChange={(e) => setItemSearchQuery(e.target.value)}
+                                            style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "0.85rem", marginBottom: "8px" }}
+                                        />
+                                        <div style={{ maxHeight: "150px", overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "6px" }}>
+                                            {allFoodItems
+                                                .filter((item) => (item.name || "").toLowerCase().includes(itemSearchQuery.toLowerCase()))
+                                                .map((item) => {
+                                                    const checked = selectedItemIds.includes(item.name) || selectedItemIds.includes(item.id);
+                                                    return (
+                                                        <label key={item.id} style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", cursor: "pointer", padding: "6px 8px", borderRadius: "6px", backgroundColor: checked ? "#fee2e2" : "#f8fafc", border: `1px solid ${checked ? "#fca5a5" : "#e2e8f0"}` }}>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={checked}
+                                                                onChange={(e) => {
+                                                                    const val = item.name || item.id;
+                                                                    if (e.target.checked) {
+                                                                        setSelectedItemIds([...selectedItemIds, val]);
+                                                                    } else {
+                                                                        setSelectedItemIds(selectedItemIds.filter((x) => x !== val && x !== item.id && x !== item.name));
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <span style={{ fontWeight: checked ? "700" : "500", color: checked ? "#991b1b" : "#334155", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</span>
+                                                        </label>
+                                                    );
+                                                })}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Auto Apply Checkbox */}
@@ -853,8 +1002,21 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                                     </div>
 
                                     {/* Advanced Rules Indicators */}
-                                    {(coupon.minimumCartValue || coupon.maxUsagesPerUser || coupon.maxUsers) && (
+                                    {(coupon.minimumCartValue || coupon.maxUsagesPerUser || coupon.maxUsers || (coupon as any).appliesToProductId || coupon.maxDiscountAmount) && (
                                         <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px dashed #cbd5e1", display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                                            {(coupon as any).appliesTo === "CATEGORY" && (coupon as any).appliesToProductId && (
+                                                <span style={{ fontSize: "0.75rem", fontWeight: "700", backgroundColor: "#fef3c7", padding: "4px 8px", borderRadius: "4px", color: "#92400e" }}>
+                                                    Category: {(coupon as any).appliesToProductId}
+                                                </span>
+                                            )}
+                                            {(coupon as any).appliesTo === "ITEMS" && (coupon as any).appliesToProductId && (
+                                                <span style={{ fontSize: "0.75rem", fontWeight: "700", backgroundColor: "#fce7f3", padding: "4px 8px", borderRadius: "4px", color: "#9d174d" }}>
+                                                    Items: {(coupon as any).appliesToProductId}
+                                                </span>
+                                            )}
+                                            {coupon.maxDiscountAmount && (
+                                                <span style={{ fontSize: "0.75rem", fontWeight: "600", backgroundColor: "#e0e7ff", padding: "4px 8px", borderRadius: "4px", color: "#3730a3" }}>Max Cap: ₹{coupon.maxDiscountAmount}</span>
+                                            )}
                                             {coupon.minimumCartValue && (
                                                 <span style={{ fontSize: "0.75rem", fontWeight: "600", backgroundColor: "#f1f5f9", padding: "4px 8px", borderRadius: "4px", color: "#475569" }}>Min order: ₹{coupon.minimumCartValue}</span>
                                             )}
@@ -1061,7 +1223,7 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                                 </div>
                             </div>
 
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1.5rem" }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1.5rem" }}>
                                 <div>
                                     <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", color: "#475569", marginBottom: "8px" }}>Min Cart Value (₹)</label>
                                     <input
@@ -1070,6 +1232,18 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                                         value={editMinimumCartValue}
                                         onKeyDown={(e) => { if (['-', '+', 'e', 'E'].includes(e.key)) e.preventDefault(); }}
                                         onChange={(e) => setEditMinimumCartValue(e.target.value)}
+                                        style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "600", color: "#475569", marginBottom: "8px" }}>Max Discount Cap (₹)</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        value={editMaxDiscountCap}
+                                        onKeyDown={(e) => { if (['-', '+', 'e', 'E'].includes(e.key)) e.preventDefault(); }}
+                                        onChange={(e) => setEditMaxDiscountCap(e.target.value)}
+                                        placeholder="e.g. 150"
                                         style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
                                     />
                                 </div>
@@ -1095,6 +1269,120 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                                         style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
                                     />
                                 </div>
+                            </div>
+
+                            {/* Applicability Scope Edit: All items / Specific Category / Specific Items */}
+                            <div style={{ marginTop: "1rem", padding: "16px", backgroundColor: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: "700", color: "#334155", marginBottom: "8px" }}>
+                                    Applies To (Item / Category Scope)
+                                </label>
+                                <div style={{ display: "flex", gap: "10px", marginBottom: "1rem" }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setEditAppliesTo("ALL");
+                                            setEditSelectedCategoryIds([]);
+                                            setEditSelectedItemIds([]);
+                                        }}
+                                        style={{ flex: 1, padding: "10px", borderRadius: "8px", border: `1px solid ${editAppliesTo === "ALL" ? "var(--primary)" : "#cbd5e1"}`, backgroundColor: editAppliesTo === "ALL" ? "#fff0f0" : "white", color: editAppliesTo === "ALL" ? "var(--primary)" : "#64748b", fontWeight: "600", cursor: "pointer" }}
+                                    >
+                                        All Items in Cart
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setEditAppliesTo("CATEGORY")}
+                                        style={{ flex: 1, padding: "10px", borderRadius: "8px", border: `1px solid ${editAppliesTo === "CATEGORY" ? "var(--primary)" : "#cbd5e1"}`, backgroundColor: editAppliesTo === "CATEGORY" ? "#fff0f0" : "white", color: editAppliesTo === "CATEGORY" ? "var(--primary)" : "#64748b", fontWeight: "600", cursor: "pointer" }}
+                                    >
+                                        Specific Categories (e.g. Cake)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setEditAppliesTo("ITEMS")}
+                                        style={{ flex: 1, padding: "10px", borderRadius: "8px", border: `1px solid ${editAppliesTo === "ITEMS" ? "var(--primary)" : "#cbd5e1"}`, backgroundColor: editAppliesTo === "ITEMS" ? "#fff0f0" : "white", color: editAppliesTo === "ITEMS" ? "var(--primary)" : "#64748b", fontWeight: "600", cursor: "pointer" }}
+                                    >
+                                        Specific Food Items
+                                    </button>
+                                </div>
+
+                                {editAppliesTo === "CATEGORY" && (
+                                    <div style={{ backgroundColor: "white", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "12px" }}>
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                                            <span style={{ fontSize: "0.85rem", fontWeight: "600", color: "#334155" }}>Choose Applicable Categories:</span>
+                                            <span style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: "600" }}>{editSelectedCategoryIds.length} category selected</span>
+                                        </div>
+                                        <input
+                                            type="text"
+                                            placeholder="Search categories (e.g. Cake, Dessert)..."
+                                            value={editCategorySearchQuery}
+                                            onChange={(e) => setEditCategorySearchQuery(e.target.value)}
+                                            style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "0.85rem", marginBottom: "8px" }}
+                                        />
+                                        <div style={{ maxHeight: "150px", overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "6px" }}>
+                                            {allFoodCategories
+                                                .filter((cat) => (cat.name || "").toLowerCase().includes(editCategorySearchQuery.toLowerCase()))
+                                                .map((cat) => {
+                                                    const checked = editSelectedCategoryIds.includes(cat.name) || editSelectedCategoryIds.includes(cat.id);
+                                                    return (
+                                                        <label key={cat.id} style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", cursor: "pointer", padding: "6px 8px", borderRadius: "6px", backgroundColor: checked ? "#fee2e2" : "#f8fafc", border: `1px solid ${checked ? "#fca5a5" : "#e2e8f0"}` }}>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={checked}
+                                                                onChange={(e) => {
+                                                                    const val = cat.name || cat.id;
+                                                                    if (e.target.checked) {
+                                                                        setEditSelectedCategoryIds([...editSelectedCategoryIds, val]);
+                                                                    } else {
+                                                                        setEditSelectedCategoryIds(editSelectedCategoryIds.filter((x) => x !== val && x !== cat.id && x !== cat.name));
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <span style={{ fontWeight: checked ? "700" : "500", color: checked ? "#991b1b" : "#334155" }}>{cat.name}</span>
+                                                        </label>
+                                                    );
+                                                })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {editAppliesTo === "ITEMS" && (
+                                    <div style={{ backgroundColor: "white", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "12px" }}>
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                                            <span style={{ fontSize: "0.85rem", fontWeight: "600", color: "#334155" }}>Choose Applicable Food Items:</span>
+                                            <span style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: "600" }}>{editSelectedItemIds.length} item selected</span>
+                                        </div>
+                                        <input
+                                            type="text"
+                                            placeholder="Search items (e.g. Paneer Makhni)..."
+                                            value={editItemSearchQuery}
+                                            onChange={(e) => setEditItemSearchQuery(e.target.value)}
+                                            style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "0.85rem", marginBottom: "8px" }}
+                                        />
+                                        <div style={{ maxHeight: "150px", overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "6px" }}>
+                                            {allFoodItems
+                                                .filter((item) => (item.name || "").toLowerCase().includes(editItemSearchQuery.toLowerCase()))
+                                                .map((item) => {
+                                                    const checked = editSelectedItemIds.includes(item.name) || editSelectedItemIds.includes(item.id);
+                                                    return (
+                                                        <label key={item.id} style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", cursor: "pointer", padding: "6px 8px", borderRadius: "6px", backgroundColor: checked ? "#fee2e2" : "#f8fafc", border: `1px solid ${checked ? "#fca5a5" : "#e2e8f0"}` }}>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={checked}
+                                                                onChange={(e) => {
+                                                                    const val = item.name || item.id;
+                                                                    if (e.target.checked) {
+                                                                        setEditSelectedItemIds([...editSelectedItemIds, val]);
+                                                                    } else {
+                                                                        setEditSelectedItemIds(editSelectedItemIds.filter((x) => x !== val && x !== item.id && x !== item.name));
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <span style={{ fontWeight: checked ? "700" : "500", color: checked ? "#991b1b" : "#334155", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</span>
+                                                        </label>
+                                                    );
+                                                })}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Auto Apply Edit Checkbox */}

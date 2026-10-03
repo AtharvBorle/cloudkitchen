@@ -61,6 +61,27 @@ export interface OrderDefaultProps {
   onRejectOrder?: () => void;
 }
 
+const formatOrderDateTime = (isoString?: string | Date): string => {
+  if (!isoString) return "Just now";
+  const d = new Date(isoString);
+  if (isNaN(d.getTime())) return "Just now";
+
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+
+  const yesterday = new Date();
+  yesterday.setDate(now.getDate() - 1);
+  const isYesterday = d.toDateString() === yesterday.toDateString();
+
+  const timeStr = d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+
+  if (isToday) return `Today at ${timeStr}`;
+  if (isYesterday) return `Yesterday at ${timeStr}`;
+
+  const dateStr = d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+  return `${dateStr} at ${timeStr}`;
+};
+
 export const OrderDefault: React.FC<OrderDefaultProps> = ({
   orderData: propOrderData,
   ownerName: initialOwnerName,
@@ -181,14 +202,9 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
 
             setOrder({
               id: target.id,
-              orderId: `#NCR-${target.id.slice(0, 4).toUpperCase()}`,
               createdAt: target.createdAt,
-              placedTime: target.createdAt
-                ? `Today at ${timeStr}`
-                : "Today at 02:45 PM",
-              cancelledTime: target.updatedAt
-                ? `Today at ${cancelledTimeStr}`
-                : `Today at ${timeStr}`,
+              placedTime: formatOrderDateTime(target.createdAt),
+              cancelledTime: formatOrderDateTime(target.updatedAt || target.createdAt),
               status: statusVal,
               rawStatus: s,
               customerName: target.user?.name || "Customer",
@@ -285,12 +301,11 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
         body: JSON.stringify({ status: "CANCELLED" }),
       });
       if (res.ok) {
-        const nowTime = new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
         setOrder((prev) => (prev ? {
           ...prev,
           status: "Cancelled",
           rawStatus: "CANCELLED",
-          cancelledTime: `Today at ${nowTime}`,
+          cancelledTime: formatOrderDateTime(new Date()),
         } : null));
         setToast({
           type: "success",

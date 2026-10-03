@@ -171,7 +171,9 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
         const shortId = typeof orderId === "string" ? orderId.slice(-6).toUpperCase() : "ORDER";
         const status = (order.status || "PENDING").toUpperCase();
         const sellerName = order.seller?.businessName || order.sellerName || "Kitchen Partner";
-        const createdDate = order.createdAt ? new Date(order.createdAt) : new Date();
+        const eventDate = (status !== "PENDING" && order.updatedAt)
+          ? new Date(order.updatedAt)
+          : (order.createdAt ? new Date(order.createdAt) : new Date());
 
         let title = `Order #${shortId} Placed`;
         let message = `Your order from ${sellerName} has been received and confirmed.`;
@@ -195,10 +197,10 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
           tag = "DELIVERED";
           tagColor = "green";
           actionText = "Reorder";
-        } else if (status === "CANCELLED") {
-          title = `Order #${shortId} Cancelled`;
-          message = `Your order was cancelled. Any charged amount is refunded.`;
-          tag = "CANCELLED";
+        } else if (status === "CANCELLED" || status === "REJECTED") {
+          title = `Order #${shortId} Not Confirmed`;
+          message = `Your order was not accepted or confirmed by the Seller/Restaurant Owner. Any charged amount is refunded.`;
+          tag = "NOT CONFIRMED";
           tagColor = "red";
           actionText = "View Details";
         }
@@ -208,8 +210,8 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
           type: "order",
           title,
           message,
-          timestamp: createdDate.toISOString(),
-          relativeTime: getRelativeTime(createdDate.toISOString()),
+          timestamp: eventDate.toISOString(),
+          relativeTime: getRelativeTime(eventDate.toISOString()),
           isRead: readIds.includes(`order-notif-${orderId}`),
           link: "/orders-desktop",
           tag,

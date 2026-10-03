@@ -55,9 +55,40 @@ export interface OrderRow {
   status: "Preparing" | "Pending" | "Out for Delivery" | "Completed" | "Cancelled";
   rawStatus: string;
   createdAt: string;
+  date: string;
   time: string;
   deliveryPersonName?: string;
 }
+
+const formatOrderDate = (isoString?: string): string => {
+  if (!isoString) return "Today";
+  try {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return "Today";
+    return d.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return "Today";
+  }
+};
+
+const formatOrderTime = (isoString?: string): string => {
+  if (!isoString) return "Just now";
+  try {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return "Just now";
+    return d.toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  } catch {
+    return "Just now";
+  }
+};
 
 export interface SellerOrdersProps {
   ownerName?: string;
@@ -183,9 +214,8 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
               }
             }
 
-            const timeAgoStr = o.createdAt
-              ? new Date(o.createdAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
-              : "Just now";
+            const orderDateStr = formatOrderDate(o.createdAt);
+            const orderTimeStr = formatOrderTime(o.createdAt);
 
             return {
               id: o.id,
@@ -198,7 +228,8 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
               status: statusVal,
               rawStatus: s,
               createdAt: o.createdAt || new Date().toISOString(),
-              time: timeAgoStr,
+              date: orderDateStr,
+              time: orderTimeStr,
               deliveryPersonName: o.deliveryPerson?.name,
             };
           });
@@ -240,6 +271,8 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
           } catch (e) {
             itemsSummary = "Kitchen Items";
           }
+          const orderDateStr = formatOrderDate(o.createdAt);
+          const orderTimeStr = formatOrderTime(o.createdAt);
           const newRow: OrderRow = {
             id: o.id,
             orderId: `#NCR-${o.id.slice(0, 4).toUpperCase()}`,
@@ -251,7 +284,8 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
             status: "Pending",
             rawStatus: "PENDING",
             createdAt: o.createdAt || new Date().toISOString(),
-            time: "Just now",
+            date: orderDateStr,
+            time: orderTimeStr,
             deliveryPersonName: o.deliveryPerson?.name,
           };
           setOrderList((prev) => {
@@ -494,6 +528,8 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
           order.room.toLowerCase().includes(query) ||
           order.items.toLowerCase().includes(query) ||
           order.id.toLowerCase().includes(query) ||
+          (order.date && order.date.toLowerCase().includes(query)) ||
+          (order.time && order.time.toLowerCase().includes(query)) ||
           (order.deliveryPersonName && order.deliveryPersonName.toLowerCase().includes(query)) ||
           order.status.toLowerCase().includes(query)
         );
@@ -671,7 +707,7 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
                     <th>ITEMS</th>
                     <th>TOTAL</th>
                     <th>STATUS</th>
-                    <th>TIME</th>
+                    <th>DATE & TIME</th>
                     <th style={{ textAlign: "right" }}>ACTIONS</th>
                   </tr>
                 </thead>
@@ -737,34 +773,39 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
                           <td className={styles.roomText}>{order.room}</td>
                           <td className={styles.itemsText}>{order.items}</td>
                           <td className={styles.totalText}>{order.total}</td>
-                          <td>
+                          <td className={styles.statusCell}>
                             {isPending ? (
                               !isExpired ? (
-                                <span
+                                <div
                                   className={`${styles.statusBadge} ${
                                     isUrgent ? styles.statusTimerUrgent : styles.statusTimer
                                   }`}
                                   title={`Accept order within ${mm}:${ss} before auto-cancellation`}
                                 >
                                   <Clock size={12} style={{ display: "inline", verticalAlign: "middle", marginRight: "3px" }} />
-                                  {mm}:{ss}
-                                </span>
+                                  <span className={styles.statusLabel}>{mm}:{ss}</span>
+                                </div>
                               ) : (
-                                <span className={`${styles.statusBadge} ${styles.statusCancelled}`} title="Auto-cancelled (acceptance time expired)">
-                                  Cancelled
-                                </span>
+                                <div className={`${styles.statusBadge} ${styles.statusCancelled}`} title="Auto-cancelled (acceptance time expired)">
+                                  <span className={styles.statusDot} />
+                                  <span className={styles.statusLabel}>Cancelled</span>
+                                </div>
                               )
                             ) : (
-                              <span
+                              <div
                                 className={`${styles.statusBadge} ${getStatusBadgeClass(
                                   order.status
                                 )}`}
                               >
-                                {order.status}
-                              </span>
+                                <span className={styles.statusDot} />
+                                <span className={styles.statusLabel}>{order.status}</span>
+                              </div>
                             )}
                           </td>
-                          <td className={styles.timeText}>{order.time}</td>
+                          <td className={styles.dateTimeCell}>
+                            <div className={styles.datePrimary}>{order.date}</div>
+                            <div className={styles.timeSecondary}>{order.time}</div>
+                          </td>
                           <td style={{ textAlign: "right" }} onClick={(e) => e.stopPropagation()}>
                             <div className={styles.actionBtnGroup}>
                               {isPending && !isExpired && (

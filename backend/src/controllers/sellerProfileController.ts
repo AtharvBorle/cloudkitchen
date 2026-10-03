@@ -371,3 +371,219 @@ export const getSellerById = async (id: string) => {
 
     return seller;
 };
+
+export const exportSellerBusinessData = async () => {
+    const session = await getAuthSession();
+
+    if (!session?.user) {
+        throw new ApiError("Please log in first to export your seller business data.", 401);
+    }
+    if (session.user.role !== "SELLER" && session.user.role !== "SUPERADMIN") {
+        throw new ApiError("Access denied. Seller privileges required.", 403);
+    }
+
+    const seller: any = await db.sellerProfile.findUnique({
+        where: { userId: session.user.id },
+        include: {
+            user: {
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    phone: true,
+                    city: true,
+                    pincode: true,
+                    role: true,
+                    createdAt: true
+                }
+            },
+            foodItems: {
+                select: {
+                    id: true,
+                    name: true,
+                    description: true,
+                    price: true,
+                    itemType: true,
+                    isAvailable: true,
+                    stockQuantity: true,
+                    openTime: true,
+                    closeTime: true,
+                    operationalHours: true,
+                    addons: true,
+                    variants: true,
+                    deliveryPincodes: true,
+                    imageUrl: true
+                }
+            },
+            rooms: {
+                select: {
+                    id: true,
+                    title: true,
+                    description: true,
+                    price: true,
+                    capacity: true,
+                    images: true,
+                    isAvailable: true
+                }
+            },
+            orders: {
+                select: {
+                    id: true,
+                    totalAmount: true,
+                    status: true,
+                    isPaid: true,
+                    paymentMethod: true,
+                    deliveryAddress: true,
+                    createdAt: true,
+                    items: true
+                },
+                orderBy: {
+                    createdAt: "desc"
+                }
+            },
+            reviews: {
+                select: {
+                    id: true,
+                    rating: true,
+                    comment: true,
+                    createdAt: true
+                },
+                orderBy: {
+                    createdAt: "desc"
+                }
+            },
+            servedPincodes: {
+                select: {
+                    pincode: true,
+                    name: true
+                }
+            },
+            subscriptions: {
+                include: {
+                    plan: true
+                },
+                orderBy: {
+                    createdAt: "desc"
+                }
+            }
+        }
+    });
+
+    if (!seller) {
+        throw new ApiError("Seller profile could not be found.", 404);
+    }
+
+    // Fetch seller coupons
+    const coupons = await db.coupon.findMany({
+        where: {
+            appliesToSellerId: seller.id
+        },
+        select: {
+            id: true,
+            code: true,
+            description: true,
+            discountType: true,
+            discountPercentage: true,
+            discountAmount: true,
+            minimumCartValue: true,
+            maxDiscountAmount: true,
+            usageLimit: true,
+            perUserLimit: true,
+            isActive: true,
+            validFrom: true,
+            validUntil: true,
+            noExpiry: true,
+            createdAt: true
+        },
+        orderBy: {
+            createdAt: "desc"
+        }
+    });
+
+    const parsedOrders = (seller.orders || []).map((o: any) => {
+        let itemsList = [];
+        try {
+            itemsList = typeof o.items === "string" ? JSON.parse(o.items) : o.items;
+        } catch {
+            itemsList = [];
+        }
+        return {
+            orderId: o.id,
+            status: o.status,
+            totalAmount: o.totalAmount,
+            isPaid: o.isPaid,
+            paymentMethod: o.paymentMethod,
+            deliveryAddress: o.deliveryAddress,
+            orderDate: o.createdAt,
+            items: itemsList
+        };
+    });
+
+    const totalRevenue = (seller.orders || [])
+        .filter((o: any) => o.status === "DELIVERED" || o.isPaid)
+        .reduce((sum: number, o: any) => sum + (o.totalAmount || 0), 0);
+
+    const exportPayload = {
+        metadata: {
+            exportedAt: new Date().toISOString(),
+            platform: "Neo Cloud Kitchen Business Operations Console",
+            version: "2.0",
+            businessId: seller.id,
+            trackingId: seller.trackingId,
+            businessName: seller.businessName
+        },
+        businessProfile: {
+            businessName: seller.businessName,
+            trackingId: seller.trackingId,
+            ownerName: seller.user?.name,
+            email: seller.user?.email,
+            phone: seller.phone || seller.user?.phone,
+            city: seller.city || seller.user?.city,
+            addressLocality: seller.addressLocality,
+            addressFlat: seller.addressFlat,
+            pincode: seller.user?.pincode,
+            businessCategory: seller.businessCategory,
+            foodType: seller.foodType,
+            isOnline: seller.isOnline,
+            verificationStatus: seller.verificationStatus,
+            joinedDate: seller.user?.createdAt
+        },
+        servedPincodes: seller.servedPincodes || [],
+        foodMenu: {
+            totalItems: (seller.foodItems || []).length,
+            items: seller.foodItems || []
+        },
+        rooms: {
+            totalRooms: (seller.rooms || []).length,
+            items: seller.rooms || []
+        },
+        promotionalOffers: {
+            totalCoupons: coupons.length,
+            coupons
+        },
+        ordersAndSales: {
+            totalOrders: (seller.orders || []).length,
+            deliveredOrders: (seller.orders || []).filter((o: any) => o.status === "DELIVERED").length,
+            totalRevenue: Math.round(totalRevenue * 100) / 100,
+            orders: parsedOrders
+        },
+        customerReviews: {
+            totalReviews: (seller.reviews || []).length,
+            averageRating: (seller.reviews || []).length > 0 
+                ? Math.round(((seller.reviews || []).reduce((acc: number, r: any) => acc + (r.rating || 0), 0) / seller.reviews.length) * 10) / 10 
+                : 0,
+            reviews: seller.reviews || []
+        },
+        subscriptions: (seller.subscriptions || []).map((s: any) => ({
+            id: s.id,
+            planName: s.plan?.name || "Standard Plan",
+            category: s.plan?.category || "BOTH",
+            amountPaid: s.amount,
+            status: s.status,
+            validUntil: s.validUntil,
+            createdAt: s.createdAt
+        }))
+    };
+
+    return exportPayload;
+};
