@@ -16,6 +16,7 @@ import {
   Minus,
   ShoppingBag,
   AlertCircle,
+  AlertTriangle,
   ChevronDown,
   ChevronUp,
   Search,
@@ -45,6 +46,11 @@ export interface UserCartItem {
   itemType?: string;
   sellerId?: string;
   sellerName?: string;
+  categoryId?: string;
+  foodCategoryId?: string;
+  category?: any;
+  foodCategory?: any;
+  categoryName?: string;
 }
 
 export interface UserCartProps {
@@ -232,7 +238,9 @@ export const UserCart: React.FC<UserCartProps> = ({
 
   const [currentAddress, setCurrentAddress] = useState<string>(formattedDefaultAddress);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState<boolean>(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "warning" | "info" } | null>(null);
+  const toastTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const isSuppressingAutoApplyRef = React.useRef<boolean>(false);
   const [isSellerClosed, setIsSellerClosed] = useState<boolean>(false);
   const [isSellerUnavailableDismissed, setIsSellerUnavailableDismissed] = useState<boolean>(false);
   const hasShownUnavailableToast = React.useRef<boolean>(false);
@@ -286,6 +294,11 @@ export const UserCart: React.FC<UserCartProps> = ({
           itemType: ci.itemType,
           sellerId: ci.sellerId,
           sellerName: ci.sellerName,
+          categoryId: ci.categoryId,
+          foodCategoryId: ci.foodCategoryId,
+          category: ci.category,
+          foodCategory: ci.foodCategory,
+          categoryName: ci.categoryName || (ci.category as any)?.name || (ci.foodCategory as any)?.name,
         }))
       : localCartItems;
   }, [contextCartItems, localCartItems]);
@@ -420,11 +433,12 @@ export const UserCart: React.FC<UserCartProps> = ({
     return { isOutsideCoverage: false, shopDistanceKm: null, maxDeliveryRadius: maxRadius };
   }, [sellerDetails, cartItems, defaultAddress]);
 
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => {
-      setToastMessage(null);
-    }, 2800);
+  const showToast = (msg: string, type: "success" | "error" | "warning" | "info" = "success", duration = 3000) => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    setToast({ message: msg, type });
+    toastTimeoutRef.current = setTimeout(() => {
+      setToast(null);
+    }, duration);
   };
 
   // Parse add-ons from string or array safely and deduplicate
@@ -704,7 +718,7 @@ export const UserCart: React.FC<UserCartProps> = ({
 
   // Auto-apply eligible coupon when conditions are met
   React.useEffect(() => {
-    if (userDismissedPromo || isValidatingPromo || availableOffers.length === 0) {
+    if (userDismissedPromo || isValidatingPromo || availableOffers.length === 0 || isSuppressingAutoApplyRef.current) {
       return;
     }
 
@@ -720,9 +734,7 @@ export const UserCart: React.FC<UserCartProps> = ({
 
       // Check product scope if restricted
       if (offer.appliesToProductId) {
-        const hasProduct = cartItems.some(
-          (it) => it.id === offer.appliesToProductId || it.foodItemId === offer.appliesToProductId
-        );
+        const hasProduct = isCouponItemApplicable(offer, cartItems);
         if (!hasProduct) return false;
       }
       return true;
@@ -754,11 +766,32 @@ export const UserCart: React.FC<UserCartProps> = ({
     for (const offer of eligibleAutoOffers) {
       const pct = Number(offer.discountPercentage || (offer.discountType === "PERCENTAGE" ? (offer.discountValue || 0) : 0));
       let disc = 0;
+      let targetSub = subtotal;
+
+      if (offer.appliesToProductId) {
+        const allowedKeys = String(offer.appliesToProductId).split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+        const isCat = offer.appliesTo === "CATEGORY";
+        const matchingItems = cartItems.filter((it) => {
+          if (isCat) {
+            const catId = String(it.categoryId || it.foodCategoryId || "").toLowerCase();
+            const catName = String(it.categoryName || (it.foodCategory as any)?.name || (it.category as any)?.name || it.category || it.foodCategory || "").toLowerCase().trim();
+            const name = String(it.name || "").toLowerCase().trim();
+            return allowedKeys.some((k) => k === catId || k === catName || (catName && catName.includes(k)) || (k && catName && k.includes(catName)) || (name && name.includes(k)));
+          }
+          const itemId = String(it.id || "").toLowerCase();
+          const foodItemId = String(it.foodItemId || "").toLowerCase();
+          const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+          const name = String(it.name || "").toLowerCase().trim();
+          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
+        });
+        targetSub = matchingItems.reduce((acc, it) => acc + it.price * it.qty, 0);
+      }
+
       if (pct > 0) {
-        disc = Math.round((subtotal * pct) / 100);
+        disc = Math.round((targetSub * pct) / 100);
         if (offer.maxDiscountAmount) disc = Math.min(disc, Number(offer.maxDiscountAmount));
       } else {
-        disc = Math.min(Number(offer.discountAmount || offer.discountValue || 0), subtotal);
+        disc = Math.min(Number(offer.discountAmount || offer.discountValue || 0), targetSub);
       }
       if (disc >= maxDiscount) {
         maxDiscount = disc;
@@ -841,6 +874,11 @@ export const UserCart: React.FC<UserCartProps> = ({
               foodItemId: it.foodItemId,
               price: it.price,
               quantity: it.qty,
+              categoryId: it.categoryId,
+              foodCategoryId: it.foodCategoryId,
+              category: it.category,
+              foodCategory: it.foodCategory,
+              categoryName: it.categoryName || (it.category as any)?.name || (it.foodCategory as any)?.name,
             })),
             userId: session?.user?.id,
           }),
@@ -899,11 +937,27 @@ export const UserCart: React.FC<UserCartProps> = ({
       .filter(Boolean);
     if (allowedKeys.length === 0) return true;
 
+    const isCategory = coupon.appliesTo === "CATEGORY";
+    const matchingIdsSet = Array.isArray(coupon.matchingItemIds)
+      ? new Set(coupon.matchingItemIds.map((id: string) => String(id).toLowerCase()))
+      : null;
+
     return items.some((it) => {
       const itemId = String(it.id || "").toLowerCase();
       const foodItemId = String(it.foodItemId || "").toLowerCase();
       const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
       const name = String(it.name || "").toLowerCase().trim();
+
+      if (matchingIdsSet && (matchingIdsSet.has(itemId) || matchingIdsSet.has(foodItemId) || matchingIdsSet.has(baseId))) {
+        return true;
+      }
+
+      if (isCategory) {
+        const catId = String(it.categoryId || it.foodCategoryId || "").toLowerCase();
+        const catName = String(it.categoryName || (it.foodCategory as any)?.name || (it.category as any)?.name || it.category || it.foodCategory || "").toLowerCase().trim();
+        return allowedKeys.some((k) => k === catId || k === catName || (catName && catName.includes(k)) || (k && catName && k.includes(catName)) || (name && name.includes(k)));
+      }
+
       return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
     });
   };
@@ -925,7 +979,7 @@ export const UserCart: React.FC<UserCartProps> = ({
           localStorage.removeItem("appliedCoupon");
         } catch (e) {}
       }
-      showToast(`Coupon "${code}" removed. Minimum cart value of ₹${minCart} required.`);
+      showToast(`Coupon "${code}" removed. Minimum cart value of ₹${minCart} required.`, "warning");
       return;
     }
 
@@ -944,7 +998,12 @@ export const UserCart: React.FC<UserCartProps> = ({
             localStorage.removeItem("appliedCoupon");
           } catch (e) {}
         }
-        showToast(`Coupon "${code}" is no longer applicable as the required item was removed from your cart.`);
+        showToast(
+          appliedCoupon.appliesTo === "CATEGORY"
+            ? `Coupon "${code}" is no longer applicable as items from the required category were removed.`
+            : `Coupon "${code}" is no longer applicable as the required item was removed from your cart.`,
+          "warning"
+        );
         return;
       }
     } else if (appliedCoupon.appliesToProductId && cartItems.length === 0) {
@@ -1016,22 +1075,27 @@ export const UserCart: React.FC<UserCartProps> = ({
     }
 
     if (!targetCode) {
-      showToast("Please enter or select a promo code");
+      showToast("Please enter or select a promo code", "warning");
       return;
     }
-
-    setUserDismissedPromo(false);
-    lastAutoAppliedCodeRef.current = null;
-    // Auto-populate input field when clicked from offers list
-    setPromoCode(targetCode);
 
     const currentSubtotal = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
     const cartSellerId = cartItems.find((ci) => ci.sellerId)?.sellerId || cartItems[0]?.sellerId;
 
     if (currentSubtotal <= 0) {
-      showToast("Please add items to cart before applying coupon");
+      showToast("Please add items to cart before applying coupon", "warning");
       return;
     }
+
+    // Capture previously valid coupon details to restore after displaying error
+    const previousCoupon = appliedCoupon;
+    const previousPromo = appliedPromo;
+    const previousPercent = discountPercent;
+
+    setUserDismissedPromo(false);
+    lastAutoAppliedCodeRef.current = null;
+    // Auto-populate input field when clicked from offers list
+    setPromoCode(targetCode);
 
     setIsValidatingPromo(true);
     try {
@@ -1047,6 +1111,11 @@ export const UserCart: React.FC<UserCartProps> = ({
             foodItemId: it.foodItemId,
             price: it.price,
             quantity: it.qty,
+            categoryId: it.categoryId,
+            foodCategoryId: it.foodCategoryId,
+            category: it.category,
+            foodCategory: it.foodCategory,
+            categoryName: it.categoryName || (it.category as any)?.name || (it.foodCategory as any)?.name,
           })),
           userId: session?.user?.id,
         }),
@@ -1066,36 +1135,122 @@ export const UserCart: React.FC<UserCartProps> = ({
             localStorage.setItem("appliedCoupon", JSON.stringify(cData));
           } catch (e) {}
         }
-        showToast(cData.message || json?.message || `Coupon "${cData.code}" applied! Saved ₹${savedAmt}`);
+        showToast(cData.message || json?.message || `Coupon "${cData.code}" applied! Saved ₹${savedAmt}`, "success");
       } else {
         const errorMsg = json?.message || json?.error || (typeof json === "string" ? json : `Coupon "${targetCode}" is invalid or requirements not met.`);
+
+        // Suppress auto-apply from immediately overriding the error toast
+        isSuppressingAutoApplyRef.current = true;
+
         setAppliedCoupon(null);
         setAppliedPromo(null);
         setDiscountPercent(0);
-        if (typeof window !== "undefined") {
-          try {
-            sessionStorage.removeItem("appliedCoupon");
-            localStorage.removeItem("appliedCoupon");
-          } catch (e) {}
-        }
-        showToast(errorMsg);
+
+        // Display clear error notification explaining why coupon cannot be applied
+        showToast(errorMsg, "error", 3000);
+
+        // After displaying the error message for 3 seconds, restore previously valid auto-applied coupon
+        setTimeout(() => {
+          isSuppressingAutoApplyRef.current = false;
+          if (previousCoupon && previousPromo) {
+            setAppliedCoupon(previousCoupon);
+            setAppliedPromo(previousPromo);
+            setPromoCode(previousPromo);
+            setDiscountPercent(previousPercent);
+            if (typeof window !== "undefined") {
+              try {
+                sessionStorage.setItem("appliedCoupon", JSON.stringify(previousCoupon));
+                sessionStorage.setItem("applied_cart_coupon", JSON.stringify(previousCoupon));
+                localStorage.setItem("appliedCoupon", JSON.stringify(previousCoupon));
+              } catch (e) {}
+            }
+          } else {
+            setPromoCode("");
+          }
+        }, 3000);
       }
     } catch (e) {
       console.error("Coupon validation error:", e);
+      isSuppressingAutoApplyRef.current = true;
       setAppliedCoupon(null);
       setAppliedPromo(null);
       setDiscountPercent(0);
-      if (typeof window !== "undefined") {
-        try {
-          sessionStorage.removeItem("appliedCoupon");
-          localStorage.removeItem("appliedCoupon");
-        } catch (e) {}
-      }
-      showToast(`Failed to validate coupon "${targetCode}".`);
+      showToast(`Failed to validate coupon "${targetCode}".`, "error", 3000);
+      setTimeout(() => {
+        isSuppressingAutoApplyRef.current = false;
+        if (previousCoupon && previousPromo) {
+          setAppliedCoupon(previousCoupon);
+          setAppliedPromo(previousPromo);
+          setPromoCode(previousPromo);
+          setDiscountPercent(previousPercent);
+        }
+      }, 3000);
     } finally {
       setIsValidatingPromo(false);
     }
   };
+
+  // Category-specific discount details for breakdown and item-level distribution
+  const couponCategoryDetails = React.useMemo(() => {
+    if (!appliedCoupon) return null;
+    const isCategory = appliedCoupon.appliesTo === "CATEGORY";
+    const isItems = appliedCoupon.appliesTo === "ITEMS";
+    if (!isCategory && !isItems) return null;
+
+    const allowedKeys = String(appliedCoupon.appliesToProductId || "")
+      .split(",")
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
+
+    const matchingIdsSet = Array.isArray((appliedCoupon as any).matchingItemIds)
+      ? new Set((appliedCoupon as any).matchingItemIds.map((id: string) => String(id).toLowerCase()))
+      : null;
+
+    const matchingItems: UserCartItem[] = [];
+    let matchingSubtotal = 0;
+
+    cartItems.forEach((it) => {
+      const itemId = String(it.id || "").toLowerCase();
+      const foodItemId = String(it.foodItemId || "").toLowerCase();
+      const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+      const name = String(it.name || "").toLowerCase().trim();
+
+      let isMatch = false;
+      if (matchingIdsSet && (matchingIdsSet.has(itemId) || matchingIdsSet.has(foodItemId) || matchingIdsSet.has(baseId))) {
+        isMatch = true;
+      } else if (isCategory) {
+        const catId = String(it.categoryId || it.foodCategoryId || "").toLowerCase();
+        const catName = String(it.categoryName || (it.foodCategory as any)?.name || (it.category as any)?.name || it.category || it.foodCategory || "").toLowerCase().trim();
+        isMatch = allowedKeys.some((k) => k === catId || k === catName || (catName && catName.includes(k)) || (k && catName && k.includes(catName)) || (name && name.includes(k)));
+      } else {
+        isMatch = allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
+      }
+
+      if (isMatch) {
+        matchingItems.push(it);
+        matchingSubtotal += (Number(it.price) || 0) * (Number(it.qty) || 1);
+      }
+    });
+
+    const categoryName = (appliedCoupon as any).applicableCategoryName || (isCategory ? (matchingItems[0]?.categoryName || (matchingItems[0]?.foodCategory as any)?.name || (matchingItems[0]?.category as any)?.name || allowedKeys[0] || "Category") : null);
+
+    const matchingIds = new Set<string>();
+    matchingItems.forEach((it) => {
+      if (it.id) matchingIds.add(String(it.id).toLowerCase());
+      if (it.foodItemId) matchingIds.add(String(it.foodItemId).toLowerCase());
+      const baseId = it.id.includes("_") ? it.id.split("_")[0] : it.id;
+      matchingIds.add(baseId.toLowerCase());
+    });
+
+    return {
+      isCategory,
+      isItems,
+      categoryName,
+      matchingItems,
+      matchingSubtotal,
+      matchingIds,
+    };
+  }, [appliedCoupon, cartItems]);
 
   // Price Calculations
   const discountAmount = React.useMemo(() => {
@@ -1109,13 +1264,30 @@ export const UserCart: React.FC<UserCartProps> = ({
         .map((s) => s.trim().toLowerCase())
         .filter(Boolean);
       if (allowedKeys.length > 0) {
+        const isCategory = appliedCoupon.appliesTo === "CATEGORY";
+        const matchingIdsSet = Array.isArray((appliedCoupon as any).matchingItemIds)
+          ? new Set((appliedCoupon as any).matchingItemIds.map((id: string) => String(id).toLowerCase()))
+          : null;
+
         const matchingItems = cartItems.filter((it) => {
           const itemId = String(it.id || "").toLowerCase();
           const foodItemId = String(it.foodItemId || "").toLowerCase();
           const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
           const name = String(it.name || "").toLowerCase().trim();
+
+          if (matchingIdsSet && (matchingIdsSet.has(itemId) || matchingIdsSet.has(foodItemId) || matchingIdsSet.has(baseId))) {
+            return true;
+          }
+
+          if (isCategory) {
+            const catId = String(it.categoryId || it.foodCategoryId || "").toLowerCase();
+            const catName = String(it.categoryName || (it.foodCategory as any)?.name || (it.category as any)?.name || it.category || it.foodCategory || "").toLowerCase().trim();
+            return allowedKeys.some((k) => k === catId || k === catName || (catName && catName.includes(k)) || (k && catName && k.includes(catName)) || (name && name.includes(k)));
+          }
+
           return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
         });
+
         if (matchingItems.length === 0) return 0;
         targetSubtotal = matchingItems.reduce((acc, it) => acc + it.price * it.qty, 0);
       }
@@ -1129,6 +1301,21 @@ export const UserCart: React.FC<UserCartProps> = ({
     const flat = appliedCoupon.discountAmount || 0;
     return Math.min(flat, targetSubtotal);
   }, [appliedCoupon, subtotal, cartItems]);
+
+  const getItemDiscount = (item: UserCartItem) => {
+    if (!appliedCoupon || discountAmount <= 0) return 0;
+    if (!couponCategoryDetails) {
+      if (subtotal <= 0) return 0;
+      return Math.round(((item.price * item.qty) / subtotal) * discountAmount);
+    }
+    const itemId = String(item.id || "").toLowerCase();
+    const foodItemId = String(item.foodItemId || "").toLowerCase();
+    const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+    const isMatching = couponCategoryDetails.matchingIds.has(itemId) || couponCategoryDetails.matchingIds.has(foodItemId) || couponCategoryDetails.matchingIds.has(baseId);
+    if (!isMatching) return 0;
+    if (couponCategoryDetails.matchingSubtotal <= 0) return 0;
+    return Math.round(((item.price * item.qty) / couponCategoryDetails.matchingSubtotal) * discountAmount);
+  };
   const deliveryFee = 0;
   const taxesAndCharges = 0;
   const grandTotal = Math.max(0, subtotal - discountAmount);
@@ -1441,16 +1628,50 @@ export const UserCart: React.FC<UserCartProps> = ({
                         </div>
                       )}
 
-                      <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "10px", marginTop: "4px" }}>
-                        <span className={styles.itemPrice}>
-                          ₹{item.price.toLocaleString("en-IN")}
-                        </span>
-                        {item.addonsTotal !== undefined && item.addonsTotal > 0 && item.basePrice !== undefined && (
-                          <span style={{ fontSize: "0.75rem", color: "#64748B", fontWeight: "500" }}>
-                            (₹{item.basePrice} base + ₹{item.addonsTotal} add-ons)
-                          </span>
-                        )}
-                      </div>
+                      {(() => {
+                        const itemDisc = getItemDiscount(item);
+                        const hasDiscount = itemDisc > 0;
+                        const discountedUnitPrice = hasDiscount
+                          ? Math.max(0, Math.round((item.price * item.qty - itemDisc) / item.qty))
+                          : item.price;
+
+                        return (
+                          <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "8px", marginTop: "4px" }}>
+                            {hasDiscount ? (
+                              <>
+                                <span className={styles.itemPrice} style={{ color: "#16A34A" }}>
+                                  ₹{discountedUnitPrice.toLocaleString("en-IN")}
+                                </span>
+                                <span style={{ textDecoration: "line-through", color: "#94A3B8", fontSize: "0.85rem", fontWeight: "600" }}>
+                                  ₹{item.price.toLocaleString("en-IN")}
+                                </span>
+                                <span
+                                  style={{
+                                    backgroundColor: "#DCFCE7",
+                                    color: "#166534",
+                                    fontSize: "0.72rem",
+                                    fontWeight: 700,
+                                    padding: "2px 6px",
+                                    borderRadius: "4px",
+                                    border: "1px solid #BBF7D0",
+                                  }}
+                                >
+                                  Save ₹{itemDisc} {couponCategoryDetails?.isCategory && couponCategoryDetails.categoryName ? `(${couponCategoryDetails.categoryName})` : ""}
+                                </span>
+                              </>
+                            ) : (
+                              <span className={styles.itemPrice}>
+                                ₹{item.price.toLocaleString("en-IN")}
+                              </span>
+                            )}
+                            {item.addonsTotal !== undefined && item.addonsTotal > 0 && item.basePrice !== undefined && (
+                              <span style={{ fontSize: "0.75rem", color: "#64748B", fontWeight: "500" }}>
+                                (₹{item.basePrice} base + ₹{item.addonsTotal} add-ons)
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
 
                       {/* Available remaining add-ons for this specific dish */}
                       {!isSellerClosed && (() => {
@@ -1884,14 +2105,52 @@ export const UserCart: React.FC<UserCartProps> = ({
                 </div>
 
                 {discountAmount > 0 && (
-                  <div className={styles.pricingRow}>
-                    <span className={styles.discountValue}>
-                      Discount ({appliedCoupon?.discountPercentage ? `${appliedCoupon.discountPercentage}%` : appliedCoupon?.discountLabel || `${discountPercent}%`})
-                    </span>
-                    <span className={styles.discountValue}>
-                      - ₹{discountAmount.toLocaleString("en-IN")}
-                    </span>
-                  </div>
+                  <>
+                    {couponCategoryDetails?.isCategory && couponCategoryDetails.categoryName ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                        <div className={styles.pricingRow}>
+                          <span className={styles.discountValue} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <Tag size={14} />
+                            <span>
+                              {couponCategoryDetails.categoryName} Category Discount ({appliedCoupon?.discountPercentage ? `${appliedCoupon.discountPercentage}% OFF` : appliedCoupon?.discountLabel || `${discountPercent}% OFF`})
+                            </span>
+                          </span>
+                          <span className={styles.discountValue}>
+                            - ₹{discountAmount.toLocaleString("en-IN")}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: "0.75rem", color: "#166534", backgroundColor: "#F0FDF4", padding: "4px 8px", borderRadius: "6px", border: "1px dashed #86EFAC", marginTop: "2px" }}>
+                          Applied only to {couponCategoryDetails.categoryName} items (eligible subtotal: ₹{couponCategoryDetails.matchingSubtotal.toLocaleString("en-IN")})
+                        </div>
+                      </div>
+                    ) : couponCategoryDetails?.isItems ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                        <div className={styles.pricingRow}>
+                          <span className={styles.discountValue} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <Tag size={14} />
+                            <span>
+                              Item-Specific Discount ({appliedCoupon?.discountPercentage ? `${appliedCoupon.discountPercentage}% OFF` : appliedCoupon?.discountLabel || `${discountPercent}% OFF`})
+                            </span>
+                          </span>
+                          <span className={styles.discountValue}>
+                            - ₹{discountAmount.toLocaleString("en-IN")}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: "0.75rem", color: "#166534", backgroundColor: "#F0FDF4", padding: "4px 8px", borderRadius: "6px", border: "1px dashed #86EFAC", marginTop: "2px" }}>
+                          Applied only to eligible items (item subtotal: ₹{couponCategoryDetails.matchingSubtotal.toLocaleString("en-IN")})
+                        </div>
+                      </div>
+                    ) : (
+                      <div className={styles.pricingRow}>
+                        <span className={styles.discountValue}>
+                          Discount ({appliedCoupon?.discountPercentage ? `${appliedCoupon.discountPercentage}%` : appliedCoupon?.discountLabel || `${discountPercent}%`})
+                        </span>
+                        <span className={styles.discountValue}>
+                          - ₹{discountAmount.toLocaleString("en-IN")}
+                        </span>
+                      </div>
+                    )}
+                  </>
                 )}
 
                 <div className={styles.divider} />
@@ -2130,10 +2389,40 @@ export const UserCart: React.FC<UserCartProps> = ({
       )}
 
       {/* Toast Feedback */}
-      {toastMessage && (
-        <div className={styles.toastMessage}>
-          <CheckCircle2 size={18} color="#10B981" />
-          <span>{toastMessage}</span>
+      {toast && (
+        <div
+          className={styles.toastMessage}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            backgroundColor:
+              toast.type === "error"
+                ? "#FEF2F2"
+                : toast.type === "warning"
+                ? "#FFFBEB"
+                : "#F0FDF4",
+            color:
+              toast.type === "error"
+                ? "#991B1B"
+                : toast.type === "warning"
+                ? "#92400E"
+                : "#166534",
+            border: `1.5px solid ${
+              toast.type === "error"
+                ? "#FCA5A5"
+                : toast.type === "warning"
+                ? "#FCD34D"
+                : "#86EFAC"
+            }`,
+            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08)",
+            zIndex: 99999,
+          }}
+        >
+          {toast.type === "error" && <AlertCircle size={20} color="#DC2626" style={{ flexShrink: 0 }} />}
+          {toast.type === "warning" && <AlertTriangle size={20} color="#D97706" style={{ flexShrink: 0 }} />}
+          {(toast.type === "success" || toast.type === "info") && <CheckCircle2 size={20} color="#10B981" style={{ flexShrink: 0 }} />}
+          <span style={{ fontWeight: 600, fontSize: "0.88rem" }}>{toast.message}</span>
         </div>
       )}
 

@@ -65,6 +65,11 @@ export type CartItem = {
     stockQuantity?: number;
     maxStock?: number;
     itemType?: string;
+    categoryId?: string;
+    foodCategoryId?: string;
+    category?: any;
+    foodCategory?: any;
+    categoryName?: string;
 };
 
 export type ToastType = "warning" | "error" | "info" | "success";

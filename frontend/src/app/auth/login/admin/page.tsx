@@ -12,8 +12,15 @@ export default function AdminLoginPage() {
     const router = useRouter();
     
     useEffect(() => {
-        if (typeof window !== "undefined" && window.location.pathname === "/auth/login/admin") {
-            router.replace("/admin");
+        if (typeof window !== "undefined") {
+            const params = new URLSearchParams(window.location.search);
+            const errParam = params.get("error");
+            if (errParam && errParam.includes("ACCOUNT_INACTIVE")) {
+                setError("Your account is inactive. Please contact the administrator.");
+            }
+            if (window.location.pathname === "/auth/login/admin") {
+                router.replace("/admin");
+            }
         }
     }, [router]);
     const [email, setEmail] = useState("");
@@ -43,14 +50,29 @@ export default function AdminLoginPage() {
             });
 
             if (res?.error) {
-                if (res.error === "USER_NOT_FOUND" || res.error.includes("USER_NOT_FOUND")) {
-                    setError("Account not found.");
-                } else if (res.error === "INVALID_PASSWORD" || res.error.includes("INVALID_PASSWORD")) {
-                    setError("Incorrect password.");
-                } else if (res.error.includes("ROLE_MISMATCH_ADMIN")) {
+                const errStr = res.error || "";
+                if (errStr.includes("ACCOUNT_INACTIVE") || (res as any)?.code === "ACCOUNT_INACTIVE" || res.url?.includes("ACCOUNT_INACTIVE")) {
+                    setError("Your account is inactive. Please contact the administrator.");
+                } else if (errStr.includes("ROLE_MISMATCH_ADMIN")) {
                     setError("Access denied. Only authorized Admin accounts can access this portal.");
+                } else if (errStr === "USER_NOT_FOUND" || errStr.includes("USER_NOT_FOUND")) {
+                    setError("Account not found.");
+                } else if (errStr === "INVALID_PASSWORD" || errStr.includes("INVALID_PASSWORD")) {
+                    setError("Incorrect password.");
                 } else {
-                    setError("Invalid email or password.");
+                    let determinedError = "Invalid email or password.";
+                    try {
+                        const checkRes = await fetch("/api/auth/check-email", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ email: emailValidation.normalizedEmail })
+                        });
+                        const checkData = await checkRes.json();
+                        if (checkData?.data?.isActive === false) {
+                            determinedError = "Your account is inactive. Please contact the administrator.";
+                        }
+                    } catch {}
+                    setError(determinedError);
                 }
             } else {
                 const session = await getSession();

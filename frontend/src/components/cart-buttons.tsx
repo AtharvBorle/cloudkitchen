@@ -71,6 +71,11 @@ export function AddToCartButton({ item, fullWidth = true, disabled = false }: { 
             stockQuantity: stockLimit,
             maxStock: stockLimit,
             itemType: item.itemType,
+            categoryId: (item as any).categoryId,
+            foodCategoryId: (item as any).foodCategoryId,
+            category: (item as any).category,
+            foodCategory: (item as any).foodCategory,
+            categoryName: (item as any).categoryName || (item as any).category?.name || (item as any).foodCategory?.name,
         });
 
         if (success && !cartItem) {
@@ -99,6 +104,11 @@ export function AddToCartButton({ item, fullWidth = true, disabled = false }: { 
             stockQuantity: stockLimit,
             maxStock: stockLimit,
             itemType: item.itemType,
+            categoryId: (item as any).categoryId,
+            foodCategoryId: (item as any).foodCategoryId,
+            category: (item as any).category,
+            foodCategory: (item as any).foodCategory,
+            categoryName: (item as any).categoryName || (item as any).category?.name || (item as any).foodCategory?.name,
         });
 
         if (success) {

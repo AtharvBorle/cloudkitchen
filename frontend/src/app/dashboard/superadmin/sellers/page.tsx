@@ -130,7 +130,7 @@ export default function SuperadminSellersPage() {
                     isActive: editIsActive,
                     businessName: editBusinessName,
                     type: editType,
-                    verificationStatus: editVerificationStatus,
+                    verificationStatus: editingSeller?.verificationStatus === "APPROVED" ? "APPROVED" : editVerificationStatus,
                     isOnline: editIsOnline,
                     foodVerificationStatus: editFoodVerificationStatus,
                     propertyVerificationStatus: editPropertyVerificationStatus
@@ -556,25 +556,27 @@ export default function SuperadminSellersPage() {
                             <div style={{ backgroundColor: '#f8fafc', padding: '15px', borderRadius: '8px', marginBottom: '20px', border: '1px solid #e2e8f0' }}>
                                 <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#64748b', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Category & Document Verifications</div>
                                 
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: editingSeller?.verificationStatus === 'APPROVED' ? '1fr' : '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
                                     <div className="input-group" style={{ marginBottom: 0 }}>
                                         <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Registered Category</label>
                                         <div style={{ padding: '8px 12px', backgroundColor: '#e2e8f0', borderRadius: '6px', fontSize: '0.9rem', fontWeight: 'bold', color: '#1e293b' }}>
                                             {editBusinessCategory}
                                         </div>
                                     </div>
-                                    <div className="input-group" style={{ marginBottom: 0 }}>
-                                        <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '5px', color: '#475569', fontWeight: '600' }}>Overall Profile Status</label>
-                                        <select
-                                            value={editVerificationStatus}
-                                            onChange={e => setEditVerificationStatus(e.target.value)}
-                                            className="input-field" style={{ appearance: 'auto', backgroundColor: 'white', border: '1px solid #cbd5e1', padding: '8px' }}
-                                        >
-                                            <option value="PENDING">Pending (Profile Review)</option>
-                                            <option value="APPROVED">Approved (Profile Verified)</option>
-                                            <option value="REJECTED">Rejected</option>
-                                        </select>
-                                    </div>
+                                    {editingSeller?.verificationStatus !== "APPROVED" && (
+                                        <div className="input-group" style={{ marginBottom: 0 }}>
+                                            <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '5px', color: '#475569', fontWeight: '600' }}>Overall Profile Status</label>
+                                            <select
+                                                value={editVerificationStatus}
+                                                onChange={e => setEditVerificationStatus(e.target.value)}
+                                                className="input-field" style={{ appearance: 'auto', backgroundColor: 'white', border: '1px solid #cbd5e1', padding: '8px' }}
+                                            >
+                                                <option value="PENDING">Pending (Profile Review)</option>
+                                                <option value="APPROVED">Approved (Profile Verified)</option>
+                                                <option value="REJECTED">Rejected</option>
+                                            </select>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>

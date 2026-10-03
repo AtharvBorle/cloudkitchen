@@ -65,6 +65,11 @@ export interface CheckoutSummaryItem {
   qty: number;
   price: number;
   image: string;
+  categoryId?: string;
+  foodCategoryId?: string;
+  category?: any;
+  foodCategory?: any;
+  categoryName?: string;
 }
 
 export interface PendingOrderTransaction {
@@ -777,12 +782,71 @@ const loadRazorpayScript = (): Promise<boolean> => {
           qty: ci.quantity,
           price: ci.price * ci.quantity,
           image: ci.imageUrl || ci.image || "/images/places/place-pizza.png",
+          categoryId: ci.categoryId,
+          foodCategoryId: ci.foodCategoryId,
+          category: ci.category,
+          foodCategory: ci.foodCategory,
+          categoryName: ci.categoryName || (ci.category as any)?.name || (ci.foodCategory as any)?.name,
         }))
       : items;
   }, [cartItems, items]);
 
   // Pricing calculations: strictly only item prices and promo discounts
   const subtotal = checkoutItems.reduce((acc, item) => acc + item.price, 0);
+
+  // Category-specific details for checkout breakdown
+  const couponCategoryDetails = React.useMemo(() => {
+    if (!appliedCoupon || !isPromoApplied) return null;
+    const isCategory = (appliedCoupon as any).appliesTo === "CATEGORY";
+    const isItems = (appliedCoupon as any).appliesTo === "ITEMS";
+    if (!isCategory && !isItems) return null;
+
+    const allowedKeys = String(appliedCoupon.appliesToProductId || "")
+      .split(",")
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
+
+    const matchingIdsSet = Array.isArray((appliedCoupon as any).matchingItemIds)
+      ? new Set((appliedCoupon as any).matchingItemIds.map((id: string) => String(id).toLowerCase()))
+      : null;
+
+    const matchingItems: CheckoutSummaryItem[] = [];
+    let matchingSubtotal = 0;
+
+    checkoutItems.forEach((it) => {
+      const itemId = String(it.id || "").toLowerCase();
+      const foodItemId = String(it.foodItemId || "").toLowerCase();
+      const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+      const name = String(it.name || "").toLowerCase().trim();
+
+      let isMatch = false;
+      if (matchingIdsSet && (matchingIdsSet.has(itemId) || matchingIdsSet.has(foodItemId) || matchingIdsSet.has(baseId))) {
+        isMatch = true;
+      } else if (isCategory) {
+        const catId = String(it.categoryId || it.foodCategoryId || "").toLowerCase();
+        const catName = String(it.categoryName || (it.foodCategory as any)?.name || (it.category as any)?.name || it.category || it.foodCategory || "").toLowerCase().trim();
+        isMatch = allowedKeys.some((k) => k === catId || k === catName || (catName && catName.includes(k)) || (k && catName && k.includes(catName)) || (name && name.includes(k)));
+      } else {
+        isMatch = allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
+      }
+
+      if (isMatch) {
+        matchingItems.push(it);
+        matchingSubtotal += Number(it.price) || 0;
+      }
+    });
+
+    const categoryName = (appliedCoupon as any).applicableCategoryName || (isCategory ? (matchingItems[0]?.categoryName || (matchingItems[0]?.foodCategory as any)?.name || (matchingItems[0]?.category as any)?.name || allowedKeys[0] || "Category") : null);
+
+    return {
+      isCategory,
+      isItems,
+      categoryName,
+      matchingItems,
+      matchingSubtotal,
+    };
+  }, [appliedCoupon, isPromoApplied, checkoutItems]);
+
   const discountAmount = React.useMemo(() => {
     if (!isPromoApplied || !appliedCoupon || subtotal <= 0 || checkoutItems.length === 0) return 0;
     if (appliedCoupon.minimumCartValue && subtotal < appliedCoupon.minimumCartValue) return 0;
@@ -794,11 +858,27 @@ const loadRazorpayScript = (): Promise<boolean> => {
         .map((s) => s.trim().toLowerCase())
         .filter(Boolean);
       if (allowedKeys.length > 0) {
+        const isCategory = (appliedCoupon as any).appliesTo === "CATEGORY";
+        const matchingIdsSet = Array.isArray((appliedCoupon as any).matchingItemIds)
+          ? new Set((appliedCoupon as any).matchingItemIds.map((id: string) => String(id).toLowerCase()))
+          : null;
+
         const matchingItems = checkoutItems.filter((it) => {
           const itemId = String(it.id || "").toLowerCase();
           const foodItemId = String(it.foodItemId || "").toLowerCase();
           const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
           const name = String(it.name || "").toLowerCase().trim();
+
+          if (matchingIdsSet && (matchingIdsSet.has(itemId) || matchingIdsSet.has(foodItemId) || matchingIdsSet.has(baseId))) {
+            return true;
+          }
+
+          if (isCategory) {
+            const catId = String(it.categoryId || it.foodCategoryId || "").toLowerCase();
+            const catName = String(it.categoryName || (it.foodCategory as any)?.name || (it.category as any)?.name || it.category || it.foodCategory || "").toLowerCase().trim();
+            return allowedKeys.some((k) => k === catId || k === catName || (catName && catName.includes(k)) || (k && catName && k.includes(catName)) || (name && name.includes(k)));
+          }
+
           return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
         });
         if (matchingItems.length === 0) return 0;
@@ -1101,6 +1181,11 @@ const loadRazorpayScript = (): Promise<boolean> => {
             foodItemId: it.foodItemId,
             price: it.price,
             quantity: it.qty,
+            categoryId: it.categoryId,
+            foodCategoryId: it.foodCategoryId,
+            category: it.category,
+            foodCategory: it.foodCategory,
+            categoryName: it.categoryName || (it.category as any)?.name || (it.foodCategory as any)?.name,
           })),
           userId: session?.user?.id,
         }),
@@ -2553,12 +2638,46 @@ const loadRazorpayScript = (): Promise<boolean> => {
                   </div>
 
                   {isPromoApplied && discountAmount > 0 && (
-                    <div className={styles.pricingRowDiscount}>
-                      <span className={styles.discountLabel}>Promo Discount ({appliedCoupon?.discountPercentage ? `${appliedCoupon.discountPercentage}%` : appliedCoupon?.discountLabel || `${discountPercent}%`})</span>
-                      <span className={styles.discountValue}>
-                        -₹{discountAmount.toLocaleString("en-IN")}
-                      </span>
-                    </div>
+                    <>
+                      {couponCategoryDetails?.isCategory && couponCategoryDetails.categoryName ? (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                          <div className={styles.pricingRowDiscount}>
+                            <span className={styles.discountLabel} style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                              <Tag size={13} />
+                              <span>{couponCategoryDetails.categoryName} Category Discount ({appliedCoupon?.discountPercentage ? `${appliedCoupon.discountPercentage}% OFF` : appliedCoupon?.discountLabel || `${discountPercent}% OFF`})</span>
+                            </span>
+                            <span className={styles.discountValue}>
+                              -₹{discountAmount.toLocaleString("en-IN")}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: "0.72rem", color: "#166534", backgroundColor: "#F0FDF4", padding: "3px 6px", borderRadius: "4px", border: "1px dashed #86EFAC" }}>
+                            Applied only to {couponCategoryDetails.categoryName} items (eligible subtotal: ₹{couponCategoryDetails.matchingSubtotal.toLocaleString("en-IN")})
+                          </div>
+                        </div>
+                      ) : couponCategoryDetails?.isItems ? (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                          <div className={styles.pricingRowDiscount}>
+                            <span className={styles.discountLabel} style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                              <Tag size={13} />
+                              <span>Item-Specific Discount ({appliedCoupon?.discountPercentage ? `${appliedCoupon.discountPercentage}% OFF` : appliedCoupon?.discountLabel || `${discountPercent}% OFF`})</span>
+                            </span>
+                            <span className={styles.discountValue}>
+                              -₹{discountAmount.toLocaleString("en-IN")}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: "0.72rem", color: "#166534", backgroundColor: "#F0FDF4", padding: "3px 6px", borderRadius: "4px", border: "1px dashed #86EFAC" }}>
+                            Applied only to eligible items (item subtotal: ₹{couponCategoryDetails.matchingSubtotal.toLocaleString("en-IN")})
+                          </div>
+                        </div>
+                      ) : (
+                        <div className={styles.pricingRowDiscount}>
+                          <span className={styles.discountLabel}>Promo Discount ({appliedCoupon?.discountPercentage ? `${appliedCoupon.discountPercentage}%` : appliedCoupon?.discountLabel || `${discountPercent}%`})</span>
+                          <span className={styles.discountValue}>
+                            -₹{discountAmount.toLocaleString("en-IN")}
+                          </span>
+                        </div>
+                      )}
+                    </>
                   )}
 
                   <div className={styles.divider} />
