@@ -188,7 +188,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                     timestamp: o.createdAt || new Date().toISOString(),
                     severity: "success",
                     actionLabel: "View Order",
-                    actionHref: "/seller/orders",
+                    actionHref: `/seller/orders/details?orderId=${encodeURIComponent(o.id)}`,
                   });
                 } catch {}
               }
@@ -250,7 +250,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
             details: `Customer: ${o.user?.name || "Customer"}${customerPhone ? ` • Phone: ${customerPhone}` : ""}${address ? ` • Address: ${address}` : ""}`,
             severity: "success",
             actionLabel: "View Order",
-            actionHref: "/seller/orders",
+            actionHref: `/seller/orders/details?orderId=${encodeURIComponent(orderId)}`,
           });
         }
       }

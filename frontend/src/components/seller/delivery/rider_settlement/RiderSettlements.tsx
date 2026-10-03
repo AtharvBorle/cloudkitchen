@@ -17,6 +17,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
+import PaginationControls from "@/components/seller/common/PaginationControls";
 
 export interface RiderProfileInfo {
   id?: string;
@@ -254,6 +255,67 @@ export default function RiderSettlements({
       return true;
     });
   }, [currentLedger, fromDate, toDate, searchQuery]);
+
+  // Pagination State for Ledger Table
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number | "All">(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [fromDate, toDate, searchQuery, currentLedger]);
+
+  const paginatedLedger = useMemo(() => {
+    if (pageSize === "All") return filteredLedger;
+    const start = (currentPage - 1) * pageSize;
+    return filteredLedger.slice(start, start + pageSize);
+  }, [filteredLedger, currentPage, pageSize]);
+
+  // Discrepancy States
+  const [isDiscrepancyModalOpen, setIsDiscrepancyModalOpen] = useState(false);
+  const [discrepancyReason, setDiscrepancyReason] = useState("Cash shortage in handover");
+  const [actualCashReceived, setActualCashReceived] = useState("");
+  const [discrepancyNotes, setDiscrepancyNotes] = useState("");
+
+  const handleSubmitDiscrepancy = (e: React.FormEvent) => {
+    e.preventDefault();
+    const rawExpected = currentBalance;
+    const rawActual = parseFloat(actualCashReceived.replace(/[^0-9.]/g, "")) || 0;
+    const rawShortage = Math.max(0, rawExpected - rawActual);
+    const ticketNum = `DISC-${Math.floor(100000 + Math.random() * 900000)}`;
+
+    const newRecord = {
+      id: `disc-${Date.now()}`,
+      ticketId: ticketNum,
+      riderName: riderProfile.name || "Rider",
+      expectedAmount: `₹${rawExpected.toLocaleString("en-IN")}`,
+      actualAmount: actualCashReceived ? `₹${rawActual.toLocaleString("en-IN")}` : "₹0",
+      shortageAmount: `₹${rawShortage.toLocaleString("en-IN")}`,
+      reason: discrepancyReason,
+      note: discrepancyNotes.trim() || "Mismatch reported by seller during cash handover verification.",
+      status: "UNDER_REVIEW",
+      createdAt: new Date().toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      }),
+    };
+
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("seller_cash_discrepancies");
+        const parsed = stored ? JSON.parse(stored) : [];
+        const updated = [newRecord, ...(Array.isArray(parsed) ? parsed : [])];
+        localStorage.setItem("seller_cash_discrepancies", JSON.stringify(updated));
+        window.dispatchEvent(new CustomEvent("seller-discrepancy-submitted", { detail: newRecord }));
+      } catch {}
+    }
+
+    setIsDiscrepancyModalOpen(false);
+    showToast(`Discrepancy ticket #${ticketNum} submitted & tracked.`);
+  };
 
   const handleClearDateFilter = () => {
     setFromDate("");
@@ -774,29 +836,55 @@ export default function RiderSettlements({
                 </span>
               </div>
 
-              {/* Record Settlement Button */}
-              <button
-                type="button"
-                onClick={handleOpenRecordModal}
-                style={{
-                  width: "100%",
-                  height: "42px",
-                  backgroundColor: "#F97316",
-                  backgroundImage: "linear-gradient(135deg, #FF5500 0%, #F97316 100%)",
-                  color: "#FFFFFF",
-                  border: "none",
-                  borderRadius: "8px",
-                  fontSize: "13.5px",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  boxShadow: "0 2px 8px rgba(249, 115, 22, 0.25)",
-                  transition: "all 0.18s ease",
-                  fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-                }}
-                className="record-settlement-btn"
-              >
-                Record Settlement
-              </button>
+              {/* Actions */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <button
+                  type="button"
+                  onClick={handleOpenRecordModal}
+                  style={{
+                    width: "100%",
+                    height: "42px",
+                    backgroundColor: "#F97316",
+                    backgroundImage: "linear-gradient(135deg, #FF5500 0%, #F97316 100%)",
+                    color: "#FFFFFF",
+                    border: "none",
+                    borderRadius: "8px",
+                    fontSize: "13.5px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    boxShadow: "0 2px 8px rgba(249, 115, 22, 0.25)",
+                    transition: "all 0.18s ease",
+                    fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+                  }}
+                  className="record-settlement-btn"
+                >
+                  Record Settlement
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActualCashReceived("");
+                    setDiscrepancyNotes("");
+                    setIsDiscrepancyModalOpen(true);
+                  }}
+                  style={{
+                    width: "100%",
+                    height: "38px",
+                    backgroundColor: "#FFF5F5",
+                    color: "#DC2626",
+                    border: "1px solid #FECACA",
+                    borderRadius: "8px",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    transition: "all 0.18s ease",
+                    fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+                  }}
+                  className="report-discrepancy-btn"
+                >
+                  Report Discrepancy
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1103,8 +1191,8 @@ export default function RiderSettlements({
 
                 {/* Table Body */}
                 <tbody>
-                  {filteredLedger.length > 0 ? (
-                    filteredLedger.map((item, index) => {
+                  {paginatedLedger.length > 0 ? (
+                    paginatedLedger.map((item, index) => {
                       const isSettlement =
                         item.type.toLowerCase() === "settlement" ||
                         item.amount.startsWith("-");
@@ -1114,7 +1202,7 @@ export default function RiderSettlements({
                           key={item.id || index}
                           style={{
                             borderBottom:
-                              index !== filteredLedger.length - 1
+                              index !== paginatedLedger.length - 1
                                 ? "1px solid #F8FAFC"
                                 : "none",
                             transition: "background-color 0.15s ease",
@@ -1214,6 +1302,23 @@ export default function RiderSettlements({
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination Controls */}
+            {filteredLedger.length > 0 && (
+              <div style={{ marginTop: "12px" }}>
+                <PaginationControls
+                  currentPage={currentPage}
+                  totalItems={filteredLedger.length}
+                  pageSize={pageSize}
+                  onPageChange={(p) => setCurrentPage(p)}
+                  onPageSizeChange={(s) => {
+                    setPageSize(s);
+                    setCurrentPage(1);
+                  }}
+                  itemLabel="transactions"
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1518,6 +1623,248 @@ export default function RiderSettlements({
         </div>
       )}
 
+      {/* Report Discrepancy Modal */}
+      {isDiscrepancyModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.6)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "20px",
+          }}
+          onClick={() => setIsDiscrepancyModalOpen(false)}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: "480px",
+              backgroundColor: "#FFFFFF",
+              borderRadius: "16px",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+              overflow: "hidden",
+              border: "1px solid #E2E8F0",
+              fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div
+              style={{
+                padding: "20px 24px",
+                borderBottom: "1px solid #F1F5F9",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                backgroundColor: "#FEF2F2",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div
+                  style={{
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "8px",
+                    backgroundColor: "#FEE2E2",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#DC2626",
+                  }}
+                >
+                  <AlertTriangle size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "#0F172A" }}>
+                    Report Cash Discrepancy
+                  </h3>
+                  <p style={{ margin: "2px 0 0 0", fontSize: "12px", color: "#64748B" }}>
+                    Track cash mismatch for {riderProfile.name || "rider"}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDiscrepancyModalOpen(false)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#94A3B8",
+                  cursor: "pointer",
+                  padding: "4px",
+                  display: "flex",
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <form onSubmit={handleSubmitDiscrepancy} style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              {/* Expected & Shortage Summary */}
+              {(() => {
+                const rawActual = parseFloat(actualCashReceived.replace(/[^0-9.]/g, "")) || 0;
+                const rawShortage = Math.max(0, currentBalance - rawActual);
+                return (
+                  <div
+                    style={{
+                      backgroundColor: "#F8FAFC",
+                      borderRadius: "10px",
+                      padding: "12px 16px",
+                      border: "1px solid #E2E8F0",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: "11px", color: "#64748B", fontWeight: 600 }}>EXPECTED CASH</div>
+                      <div style={{ fontSize: "16px", fontWeight: 800, color: "#0F172A" }}>
+                        ₹{currentBalance.toLocaleString("en-IN")}
+                      </div>
+                    </div>
+                    {actualCashReceived !== "" && (
+                      <div style={{ textAlign: "right" }}>
+                        <div style={{ fontSize: "11px", color: rawShortage > 0 ? "#DC2626" : "#16A34A", fontWeight: 700 }}>
+                          {rawShortage > 0 ? "SHORTAGE AMOUNT" : "EXACT / SURPLUS"}
+                        </div>
+                        <div style={{ fontSize: "16px", fontWeight: 800, color: rawShortage > 0 ? "#DC2626" : "#16A34A" }}>
+                          ₹{rawShortage.toLocaleString("en-IN")}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Reason */}
+              <div>
+                <label style={{ display: "block", fontSize: "12.5px", fontWeight: 600, color: "#334155", marginBottom: "6px" }}>
+                  Discrepancy Reason *
+                </label>
+                <select
+                  value={discrepancyReason}
+                  onChange={(e) => setDiscrepancyReason(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    borderRadius: "8px",
+                    border: "1.5px solid #CBD5E1",
+                    fontSize: "13.5px",
+                    color: "#0F172A",
+                    backgroundColor: "#FFFFFF",
+                    outline: "none",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  <option value="Cash shortage in handover">Cash shortage in handover</option>
+                  <option value="Damaged or counterfeit notes">Damaged or counterfeit notes</option>
+                  <option value="Customer payment dispute">Customer payment dispute</option>
+                  <option value="Order marked delivered but unpaid">Order marked delivered but unpaid</option>
+                  <option value="Other">Other discrepancy</option>
+                </select>
+              </div>
+
+              {/* Actual Cash Received */}
+              <div>
+                <label style={{ display: "block", fontSize: "12.5px", fontWeight: 600, color: "#334155", marginBottom: "6px" }}>
+                  Actual Cash Received (₹) *
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={actualCashReceived}
+                  onChange={(e) => setActualCashReceived(e.target.value)}
+                  placeholder="e.g. 500"
+                  required
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    borderRadius: "8px",
+                    border: "1.5px solid #CBD5E1",
+                    fontSize: "15px",
+                    fontWeight: 700,
+                    color: "#0F172A",
+                    outline: "none",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label style={{ display: "block", fontSize: "12.5px", fontWeight: 600, color: "#334155", marginBottom: "6px" }}>
+                  Notes / Explanation
+                </label>
+                <textarea
+                  value={discrepancyNotes}
+                  onChange={(e) => setDiscrepancyNotes(e.target.value)}
+                  placeholder="Describe discrepancy details for audit & review..."
+                  rows={2}
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    borderRadius: "8px",
+                    border: "1.5px solid #CBD5E1",
+                    fontSize: "13.5px",
+                    color: "#0F172A",
+                    outline: "none",
+                    boxSizing: "border-box",
+                    fontFamily: "inherit",
+                  }}
+                />
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: "flex", gap: "10px", marginTop: "4px" }}>
+                <button
+                  type="button"
+                  onClick={() => setIsDiscrepancyModalOpen(false)}
+                  style={{
+                    flex: 1,
+                    padding: "11px",
+                    borderRadius: "8px",
+                    border: "1px solid #CBD5E1",
+                    backgroundColor: "#FFFFFF",
+                    color: "#475569",
+                    fontSize: "13.5px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    flex: 2,
+                    padding: "11px",
+                    borderRadius: "8px",
+                    border: "none",
+                    backgroundColor: "#DC2626",
+                    color: "#FFFFFF",
+                    fontSize: "13.5px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    boxShadow: "0 2px 8px rgba(220, 38, 38, 0.25)",
+                  }}
+                >
+                  Submit & Track Report
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Toast Notification */}
       {toastMessage && (
         <div
@@ -1551,6 +1898,11 @@ export default function RiderSettlements({
         .record-settlement-btn:hover {
           transform: translateY(-1px);
           box-shadow: 0 4px 12px rgba(249, 115, 22, 0.38) !important;
+        }
+        .report-discrepancy-btn:hover {
+          background-color: #FEE2E2 !important;
+          border-color: #F87171 !important;
+          transform: translateY(-1px);
         }
         .download-csv-btn:hover {
           border-color: #FF5500 !important;

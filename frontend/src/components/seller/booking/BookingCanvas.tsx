@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from "react";
 import { ArrowRight, X, Phone, Calendar, Bed, CheckCircle2, AlertCircle } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
+import PaginationControls from "../common/PaginationControls";
 
 export interface BookingRecord {
   id: string;
@@ -148,6 +149,20 @@ export default function BookingCanvas({
       (b) => b.status.toLowerCase() === activeTab.toLowerCase()
     );
   }, [bookingList, activeTab]);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number | "All">(10);
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, bookingList]);
+
+  const paginatedBookings = useMemo(() => {
+    if (pageSize === "All") return filteredBookings;
+    const start = (currentPage - 1) * pageSize;
+    return filteredBookings.slice(start, start + pageSize);
+  }, [filteredBookings, currentPage, pageSize]);
 
   // Helper for Initials
   const getInitials = (name: string, fallback?: string): string => {
@@ -540,8 +555,8 @@ export default function BookingCanvas({
 
               {/* Table Body */}
               <tbody>
-                {filteredBookings.length > 0 ? (
-                  filteredBookings.map((booking, index) => {
+                {paginatedBookings.length > 0 ? (
+                  paginatedBookings.map((booking, index) => {
                     const initials = getInitials(
                       booking.guestName,
                       booking.guestInitials
@@ -552,7 +567,7 @@ export default function BookingCanvas({
                         key={booking.id || index}
                         style={{
                           borderBottom:
-                            index !== filteredBookings.length - 1
+                            index !== paginatedBookings.length - 1
                               ? "1px solid #F8FAFC"
                               : "none",
                           transition: "background-color 0.15s ease",
@@ -741,6 +756,22 @@ export default function BookingCanvas({
               </tbody>
             </table>
           </div>
+
+          {filteredBookings.length > 0 && (
+            <div style={{ marginTop: "16px" }}>
+              <PaginationControls
+                currentPage={currentPage}
+                totalItems={filteredBookings.length}
+                pageSize={pageSize}
+                onPageChange={(p) => setCurrentPage(p)}
+                onPageSizeChange={(s) => {
+                  setPageSize(s);
+                  setCurrentPage(1);
+                }}
+                itemLabel="bookings"
+              />
+            </div>
+          )}
         </div>
       </div>
 

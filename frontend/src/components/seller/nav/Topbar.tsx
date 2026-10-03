@@ -362,8 +362,15 @@ export default function Topbar({
                       onClick={() => {
                         markAsRead(item.id);
                         setIsDropdownOpen(false);
-                        if (item.actionHref) {
-                          router.push(item.actionHref);
+                        let targetHref = item.actionHref;
+                        if (item.category === "orders") {
+                          const match = item.title.match(/#([A-Za-z0-9-]+)/) || item.id.match(/notif-order-([A-Za-z0-9-]+)/);
+                          if (match && (!targetHref || targetHref === "/seller/orders")) {
+                            targetHref = `/seller/orders/details?orderId=${encodeURIComponent(match[1])}`;
+                          }
+                        }
+                        if (targetHref) {
+                          router.push(targetHref);
                         }
                       }}
                     >

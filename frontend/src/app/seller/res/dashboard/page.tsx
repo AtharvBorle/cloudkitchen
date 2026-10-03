@@ -56,7 +56,7 @@ export default function ResponsiveSellerDashboardPage() {
                 details: `Customer: ${o.user?.name || "Customer"}${customerPhone ? ` • Phone: ${customerPhone}` : ""}${address ? ` • Address: ${address}` : ""}`,
                 severity: "success",
                 actionLabel: "View Order",
-                actionHref: "/seller/orders",
+                actionHref: `/seller/orders/details?orderId=${encodeURIComponent(o.id)}`,
               });
             }
           });
@@ -105,7 +105,7 @@ export default function ResponsiveSellerDashboardPage() {
             details: `Customer: ${o.user?.name || "Customer"}${customerPhone ? ` • Phone: ${customerPhone}` : ""}${address ? ` • Address: ${address}` : ""}`,
             severity: "success",
             actionLabel: "View Order",
-            actionHref: "/seller/orders",
+            actionHref: `/seller/orders/details?orderId=${encodeURIComponent(orderId)}`,
           });
         }
       }

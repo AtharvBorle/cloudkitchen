@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Menu as MenuIcon, Calendar, Bell } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
+import PaginationControls from "../../common/PaginationControls";
 import styles from "./ResponsiveBooking.module.css";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
 import { useSellerNotifications } from "@/hooks/useSellerNotifications";
@@ -102,6 +103,20 @@ export const ResponsiveBooking: React.FC<ResponsiveBookingProps> = ({
     }
     return true;
   });
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number | "All">(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedTab, bookingList]);
+
+  const paginatedBookings = React.useMemo(() => {
+    if (pageSize === "All") return filteredBookings;
+    const start = (currentPage - 1) * pageSize;
+    return filteredBookings.slice(start, start + pageSize);
+  }, [filteredBookings, currentPage, pageSize]);
 
   const getStatusBadgeClass = (status: ResponsiveBookingItem["status"]) => {
     switch (status) {
@@ -202,63 +217,79 @@ export const ResponsiveBooking: React.FC<ResponsiveBookingProps> = ({
         {/* Main Content Area */}
         <main className={styles.contentArea}>
           {filteredBookings.length > 0 ? (
-            filteredBookings.map((booking) => (
-              <article key={booking.id} className={styles.bookingCard}>
-                {/* Top: Guest Info & Status Badge */}
-                <div className={styles.cardHeader}>
-                  <div className={styles.guestInfo}>
-                    <h2 className={styles.guestName}>{booking.guestName}</h2>
-                    <p className={styles.roomName}>{booking.roomName}</p>
+            <>
+              {paginatedBookings.map((booking) => (
+                <article key={booking.id} className={styles.bookingCard}>
+                  {/* Top: Guest Info & Status Badge */}
+                  <div className={styles.cardHeader}>
+                    <div className={styles.guestInfo}>
+                      <h2 className={styles.guestName}>{booking.guestName}</h2>
+                      <p className={styles.roomName}>{booking.roomName}</p>
+                    </div>
+                    <span
+                      className={`${styles.statusBadge} ${getStatusBadgeClass(
+                        booking.status
+                      )}`}
+                    >
+                      {booking.status}
+                    </span>
                   </div>
-                  <span
-                    className={`${styles.statusBadge} ${getStatusBadgeClass(
-                      booking.status
-                    )}`}
-                  >
-                    {booking.status}
-                  </span>
-                </div>
 
-                {/* Middle: Date Range & Amount Strip */}
-                <div className={styles.datesAmountContainer}>
-                  <div className={styles.datesLeft}>
-                    <Calendar size={17} />
-                    <span className={styles.dateRangeText}>{booking.dateRange}</span>
+                  {/* Middle: Date Range & Amount Strip */}
+                  <div className={styles.datesAmountContainer}>
+                    <div className={styles.datesLeft}>
+                      <Calendar size={17} />
+                      <span className={styles.dateRangeText}>{booking.dateRange}</span>
+                    </div>
+                    <span className={styles.amountText}>{booking.amount}</span>
                   </div>
-                  <span className={styles.amountText}>{booking.amount}</span>
-                </div>
 
-                {/* Bottom: Action Buttons */}
-                {booking.status === "Requested" ? (
-                  <div className={styles.actionsRow}>
+                  {/* Bottom: Action Buttons */}
+                  {booking.status === "Requested" ? (
+                    <div className={styles.actionsRow}>
+                      <button
+                        type="button"
+                        className={styles.declineButton}
+                        onClick={() => handleDeclineAction(booking.id)}
+                      >
+                        Decline
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.confirmButton}
+                        onClick={() => handleConfirmAction(booking.id)}
+                      >
+                        Confirm
+                      </button>
+                    </div>
+                  ) : (
                     <button
                       type="button"
-                      className={styles.declineButton}
-                      onClick={() => handleDeclineAction(booking.id)}
+                      className={styles.secondaryActionBtn}
+                      onClick={() => handleViewDetails(booking)}
                     >
-                      Decline
+                      {booking.status === "Confirmed"
+                        ? "Manage Booking"
+                        : "View Receipt"}
                     </button>
-                    <button
-                      type="button"
-                      className={styles.confirmButton}
-                      onClick={() => handleConfirmAction(booking.id)}
-                    >
-                      Confirm
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    className={styles.secondaryActionBtn}
-                    onClick={() => handleViewDetails(booking)}
-                  >
-                    {booking.status === "Confirmed"
-                      ? "Manage Booking"
-                      : "View Receipt"}
-                  </button>
-                )}
-              </article>
-            ))
+                  )}
+                </article>
+              ))}
+
+              <div style={{ marginTop: "16px" }}>
+                <PaginationControls
+                  currentPage={currentPage}
+                  totalItems={filteredBookings.length}
+                  pageSize={pageSize}
+                  onPageChange={(p) => setCurrentPage(p)}
+                  onPageSizeChange={(s) => {
+                    setPageSize(s);
+                    setCurrentPage(1);
+                  }}
+                  itemLabel="bookings"
+                />
+              </div>
+            </>
           ) : (
             <div className={styles.emptyState}>
               <p className={styles.emptyText}>

@@ -18,6 +18,7 @@ import {
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import RejectOrderModal from "../RejectOrderModal";
 import ToastNotification from "../ToastNotification";
+import PaginationControls from "../../common/PaginationControls";
 import { getRemainingSeconds } from "../SellerOrders";
 import { fetchApi } from "@/lib/fetch-api";
 import styles from "./ResponsiveSellerOrders.module.css";
@@ -152,11 +153,26 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
     return effStatus === selectedTab;
   });
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number | "All">(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedTab]);
+
+  const paginatedOrders = React.useMemo(() => {
+    if (pageSize === "All") return filteredOrders;
+    const numSize = Number(pageSize) || 10;
+    const startIndex = (currentPage - 1) * numSize;
+    return filteredOrders.slice(startIndex, startIndex + numSize);
+  }, [filteredOrders, currentPage, pageSize]);
+
   const handleCardClick = (order: ResponsiveOrderItem) => {
     if (onOrderClick) {
       onOrderClick(order);
     } else {
-      router.push("/seller/orders/details");
+      router.push(`/seller/orders/details?orderId=${encodeURIComponent(order.id)}`);
     }
   };
 
@@ -315,139 +331,152 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
         {/* Orders Content Area */}
         <main className={styles.contentArea}>
           {filteredOrders.length > 0 ? (
-            <div className={styles.ordersList}>
-              {filteredOrders.map((order) => (
-                <article
-                  key={order.id}
-                  className={styles.orderCard}
-                  onClick={() => handleCardClick(order)}
-                >
-                  {/* Top Meta Line: #1234 • ⏱️ 04:32 > */}
-                  <div className={styles.cardTopRow}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span className={styles.orderMetaText}>{order.orderNumber}</span>
-                      {order.status === "New" ? (
-                        (() => {
-                          const sec = getRemainingSeconds(order.createdAt, now);
-                          const mm = String(Math.floor(sec / 60)).padStart(2, "0");
-                          const ss = String(sec % 60).padStart(2, "0");
-                          const isUrgent = sec <= 60;
-                          return sec > 0 ? (
-                            <span
-                              className={`${styles.timerBadge} ${isUrgent ? styles.timerBadgeUrgent : ""}`}
-                              title={`Accept order within ${mm}:${ss}`}
-                            >
-                              <Clock size={12} style={{ display: "inline", verticalAlign: "middle", marginRight: "3px" }} />
-                              {mm}:{ss}
-                            </span>
-                          ) : (
-                            <span className={styles.cancelledBadge}>Cancelled</span>
-                          );
-                        })()
-                      ) : (
-                        <span className={styles.orderMetaText}>• {order.timeAgo}</span>
-                      )}
-                    </div>
-                    <ChevronRight size={18} className={styles.chevronIcon} />
-                  </div>
-
-                  {/* Customer Info & Items */}
-                  <div className={styles.customerSection}>
-                    <h2 className={styles.customerName}>{order.customerName}</h2>
-                    <p className={styles.itemsLine}>{order.itemsText}</p>
-                  </div>
-
-                  {/* Prior Orders & Total */}
-                  <div className={styles.secondaryInfoRow}>
-                    <div className={styles.priorOrdersWrapper}>
-                      <ShoppingBag size={14} className={styles.packageIcon} />
-                      <span>({order.priorOrdersCount} orders)</span>
-                    </div>
-                    <span className={styles.totalAmountText}>{order.totalAmount}</span>
-                  </div>
-
-                  {/* Customer Stats: ⭐ 4.5 • 128 Delivered • 3 Cancelled (Click to view Reliability Modal) */}
-                  <div
-                    className={styles.customerStatsRow}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push("/seller/res/orders/reliability");
-                    }}
-                    title="View Customer Reliability Score"
-                    style={{ cursor: "pointer" }}
+            <>
+              <div className={styles.ordersList}>
+                {paginatedOrders.map((order) => (
+                  <article
+                    key={order.id}
+                    className={styles.orderCard}
+                    onClick={() => handleCardClick(order)}
                   >
-                    <div className={styles.ratingStat}>
-                      <Star size={14} className={styles.starIcon} />
-                      <span>{order.rating.toFixed(1)}</span>
+                    {/* Top Meta Line: #1234 • ⏱️ 04:32 > */}
+                    <div className={styles.cardTopRow}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <span className={styles.orderMetaText}>{order.orderNumber}</span>
+                        {order.status === "New" ? (
+                          (() => {
+                            const sec = getRemainingSeconds(order.createdAt, now);
+                            const mm = String(Math.floor(sec / 60)).padStart(2, "0");
+                            const ss = String(sec % 60).padStart(2, "0");
+                            const isUrgent = sec <= 60;
+                            return sec > 0 ? (
+                              <span
+                                className={`${styles.timerBadge} ${isUrgent ? styles.timerBadgeUrgent : ""}`}
+                                title={`Accept order within ${mm}:${ss}`}
+                              >
+                                <Clock size={12} style={{ display: "inline", verticalAlign: "middle", marginRight: "3px" }} />
+                                {mm}:{ss}
+                              </span>
+                            ) : (
+                              <span className={styles.cancelledBadge}>Cancelled</span>
+                            );
+                          })()
+                        ) : (
+                          <span className={styles.orderMetaText}>• {order.timeAgo}</span>
+                        )}
+                      </div>
+                      <ChevronRight size={18} className={styles.chevronIcon} />
                     </div>
 
-                    <div className={styles.deliveredStat}>
-                      <span className={styles.statDotGreen} />
-                      <span>{order.deliveredCount} Delivered</span>
+                    {/* Customer Info & Items */}
+                    <div className={styles.customerSection}>
+                      <h2 className={styles.customerName}>{order.customerName}</h2>
+                      <p className={styles.itemsLine}>{order.itemsText}</p>
                     </div>
 
-                    <div className={styles.cancelledStat}>
-                      <span className={styles.statDotRed} />
-                      <span>{order.cancelledCount} Cancelled</span>
+                    {/* Prior Orders & Total */}
+                    <div className={styles.secondaryInfoRow}>
+                      <div className={styles.priorOrdersWrapper}>
+                        <ShoppingBag size={14} className={styles.packageIcon} />
+                        <span>({order.priorOrdersCount} orders)</span>
+                      </div>
+                      <span className={styles.totalAmountText}>{order.totalAmount}</span>
                     </div>
-                  </div>
 
-                  {/* Action Buttons */}
-                  {order.status === "New" && getRemainingSeconds(order.createdAt, now) > 0 && (
-                    <div className={styles.actionsRow}>
-                      <button
-                        type="button"
-                        className={styles.acceptButton}
-                        onClick={(e) => handleAcceptOrder(order.id, e)}
-                      >
-                        Accept
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.rejectButton}
-                        onClick={(e) => handleOpenReject(order, e)}
-                      >
-                        Reject
-                      </button>
-                    </div>
-                  )}
+                    {/* Customer Stats: ⭐ 4.5 • 128 Delivered • 3 Cancelled (Click to view Reliability Modal) */}
+                    <div
+                      className={styles.customerStatsRow}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push("/seller/res/orders/reliability");
+                      }}
+                      title="View Customer Reliability Score"
+                      style={{ cursor: "pointer" }}
+                    >
+                      <div className={styles.ratingStat}>
+                        <Star size={14} className={styles.starIcon} />
+                        <span>{order.rating.toFixed(1)}</span>
+                      </div>
 
-                  {order.status === "Preparing" && (
-                    <div className={styles.actionsRow}>
-                      <button
-                        type="button"
-                        className={styles.acceptButton}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setOrdersList((prev) =>
-                            prev.map((o) => (o.id === order.id ? { ...o, status: "Out" as const } : o))
-                          );
-                        }}
-                      >
-                        Ready for Delivery
-                      </button>
-                    </div>
-                  )}
+                      <div className={styles.deliveredStat}>
+                        <span className={styles.statDotGreen} />
+                        <span>{order.deliveredCount} Delivered</span>
+                      </div>
 
-                  {order.status === "Out" && (
-                    <div className={styles.actionsRow}>
-                      <button
-                        type="button"
-                        className={styles.acceptButton}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setOrdersList((prev) =>
-                            prev.map((o) => (o.id === order.id ? { ...o, status: "Done" as const } : o))
-                          );
-                        }}
-                      >
-                        Mark Delivered
-                      </button>
+                      <div className={styles.cancelledStat}>
+                        <span className={styles.statDotRed} />
+                        <span>{order.cancelledCount} Cancelled</span>
+                      </div>
                     </div>
-                  )}
-                </article>
-              ))}
-            </div>
+
+                    {/* Action Buttons */}
+                    {order.status === "New" && getRemainingSeconds(order.createdAt, now) > 0 && (
+                      <div className={styles.actionsRow}>
+                        <button
+                          type="button"
+                          className={styles.acceptButton}
+                          onClick={(e) => handleAcceptOrder(order.id, e)}
+                        >
+                          Accept
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.rejectButton}
+                          onClick={(e) => handleOpenReject(order, e)}
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    )}
+
+                    {order.status === "Preparing" && (
+                      <div className={styles.actionsRow}>
+                        <button
+                          type="button"
+                          className={styles.acceptButton}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOrdersList((prev) =>
+                              prev.map((o) => (o.id === order.id ? { ...o, status: "Out" as const } : o))
+                            );
+                          }}
+                        >
+                          Ready for Delivery
+                        </button>
+                      </div>
+                    )}
+
+                    {order.status === "Out" && (
+                      <div className={styles.actionsRow}>
+                        <button
+                          type="button"
+                          className={styles.acceptButton}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOrdersList((prev) =>
+                              prev.map((o) => (o.id === order.id ? { ...o, status: "Done" as const } : o))
+                            );
+                          }}
+                        >
+                          Mark Delivered
+                        </button>
+                      </div>
+                    )}
+                  </article>
+                ))}
+              </div>
+
+              {/* Pagination Controls */}
+              <PaginationControls
+                currentPage={currentPage}
+                totalItems={filteredOrders.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+                itemName="orders"
+                pageSizeOptions={[10, 20, 25, 50, "All"]}
+              />
+            </>
           ) : (
             <div className={styles.emptyState}>
               <div className={styles.emptyIcon}>

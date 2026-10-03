@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Menu as MenuIcon, Plus, Search, Minus, UtensilsCrossed, Bell } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
+import PaginationControls from "../../common/PaginationControls";
 import styles from "./ResponsiveMenu.module.css";
 
 export type MenuCategory = string;
@@ -131,6 +132,20 @@ export const ResponsiveMenu: React.FC<ResponsiveMenuProps> = ({
     return matchesCategory && matchesSearch;
   });
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number | "All">(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, searchQuery]);
+
+  const paginatedDishes = React.useMemo(() => {
+    if (pageSize === "All") return filteredDishes;
+    const start = (currentPage - 1) * pageSize;
+    return filteredDishes.slice(start, start + pageSize);
+  }, [filteredDishes, currentPage, pageSize]);
+
   return (
     <div className={styles.screenWrapper}>
       {/* Drawer Navigation Menu */}
@@ -238,7 +253,7 @@ export const ResponsiveMenu: React.FC<ResponsiveMenuProps> = ({
         <main className={styles.contentArea}>
           {filteredDishes.length > 0 ? (
             <div className={styles.itemsList}>
-              {filteredDishes.map((dish) => (
+              {paginatedDishes.map((dish) => (
                 <article key={dish.id} className={styles.itemCard}>
                   {/* Left: Thumbnail & Details */}
                   <div className={styles.itemLeft}>
@@ -343,6 +358,20 @@ export const ResponsiveMenu: React.FC<ResponsiveMenuProps> = ({
                   </div>
                 </article>
               ))}
+
+              <div style={{ marginTop: "16px" }}>
+                <PaginationControls
+                  currentPage={currentPage}
+                  totalItems={filteredDishes.length}
+                  pageSize={pageSize}
+                  onPageChange={(p) => setCurrentPage(p)}
+                  onPageSizeChange={(s) => {
+                    setPageSize(s);
+                    setCurrentPage(1);
+                  }}
+                  itemLabel="dishes"
+                />
+              </div>
             </div>
           ) : (
             <div className={styles.emptyState}>

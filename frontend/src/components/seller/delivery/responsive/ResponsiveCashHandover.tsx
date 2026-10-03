@@ -115,7 +115,12 @@ export const ResponsiveCashHandover: React.FC<ResponsiveCashHandoverProps> = ({
   };
 
   const handleSubmitDiscrepancy = () => {
-    const rawExpected = parseFloat(totalCash.replace(/[^0-9.]/g, "")) || 0;
+    const ordersTotal = orders.reduce(
+      (sum, o) => sum + (parseFloat(o.amount.replace(/[^0-9.]/g, "")) || 0),
+      0
+    );
+    const parsedTotalCash = parseFloat(totalCash.replace(/[^0-9.]/g, "")) || 0;
+    const rawExpected = parsedTotalCash > 0 ? parsedTotalCash : ordersTotal;
     const rawActual = parseFloat(actualCashReceived.replace(/[^0-9.]/g, "")) || 0;
     const rawShortage = Math.max(0, rawExpected - rawActual);
     const ticketNum = `DISC-${Math.floor(100000 + Math.random() * 900000)}`;
@@ -124,7 +129,7 @@ export const ResponsiveCashHandover: React.FC<ResponsiveCashHandoverProps> = ({
       id: `disc-${Date.now()}`,
       ticketId: ticketNum,
       riderName,
-      expectedAmount: totalCash,
+      expectedAmount: `₹${rawExpected.toLocaleString("en-IN")}`,
       actualAmount: actualCashReceived ? `₹${rawActual.toLocaleString("en-IN")}` : "₹0",
       shortageAmount: `₹${rawShortage.toLocaleString("en-IN")}`,
       reason: discrepancyReason,
@@ -417,6 +422,63 @@ export const ResponsiveCashHandover: React.FC<ResponsiveCashHandoverProps> = ({
               <p className={styles.modalText}>
                 Record and track a mismatch in cash collected vs expected amount for <strong>{riderName}</strong>.
               </p>
+
+              {/* Amount Breakdown Summary */}
+              {(() => {
+                const ordersTotal = orders.reduce(
+                  (sum, o) => sum + (parseFloat(o.amount.replace(/[^0-9.]/g, "")) || 0),
+                  0
+                );
+                const parsedTotalCash = parseFloat(totalCash.replace(/[^0-9.]/g, "")) || 0;
+                const modalExpected = parsedTotalCash > 0 ? parsedTotalCash : ordersTotal;
+                const modalActual = parseFloat(actualCashReceived.replace(/[^0-9.]/g, "")) || 0;
+                const modalShortage = Math.max(0, modalExpected - modalActual);
+
+                return (
+                  <div
+                    style={{
+                      backgroundColor: "#F8FAFC",
+                      borderRadius: "10px",
+                      padding: "10px 12px",
+                      border: "1px solid #E2E8F0",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: "11px", color: "#64748B", fontWeight: 600 }}>
+                        EXPECTED CASH
+                      </div>
+                      <div style={{ fontSize: "15px", fontWeight: 800, color: "#0F172A" }}>
+                        ₹{modalExpected.toLocaleString("en-IN")}
+                      </div>
+                    </div>
+                    {actualCashReceived !== "" && (
+                      <div style={{ textAlign: "right" }}>
+                        <div
+                          style={{
+                            fontSize: "11px",
+                            color: modalShortage > 0 ? "#DC2626" : "#16A34A",
+                            fontWeight: 700,
+                          }}
+                        >
+                          {modalShortage > 0 ? "SHORTAGE" : "EXACT / SURPLUS"}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "15px",
+                            fontWeight: 800,
+                            color: modalShortage > 0 ? "#DC2626" : "#16A34A",
+                          }}
+                        >
+                          ₹{modalShortage.toLocaleString("en-IN")}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               <div className={styles.formField}>
                 <label className={styles.fieldLabel}>Discrepancy Reason</label>

@@ -359,11 +359,18 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
                     <div className={styles.cardFooter}>
                       {notif.actionHref && (
                         <Link
-                          href={
-                            notif.actionLabel === "Track Dispatch" && notif.actionHref === "/seller/delivery"
-                              ? "/seller/orders"
-                              : notif.actionHref
-                          }
+                          href={(() => {
+                            if (notif.actionLabel === "Track Dispatch" && notif.actionHref === "/seller/delivery") {
+                              return "/seller/orders";
+                            }
+                            if (notif.category === "orders") {
+                              const match = notif.title.match(/#([A-Za-z0-9-]+)/) || notif.id.match(/notif-order-([A-Za-z0-9-]+)/);
+                              if (match && (!notif.actionHref || notif.actionHref === "/seller/orders")) {
+                                return `/seller/orders/details?orderId=${encodeURIComponent(match[1])}`;
+                              }
+                            }
+                            return notif.actionHref;
+                          })()}
                           className={styles.cardActionLink}
                           onClick={(e) => e.stopPropagation()}
                         >

@@ -119,7 +119,7 @@ export function createSampleAlert(category: NotificationCategory): SellerNotific
         isRead: false,
         severity: "success",
         actionLabel: "View Order",
-        actionHref: "/seller/orders",
+        actionHref: `/seller/orders/details?orderId=ORD-${ordNum}`,
       };
     }
     case "stock": {

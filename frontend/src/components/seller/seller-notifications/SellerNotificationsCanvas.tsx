@@ -351,11 +351,18 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
                   <div className={styles.cardFooter}>
                     {item.actionLabel && item.actionHref ? (
                       <Link
-                        href={
-                          item.actionLabel === "Track Dispatch" && item.actionHref === "/seller/delivery"
-                            ? "/seller/orders"
-                            : item.actionHref
-                        }
+                        href={(() => {
+                          if (item.actionLabel === "Track Dispatch" && item.actionHref === "/seller/delivery") {
+                            return "/seller/orders";
+                          }
+                          if (item.category === "orders") {
+                            const match = item.title.match(/#([A-Za-z0-9-]+)/) || item.id.match(/notif-order-([A-Za-z0-9-]+)/);
+                            if (match && (!item.actionHref || item.actionHref === "/seller/orders")) {
+                              return `/seller/orders/details?orderId=${encodeURIComponent(match[1])}`;
+                            }
+                          }
+                          return item.actionHref;
+                        })()}
                         className={styles.cardActionLink}
                         onClick={(e) => {
                           e.stopPropagation();

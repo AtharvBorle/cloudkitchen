@@ -24,6 +24,7 @@ import {
 import styles from "./ResponsiveManageRiders.module.css";
 import { fetchApi } from "@/lib/fetch-api";
 import { validateEmail } from "@/lib/email-validation";
+import PaginationControls from "@/components/seller/common/PaginationControls";
 
 export interface ManagedRiderItem {
   id: string;
@@ -85,10 +86,23 @@ export const ResponsiveManageRiders: React.FC<ResponsiveManageRidersProps> = ({
   const [deletingRider, setDeletingRider] = useState<ManagedRiderItem | null>(null);
   const [deleteError, setDeleteError] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number | "All">(10);
 
   React.useEffect(() => {
     setLocalRiders(riders);
   }, [riders]);
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [localRiders]);
+
+  const paginatedRiders = React.useMemo(() => {
+    if (pageSize === "All") return localRiders;
+    const start = (currentPage - 1) * pageSize;
+    return localRiders.slice(start, start + pageSize);
+  }, [localRiders, currentPage, pageSize]);
 
   const showToast = (text: string, isError: boolean = false) => {
     setToastMessage({ text, isError });
@@ -404,7 +418,7 @@ export const ResponsiveManageRiders: React.FC<ResponsiveManageRidersProps> = ({
                   <p style={{ margin: "4px 0 0 0", fontSize: "13px" }}>Add an agent to start managing riders.</p>
                 </div>
               ) : (
-                localRiders.map((rider) => {
+                paginatedRiders.map((rider) => {
                   const isOnline =
                     rider.status === "Online" ||
                     rider.status === "Active" ||
@@ -491,6 +505,22 @@ export const ResponsiveManageRiders: React.FC<ResponsiveManageRidersProps> = ({
                 })
               )}
             </div>
+
+            {localRiders.length > 0 && (
+              <div style={{ marginTop: "14px" }}>
+                <PaginationControls
+                  currentPage={currentPage}
+                  totalItems={localRiders.length}
+                  pageSize={pageSize}
+                  onPageChange={(p) => setCurrentPage(p)}
+                  onPageSizeChange={(s) => {
+                    setPageSize(s);
+                    setCurrentPage(1);
+                  }}
+                  itemLabel="riders"
+                />
+              </div>
+            )}
           </section>
 
           {/* Action Buttons */}

@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Menu as MenuIcon, Plus, User, ChevronRight, Bell } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
+import PaginationControls from "../../common/PaginationControls";
 import styles from "./ResponsiveRoom.module.css";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
 import { useSellerNotifications } from "@/hooks/useSellerNotifications";
@@ -52,11 +53,21 @@ export const ResponsiveRoom: React.FC<ResponsiveRoomProps> = ({
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   const [roomList, setRoomList] = useState<ResponsiveRoomItem[]>(rooms);
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number | "All">(10);
+
   useEffect(() => {
     if (rooms && rooms !== EMPTY_ROOMS) {
       setRoomList(rooms);
     }
   }, [rooms]);
+
+  const paginatedRooms = React.useMemo(() => {
+    if (pageSize === "All") return roomList;
+    const start = (currentPage - 1) * pageSize;
+    return roomList.slice(start, start + pageSize);
+  }, [roomList, currentPage, pageSize]);
 
   const handleToggle = (roomId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -158,65 +169,81 @@ export const ResponsiveRoom: React.FC<ResponsiveRoomProps> = ({
         {/* Rooms List Content Area */}
         <main className={styles.contentArea}>
           {roomList.length > 0 ? (
-            roomList.map((room) => (
-              <article
-                key={room.id}
-                className={styles.roomCard}
-                onClick={() => handleCardClick(room)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    handleCardClick(room);
-                  }
-                }}
-              >
-                {/* Room Photo Banner */}
-                <div className={styles.imageWrapper}>
-                  <img
-                    src={room.imageUrl}
-                    alt={room.name}
-                    className={styles.roomImage}
-                    onError={(e) => {
-                      (e.target as HTMLElement).style.display = "none";
-                    }}
-                  />
-                </div>
+            <>
+              {paginatedRooms.map((room) => (
+                <article
+                  key={room.id}
+                  className={styles.roomCard}
+                  onClick={() => handleCardClick(room)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      handleCardClick(room);
+                    }
+                  }}
+                >
+                  {/* Room Photo Banner */}
+                  <div className={styles.imageWrapper}>
+                    <img
+                      src={room.imageUrl}
+                      alt={room.name}
+                      className={styles.roomImage}
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.display = "none";
+                      }}
+                    />
+                  </div>
 
-                {/* Card Body Details */}
-                <div className={styles.cardBody}>
-                  <div className={styles.cardLeft}>
-                    <h2 className={styles.roomName}>{room.name}</h2>
-                    <div className={styles.metaRow}>
-                      <span className={styles.sleepsInfo}>
-                        <User size={14} className={styles.sleepsIcon} />
-                        Sleeps {room.sleepsCount}
-                      </span>
-                      <span className={styles.priceTag}>
-                        {room.pricePerNight}
-                      </span>
+                  {/* Card Body Details */}
+                  <div className={styles.cardBody}>
+                    <div className={styles.cardLeft}>
+                      <h2 className={styles.roomName}>{room.name}</h2>
+                      <div className={styles.metaRow}>
+                        <span className={styles.sleepsInfo}>
+                          <User size={14} className={styles.sleepsIcon} />
+                          Sleeps {room.sleepsCount}
+                        </span>
+                        <span className={styles.priceTag}>
+                          {room.pricePerNight}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Right: Availability Toggle Switch & Chevron */}
+                    <div className={styles.cardRight}>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={room.isAvailable}
+                        className={`${styles.toggleSwitch} ${
+                          room.isAvailable ? styles.toggleSwitchActive : ""
+                        }`}
+                        onClick={(e) => handleToggle(room.id, e)}
+                        aria-label={`Toggle availability for ${room.name}`}
+                      >
+                        <span className={styles.toggleThumb} />
+                      </button>
+                      <ChevronRight size={18} className={styles.chevronIcon} />
                     </div>
                   </div>
+                </article>
+              ))}
 
-                  {/* Right: Availability Toggle Switch & Chevron */}
-                  <div className={styles.cardRight}>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={room.isAvailable}
-                      className={`${styles.toggleSwitch} ${
-                        room.isAvailable ? styles.toggleSwitchActive : ""
-                      }`}
-                      onClick={(e) => handleToggle(room.id, e)}
-                      aria-label={`Toggle availability for ${room.name}`}
-                    >
-                      <span className={styles.toggleThumb} />
-                    </button>
-                    <ChevronRight size={18} className={styles.chevronIcon} />
-                  </div>
-                </div>
-              </article>
-            ))
+              <div style={{ marginTop: "16px" }}>
+                <PaginationControls
+                  currentPage={currentPage}
+                  totalItems={roomList.length}
+                  pageSize={pageSize}
+                  onPageChange={(p) => setCurrentPage(p)}
+                  onPageSizeChange={(s) => {
+                    setPageSize(s);
+                    setCurrentPage(1);
+                  }}
+                  itemLabel="rooms"
+                />
+              </div>
+            </>
           ) : (
             <div className={styles.emptyState}>
               <p className={styles.emptyText}>No rooms configured yet.</p>

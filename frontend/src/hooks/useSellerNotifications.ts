@@ -197,7 +197,7 @@ export function broadcastOrderToSellerNotifications(payload: PlacedOrderNotifica
     isRead: false,
     severity: "success",
     actionLabel: "View Order",
-    actionHref: "/seller/orders",
+    actionHref: payload.orderId ? `/seller/orders/details?orderId=${encodeURIComponent(payload.orderId)}` : "/seller/orders",
   };
 
   addSellerNotification(notifItem);
@@ -506,7 +506,7 @@ function setupGlobalNotificationListeners() {
         timestamp: o.createdAt || new Date().toISOString(),
         severity: "success",
         actionLabel: "View Order",
-        actionHref: "/seller/orders",
+        actionHref: `/seller/orders/details?orderId=${encodeURIComponent(orderId)}`,
       });
     }
   });
