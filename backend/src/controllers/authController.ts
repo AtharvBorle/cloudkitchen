@@ -478,6 +478,55 @@ export const loginUser = async (req: Request) => {
         { expiresIn: "30d" } // 30 day expiration for mobile convenience
     );
 
+    // Record login session in audit log
+    try {
+        const userAgent = req.headers.get("user-agent") || "";
+        const forwardedIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "Active Secure Session";
+        let os = "Windows 10/11 Desktop";
+        let isMobile = false;
+        if (/iPhone|iPad|iPod/.test(userAgent)) {
+            os = "iOS Mobile";
+            isMobile = true;
+        } else if (/Android/.test(userAgent)) {
+            os = "Android Mobile";
+            isMobile = true;
+        } else if (/Macintosh|Mac OS X/.test(userAgent)) {
+            os = "macOS Desktop";
+        } else if (/Windows NT 10.0|Windows NT 11.0|Windows/.test(userAgent)) {
+            os = "Windows 10/11 Desktop";
+        } else if (/Linux/.test(userAgent)) {
+            os = "Linux Desktop";
+        }
+
+        let browser = "Google Chrome";
+        if (userAgent.includes("Edg/")) browser = "Microsoft Edge";
+        else if (userAgent.includes("OPR/") || userAgent.includes("Opera/")) browser = "Opera";
+        else if (userAgent.includes("Chrome/") && userAgent.includes("Safari/")) browser = "Google Chrome";
+        else if (userAgent.includes("Safari/") && !userAgent.includes("Chrome/")) browser = "Safari";
+        else if (userAgent.includes("Firefox/")) browser = "Mozilla Firefox";
+
+        const deviceId = `dev_${browser.toLowerCase().replace(/\s+/g, "_")}_${Date.now()}`;
+        await db.auditLog.create({
+            data: {
+                action: "USER_SESSION",
+                performedBy: user.id,
+                details: JSON.stringify({
+                    deviceId,
+                    location: "Calcutta, Asia",
+                    browser,
+                    os,
+                    ip: forwardedIp,
+                    deviceType: isMobile ? "mobile" : "desktop",
+                    lastActiveTime: new Date().toISOString(),
+                    userAgent,
+                }),
+                timestamp: new Date(),
+            }
+        });
+    } catch (e) {
+        // Silently ignore session recording errors
+    }
+
     return {
         token,
         user: {

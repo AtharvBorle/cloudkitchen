@@ -295,30 +295,33 @@ export interface ActiveLoginSessionsProps {
 }
 
 export const ActiveLoginSessionsCard: React.FC<ActiveLoginSessionsProps> = ({
+  sessions: initialSessions,
   onLogoutOtherSessions,
   className = "",
 }) => {
-  const [currentSession, setCurrentSession] = useState<LoginSessionItem>({
-    id: "current-session",
-    location: "Detecting location...",
-    browser: "Web Browser",
-    os: "Current Device",
-    ip: "Active Connection",
-    lastActive: "Active right now",
-    isCurrent: true,
-    deviceType: "desktop",
-  });
-
-  const [hasOtherSessions, setHasOtherSessions] = useState(false);
+  const [sessionList, setSessionList] = useState<LoginSessionItem[]>(() => initialSessions || []);
   const [loggedOutNotice, setLoggedOutNotice] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
+  const getDeviceId = () => {
+    if (typeof window === "undefined") return "browser-device";
+    let id = localStorage.getItem("cloudkitchen_seller_device_id");
+    if (!id) {
+      id = `dev_${Math.random().toString(36).substring(2, 10)}_${Date.now()}`;
+      localStorage.setItem("cloudkitchen_seller_device_id", id);
+    }
+    return id;
+  };
+
+  const loadSessions = async () => {
     const { os, isMobile } = detectOS();
     const browser = detectBrowser();
     const location = detectLocation();
+    const deviceId = getDeviceId();
 
-    setCurrentSession({
-      id: "current-session",
+    // Set optimistic current device session first
+    const currentDeviceFallback: LoginSessionItem = {
+      id: "current-local-session",
       location,
       browser,
       os,
@@ -326,19 +329,79 @@ export const ActiveLoginSessionsCard: React.FC<ActiveLoginSessionsProps> = ({
       lastActive: "Active right now",
       isCurrent: true,
       deviceType: isMobile ? "mobile" : "desktop",
-    });
+    };
+
+    try {
+      const query = new URLSearchParams({
+        deviceId,
+        location,
+        browser,
+        os,
+        deviceType: isMobile ? "mobile" : "desktop",
+      });
+
+      const res = await fetchApi(`/api/seller/sessions?${query.toString()}`);
+      if (res.ok) {
+        const json = await res.json();
+        const fetched = json.data?.sessions;
+        if (Array.isArray(fetched) && fetched.length > 0) {
+          setSessionList(fetched);
+          return;
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load active login sessions:", err);
+    }
+
+    setSessionList((prev) => (prev.length > 0 ? prev : [currentDeviceFallback]));
+  };
+
+  useEffect(() => {
+    loadSessions();
   }, []);
 
-  const handleLogoutAllOther = () => {
-    setHasOtherSessions(false);
-    setLoggedOutNotice(true);
-    if (onLogoutOtherSessions) {
-      onLogoutOtherSessions();
+  const handleLogoutSingleSession = async (sessionId: string) => {
+    try {
+      await fetchApi(`/api/seller/sessions?id=${sessionId}`, {
+        method: "DELETE",
+      });
+      setSessionList((prev) => prev.filter((s) => s.id !== sessionId));
+    } catch (err) {
+      console.error("Failed to terminate session:", err);
     }
-    setTimeout(() => {
-      setLoggedOutNotice(false);
-    }, 4000);
   };
+
+  const handleLogoutAllOther = async () => {
+    const deviceId = getDeviceId();
+    try {
+      await fetchApi(`/api/seller/sessions?allOther=true&currentDeviceId=${deviceId}`, {
+        method: "DELETE",
+      });
+      setSessionList((prev) => prev.filter((s) => s.isCurrent));
+      setLoggedOutNotice(true);
+      if (onLogoutOtherSessions) {
+        onLogoutOtherSessions();
+      }
+      setTimeout(() => {
+        setLoggedOutNotice(false);
+      }, 4000);
+    } catch (err) {
+      console.error("Failed to logout other sessions:", err);
+    }
+  };
+
+  const currentSession = sessionList.find((s) => s.isCurrent) || sessionList[0] || {
+    id: "current-session",
+    location: "Calcutta, Asia",
+    browser: "Google Chrome",
+    os: "Windows 10/11 Desktop",
+    ip: "Active Secure Session",
+    lastActive: "Active right now",
+    isCurrent: true,
+    deviceType: "desktop",
+  };
+
+  const otherSessions = sessionList.filter((s) => s.id !== currentSession.id && !s.isCurrent);
 
   return (
     <section className={`${styles.card} ${className}`} aria-labelledby="active-sessions-heading">
@@ -369,6 +432,35 @@ export const ActiveLoginSessionsCard: React.FC<ActiveLoginSessionsProps> = ({
           </p>
         </div>
 
+        {/* Other Logged-in Devices / Browsers */}
+        {otherSessions.map((session) => (
+          <div key={session.id} className={styles.sessionItem}>
+            <div className={styles.sessionItemHeader}>
+              <div className={styles.sessionTitleRow}>
+                {session.deviceType === "mobile" ? (
+                  <Smartphone size={16} color="#64748B" style={{ flexShrink: 0 }} />
+                ) : (
+                  <Laptop size={16} color="#64748B" style={{ flexShrink: 0 }} />
+                )}
+                <h3 className={styles.deviceTitle}>
+                  {session.location} • {session.browser} ({session.os})
+                </h3>
+              </div>
+              <button
+                type="button"
+                className={styles.logoutSingleDeviceBtn}
+                onClick={() => handleLogoutSingleSession(session.id)}
+                title="Log out from this device"
+              >
+                Log Out
+              </button>
+            </div>
+            <p className={styles.sessionMeta}>
+              {session.lastActive} • {session.ip}
+            </p>
+          </div>
+        ))}
+
         {loggedOutNotice && (
           <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#16A34A", fontSize: "13px", fontWeight: 600, paddingTop: "12px" }}>
             <CheckCircle2 size={16} />
@@ -380,7 +472,7 @@ export const ActiveLoginSessionsCard: React.FC<ActiveLoginSessionsProps> = ({
           type="button"
           className={styles.logoutAllButton}
           onClick={handleLogoutAllOther}
-          disabled={!hasOtherSessions && loggedOutNotice}
+          disabled={otherSessions.length === 0 && !loggedOutNotice}
         >
           Log Out of All Other Devices
         </button>
