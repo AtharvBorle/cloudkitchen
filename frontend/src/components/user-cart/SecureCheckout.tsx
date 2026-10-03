@@ -552,7 +552,7 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
   const [isRecoveringTx, setIsRecoveringTx] = useState<boolean>(false);
   const [isOffline, setIsOffline] = useState<boolean>(false);
 
-  // Restore applied coupon from Cart page
+  // Restore applied coupon from Cart page (with empty cart & seller match safeguards)
   useEffect(() => {
     try {
       if (typeof window !== "undefined") {
@@ -560,6 +560,24 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
         if (saved) {
           const parsed = JSON.parse(saved);
           if (parsed && (parsed.code || parsed.id)) {
+            // Guard: Never restore coupon if cart is empty
+            if (cartItems.length === 0) {
+              sessionStorage.removeItem("applied_cart_coupon");
+              sessionStorage.removeItem("appliedCoupon");
+              localStorage.removeItem("appliedCoupon");
+              return;
+            }
+            // Guard: Seller-specific coupons must match active cart seller
+            const couponSellerId = parsed.sellerId || parsed.appliesToSellerId;
+            const currentSellerId = cartItems[0]?.sellerId;
+            if (couponSellerId && couponSellerId !== "GLOBAL" && couponSellerId !== "ALL" && currentSellerId) {
+              if (String(couponSellerId) !== String(currentSellerId)) {
+                sessionStorage.removeItem("applied_cart_coupon");
+                sessionStorage.removeItem("appliedCoupon");
+                localStorage.removeItem("appliedCoupon");
+                return;
+              }
+            }
             setAppliedCoupon(parsed);
             setIsPromoApplied(true);
             setPromoCode(parsed.code || "");
@@ -570,7 +588,7 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
     } catch (e) {
       console.error("Failed to restore applied coupon from storage:", e);
     }
-  }, []);
+  }, [cartItems]);
 
   // Network Offline / Online Detection
   useEffect(() => {
@@ -1028,13 +1046,30 @@ const loadRazorpayScript = (): Promise<boolean> => {
       return;
     }
 
-    if (subtotal <= 0) return;
+    if (subtotal <= 0 || checkoutItems.length === 0 || !activeSellerId) {
+      if (appliedCoupon) {
+        setIsPromoApplied(false);
+        setDiscountPercent(0);
+        setAppliedCoupon(null);
+        setPromoCode("");
+      }
+      return;
+    }
 
-    // Filter offers configured with isAutoApply that satisfy minimum cart & scope & eligibility
+    // Filter offers configured with isAutoApply that satisfy minimum cart & scope & eligibility & seller match
     const eligibleAutoOffers = availableOffers.filter((offer) => {
       if (offer.isEligible === false) return false;
       const isAuto = Boolean(offer.isAutoApply || offer.autoApply);
       if (!isAuto) return false;
+
+      // Strict seller match for seller-specific coupons
+      const offerSellerId = offer.sellerId || offer.appliesToSellerId;
+      if (offerSellerId && offerSellerId !== "GLOBAL" && offerSellerId !== "ALL") {
+        if (!activeSellerId || String(offerSellerId) !== String(activeSellerId)) {
+          return false;
+        }
+      }
+
       const minCart = Number(offer.minimumCartValue ?? offer.minOrderAmount ?? 0);
       if (subtotal < minCart) return false;
 
@@ -1048,7 +1083,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
     });
 
     if (eligibleAutoOffers.length === 0) {
-      // If currently applied was auto-applied and subtotal dropped below threshold, remove it
+      // If currently applied was auto-applied and subtotal dropped below threshold or no longer matches seller, remove it
       if (appliedCoupon && (appliedCoupon as any).isAutoApply) {
         setIsPromoApplied(false);
         setDiscountPercent(0);
@@ -1097,9 +1132,29 @@ const loadRazorpayScript = (): Promise<boolean> => {
     }
   }, [availableOffers, subtotal, userDismissedPromo, isPromoApplied, appliedCoupon, isValidatingPromo, activeSellerId, checkoutItems]);
 
-  // Auto-remove or invalidate applied coupon whenever subtotal drops below minimum required cart value or required item is removed
+  // Auto-remove or invalidate applied coupon whenever subtotal drops below minimum required cart value or required item is removed or seller changes
   useEffect(() => {
     if (!appliedCoupon || !isPromoApplied) return;
+
+    if (subtotal <= 0 || checkoutItems.length === 0) {
+      setIsPromoApplied(false);
+      setDiscountPercent(0);
+      setAppliedCoupon(null);
+      setPromoCode("");
+      return;
+    }
+
+    const couponSellerId = (appliedCoupon as any).sellerId || (appliedCoupon as any).appliesToSellerId;
+    if (couponSellerId && couponSellerId !== "GLOBAL" && couponSellerId !== "ALL" && activeSellerId) {
+      if (String(couponSellerId) !== String(activeSellerId)) {
+        setIsPromoApplied(false);
+        setDiscountPercent(0);
+        setAppliedCoupon(null);
+        setPromoCode("");
+        return;
+      }
+    }
+
     const minCart = Number(appliedCoupon.minimumCartValue ?? (appliedCoupon as any).minOrderAmount ?? 0);
     if (minCart > 0 && subtotal < minCart) {
       const code = appliedCoupon.code || promoCode || "Applied";
@@ -1140,7 +1195,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
       setAppliedCoupon(null);
       setPromoCode("");
     }
-  }, [subtotal, checkoutItems, appliedCoupon, isPromoApplied, promoCode]);
+  }, [subtotal, checkoutItems, appliedCoupon, isPromoApplied, promoCode, activeSellerId]);
 
   const handleRemovePromo = () => {
     setUserDismissedPromo(true);

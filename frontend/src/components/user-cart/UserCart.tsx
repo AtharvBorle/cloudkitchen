@@ -220,61 +220,6 @@ export const UserCart: React.FC<UserCartProps> = ({
   const [couponSearchQuery, setCouponSearchQuery] = useState<string>("");
   const couponDropdownRef = React.useRef<HTMLDivElement>(null);
 
-  // Sync formatted current address from LocationProvider's defaultAddress or savedAddresses
-  const formattedDefaultAddress = React.useMemo(() => {
-    if (defaultAddress) {
-      const parts = [defaultAddress.houseNumber, defaultAddress.street, defaultAddress.locality, defaultAddress.landmark].filter(Boolean);
-      const line = parts.join(", ");
-      return defaultAddress.pincode ? `${line} - ${defaultAddress.pincode}` : line;
-    }
-    if (savedAddresses && savedAddresses.length > 0) {
-      const def = savedAddresses.find((a) => a.isDefault) || savedAddresses[0];
-      const parts = [def.houseNumber, def.street, def.locality, def.landmark].filter(Boolean);
-      const line = parts.join(", ");
-      return def.pincode ? `${line} - ${def.pincode}` : line;
-    }
-    return defaultAddressProp || "No address selected";
-  }, [defaultAddress, defaultAddressProp, savedAddresses]);
-
-  const [currentAddress, setCurrentAddress] = useState<string>(formattedDefaultAddress);
-  const [isAddressModalOpen, setIsAddressModalOpen] = useState<boolean>(false);
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "warning" | "info" } | null>(null);
-  const toastTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
-  const isSuppressingAutoApplyRef = React.useRef<boolean>(false);
-  const [isSellerClosed, setIsSellerClosed] = useState<boolean>(false);
-  const [isSellerUnavailableDismissed, setIsSellerUnavailableDismissed] = useState<boolean>(false);
-  const hasShownUnavailableToast = React.useRef<boolean>(false);
-  const [sellerDetails, setSellerDetails] = useState<any>(null);
-
-  // Sync with live seller prices on mount
-  useEffect(() => {
-    syncCartWithLiveMenu();
-  }, [syncCartWithLiveMenu]);
-
-  // Restore previously applied coupon from storage
-  useEffect(() => {
-    try {
-      if (typeof window !== "undefined") {
-        const saved = sessionStorage.getItem("appliedCoupon") || localStorage.getItem("appliedCoupon");
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (parsed && (parsed.code || parsed.id)) {
-            setAppliedCoupon(parsed);
-            setAppliedPromo(parsed.code || "");
-            setPromoCode(parsed.code || "");
-            setDiscountPercent(parsed.discountPercentage || 0);
-          }
-        }
-      }
-    } catch (e) {
-      console.error("Failed to restore applied coupon from storage:", e);
-    }
-  }, []);
-
-  useEffect(() => {
-    setCurrentAddress(formattedDefaultAddress);
-  }, [formattedDefaultAddress]);
-
   // Active items derived from context if present (memoized to prevent re-render loops)
   const cartItems: UserCartItem[] = React.useMemo(() => {
     return contextCartItems.length > 0
@@ -306,6 +251,79 @@ export const UserCart: React.FC<UserCartProps> = ({
   const currentSellerId = React.useMemo(() => {
     return cartItems.find((ci) => ci.sellerId)?.sellerId || null;
   }, [cartItems]);
+
+  // Sync formatted current address from LocationProvider's defaultAddress or savedAddresses
+  const formattedDefaultAddress = React.useMemo(() => {
+    if (defaultAddress) {
+      const parts = [defaultAddress.houseNumber, defaultAddress.street, defaultAddress.locality, defaultAddress.landmark].filter(Boolean);
+      const line = parts.join(", ");
+      return defaultAddress.pincode ? `${line} - ${defaultAddress.pincode}` : line;
+    }
+    if (savedAddresses && savedAddresses.length > 0) {
+      const def = savedAddresses.find((a) => a.isDefault) || savedAddresses[0];
+      const parts = [def.houseNumber, def.street, def.locality, def.landmark].filter(Boolean);
+      const line = parts.join(", ");
+      return def.pincode ? `${line} - ${def.pincode}` : line;
+    }
+    return defaultAddressProp || "No address selected";
+  }, [defaultAddress, defaultAddressProp, savedAddresses]);
+
+  const [currentAddress, setCurrentAddress] = useState<string>(formattedDefaultAddress);
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState<boolean>(false);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "warning" | "info" } | null>(null);
+  const toastTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const isSuppressingAutoApplyRef = React.useRef<boolean>(false);
+  const [isSellerClosed, setIsSellerClosed] = useState<boolean>(false);
+  const [isSellerUnavailableDismissed, setIsSellerUnavailableDismissed] = useState<boolean>(false);
+  const hasShownUnavailableToast = React.useRef<boolean>(false);
+  const [sellerDetails, setSellerDetails] = useState<any>(null);
+
+  // Sync with live seller prices on mount
+  useEffect(() => {
+    syncCartWithLiveMenu();
+  }, [syncCartWithLiveMenu]);
+
+  // Restore previously applied coupon from storage only if cart has items
+  useEffect(() => {
+    try {
+      if (typeof window !== "undefined") {
+        const saved = sessionStorage.getItem("appliedCoupon") || localStorage.getItem("appliedCoupon");
+        if (saved && cartItems.length > 0) {
+          const parsed = JSON.parse(saved);
+          if (parsed && (parsed.code || parsed.id)) {
+            const currentSellerKey = String(currentSellerId || cartItems[0]?.sellerId || "").toLowerCase().trim();
+            const couponSellerKey = parsed.appliesToSellerId ? String(parsed.appliesToSellerId).toLowerCase().trim() : null;
+            if (!couponSellerKey || couponSellerKey === "all" || couponSellerKey === "global" || (currentSellerKey && couponSellerKey === currentSellerKey)) {
+              setAppliedCoupon(parsed);
+              setAppliedPromo(parsed.code || "");
+              setPromoCode(parsed.code || "");
+              setDiscountPercent(parsed.discountPercentage || 0);
+            } else {
+              setAppliedCoupon(null);
+              setAppliedPromo(null);
+              setDiscountPercent(0);
+              sessionStorage.removeItem("appliedCoupon");
+              localStorage.removeItem("appliedCoupon");
+            }
+          }
+        } else if (cartItems.length === 0) {
+          setAppliedCoupon(null);
+          setAppliedPromo(null);
+          setDiscountPercent(0);
+          setPromoCode("");
+          sessionStorage.removeItem("appliedCoupon");
+          sessionStorage.removeItem("applied_cart_coupon");
+          localStorage.removeItem("appliedCoupon");
+        }
+      }
+    } catch (e) {
+      console.error("Failed to restore applied coupon from storage:", e);
+    }
+  }, [cartItems.length, currentSellerId]);
+
+  useEffect(() => {
+    setCurrentAddress(formattedDefaultAddress);
+  }, [formattedDefaultAddress]);
 
   React.useEffect(() => {
     if (!currentSellerId) {
@@ -718,17 +736,48 @@ export const UserCart: React.FC<UserCartProps> = ({
 
   // Auto-apply eligible coupon when conditions are met
   React.useEffect(() => {
-    if (userDismissedPromo || isValidatingPromo || availableOffers.length === 0 || isSuppressingAutoApplyRef.current) {
+    if (userDismissedPromo || isValidatingPromo || isSuppressingAutoApplyRef.current) {
       return;
     }
 
-    if (subtotal <= 0) return;
+    if (subtotal <= 0 || cartItems.length === 0 || (!activeSellerId && !currentSellerId)) {
+      if (appliedCoupon || appliedPromo) {
+        setAppliedCoupon(null);
+        setAppliedPromo(null);
+        setDiscountPercent(0);
+        setPromoCode("");
+        lastAutoAppliedCodeRef.current = null;
+        if (typeof window !== "undefined") {
+          try {
+            sessionStorage.removeItem("applied_cart_coupon");
+            sessionStorage.removeItem("appliedCoupon");
+            localStorage.removeItem("appliedCoupon");
+          } catch (e) {}
+        }
+      }
+      return;
+    }
 
-    // Filter offers configured with isAutoApply that satisfy minimum cart & scope & eligibility
+    if (availableOffers.length === 0) {
+      return;
+    }
+
+    // Filter offers configured with isAutoApply that satisfy minimum cart & scope & eligibility & seller match
     const eligibleAutoOffers = availableOffers.filter((offer) => {
       if (offer.isEligible === false) return false;
       const isAuto = Boolean(offer.isAutoApply || offer.autoApply);
       if (!isAuto) return false;
+
+      // Ensure seller-specific coupons only auto-apply for items from that seller
+      if (offer.appliesToSellerId && offer.appliesToSellerId !== "ALL" && offer.appliesToSellerId !== "GLOBAL") {
+        const cSid = String(offer.appliesToSellerId).toLowerCase().trim();
+        const curSid = String(activeSellerId || currentSellerId || "").toLowerCase().trim();
+        const curTracking = String(currentSellerId || "").toLowerCase().trim();
+        if (curSid !== cSid && curTracking !== cSid) {
+          return false;
+        }
+      }
+
       const minCart = Number(offer.minimumCartValue ?? offer.minOrderAmount ?? 0);
       if (subtotal < minCart) return false;
 
@@ -962,9 +1011,51 @@ export const UserCart: React.FC<UserCartProps> = ({
     });
   };
 
-  // Auto-remove or invalidate applied coupon whenever subtotal drops below minimum cart value or required item is removed
+  // Auto-remove or invalidate applied coupon whenever subtotal drops below minimum cart value, cart is empty, seller changes, or required item is removed
   React.useEffect(() => {
+    if (!appliedCoupon && !appliedPromo) return;
+
+    if (cartItems.length === 0 || subtotal <= 0) {
+      setAppliedCoupon(null);
+      setAppliedPromo(null);
+      setDiscountPercent(0);
+      setPromoCode("");
+      lastAutoAppliedCodeRef.current = null;
+      if (typeof window !== "undefined") {
+        try {
+          sessionStorage.removeItem("applied_cart_coupon");
+          sessionStorage.removeItem("appliedCoupon");
+          localStorage.removeItem("appliedCoupon");
+        } catch (e) {}
+      }
+      return;
+    }
+
+    // Check seller store match
+    const cSid = (appliedCoupon as any)?.appliesToSellerId;
+    if (cSid && cSid !== "ALL" && cSid !== "GLOBAL") {
+      const curSid = String(activeSellerId || currentSellerId || "").toLowerCase().trim();
+      const curTracking = String(currentSellerId || "").toLowerCase().trim();
+      const couponSid = String(cSid).toLowerCase().trim();
+      if (curSid !== couponSid && curTracking !== couponSid) {
+        setAppliedCoupon(null);
+        setAppliedPromo(null);
+        setDiscountPercent(0);
+        setPromoCode("");
+        lastAutoAppliedCodeRef.current = null;
+        if (typeof window !== "undefined") {
+          try {
+            sessionStorage.removeItem("applied_cart_coupon");
+            sessionStorage.removeItem("appliedCoupon");
+            localStorage.removeItem("appliedCoupon");
+          } catch (e) {}
+        }
+        return;
+      }
+    }
+
     if (!appliedCoupon) return;
+
     const minCart = Number(appliedCoupon.minimumCartValue ?? (appliedCoupon as any).minOrderAmount ?? 0);
     if (minCart > 0 && subtotal < minCart) {
       const code = appliedCoupon.code || appliedPromo || "Applied";
@@ -972,6 +1063,7 @@ export const UserCart: React.FC<UserCartProps> = ({
       setAppliedPromo(null);
       setDiscountPercent(0);
       setPromoCode("");
+      lastAutoAppliedCodeRef.current = null;
       if (typeof window !== "undefined") {
         try {
           sessionStorage.removeItem("applied_cart_coupon");
@@ -991,6 +1083,7 @@ export const UserCart: React.FC<UserCartProps> = ({
         setAppliedPromo(null);
         setDiscountPercent(0);
         setPromoCode("");
+        lastAutoAppliedCodeRef.current = null;
         if (typeof window !== "undefined") {
           try {
             sessionStorage.removeItem("applied_cart_coupon");
@@ -1011,6 +1104,7 @@ export const UserCart: React.FC<UserCartProps> = ({
       setAppliedPromo(null);
       setDiscountPercent(0);
       setPromoCode("");
+      lastAutoAppliedCodeRef.current = null;
       if (typeof window !== "undefined") {
         try {
           sessionStorage.removeItem("applied_cart_coupon");
@@ -1019,7 +1113,7 @@ export const UserCart: React.FC<UserCartProps> = ({
         } catch (e) {}
       }
     }
-  }, [subtotal, cartItems, appliedCoupon, appliedPromo]);
+  }, [subtotal, cartItems, appliedCoupon, appliedPromo, activeSellerId, currentSellerId]);
 
   // Handle click outside to close coupon dropdown
   useEffect(() => {
@@ -1813,7 +1907,7 @@ export const UserCart: React.FC<UserCartProps> = ({
           <aside className={styles.sidebarRight}>
             {/* 1. Promo Code & Interactive Coupon Selector */}
             <div className={styles.promoSectionWrapper} ref={couponDropdownRef}>
-              {appliedPromo ? (
+              {appliedPromo && cartItems.length > 0 && subtotal > 0 ? (
                 <div
                   style={{
                     display: "flex",
