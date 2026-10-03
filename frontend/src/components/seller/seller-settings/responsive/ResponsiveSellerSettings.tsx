@@ -42,10 +42,18 @@ export type SettingsTabType = "General" | "Notifications" | "Security" | "Prefer
 
 export interface OperatingHoursDay {
   day: string;
-  shortDay: string;
+  shortDay?: string;
+  openTime?: string;
+  closeTime?: string;
   timeRange: string;
   isOpen: boolean;
 }
+
+const TIME_OPTIONS = [
+  "06:00 AM", "07:00 AM", "08:00 AM", "09:00 AM", "10:00 AM", "11:00 AM",
+  "12:00 PM", "01:00 PM", "02:00 PM", "03:00 PM", "04:00 PM", "05:00 PM",
+  "06:00 PM", "07:00 PM", "08:00 PM", "09:00 PM", "10:00 PM", "11:00 PM", "12:00 AM"
+];
 
 export interface ResponsiveSellerSettingsData {
   // General - Restaurant Information
@@ -122,13 +130,13 @@ export interface ResponsiveSellerSettingsData {
 }
 
 const DEFAULT_OPERATING_HOURS: OperatingHoursDay[] = [
-  { day: "Monday", shortDay: "Mon", timeRange: "09:00 AM - 10:00 PM", isOpen: true },
-  { day: "Tuesday", shortDay: "Tue", timeRange: "09:00 AM - 10:00 PM", isOpen: true },
-  { day: "Wednesday", shortDay: "Wed", timeRange: "09:00 AM - 10:00 PM", isOpen: true },
-  { day: "Thursday", shortDay: "Thu", timeRange: "09:00 AM - 10:00 PM", isOpen: true },
-  { day: "Friday", shortDay: "Fri", timeRange: "09:00 AM - 10:00 PM", isOpen: true },
-  { day: "Saturday", shortDay: "Sat", timeRange: "09:00 AM - 10:00 PM", isOpen: true },
-  { day: "Sunday", shortDay: "Sun", timeRange: "09:00 AM - 10:00 PM", isOpen: false },
+  { day: "Monday", shortDay: "Mon", openTime: "09:00 AM", closeTime: "10:00 PM", timeRange: "09:00 AM - 10:00 PM", isOpen: true },
+  { day: "Tuesday", shortDay: "Tue", openTime: "09:00 AM", closeTime: "10:00 PM", timeRange: "09:00 AM - 10:00 PM", isOpen: true },
+  { day: "Wednesday", shortDay: "Wed", openTime: "09:00 AM", closeTime: "10:00 PM", timeRange: "09:00 AM - 10:00 PM", isOpen: true },
+  { day: "Thursday", shortDay: "Thu", openTime: "09:00 AM", closeTime: "10:00 PM", timeRange: "09:00 AM - 10:00 PM", isOpen: true },
+  { day: "Friday", shortDay: "Fri", openTime: "09:00 AM", closeTime: "10:00 PM", timeRange: "09:00 AM - 10:00 PM", isOpen: true },
+  { day: "Saturday", shortDay: "Sat", openTime: "09:00 AM", closeTime: "10:00 PM", timeRange: "09:00 AM - 10:00 PM", isOpen: true },
+  { day: "Sunday", shortDay: "Sun", openTime: "09:00 AM", closeTime: "10:00 PM", timeRange: "09:00 AM - 10:00 PM", isOpen: false },
 ];
 
 const INITIAL_SETTINGS: ResponsiveSellerSettingsData = {
@@ -735,6 +743,49 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
         ...prev,
         operatingHours: updated,
       };
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem(
+            "seller_regional_settings",
+            JSON.stringify({
+              language: prev.language,
+              timezone: prev.timezone,
+              currency: prev.currency,
+              operatingHours: updated,
+            })
+          );
+          localStorage.setItem(
+            "seller_settings_preferences",
+            JSON.stringify(nextFormData)
+          );
+        } catch {}
+      }
+      return nextFormData;
+    });
+  };
+
+  const handleTimeChange = (index: number, field: "openTime" | "closeTime", value: string) => {
+    setFormData((prev) => {
+      const updated = [...prev.operatingHours];
+      const target = { ...updated[index] };
+      const currentOpen = target.openTime || (target.timeRange ? target.timeRange.split("-")[0]?.trim() : "09:00 AM");
+      const currentClose = target.closeTime || (target.timeRange ? target.timeRange.split("-")[1]?.trim() : "10:00 PM");
+
+      if (field === "openTime") {
+        target.openTime = value;
+        target.closeTime = currentClose;
+      } else {
+        target.openTime = currentOpen;
+        target.closeTime = value;
+      }
+      target.timeRange = `${target.openTime} - ${target.closeTime}`;
+      updated[index] = target;
+
+      const nextFormData = {
+        ...prev,
+        operatingHours: updated,
+      };
+
       if (typeof window !== "undefined") {
         try {
           localStorage.setItem(
@@ -1942,27 +1993,105 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
 
               {/* 2. Operating Hours */}
               <div className={styles.card}>
-                <h2 className={styles.cardTitle}>Operating Hours</h2>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                  <h2 className={styles.cardTitle} style={{ margin: 0 }}>Operating Hours</h2>
+                  <span style={{ fontSize: "12px", color: "#64748B" }}>
+                    {formData.operatingHours.filter((d) => d.isOpen).length} of 7 days open
+                  </span>
+                </div>
 
-                <div className={styles.hoursList}>
-                  {formData.operatingHours.map((item, idx) => (
-                    <div key={item.day} className={styles.hoursRow}>
-                      <span className={styles.dayLabel}>{item.day}</span>
-                      <span className={styles.timeRangeText}>{item.timeRange}</span>
-                      <div className={styles.switchWrapper}>
-                        <label className={styles.toggleSwitch}>
-                          <input
-                            type="checkbox"
-                            checked={item.isOpen}
-                            disabled={!isEditingGeneral}
-                            onChange={() => handleDayToggle(idx)}
-                            aria-label={`Toggle ${item.day} status`}
-                          />
-                          <span className={styles.toggleSlider} style={!isEditingGeneral ? { opacity: 0.6, cursor: "not-allowed" } : {}} />
-                        </label>
+                <div className={styles.hoursList} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  {formData.operatingHours.map((item, idx) => {
+                    const openVal = item.openTime || (item.timeRange ? item.timeRange.split("-")[0]?.trim() : "09:00 AM");
+                    const closeVal = item.closeTime || (item.timeRange ? item.timeRange.split("-")[1]?.trim() : "10:00 PM");
+
+                    return (
+                      <div
+                        key={item.day}
+                        style={{
+                          padding: "12px 14px",
+                          borderRadius: "10px",
+                          backgroundColor: item.isOpen ? "#F8FAFC" : "#F1F5F9",
+                          border: item.isOpen ? "1px solid #E2E8F0" : "1px dashed #CBD5E1",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "8px",
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ fontSize: "0.9rem", fontWeight: 600, color: item.isOpen ? "#0F172A" : "#64748B" }}>
+                            {item.day}
+                          </span>
+                          <div className={styles.switchWrapper}>
+                            <label className={styles.toggleSwitch}>
+                              <input
+                                type="checkbox"
+                                checked={item.isOpen}
+                                disabled={!isEditingGeneral}
+                                onChange={() => handleDayToggle(idx)}
+                                aria-label={`Toggle ${item.day} status`}
+                              />
+                              <span className={styles.toggleSlider} style={!isEditingGeneral ? { opacity: 0.6, cursor: "not-allowed" } : {}} />
+                            </label>
+                          </div>
+                        </div>
+
+                        {item.isOpen ? (
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <select
+                              value={openVal}
+                              disabled={!isEditingGeneral}
+                              onChange={(e) => isEditingGeneral && handleTimeChange(idx, "openTime", e.target.value)}
+                              style={{
+                                flex: 1,
+                                padding: "6px 8px",
+                                borderRadius: "6px",
+                                border: "1px solid #CBD5E1",
+                                backgroundColor: !isEditingGeneral ? "#F1F5F9" : "#FFFFFF",
+                                fontSize: "0.8rem",
+                                fontWeight: 500,
+                                color: "#0F172A",
+                                cursor: !isEditingGeneral ? "not-allowed" : "pointer",
+                              }}
+                            >
+                              {TIME_OPTIONS.map((t) => (
+                                <option key={t} value={t} disabled={t === closeVal}>
+                                  {t}
+                                </option>
+                              ))}
+                            </select>
+                            <span style={{ fontSize: "0.8rem", color: "#64748B", fontWeight: 500 }}>to</span>
+                            <select
+                              value={closeVal}
+                              disabled={!isEditingGeneral}
+                              onChange={(e) => isEditingGeneral && handleTimeChange(idx, "closeTime", e.target.value)}
+                              style={{
+                                flex: 1,
+                                padding: "6px 8px",
+                                borderRadius: "6px",
+                                border: "1px solid #CBD5E1",
+                                backgroundColor: !isEditingGeneral ? "#F1F5F9" : "#FFFFFF",
+                                fontSize: "0.8rem",
+                                fontWeight: 500,
+                                color: "#0F172A",
+                                cursor: !isEditingGeneral ? "not-allowed" : "pointer",
+                              }}
+                            >
+                              {TIME_OPTIONS.map((t) => (
+                                <option key={t} value={t} disabled={t === openVal}>
+                                  {t}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: "0.8rem", color: "#94A3B8", fontStyle: "italic" }}>
+                            Closed all day
+                          </span>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </>
@@ -2305,90 +2434,18 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
 
           {activeTab === "Preferences" && (
             <>
-              {/* 1. Localization */}
+              {/* Data & Account Management */}
               <div className={styles.card}>
-                <h2 className={styles.cardTitle}>Localization</h2>
-
-                {/* Default Interface Language (Commented out for now) */}
-                {/*
-                <div className={styles.fieldGroup}>
-                  <label className={styles.label}>Default Interface Language</label>
-                  <input
-                    type="text"
-                    className={styles.input}
-                    value={formData.language}
-                    onChange={(e) => handleInputChange("language", e.target.value)}
-                    placeholder="e.g. English (United States)"
-                  />
-                </div>
-                */}
-
-                <div className={styles.fieldGroup}>
-                  <label className={styles.label}>Console Timezone</label>
-                  <input
-                    type="text"
-                    className={styles.input}
-                    value={formData.timezone}
-                    onChange={(e) => handleInputChange("timezone", e.target.value)}
-                    placeholder="e.g. Asia/Kolkata (GMT+05:30)"
-                  />
-                </div>
-
-                <div className={styles.fieldGroup}>
-                  <label className={styles.label}>Primary Business Currency</label>
-                  <input
-                    type="text"
-                    className={styles.input}
-                    value={formData.currency}
-                    onChange={(e) => handleInputChange("currency", e.target.value)}
-                    placeholder="e.g. INR (₹) - Indian Rupee"
-                  />
-                </div>
-              </div>
-
-              {/* 2. Privacy & Data Options */}
-              <div className={styles.card}>
-                <h2 className={styles.cardTitle}>Privacy &amp; Data Options</h2>
-
-                <div className={styles.hoursRow}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                    <span className={styles.label}>Share Anonymized Usage Data</span>
-                    <span style={{ fontSize: "12px", color: "#64748B" }}>Help us build better cloud operations by sharing aggregated diagnostic reports.</span>
-                  </div>
-                  <div className={styles.switchWrapper}>
-                    <label className={styles.toggleSwitch}>
-                      <input
-                        type="checkbox"
-                        checked={formData.shareAnonymizedData}
-                        onChange={(e) => handleInputChange("shareAnonymizedData", e.target.checked)}
-                      />
-                      <span className={styles.toggleSlider} />
-                    </label>
-                  </div>
-                </div>
-
-                <div className={styles.hoursRow}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                    <span className={styles.label}>Auto-Delete Session History</span>
-                    <span style={{ fontSize: "12px", color: "#64748B" }}>Remove logs and activity metrics older than 30 days automatically.</span>
-                  </div>
-                  <div className={styles.switchWrapper}>
-                    <label className={styles.toggleSwitch}>
-                      <input
-                        type="checkbox"
-                        checked={formData.autoDeleteSessionHistory}
-                        onChange={(e) => handleInputChange("autoDeleteSessionHistory", e.target.checked)}
-                      />
-                      <span className={styles.toggleSlider} />
-                    </label>
-                  </div>
-                </div>
+                <h2 className={styles.cardTitle}>Data &amp; Account Management</h2>
 
                 {/* Backup and Archival */}
-                <div style={{ marginTop: "14px", paddingTop: "14px", borderTop: "1px solid #F1F5F9" }}>
-                  <span className={styles.label} style={{ display: "block", marginBottom: "8px", fontSize: "12.5px", fontWeight: 700 }}>
+                <div style={{ marginTop: "4px" }}>
+                  <span className={styles.label} style={{ display: "block", marginBottom: "6px", fontSize: "12.5px", fontWeight: 700 }}>
                     Backup and Archival
                   </span>
+                  <p style={{ fontSize: "12px", color: "#64748B", marginBottom: "12px", lineHeight: "1.4" }}>
+                    Export your complete store profile, menu catalog, operational schedules, and metrics, or permanently delete your seller account.
+                  </p>
                   <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                     <button
                       type="button"

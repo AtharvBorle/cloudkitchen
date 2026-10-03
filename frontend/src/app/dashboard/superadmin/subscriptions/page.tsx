@@ -4,7 +4,7 @@ import { fetchApi } from "@/lib/fetch-api";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { performLogout } from "@/lib/logout";
-import { CheckCircle2, AlertCircle } from "lucide-react";
+import { CheckCircle2, AlertCircle, AlertTriangle, Users, Trash2 } from "lucide-react";
 
 export default function SuperadminSubscriptionsPage() {
     const router = useRouter();
@@ -35,6 +35,9 @@ export default function SuperadminSubscriptionsPage() {
     const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
 
     const [savingPlan, setSavingPlan] = useState(false);
+    const [planToDelete, setPlanToDelete] = useState<any | null>(null);
+    const [deletingPlanLoading, setDeletingPlanLoading] = useState(false);
+
     // Edit Plan Modal State
     const [editingPlan, setEditingPlan] = useState<any | null>(null);
     const [editPlanName, setEditPlanName] = useState("");
@@ -206,19 +209,24 @@ export default function SuperadminSubscriptionsPage() {
         }
     };
 
-    const handleDeletePlan = async (id: string) => {
-        if (!confirm("Are you sure you want to delete this plan?")) return;
+    const handleConfirmDeletePlan = async () => {
+        if (!planToDelete) return;
+        setDeletingPlanLoading(true);
         try {
-            const res = await fetchApi(`/api/superadmin/plans/${id}`, { method: "DELETE" });
+            const res = await fetchApi(`/api/superadmin/plans/${planToDelete.id}`, { method: "DELETE" });
+            const data = await res.json().catch(() => ({}));
             if (res.ok) {
-                showToast("Subscription plan deleted successfully.", "success");
+                showToast(data.message || "Subscription plan deleted successfully.", "success");
+                setPlanToDelete(null);
                 fetchData();
             } else {
-                showToast("Failed to delete plan.", "error");
+                showToast(data.message || "Failed to delete plan.", "error");
             }
         } catch (error) {
             console.error(error);
             showToast("Failed to delete plan.", "error");
+        } finally {
+            setDeletingPlanLoading(false);
         }
     };
 
@@ -576,15 +584,19 @@ export default function SuperadminSubscriptionsPage() {
                                     <button onClick={() => handleTogglePlanActive(plan)} style={{ background: 'none', border: 'none', color: plan.isActive ? '#E74C3C' : '#27AE60', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem' }}>
                                         {plan.isActive ? "Deactivate" : "Activate"}
                                     </button>
-                                    <button onClick={() => handleDeletePlan(plan.id)} style={{ background: 'none', border: 'none', color: 'var(--coral)', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem' }}>Delete</button>
+                                    <button onClick={() => setPlanToDelete(plan)} style={{ background: 'none', border: 'none', color: 'var(--coral)', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem' }}>Delete</button>
                                 </div>
                             </div>
                             <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--primary)', marginBottom: '5px' }}>₹{plan.price}</div>
-                            <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <span>Duration: {plan.durationMonths} Month(s)</span>
                                 <span style={{ backgroundColor: '#E2E8F0', color: '#475569', padding: '2px 8px', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 'bold' }}>
                                     {plan.category || "BOTH"}
                                 </span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.825rem', color: '#475569', marginBottom: '14px', backgroundColor: '#FFFFFF', padding: '6px 10px', borderRadius: '6px', border: '1px solid #E2E8F0', width: 'fit-content' }}>
+                                <Users size={14} color={plan.activeSubscribersCount > 0 ? '#16A34A' : '#64748B'} />
+                                <span>Active Subscribers: <strong style={{ color: plan.activeSubscribersCount > 0 ? '#16A34A' : '#0F172A' }}>{plan.activeSubscribersCount || 0}</strong></span>
                             </div>
                             <ul style={{ paddingLeft: '20px', color: '#555', fontSize: '0.9rem' }}>
                                 {(() => {
@@ -956,6 +968,57 @@ export default function SuperadminSubscriptionsPage() {
                                 <button type="submit" className="btn btn-primary" style={{ width: 'auto', padding: '12px 24px', borderRadius: '8px' }}>Save Changes</button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Plan Delete Confirmation Modal */}
+            {planToDelete && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px' }}>
+                    <div style={{ backgroundColor: 'white', padding: '28px', borderRadius: '16px', width: '100%', maxWidth: '480px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', marginBottom: '16px' }}>
+                            <div style={{ width: '42px', height: '42px', borderRadius: '10px', backgroundColor: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <AlertTriangle size={22} />
+                            </div>
+                            <div>
+                                <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', margin: '0 0 6px 0', color: '#0F172A' }}>
+                                    Delete Subscription Plan
+                                </h3>
+                                <p style={{ fontSize: '0.9rem', color: '#475569', margin: 0, lineHeight: 1.5 }}>
+                                    Are you sure you want to delete <strong style={{ color: '#0F172A' }}>{planToDelete.name}</strong> (₹{planToDelete.price})?
+                                </p>
+                            </div>
+                        </div>
+
+                        <div style={{ backgroundColor: (planToDelete.activeSubscribersCount || 0) > 0 ? '#FEF2F2' : '#F8FAFC', border: `1px solid ${(planToDelete.activeSubscribersCount || 0) > 0 ? '#FECACA' : '#E2E8F0'}`, borderRadius: '8px', padding: '14px', marginBottom: '20px' }}>
+                            <div style={{ fontSize: '0.875rem', fontWeight: 600, color: (planToDelete.activeSubscribersCount || 0) > 0 ? '#991B1B' : '#334155', marginBottom: '4px' }}>
+                                👥 Current Active Subscribers: {planToDelete.activeSubscribersCount || 0}
+                            </div>
+                            <div style={{ fontSize: '0.8rem', color: (planToDelete.activeSubscribersCount || 0) > 0 ? '#7F1D1D' : '#64748B', lineHeight: 1.4 }}>
+                                {(planToDelete.activeSubscribersCount || 0) > 0
+                                    ? `This plan currently has ${planToDelete.activeSubscribersCount} active subscriber(s). Deleting it will remove the plan from new seller purchases, while preserving full access and features for existing subscribers until their validity expires.`
+                                    : "No active sellers are currently subscribed to this plan. It will be permanently removed."}
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                            <button
+                                type="button"
+                                disabled={deletingPlanLoading}
+                                onClick={() => setPlanToDelete(null)}
+                                style={{ padding: '9px 18px', borderRadius: '8px', border: '1px solid #CBD5E1', backgroundColor: 'white', color: '#475569', fontWeight: 600, cursor: 'pointer' }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                disabled={deletingPlanLoading}
+                                onClick={handleConfirmDeletePlan}
+                                style={{ padding: '9px 18px', borderRadius: '8px', border: 'none', backgroundColor: '#DC2626', color: 'white', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                            >
+                                {deletingPlanLoading ? "Deleting..." : "Delete Plan"}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

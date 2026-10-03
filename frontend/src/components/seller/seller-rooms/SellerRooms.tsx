@@ -9,6 +9,7 @@ import ConsoleSidebar from '../sidebar/Sidebar';
 import Topbar from '../nav/Topbar';
 import { fetchApi } from '@/lib/fetch-api';
 import { useSellerProfile } from '@/hooks/useSellerProfile';
+import PaginationControls from '../common/PaginationControls';
 import styles from './SellerRooms.module.css';
 
 export interface RoomItem {
@@ -69,6 +70,31 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
   const [statusChecked, setStatusChecked] = useState(false);
   const [isPropertyActive, setIsPropertyActive] = useState<boolean | null>(null);
   const [propertyVerification, setPropertyVerification] = useState<string>("NONE");
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number | "All">(10);
+
+  const filteredRooms = React.useMemo(() => {
+    if (!searchQuery.trim()) return roomList;
+    const q = searchQuery.toLowerCase().trim();
+    return roomList.filter(
+      (r) =>
+        r.title.toLowerCase().includes(q) ||
+        r.tier.toLowerCase().includes(q) ||
+        r.pricePerNight.toLowerCase().includes(q)
+    );
+  }, [roomList, searchQuery]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  const paginatedRooms = React.useMemo(() => {
+    if (pageSize === "All") return filteredRooms;
+    const start = (currentPage - 1) * pageSize;
+    return filteredRooms.slice(start, start + pageSize);
+  }, [filteredRooms, currentPage, pageSize]);
 
   useEffect(() => {
     async function checkCategoryAccess() {
@@ -393,107 +419,106 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
 
           {/* Rooms Grid Cards */}
           <div className={styles.roomsGrid}>
-            {roomList.filter((r) => {
-              if (!searchQuery.trim()) return true;
-              const q = searchQuery.toLowerCase().trim();
-              return (
-                r.title.toLowerCase().includes(q) ||
-                r.tier.toLowerCase().includes(q) ||
-                r.pricePerNight.toLowerCase().includes(q)
-              );
-            }).length === 0 ? (
+            {filteredRooms.length === 0 ? (
               <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "48px 16px", backgroundColor: "#FFFFFF", borderRadius: "12px", border: "1px solid #E2E8F0", color: "#64748b" }}>
                 {loading ? "Loading configured rooms..." : searchQuery.trim() ? `No rooms matching "${searchQuery}" found.` : "No rooms configured yet. Click '+ Add Room' to create your first listing."}
               </div>
             ) : (
-              roomList
-                .filter((r) => {
-                  if (!searchQuery.trim()) return true;
-                  const q = searchQuery.toLowerCase().trim();
-                  return (
-                    r.title.toLowerCase().includes(q) ||
-                    r.tier.toLowerCase().includes(q) ||
-                    r.pricePerNight.toLowerCase().includes(q)
-                  );
-                })
-                .map((room) => (
-              <div key={room.id} className={styles.roomCard}>
-                {/* Room Hero Image Container with Floating Edit Action */}
-                <div className={styles.imageContainer}>
-                  <Image
-                    src={room.image}
-                    alt={room.title}
-                    fill
-                    className={styles.roomImage}
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                    priority
-                  />
+              paginatedRooms.map((room) => (
+                <div key={room.id} className={styles.roomCard}>
+                  {/* Room Hero Image Container with Floating Edit Action */}
+                  <div className={styles.imageContainer}>
+                    <Image
+                      src={room.image}
+                      alt={room.title}
+                      fill
+                      className={styles.roomImage}
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      priority
+                    />
 
-                  {/* Unique Dynamic Edit Action Button Floating on Image */}
-                  <button
-                    type="button"
-                    className={styles.imageEditBadge}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(`/seller/rooms/config?id=${room.id}`);
-                    }}
-                    title={`Edit ${room.title}`}
-                    aria-label={`Edit ${room.title}`}
-                  >
-                    <Pencil size={13} strokeWidth={2.6} className={styles.editIcon} />
-                    <span className={styles.editLabel}>Edit</span>
-                  </button>
-                </div>
-
-                {/* Card Content */}
-                <div className={styles.cardBody}>
-                  <h3 className={styles.roomTitle}>{room.title}</h3>
-
-                  <div className={styles.metaRow}>
-                    <div className={styles.guestInfo}>
-                      <User size={15} strokeWidth={2.2} className={styles.userIcon} />
-                      <span>{room.guestsCount} Guests</span>
-                    </div>
-                    <span className={styles.bulletDot}>•</span>
-                    <span className={styles.tierTag}>{room.tier}</span>
+                    {/* Unique Dynamic Edit Action Button Floating on Image */}
+                    <button
+                      type="button"
+                      className={styles.imageEditBadge}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/seller/rooms/config?id=${room.id}`);
+                      }}
+                      title={`Edit ${room.title}`}
+                      aria-label={`Edit ${room.title}`}
+                    >
+                      <Pencil size={13} strokeWidth={2.6} className={styles.editIcon} />
+                      <span className={styles.editLabel}>Edit</span>
+                    </button>
                   </div>
 
-                  <div className={styles.cardDivider} />
+                  {/* Card Content */}
+                  <div className={styles.cardBody}>
+                    <h3 className={styles.roomTitle}>{room.title}</h3>
 
-                  <div className={styles.pricingRow}>
-                    <div className={styles.priceGroup}>
-                      <span className={styles.priceLabel}>PRICE / NIGHT</span>
-                      <span className={styles.priceValue}>{room.pricePerNight}</span>
+                    <div className={styles.metaRow}>
+                      <div className={styles.guestInfo}>
+                        <User size={15} strokeWidth={2.2} className={styles.userIcon} />
+                        <span>{room.guestsCount} Guests</span>
+                      </div>
+                      <span className={styles.bulletDot}>•</span>
+                      <span className={styles.tierTag}>{room.tier}</span>
                     </div>
 
-                    <div className={styles.statusGroup}>
-                      <span
-                        className={
-                          room.isAvailable ? styles.statusAvailable : styles.statusUnavailable
-                        }
-                      >
-                        {room.isAvailable ? 'AVAILABLE' : 'UNAVAILABLE'}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleToggleRoom(room.id)}
-                        className={`${styles.toggleSwitch} ${
-                          room.isAvailable ? styles.toggleSwitchActive : ''
-                        }`}
-                        aria-label={`Toggle availability for ${room.title}`}
-                      >
+                    <div className={styles.cardDivider} />
+
+                    <div className={styles.pricingRow}>
+                      <div className={styles.priceGroup}>
+                        <span className={styles.priceLabel}>PRICE / NIGHT</span>
+                        <span className={styles.priceValue}>{room.pricePerNight}</span>
+                      </div>
+
+                      <div className={styles.statusGroup}>
                         <span
-                          className={`${styles.toggleThumb} ${
-                            room.isAvailable ? styles.toggleThumbActive : ''
+                          className={
+                            room.isAvailable ? styles.statusAvailable : styles.statusUnavailable
+                          }
+                        >
+                          {room.isAvailable ? 'AVAILABLE' : 'UNAVAILABLE'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleRoom(room.id)}
+                          className={`${styles.toggleSwitch} ${
+                            room.isAvailable ? styles.toggleSwitchActive : ''
                           }`}
-                        />
-                      </button>
+                          aria-label={`Toggle availability for ${room.title}`}
+                        >
+                          <span
+                            className={`${styles.toggleThumb} ${
+                              room.isAvailable ? styles.toggleThumbActive : ''
+                            }`}
+                          />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            )))}
+              ))
+            )}
           </div>
+
+          {filteredRooms.length > 0 && (
+            <div style={{ marginTop: "20px" }}>
+              <PaginationControls
+                currentPage={currentPage}
+                totalItems={filteredRooms.length}
+                pageSize={pageSize}
+                onPageChange={(p) => setCurrentPage(p)}
+                onPageSizeChange={(s) => {
+                  setPageSize(s);
+                  setCurrentPage(1);
+                }}
+                itemLabel="rooms"
+              />
+            </div>
+          )}
             </>
           )}
         </main>

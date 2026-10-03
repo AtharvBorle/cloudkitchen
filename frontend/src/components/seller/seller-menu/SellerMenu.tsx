@@ -8,6 +8,7 @@ import Topbar from "../nav/Topbar";
 import { fetchApi } from "@/lib/fetch-api";
 import { useSellerProfile, toggleSellerOnlineStatus } from "@/hooks/useSellerProfile";
 import { broadcastShopTimingAlert } from "@/hooks/useSellerNotifications";
+import PaginationControls from "../common/PaginationControls";
 import styles from "./SellerMenu.module.css";
 
 export type MenuCategoryFilter = string;
@@ -471,6 +472,23 @@ export default function SellerMenu({
     return true;
   });
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number | "All">(10);
+
+  // Reset page to 1 whenever category or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, searchQuery]);
+
+  // Slice paginated dishes
+  const paginatedDishes = React.useMemo(() => {
+    if (pageSize === "All") return filteredDishes;
+    const numSize = Number(pageSize) || 10;
+    const startIndex = (currentPage - 1) * numSize;
+    return filteredDishes.slice(startIndex, startIndex + numSize);
+  }, [filteredDishes, currentPage, pageSize]);
+
   const handleAddClick = () => {
     if (onAddNewDish) {
       onAddNewDish();
@@ -697,7 +715,7 @@ export default function SellerMenu({
                       </td>
                     </tr>
                   ) : (
-                    filteredDishes.map((dish) => (
+                    paginatedDishes.map((dish) => (
                     <tr key={dish.id}>
                       {/* Dish Thumbnail & Details */}
                       <td>
@@ -844,6 +862,19 @@ export default function SellerMenu({
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Controls */}
+          {filteredDishes.length > 0 && (
+            <PaginationControls
+              currentPage={currentPage}
+              totalItems={filteredDishes.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+              itemName="dishes"
+              pageSizeOptions={[10, 20, 25, 50, "All"]}
+            />
+          )}
           </div>
         </main>
       </div>

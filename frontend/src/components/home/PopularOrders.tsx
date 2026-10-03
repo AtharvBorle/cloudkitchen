@@ -22,6 +22,14 @@ export interface OfferCardData {
   itemType?: string;
   sellerIsOnline?: boolean;
   isAvailable?: boolean;
+  stockQuantity?: number;
+  maxStock?: number;
+  categoryId?: string;
+  foodCategoryId?: string;
+  category?: any;
+  foodCategory?: any;
+  categoryName?: string;
+  addons?: any;
 }
 
 interface PopularOrdersProps {
@@ -72,6 +80,19 @@ export default function PopularOrders({
 
   const [addedId, setAddedId] = useState<string | null>(null);
 
+  const getOfferStockLimit = (offer: OfferCardData, inCartItem?: any) => {
+    const rawStock = (offer.maxStock !== undefined && offer.maxStock !== null && Number(offer.maxStock) >= 0)
+      ? Number(offer.maxStock)
+      : (offer.stockQuantity !== undefined && offer.stockQuantity !== null && Number(offer.stockQuantity) >= 0)
+      ? Number(offer.stockQuantity)
+      : (inCartItem?.maxStock !== undefined && inCartItem?.maxStock !== null && Number(inCartItem?.maxStock) >= 0)
+      ? Number(inCartItem?.maxStock)
+      : (inCartItem?.stockQuantity !== undefined && inCartItem?.stockQuantity !== null && Number(inCartItem?.stockQuantity) >= 0)
+      ? Number(inCartItem?.stockQuantity)
+      : -1;
+    return rawStock >= 0 ? rawStock : -1;
+  };
+
   const handleOrderNow = (offer: OfferCardData) => {
     if (offer.sellerIsOnline === false) {
       showToast(`Sorry, "${offer.sellerName || "This kitchen"}" is currently closed and not accepting orders.`, "warning");
@@ -82,25 +103,26 @@ export default function PopularOrders({
       return;
     }
 
-    const rawStock = (offer as any).maxStock !== undefined ? (offer as any).maxStock : (offer as any).stockQuantity;
-    const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
+    const baseFoodId = offer.foodItemId || (offer.id.startsWith("offer-") ? offer.id.split("-").pop() : offer.id) || offer.id;
+    const existingInCart = cartItems.find((ci) => ci.id === offer.id || ci.foodItemId === offer.foodItemId || ci.id === baseFoodId || ci.foodItemId === baseFoodId);
+    const stockLimit = getOfferStockLimit(offer, existingInCart);
 
     if (stockLimit === 0) {
       showToast(`Sorry, "${offer.title}" is currently out of stock.`, "warning");
       return;
     }
 
-    const existingInCart = cartItems.find((ci) => ci.id === offer.id || ci.foodItemId === (offer.foodItemId || offer.id));
     if (existingInCart && stockLimit !== -1 && existingInCart.quantity >= stockLimit) {
       showToast(`We have only ${stockLimit} left in stock.`, "warning");
       return;
     }
 
     const success = addToCart({
-      id: offer.id,
-      foodItemId: offer.foodItemId || offer.id,
+      id: baseFoodId,
+      foodItemId: baseFoodId,
       name: offer.title,
       price: offer.price || 199,
+      basePrice: offer.price || 199,
       quantity: 1,
       sellerId: offer.sellerId || (activeSeller ? activeSeller.id : "k-1"),
       sellerName: offer.sellerName || (activeSeller ? activeSeller.name : "Verified Cloud Kitchen"),
@@ -114,6 +136,7 @@ export default function PopularOrders({
       category: (offer as any).category,
       foodCategory: (offer as any).foodCategory,
       categoryName: (offer as any).categoryName || (offer as any).category?.name || (offer as any).foodCategory?.name,
+      addons: (offer as any).addons,
     }, false, () => {
       setAddedId(offer.id);
       setTimeout(() => setAddedId(null), 1800);
@@ -189,11 +212,11 @@ export default function PopularOrders({
         >
           {displayOffers.map((offer) => {
             const isSellerClosed = offer.sellerIsOnline === false;
-            const isOutOfStock = (offer as any).stockQuantity === 0 || (offer as any).maxStock === 0 || offer.isAvailable === false;
+            const baseFoodId = offer.foodItemId || (offer.id.startsWith("offer-") ? offer.id.split("-").pop() : offer.id) || offer.id;
+            const currentInCart = cartItems.find((ci) => ci.id === offer.id || ci.foodItemId === offer.foodItemId || ci.id === baseFoodId || ci.foodItemId === baseFoodId);
+            const stockLimit = getOfferStockLimit(offer, currentInCart);
+            const isOutOfStock = stockLimit === 0 || offer.isAvailable === false;
             const isClosed = isSellerClosed || isOutOfStock;
-            const rawStock = (offer as any).maxStock !== undefined ? (offer as any).maxStock : (offer as any).stockQuantity;
-            const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
-            const currentInCart = cartItems.find((ci) => ci.id === offer.id || ci.foodItemId === (offer.foodItemId || offer.id));
             const isMaxStockInCart = !isClosed && stockLimit > 0 && (currentInCart ? currentInCart.quantity >= stockLimit : false);
 
             return (
@@ -446,7 +469,13 @@ export default function PopularOrders({
                   </span>
                   <button
                     type="button"
-                    onClick={() => handleOrderNow(offer)}
+                    onClick={() => {
+                      if (isMaxStockInCart) {
+                        showToast(`We have only ${stockLimit} left in stock.`, "warning");
+                        return;
+                      }
+                      handleOrderNow(offer);
+                    }}
                     disabled={isMaxStockInCart}
                     style={{
                       flex: 1,

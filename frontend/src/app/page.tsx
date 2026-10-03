@@ -256,6 +256,10 @@ export default function Home() {
           ? `FLAT ₹${cp.discountAmount} OFF`
           : "SPECIAL OFFER";
 
+        const rawStock = matchedItem.stockQuantity !== undefined && matchedItem.stockQuantity !== null
+          ? Number(matchedItem.stockQuantity)
+          : (matchedItem.maxStock !== undefined && matchedItem.maxStock !== null ? Number(matchedItem.maxStock) : -1);
+
         offersList.push({
           id: `offer-${cp.id}-${matchedItem.id}`,
           foodItemId: matchedItem.id,
@@ -268,8 +272,16 @@ export default function Home() {
           sellerId: matchedItem.sellerId || "",
           sellerName: matchedItem.sellerName || "Cloud Kitchen",
           sellerIsOnline: matchedItem.sellerIsOnline !== false,
-          isAvailable: matchedItem.isAvailable !== false,
+          isAvailable: matchedItem.isAvailable !== false && rawStock !== 0,
           itemType: matchedItem.itemType || "VEG",
+          stockQuantity: rawStock,
+          maxStock: rawStock,
+          categoryId: (matchedItem as any).categoryId,
+          foodCategoryId: (matchedItem as any).foodCategoryId,
+          category: (matchedItem as any).category,
+          foodCategory: (matchedItem as any).foodCategory,
+          categoryName: (matchedItem as any).categoryName || (matchedItem as any).category?.name || (matchedItem as any).foodCategory?.name,
+          addons: (matchedItem as any).addons,
         });
       }
     });

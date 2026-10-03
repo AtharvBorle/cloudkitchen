@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Check, CheckCircle2, AlertTriangle, Bell } from "lucide-react";
+import { ChevronLeft, Check, CheckCircle2, AlertTriangle, Bell, Download } from "lucide-react";
 import styles from "./ResponsiveCashHandover.module.css";
 
 export interface CashOrderLine {
@@ -115,7 +115,12 @@ export const ResponsiveCashHandover: React.FC<ResponsiveCashHandoverProps> = ({
   };
 
   const handleSubmitDiscrepancy = () => {
-    const rawExpected = parseFloat(totalCash.replace(/[^0-9.]/g, "")) || 0;
+    const ordersTotal = orders.reduce(
+      (sum, o) => sum + (parseFloat(o.amount.replace(/[^0-9.]/g, "")) || 0),
+      0
+    );
+    const parsedTotalCash = parseFloat(totalCash.replace(/[^0-9.]/g, "")) || 0;
+    const rawExpected = parsedTotalCash > 0 ? parsedTotalCash : ordersTotal;
     const rawActual = parseFloat(actualCashReceived.replace(/[^0-9.]/g, "")) || 0;
     const rawShortage = Math.max(0, rawExpected - rawActual);
     const ticketNum = `DISC-${Math.floor(100000 + Math.random() * 900000)}`;
@@ -124,7 +129,7 @@ export const ResponsiveCashHandover: React.FC<ResponsiveCashHandoverProps> = ({
       id: `disc-${Date.now()}`,
       ticketId: ticketNum,
       riderName,
-      expectedAmount: totalCash,
+      expectedAmount: `₹${rawExpected.toLocaleString("en-IN")}`,
       actualAmount: actualCashReceived ? `₹${rawActual.toLocaleString("en-IN")}` : "₹0",
       shortageAmount: `₹${rawShortage.toLocaleString("en-IN")}`,
       reason: discrepancyReason,
@@ -151,6 +156,55 @@ export const ResponsiveCashHandover: React.FC<ResponsiveCashHandoverProps> = ({
 
     setIsReporting(false);
     showToast(`Discrepancy ticket #${ticketNum} submitted & tracked.`);
+  };
+
+  const handleExportCsv = () => {
+    const headers = [
+      "Order / Reference ID",
+      "Customer Name",
+      "Amount (INR)",
+      "Rider Name",
+      "Date",
+      "Status"
+    ];
+
+    const todayStr = new Date().toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric"
+    });
+
+    const rows = (orders || []).map((o, idx) => {
+      const cleanOrderNo = o.orderNumber || `ORD-${idx + 101}`;
+      const cleanCust = o.customerName || "Customer";
+      const cleanAmt = String(o.amount || "0").replace(/[^0-9.]/g, "");
+      return [
+        `"${cleanOrderNo.replace(/"/g, '""')}"`,
+        `"${cleanCust.replace(/"/g, '""')}"`,
+        `"${cleanAmt}"`,
+        `"${riderName.replace(/"/g, '""')}"`,
+        `"${todayStr}"`,
+        `"Delivered / Cash Collected"`
+      ];
+    });
+
+    const csvContent = "\uFEFF" + [
+      headers.map(h => `"${h.replace(/"/g, '""')}"`).join(","),
+      ...rows.map(r => r.join(","))
+    ].join("\r\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    const safeName = riderName.toLowerCase().replace(/[^a-z0-9]/g, "_");
+    const dateStr = new Date().toISOString().slice(0, 10);
+    link.setAttribute("download", `rider_cash_handover_${safeName}_${dateStr}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showToast("Handover ledger CSV downloaded successfully.");
   };
 
   const riderDiscrepancies = discrepancies.filter((d) => d.riderName === riderName || !d.riderName);
@@ -203,7 +257,31 @@ export const ResponsiveCashHandover: React.FC<ResponsiveCashHandoverProps> = ({
 
           {/* Orders Breakdown */}
           <section className={styles.breakdownSection}>
-            <h4 className={styles.sectionLabel}>ORDERS BREAKDOWN</h4>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+              <h4 className={styles.sectionLabel} style={{ margin: 0 }}>ORDERS BREAKDOWN</h4>
+              {orders.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleExportCsv}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#2563EB",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    cursor: "pointer",
+                    padding: "2px 4px",
+                  }}
+                  title="Export Handover CSV"
+                >
+                  <Download size={13} />
+                  <span>Export CSV</span>
+                </button>
+              )}
+            </div>
             <div className={styles.breakdownList}>
               {orders.length === 0 ? (
                 <div style={{ padding: "16px 8px", textAlign: "center", color: "#64748B", fontSize: "0.85rem" }}>
@@ -259,14 +337,42 @@ export const ResponsiveCashHandover: React.FC<ResponsiveCashHandoverProps> = ({
             Confirm Receipt
           </button>
 
-          {/* Report Discrepancy */}
-          <button
-            type="button"
-            className={styles.reportBtn}
-            onClick={handleReport}
-          >
-            Report discrepancy
-          </button>
+          {/* Report Discrepancy & Export Actions */}
+          <div style={{ display: "flex", gap: "8px", width: "100%" }}>
+            <button
+              type="button"
+              className={styles.reportBtn}
+              onClick={handleReport}
+              style={{ flex: 1 }}
+            >
+              Report discrepancy
+            </button>
+            {orders.length > 0 && (
+              <button
+                type="button"
+                onClick={handleExportCsv}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                  padding: "12px 14px",
+                  backgroundColor: "#FFFFFF",
+                  color: "#475569",
+                  border: "1px solid #CBD5E1",
+                  borderRadius: "10px",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                }}
+                title="Download Handover CSV"
+              >
+                <Download size={15} />
+                <span>CSV</span>
+              </button>
+            )}
+          </div>
 
           {/* Tracked Discrepancy Records Section */}
           {riderDiscrepancies.length > 0 && (
@@ -316,6 +422,63 @@ export const ResponsiveCashHandover: React.FC<ResponsiveCashHandoverProps> = ({
               <p className={styles.modalText}>
                 Record and track a mismatch in cash collected vs expected amount for <strong>{riderName}</strong>.
               </p>
+
+              {/* Amount Breakdown Summary */}
+              {(() => {
+                const ordersTotal = orders.reduce(
+                  (sum, o) => sum + (parseFloat(o.amount.replace(/[^0-9.]/g, "")) || 0),
+                  0
+                );
+                const parsedTotalCash = parseFloat(totalCash.replace(/[^0-9.]/g, "")) || 0;
+                const modalExpected = parsedTotalCash > 0 ? parsedTotalCash : ordersTotal;
+                const modalActual = parseFloat(actualCashReceived.replace(/[^0-9.]/g, "")) || 0;
+                const modalShortage = Math.max(0, modalExpected - modalActual);
+
+                return (
+                  <div
+                    style={{
+                      backgroundColor: "#F8FAFC",
+                      borderRadius: "10px",
+                      padding: "10px 12px",
+                      border: "1px solid #E2E8F0",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: "11px", color: "#64748B", fontWeight: 600 }}>
+                        EXPECTED CASH
+                      </div>
+                      <div style={{ fontSize: "15px", fontWeight: 800, color: "#0F172A" }}>
+                        ₹{modalExpected.toLocaleString("en-IN")}
+                      </div>
+                    </div>
+                    {actualCashReceived !== "" && (
+                      <div style={{ textAlign: "right" }}>
+                        <div
+                          style={{
+                            fontSize: "11px",
+                            color: modalShortage > 0 ? "#DC2626" : "#16A34A",
+                            fontWeight: 700,
+                          }}
+                        >
+                          {modalShortage > 0 ? "SHORTAGE" : "EXACT / SURPLUS"}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "15px",
+                            fontWeight: 800,
+                            color: modalShortage > 0 ? "#DC2626" : "#16A34A",
+                          }}
+                        >
+                          ₹{modalShortage.toLocaleString("en-IN")}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               <div className={styles.formField}>
                 <label className={styles.fieldLabel}>Discrepancy Reason</label>

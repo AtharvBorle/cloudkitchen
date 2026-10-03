@@ -7,6 +7,7 @@ import { ResponsiveNavMenu } from "../nav/ResponsiveNavMenu";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
 import { fetchApi } from "@/lib/fetch-api";
 import { Star, Utensils, ChevronDown, Check } from "lucide-react";
+import { PaginationControls } from "../common/PaginationControls";
 import styles from "./SellerReviews.module.css";
 
 export interface ReviewItem {
@@ -148,6 +149,10 @@ export default function SellerReviewsCanvasDas({
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number | "All">(10);
+
   const filterRef = useRef<HTMLDivElement>(null);
   const sortRef = useRef<HTMLDivElement>(null);
 
@@ -281,6 +286,19 @@ export default function SellerReviewsCanvasDas({
 
     return list;
   }, [reviewsList, selectedFilter, selectedSort, searchQuery]);
+
+  // Reset to page 1 on filter, sort or search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedFilter, selectedSort, searchQuery]);
+
+  // Paginated reviews subset
+  const paginatedReviews = useMemo(() => {
+    if (pageSize === "All") return filteredAndSortedReviews;
+    const size = Number(pageSize) || 10;
+    const startIndex = (currentPage - 1) * size;
+    return filteredAndSortedReviews.slice(startIndex, startIndex + size);
+  }, [filteredAndSortedReviews, currentPage, pageSize]);
 
   return (
     <div
@@ -493,7 +511,7 @@ export default function SellerReviewsCanvasDas({
                         : "No reviews found matching the selected filter criteria."}
                     </div>
                   ) : (
-                    filteredAndSortedReviews.map((review, index) => {
+                    paginatedReviews.map((review, index) => {
                       const isNoComment =
                         !review.comment ||
                         review.comment.toLowerCase().includes("no comment left");
@@ -593,6 +611,21 @@ export default function SellerReviewsCanvasDas({
                         </div>
                       );
                     })
+                  )}
+
+                  {/* Pagination Controls */}
+                  {filteredAndSortedReviews.length > 0 && (
+                    <div style={{ marginTop: "12px", borderRadius: "12px", overflow: "hidden", border: "1px solid #E2E8F0" }}>
+                      <PaginationControls
+                        currentPage={currentPage}
+                        totalItems={filteredAndSortedReviews.length}
+                        pageSize={pageSize}
+                        onPageChange={setCurrentPage}
+                        onPageSizeChange={setPageSize}
+                        itemName="reviews"
+                        pageSizeOptions={[10, 20, 25, 50, "All"]}
+                      />
+                    </div>
                   )}
                 </div>
               </div>

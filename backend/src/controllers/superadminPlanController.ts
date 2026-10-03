@@ -15,10 +15,29 @@ export const getSubscriptionPlans = async () => {
 
     const plans = await db.subscriptionPlan.findMany({
         where: whereClause,
+        include: {
+            subscriptions: {
+                where: {
+                    status: "ACTIVE",
+                    validUntil: {
+                        gt: new Date()
+                    }
+                },
+                select: {
+                    id: true,
+                    sellerId: true
+                }
+            }
+        },
         orderBy: { price: 'asc' }
     });
 
-    return { plans };
+    const mappedPlans = plans.map(p => ({
+        ...p,
+        activeSubscribersCount: p.subscriptions ? p.subscriptions.length : 0
+    }));
+
+    return { plans: mappedPlans };
 };
 
 export const createSubscriptionPlan = async (req: Request) => {

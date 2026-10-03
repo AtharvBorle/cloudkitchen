@@ -41,7 +41,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     }
 }
 
-// Delete a plan (hard delete from database)
+// Delete/archive a plan (preserving existing subscriber access until expiration)
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const session = await getAuthSession();
@@ -54,28 +54,59 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
         const { id } = await params;
         if (!id) {
-            return NextResponse.json({ message: "ID is required" }, { status: 400 });
+            return NextResponse.json({ success: false, message: "Plan ID is required." }, { status: 400 });
         }
 
-        // Clean up references to prevent foreign key errors
-        await db.subscription.updateMany({
-            where: { planId: id },
-            data: { planId: null }
+        // Check active and historical subscriptions for this plan
+        const activeSubscribersCount = await db.subscription.count({
+            where: {
+                planId: id,
+                status: "ACTIVE",
+                validUntil: {
+                    gt: new Date()
+                }
+            }
         });
 
-        await db.subscriptionCoupon.updateMany({
-            where: { planId: id },
-            data: { planId: null }
+        const totalSubscriptionsCount = await db.subscription.count({
+            where: { planId: id }
         });
 
-        // Hard delete the plan from the database
+        if (totalSubscriptionsCount > 0) {
+            // Keep existing seller subscriptions intact so they continue to enjoy benefits until expiry!
+            // Deactivate the plan template so no new sellers can buy it.
+            await db.subscriptionPlan.update({
+                where: { id },
+                data: {
+                    isActive: false
+                }
+            });
+
+            // Deactivate linked subscription coupons
+            await db.subscriptionCoupon.updateMany({
+                where: { planId: id },
+                data: { isActive: false }
+            });
+
+            return NextResponse.json({
+                success: true,
+                message: `Subscription plan deleted from catalog. ${activeSubscribersCount} active subscriber(s) will retain their full access and benefits until their subscription expiry.`,
+                activeSubscribersCount
+            });
+        }
+
+        // If no subscriptions have ever used this plan, clean coupons and hard delete
+        await db.subscriptionCoupon.deleteMany({
+            where: { planId: id }
+        });
+
         await db.subscriptionPlan.delete({
             where: { id }
         });
 
-        return NextResponse.json({ message: "Plan deleted successfully" });
+        return NextResponse.json({ success: true, message: "Subscription plan deleted successfully." });
     } catch (error) {
         console.error("Error deleting plan:", error);
-        return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+        return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
     }
 }

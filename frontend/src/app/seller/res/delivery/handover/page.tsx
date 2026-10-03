@@ -98,6 +98,18 @@ function CashHandoverContent() {
     });
   }, [transactions, rider]);
 
+  const ordersTotal = React.useMemo(() => {
+    return cashOrders.reduce((sum, o) => {
+      const amt = parseFloat(o.amount.replace(/[^0-9.]/g, "")) || 0;
+      return sum + amt;
+    }, 0);
+  }, [cashOrders]);
+
+  const effectiveTotal =
+    rider?.outstandingBalance && rider.outstandingBalance > 0
+      ? rider.outstandingBalance
+      : ordersTotal;
+
   return (
     <ResponsiveCashHandover
       riderName={rider?.name || "Rider"}
@@ -111,7 +123,7 @@ function CashHandoverContent() {
               .slice(0, 2)
           : "RD"
       }
-      totalCash={`₹${(rider?.outstandingBalance || 0).toLocaleString("en-IN")}`}
+      totalCash={`₹${effectiveTotal.toLocaleString("en-IN")}`}
       ordersCount={cashOrders.length}
       orders={cashOrders}
       onConfirmReceipt={handleConfirmReceipt}

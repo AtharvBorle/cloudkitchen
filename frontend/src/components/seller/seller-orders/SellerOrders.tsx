@@ -11,6 +11,7 @@ import { useRealtimeStream } from "@/hooks/useRealtimeStream";
 import { playNewOrderChime } from "@/lib/audio-chime";
 import RejectOrderModal from "./RejectOrderModal";
 import ToastNotification from "./ToastNotification";
+import PaginationControls from "../common/PaginationControls";
 import styles from "./SellerOrders.module.css";
 
 export const ORDER_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
@@ -422,13 +423,13 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
 
   // Calculate status counts respecting active date filter
   const counts = useMemo(() => {
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-    const startOfYesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0, 0);
-    const endOfYesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59, 999);
-    const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay(), 0, 0, 0, 0);
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+    const todayDate = new Date();
+    const startOfToday = new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate(), 0, 0, 0, 0);
+    const endOfToday = new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate(), 23, 59, 59, 999);
+    const startOfYesterday = new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate() - 1, 0, 0, 0, 0);
+    const endOfYesterday = new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate() - 1, 23, 59, 59, 999);
+    const startOfWeek = new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate() - todayDate.getDay(), 0, 0, 0, 0);
+    const startOfMonth = new Date(todayDate.getFullYear(), todayDate.getMonth(), 1, 0, 0, 0, 0);
 
     const baseList = orderList.filter((order) => {
       if (dateFilter !== "ALL") {
@@ -562,11 +563,29 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
     return list;
   }, [orderList, activeFilter, dateFilter, searchQuery, sortBy, now]);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number | "All">(10);
+
+  // Reset page to 1 whenever filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeFilter, dateFilter, searchQuery, sortBy]);
+
+  // Slice paginated orders
+  const paginatedOrders = useMemo(() => {
+    if (pageSize === "All") return filteredOrders;
+    const numSize = Number(pageSize) || 10;
+    const startIndex = (currentPage - 1) * numSize;
+    return filteredOrders.slice(startIndex, startIndex + numSize);
+  }, [filteredOrders, currentPage, pageSize]);
+
   const resetFilters = () => {
     setActiveFilter("All");
     setDateFilter("ALL");
     setSearchQuery("");
     setSortBy("NEWEST");
+    setCurrentPage(1);
   };
 
   const getStatusBadgeClass = (status: OrderRow["status"]) => {
@@ -747,7 +766,7 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
                       </td>
                     </tr>
                   ) : (
-                    filteredOrders.map((order) => {
+                    paginatedOrders.map((order) => {
                       const isPending = order.status === "Pending" || order.rawStatus === "PENDING";
                       const remainingSec = isPending ? getRemainingSeconds(order.createdAt, now) : 0;
                       const isExpired = isPending && remainingSec <= 0;
@@ -878,6 +897,19 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination Controls */}
+            {filteredOrders.length > 0 && (
+              <PaginationControls
+                currentPage={currentPage}
+                totalItems={filteredOrders.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+                itemName="orders"
+                pageSizeOptions={[10, 20, 25, 50, "All"]}
+              />
+            )}
           </div>
         </main>
       </div>

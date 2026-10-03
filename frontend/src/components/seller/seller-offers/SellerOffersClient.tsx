@@ -14,6 +14,8 @@ export default function SellerOffersClient({ sellerId, products }: SellerOffersC
     const [offers, setOffers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [filterStatus, setFilterStatus] = useState<"ALL" | "ACTIVE" | "EXPIRED" | "DRAFT">("ALL");
+    const [couponToDelete, setCouponToDelete] = useState<{ id: string; code: string } | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const loadOffers = async () => {
         try {
@@ -35,18 +37,22 @@ export default function SellerOffersClient({ sellerId, products }: SellerOffersC
         loadOffers();
     }, []);
 
-    const handleDelete = async (id: string) => {
-        if (!confirm("Are you sure you want to delete this offer/coupon?")) return;
+    const handleConfirmDelete = async () => {
+        if (!couponToDelete) return;
         try {
-            const res = await fetchApi(`/api/seller/dashboard/offers?id=${id}`, { method: "DELETE" });
+            setIsDeleting(true);
+            const res = await fetchApi(`/api/seller/dashboard/offers?id=${couponToDelete.id}`, { method: "DELETE" });
             if (res.ok) {
-                setOffers(prev => prev.filter(o => o.id !== id));
+                setOffers(prev => prev.filter(o => o.id !== couponToDelete.id));
+                setCouponToDelete(null);
             } else {
                 const err = await res.json().catch(() => ({}));
                 alert(err.message || "Failed to delete coupon");
             }
         } catch (e: any) {
             alert(e.message || "Error deleting coupon");
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -374,7 +380,7 @@ export default function SellerOffersClient({ sellerId, products }: SellerOffersC
                                                     </Link>
                                                     <button
                                                         type="button"
-                                                        onClick={() => handleDelete(offer.id)}
+                                                        onClick={() => setCouponToDelete({ id: offer.id, code: offer.code })}
                                                         style={{
                                                             padding: "6px",
                                                             borderRadius: "6px",
@@ -386,7 +392,7 @@ export default function SellerOffersClient({ sellerId, products }: SellerOffersC
                                                             border: "1px solid #FEE2E2",
                                                             cursor: "pointer",
                                                         }}
-                                                        title="Delete Offer"
+                                                        title="Delete Coupon"
                                                     >
                                                         <Trash2 size={13} />
                                                     </button>
@@ -397,6 +403,104 @@ export default function SellerOffersClient({ sellerId, products }: SellerOffersC
                                 })}
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            )}
+
+            {/* Custom Delete Confirmation Modal */}
+            {couponToDelete && (
+                <div
+                    style={{
+                        position: "fixed",
+                        inset: 0,
+                        backgroundColor: "rgba(15, 23, 42, 0.6)",
+                        backdropFilter: "blur(4px)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        zIndex: 9999,
+                        padding: "16px",
+                        animation: "fadeIn 0.2s ease-out",
+                    }}
+                    onClick={() => !isDeleting && setCouponToDelete(null)}
+                >
+                    <div
+                        style={{
+                            backgroundColor: "#FFFFFF",
+                            borderRadius: "16px",
+                            maxWidth: "440px",
+                            width: "100%",
+                            padding: "24px",
+                            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+                            position: "relative",
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div style={{ display: "flex", alignItems: "flex-start", gap: "14px", marginBottom: "16px" }}>
+                            <div
+                                style={{
+                                    width: "42px",
+                                    height: "42px",
+                                    borderRadius: "10px",
+                                    backgroundColor: "#FEE2E2",
+                                    color: "#DC2626",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    flexShrink: 0,
+                                }}
+                            >
+                                <Trash2 size={22} />
+                            </div>
+                            <div>
+                                <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#0F172A", margin: "0 0 6px 0" }}>
+                                    Delete Coupon
+                                </h3>
+                                <p style={{ fontSize: "0.875rem", color: "#64748B", margin: 0, lineHeight: "1.4" }}>
+                                    Are you sure you want to delete coupon <strong style={{ color: "#0F172A" }}>{couponToDelete.code}</strong>? This action cannot be undone and customers will no longer be able to use it.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "24px" }}>
+                            <button
+                                type="button"
+                                disabled={isDeleting}
+                                onClick={() => setCouponToDelete(null)}
+                                style={{
+                                    padding: "9px 18px",
+                                    borderRadius: "8px",
+                                    border: "1px solid #E2E8F0",
+                                    backgroundColor: "#FFFFFF",
+                                    color: "#475569",
+                                    fontSize: "0.875rem",
+                                    fontWeight: 600,
+                                    cursor: isDeleting ? "not-allowed" : "pointer",
+                                }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                disabled={isDeleting}
+                                onClick={handleConfirmDelete}
+                                style={{
+                                    padding: "9px 18px",
+                                    borderRadius: "8px",
+                                    border: "none",
+                                    backgroundColor: "#DC2626",
+                                    color: "#FFFFFF",
+                                    fontSize: "0.875rem",
+                                    fontWeight: 600,
+                                    cursor: isDeleting ? "not-allowed" : "pointer",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "6px",
+                                }}
+                            >
+                                {isDeleting ? "Deleting..." : "Delete Coupon"}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

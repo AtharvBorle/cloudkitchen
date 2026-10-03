@@ -18,6 +18,7 @@ import {
   Check,
   Layers,
   Utensils,
+  Trash2,
 } from "lucide-react";
 import styles from "./CreateOffer.module.css";
 
@@ -171,6 +172,8 @@ function EditOfferForm({
 
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingOffer, setDeletingOffer] = useState(false);
 
   // Form States
   const [couponCode, setCouponCode] = useState("");
@@ -449,21 +452,24 @@ function EditOfferForm({
     }
   };
 
-  const handleDeleteOffer = async () => {
-    if (!confirm("Are you sure you want to delete this offer?")) return;
+  const handleConfirmDeleteOffer = async () => {
     try {
+      setDeletingOffer(true);
       const res = await fetchApi(`/api/seller/dashboard/offers?id=${encodeURIComponent(resolvedId || offerId)}`, {
         method: "DELETE",
       });
       if (res.ok) {
+        setShowDeleteModal(false);
         router.push("/seller/offers");
       } else {
         const errJson = await res.json().catch(() => ({}));
-        alert(errJson.message || "Failed to delete offer.");
+        alert(errJson.message || "Failed to delete coupon.");
       }
     } catch (err: any) {
-      console.error("Delete offer error:", err);
-      alert(err.message || "Failed to delete offer.");
+      console.error("Delete coupon error:", err);
+      alert(err.message || "Failed to delete coupon.");
+    } finally {
+      setDeletingOffer(false);
     }
   };
 
@@ -616,6 +622,26 @@ function EditOfferForm({
                     </>
                   ) : (
                     <>
+                      <button
+                        type="button"
+                        style={{
+                          padding: "10px 18px",
+                          borderRadius: "8px",
+                          border: "1px solid #FEE2E2",
+                          backgroundColor: "#FEF2F2",
+                          color: "#DC2626",
+                          fontSize: "0.875rem",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "6px",
+                        }}
+                        onClick={() => setShowDeleteModal(true)}
+                      >
+                        <Trash2 size={15} />
+                        <span>Delete</span>
+                      </button>
                       <button
                         type="button"
                         className={styles.saveDraftBtn}
@@ -1460,6 +1486,102 @@ function EditOfferForm({
           </div>
         </main>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.6)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "16px",
+          }}
+          onClick={() => !deletingOffer && setShowDeleteModal(false)}
+        >
+          <div
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "16px",
+              maxWidth: "440px",
+              width: "100%",
+              padding: "24px",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", alignItems: "flex-start", gap: "14px", marginBottom: "16px" }}>
+              <div
+                style={{
+                  width: "42px",
+                  height: "42px",
+                  borderRadius: "10px",
+                  backgroundColor: "#FEE2E2",
+                  color: "#DC2626",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <Trash2 size={22} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: "1.1rem", fontWeight: 700, color: "#0F172A", margin: "0 0 6px 0" }}>
+                  Delete Coupon
+                </h3>
+                <p style={{ fontSize: "0.875rem", color: "#64748B", margin: 0, lineHeight: "1.4" }}>
+                  Are you sure you want to delete coupon <strong style={{ color: "#0F172A" }}>{couponCode || "this coupon"}</strong>? This action cannot be undone.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "24px" }}>
+              <button
+                type="button"
+                disabled={deletingOffer}
+                onClick={() => setShowDeleteModal(false)}
+                style={{
+                  padding: "9px 18px",
+                  borderRadius: "8px",
+                  border: "1px solid #E2E8F0",
+                  backgroundColor: "#FFFFFF",
+                  color: "#475569",
+                  fontSize: "0.875rem",
+                  fontWeight: 600,
+                  cursor: deletingOffer ? "not-allowed" : "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deletingOffer}
+                onClick={handleConfirmDeleteOffer}
+                style={{
+                  padding: "9px 18px",
+                  borderRadius: "8px",
+                  border: "none",
+                  backgroundColor: "#DC2626",
+                  color: "#FFFFFF",
+                  fontSize: "0.875rem",
+                  fontWeight: 600,
+                  cursor: deletingOffer ? "not-allowed" : "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
+                {deletingOffer ? "Deleting..." : "Delete Coupon"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

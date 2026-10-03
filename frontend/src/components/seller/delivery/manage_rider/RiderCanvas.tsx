@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
 import { validateEmail } from "@/lib/email-validation";
+import PaginationControls from "@/components/seller/common/PaginationControls";
 
 export interface RiderSummaryMetric {
   id: string;
@@ -216,6 +217,20 @@ export default function RiderCanvas({
     );
   }, [riderList, searchQuery]);
   const riders = filteredRiders;
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number | "All">(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, riderList]);
+
+  const paginatedRiders = useMemo(() => {
+    if (pageSize === "All") return riders;
+    const start = (currentPage - 1) * pageSize;
+    return riders.slice(start, start + pageSize);
+  }, [riders, currentPage, pageSize]);
 
   // Toggle Active/Inactive Status
   const handleToggleStatus = async (rider: RiderWalletRecord, e?: React.MouseEvent) => {
@@ -895,7 +910,7 @@ export default function RiderCanvas({
                     </td>
                   </tr>
                 ) : (
-                  riders.map((rider, index) => {
+                  paginatedRiders.map((rider, index) => {
                     const isAct = rider.isActive;
                     const isZeroBalance =
                       rider.codBalance === "₹0" ||
@@ -1125,6 +1140,22 @@ export default function RiderCanvas({
               </tbody>
             </table>
           </div>
+
+          {riders.length > 0 && (
+            <div style={{ marginTop: "12px" }}>
+              <PaginationControls
+                currentPage={currentPage}
+                totalItems={riders.length}
+                pageSize={pageSize}
+                onPageChange={(p) => setCurrentPage(p)}
+                onPageSizeChange={(s) => {
+                  setPageSize(s);
+                  setCurrentPage(1);
+                }}
+                itemLabel="riders"
+              />
+            </div>
+          )}
         </div>
       </div>
 

@@ -538,6 +538,10 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
     minimumCartValue?: number;
     discountLabel?: string;
     calculatedDiscount?: number;
+    appliesTo?: string;
+    appliesToSellerId?: string | null;
+    appliesToProductId?: string | null;
+    [key: string]: any;
   } | null>(null);
   const appliedCouponData = appliedCoupon;
   const [isValidatingPromo, setIsValidatingPromo] = useState<boolean>(false);
@@ -2725,7 +2729,15 @@ const loadRazorpayScript = (): Promise<boolean> => {
                           <div className={styles.pricingRowDiscount}>
                             <span className={styles.discountLabel} style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                               <Tag size={13} />
-                              <span>{couponCategoryDetails.categoryName} Category Discount ({appliedCoupon?.discountPercentage ? `${appliedCoupon.discountPercentage}% OFF` : appliedCoupon?.discountLabel || `${discountPercent}% OFF`})</span>
+                              <span>
+                                {couponCategoryDetails.categoryName} Category Discount (
+                                {(appliedCoupon?.discountType === "PERCENTAGE" || (Number(appliedCoupon?.discountPercentage || 0) > 0)) && (Number(appliedCoupon?.discountPercentage || discountPercent) > 0)
+                                  ? `${appliedCoupon?.discountPercentage || discountPercent}% OFF`
+                                  : appliedCoupon?.discountLabel && !appliedCoupon.discountLabel.includes("0%")
+                                  ? appliedCoupon.discountLabel
+                                  : appliedCoupon?.code || `Flat ₹${discountAmount} OFF`}
+                                )
+                              </span>
                             </span>
                             <span className={styles.discountValue}>
                               -₹{discountAmount.toLocaleString("en-IN")}
@@ -2740,7 +2752,15 @@ const loadRazorpayScript = (): Promise<boolean> => {
                           <div className={styles.pricingRowDiscount}>
                             <span className={styles.discountLabel} style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                               <Tag size={13} />
-                              <span>Item-Specific Discount ({appliedCoupon?.discountPercentage ? `${appliedCoupon.discountPercentage}% OFF` : appliedCoupon?.discountLabel || `${discountPercent}% OFF`})</span>
+                              <span>
+                                Item-Specific Discount (
+                                {(appliedCoupon?.discountType === "PERCENTAGE" || (Number(appliedCoupon?.discountPercentage || 0) > 0)) && (Number(appliedCoupon?.discountPercentage || discountPercent) > 0)
+                                  ? `${appliedCoupon?.discountPercentage || discountPercent}% OFF`
+                                  : appliedCoupon?.discountLabel && !appliedCoupon.discountLabel.includes("0%")
+                                  ? appliedCoupon.discountLabel
+                                  : appliedCoupon?.code || `Flat ₹${discountAmount} OFF`}
+                                )
+                              </span>
                             </span>
                             <span className={styles.discountValue}>
                               -₹{discountAmount.toLocaleString("en-IN")}
@@ -2752,7 +2772,15 @@ const loadRazorpayScript = (): Promise<boolean> => {
                         </div>
                       ) : (
                         <div className={styles.pricingRowDiscount}>
-                          <span className={styles.discountLabel}>Promo Discount ({appliedCoupon?.discountPercentage ? `${appliedCoupon.discountPercentage}%` : appliedCoupon?.discountLabel || `${discountPercent}%`})</span>
+                          <span className={styles.discountLabel}>
+                            Promo Discount (
+                            {(appliedCoupon?.discountType === "PERCENTAGE" || (Number(appliedCoupon?.discountPercentage || 0) > 0)) && (Number(appliedCoupon?.discountPercentage || discountPercent) > 0)
+                              ? `${appliedCoupon?.discountPercentage || discountPercent}%`
+                              : appliedCoupon?.discountLabel && !appliedCoupon.discountLabel.includes("0%")
+                              ? appliedCoupon.discountLabel
+                              : appliedCoupon?.code || `Flat ₹${discountAmount} OFF`}
+                            )
+                          </span>
                           <span className={styles.discountValue}>
                             -₹{discountAmount.toLocaleString("en-IN")}
                           </span>

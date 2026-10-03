@@ -49,6 +49,24 @@ export default function ResponsiveMenuPage() {
     }
   };
 
+  const handleStockChange = async (dishId: string, newStock: number) => {
+    try {
+      setMenuItems((prev) =>
+        prev.map((item) =>
+          item.id === dishId ? { ...item, stockQuantity: newStock } : item
+        )
+      );
+
+      await fetchApi(`/api/seller/menu/${dishId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stockQuantity: newStock }),
+      });
+    } catch (err) {
+      console.error("Failed to update item stock quantity:", err);
+    }
+  };
+
   const mappedDishes: ResponsiveDishItem[] | undefined = useMemo(() => {
     if (!menuItems || menuItems.length === 0) return undefined;
     return menuItems.map((item: any) => {
@@ -104,6 +122,7 @@ export default function ResponsiveMenuPage() {
     <ResponsiveMenu
       dishes={mappedDishes}
       onToggleAvailability={handleToggleAvailability}
+      onStockChange={handleStockChange}
     />
   );
 }

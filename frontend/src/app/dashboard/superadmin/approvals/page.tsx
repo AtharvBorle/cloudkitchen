@@ -98,9 +98,6 @@ export default function SuperadminApprovals() {
                 <Link href="/dashboard/superadmin/subscriptions" style={{ padding: '10px 20px', color: 'var(--text-muted)', fontWeight: 'bold', textDecoration: 'none', whiteSpace: 'nowrap' }}>
                     Manage Subscriptions
                 </Link>
-                <Link href="/dashboard/superadmin/settings" style={{ padding: '10px 20px', color: 'var(--text-muted)', fontWeight: 'bold', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-                    System Settings
-                </Link>
             </div>
 
             {loading ? (

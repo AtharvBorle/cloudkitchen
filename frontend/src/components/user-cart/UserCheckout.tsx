@@ -24,6 +24,7 @@ import styles from "./UserCheckout.module.css";
 
 export interface UserCartItem {
   id: string;
+  foodItemId?: string;
   name: string;
   description: string;
   price: number;
@@ -67,6 +68,10 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
     minimumCartValue?: number;
     discountLabel?: string;
     calculatedDiscount?: number;
+    appliesTo?: string;
+    appliesToSellerId?: string | null;
+    appliesToProductId?: string | null;
+    [key: string]: any;
   } | null>(null);
   const appliedCouponData = appliedCoupon;
   const [isValidatingPromo, setIsValidatingPromo] = useState<boolean>(false);
@@ -251,7 +256,14 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
 
   // Auto-remove or invalidate applied coupon whenever subtotal drops below minimum required cart value or required item is removed
   React.useEffect(() => {
-    if (!appliedCoupon && !appliedPromo) return;
+    if (!appliedCoupon) {
+      if (appliedPromo) {
+        setAppliedPromo(null);
+        setDiscountPercent(0);
+        setPromoCode("");
+      }
+      return;
+    }
 
     if (cartItems.length === 0 || subtotal <= 0) {
       setAppliedCoupon(null);
@@ -402,8 +414,6 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
   };
 
   // Price Calculations
-  const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
-
   const discountAmount = React.useMemo(() => {
     if (!appliedCoupon || subtotal <= 0 || cartItems.length === 0) return 0;
     if (appliedCoupon.minimumCartValue && subtotal < appliedCoupon.minimumCartValue) return 0;
@@ -872,7 +882,13 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
                 {discountAmount > 0 && (
                   <div className={styles.pricingRow}>
                     <span className={styles.discountValue}>
-                      Discount ({appliedCoupon?.discountPercentage ? `${appliedCoupon.discountPercentage}%` : appliedCoupon?.discountLabel || `${discountPercent}%`})
+                      Discount (
+                      {(appliedCoupon?.discountType === "PERCENTAGE" || (Number(appliedCoupon?.discountPercentage || 0) > 0)) && (Number(appliedCoupon?.discountPercentage || discountPercent) > 0)
+                        ? `${appliedCoupon?.discountPercentage || discountPercent}%`
+                        : appliedCoupon?.discountLabel && !appliedCoupon.discountLabel.includes("0%")
+                        ? appliedCoupon.discountLabel
+                        : appliedCoupon?.code || `Flat ₹${discountAmount} OFF`}
+                      )
                     </span>
                     <span className={styles.discountValue}>
                       - ₹{discountAmount.toLocaleString("en-IN")}

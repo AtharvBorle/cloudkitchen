@@ -17,6 +17,7 @@ export interface SellerMapPickerProps {
   latitude: number | null;
   longitude: number | null;
   isPinned?: boolean;
+  disabled?: boolean;
   onChange: (lat: number, lng: number, formattedAddress?: string, details?: AddressDetails) => void;
 }
 

@@ -97,53 +97,90 @@ export default function AdminDeliveryPage() {
     const downloadCSV = () => {
         if (!transactions || transactions.length === 0) return;
         
-        // CSV headers
-        const headers = ["Date", "Time", "Transaction ID", "Type", "Amount (INR)", "Description", "Order ID", "Status"];
+        // Comprehensive CSV headers for Ledger
+        const headers = [
+            "Transaction ID",
+            "Date",
+            "Time",
+            "Transaction Type",
+            "Cash Flow",
+            "Amount (INR)",
+            "Order ID / Reference",
+            "Description",
+            "Delivery Agent",
+            "Status"
+        ];
         
-        // Map transactions to rows
+        // Map transactions to properly formatted rows
         const rows = transactions.map((tx: any) => {
-            const date = new Date(tx.createdAt).toLocaleDateString();
-            const time = new Date(tx.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const createdAt = tx.createdAt ? new Date(tx.createdAt) : new Date();
+            const date = createdAt.toLocaleDateString("en-IN", {
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit"
+            });
+            const time = createdAt.toLocaleTimeString("en-IN", {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: true
+            });
             
             let typeLabel = tx.type;
-            if (tx.type === 'COD_COLLECTION') typeLabel = 'Credited (COD Collect)';
-            else if (tx.type === 'SETTLEMENT') typeLabel = 'Debited (Settlement)';
-            else if (tx.type === 'ADJUSTMENT') typeLabel = 'Adjustment';
+            let cashFlow = "Neutral";
+            if (tx.type === 'COD_COLLECTION') {
+                typeLabel = 'Cash Collection (COD)';
+                cashFlow = '+ Credited (Collected from Customer)';
+            } else if (tx.type === 'SETTLEMENT') {
+                typeLabel = 'Cash Handover (Settlement)';
+                cashFlow = '- Debited (Remitted to Seller)';
+            } else if (tx.type === 'ADJUSTMENT') {
+                typeLabel = 'Ledger Adjustment';
+                cashFlow = 'Wallet Adjustment';
+            }
+
+            const cleanTxId = String(tx.id || "");
+            const cleanOrderId = tx.orderId ? String(tx.orderId) : (tx.order?.orderNumber ? `#${tx.order.orderNumber}` : "N/A");
+            const cleanDesc = String(tx.description || "").trim();
+            const cleanAmount = typeof tx.amount === "number" ? tx.amount.toFixed(2) : String(tx.amount || "0.00");
+            const cleanStatus = String(tx.status || "COMPLETED").toUpperCase();
+            const cleanAgent = selectedDp?.name || "Delivery Staff";
 
             return [
+                cleanTxId,
                 date,
                 time,
-                tx.id,
                 typeLabel,
-                tx.amount,
-                tx.description || "",
-                tx.orderId || "",
-                tx.status
+                cashFlow,
+                cleanAmount,
+                cleanOrderId,
+                cleanDesc,
+                cleanAgent,
+                cleanStatus
             ];
         });
         
-        // Construct CSV content
-        const csvContent = [
-            headers.join(","),
+        // Construct CSV content with RFC 4180 quoting and UTF-8 BOM
+        const csvRows = [
+            headers.map(h => `"${h.replace(/"/g, '""')}"`).join(","),
             ...rows.map((row: any[]) => 
-                row.map(value => {
-                    const stringVal = String(value).replace(/"/g, '""');
-                    return stringVal.includes(",") || stringVal.includes("\n") || stringVal.includes('"') 
-                        ? `"${stringVal}"` 
-                        : stringVal;
-                }).join(",")
+                row.map(value => `"${String(value ?? "").replace(/"/g, '""')}"`).join(",")
             )
-        ].join("\n");
+        ];
+        const csvContent = "\uFEFF" + csvRows.join("\r\n");
         
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.setAttribute("href", url);
-        link.setAttribute("download", `Transactions_${selectedDp.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
+        const safeName = (selectedDp?.name || 'delivery_staff').replace(/[^a-zA-Z0-9]/g, '_');
+        const dateStr = new Date().toISOString().split('T')[0];
+        link.setAttribute("download", `Transactions_${safeName}_${dateStr}.csv`);
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        URL.revokeObjectURL(url);
     };
 
     return (
