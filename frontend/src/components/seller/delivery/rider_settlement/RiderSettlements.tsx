@@ -262,25 +262,72 @@ export default function RiderSettlements({
 
   // Download CSV Handler
   const handleDownloadCsv = () => {
-    const headers = ["Type", "Description", "Amount", "Date & Time"];
-    const rows = filteredLedger.map((item) => [
-      `"${item.type.replace(/"/g, '""')}"`,
-      `"${item.description.replace(/"/g, '""')}"`,
-      `"${item.amount.replace(/"/g, '""')}"`,
-      `"${item.dateTime.replace(/"/g, '""')}"`,
-    ]);
+    const headers = [
+      "Entry ID",
+      "Date",
+      "Time",
+      "Transaction Type",
+      "Cash Flow",
+      "Amount (INR)",
+      "Description / Reference",
+      "Rider Name",
+      "Rider Phone",
+      "Vehicle Number"
+    ];
 
-    const csvContent = [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+    const rows = filteredLedger.map((item, index) => {
+      let datePart = "";
+      let timePart = "";
+      if (item.dateTime) {
+        const parts = item.dateTime.split(" ");
+        if (parts.length >= 2) {
+          datePart = parts[0];
+          timePart = parts.slice(1).join(" ");
+        } else {
+          datePart = item.dateTime;
+          timePart = "";
+        }
+      }
+
+      let cashFlow = item.isPositive ? "+ Inward (Collected from Customer)" : "- Outward (Remitted to Seller)";
+      if (item.type?.toLowerCase() === "adjustment") cashFlow = "Balance Adjustment";
+
+      const cleanId = item.id || `TX-${index + 1001}`;
+      const cleanType = item.type || "Transaction";
+      const cleanAmount = String(item.amount || "0").replace(/[^0-9.]/g, "");
+      const cleanDesc = (item.description || "").trim();
+      const riderName = riderProfile?.name || "Rider";
+      const riderPhone = riderProfile?.phone || "N/A";
+      const vehicleNumber = riderProfile?.vehicleNumber || "N/A";
+
+      return [
+        `"${cleanId.replace(/"/g, '""')}"`,
+        `"${datePart.replace(/"/g, '""')}"`,
+        `"${timePart.replace(/"/g, '""')}"`,
+        `"${cleanType.replace(/"/g, '""')}"`,
+        `"${cashFlow.replace(/"/g, '""')}"`,
+        `"${cleanAmount}"`,
+        `"${cleanDesc.replace(/"/g, '""')}"`,
+        `"${riderName.replace(/"/g, '""')}"`,
+        `"${riderPhone.replace(/"/g, '""')}"`,
+        `"${vehicleNumber.replace(/"/g, '""')}"`,
+      ];
+    });
+
+    const csvContent = "\uFEFF" + [
+      headers.map(h => `"${h.replace(/"/g, '""')}"`).join(","),
+      ...rows.map((e) => e.join(","))
+    ].join("\r\n");
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
+    const safeRiderName = (riderProfile?.name || "rider").toLowerCase().replace(/[^a-z0-9]/g, "_");
+    const dateStr = new Date().toISOString().slice(0, 10);
     link.setAttribute(
       "download",
-      `rider_ledger_${riderProfile.name.toLowerCase().replace(/\s+/g, "_")}_${new Date()
-        .toISOString()
-        .slice(0, 10)}.csv`
+      `rider_ledger_${safeRiderName}_${dateStr}.csv`
     );
     document.body.appendChild(link);
     link.click();

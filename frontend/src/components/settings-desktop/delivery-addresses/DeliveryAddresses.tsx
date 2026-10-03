@@ -883,19 +883,20 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
               {/* Interactive House Map Picker */}
               <div className={styles.inputGroup}>
                 <label className={styles.inputLabel}>
-                  Pin Exact Location on Map (Drag pin or click on map)
+                  Pin Exact Location on Map (Search location or drag pin)
                 </label>
                 <div className={styles.mapPickerWrapper}>
                   <HouseMapPicker
+                    label=""
                     latitude={latitude}
                     longitude={longitude}
                     onChange={(newLat, newLng, details) => {
                       setLatitude(newLat);
                       setLongitude(newLng);
-                      if (details?.pincode && !pincode) {
-                        handleFieldChange("pincode", details.pincode);
+                      if (details?.pincode) {
+                        handleFieldChange("pincode", details.pincode.replace(/\D/g, "").slice(0, 6));
                       }
-                      if (details?.street && !street) {
+                      if (details?.street) {
                         handleFieldChange("street", details.street);
                       }
                       if (details?.landmark && !landmark) {

@@ -2376,111 +2376,18 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
         {/* Tab 4: Preferences */}
         {activeTab === "Preferences" && (
           <div className={styles.mainGrid}>
-            {/* Left Column: Localization */}
-            <div className={styles.leftColumn}>
-              {/* Localization */}
+            <div className={styles.leftColumn} style={{ gridColumn: "1 / -1", maxWidth: "800px" }}>
               <div className={styles.card}>
-                <h2 className={styles.cardTitle}>Localization</h2>
-
-                {/* Default Interface Language (Commented out for now) */}
-                {/*
-                <div className={styles.fieldGroup}>
-                  <label className={styles.label}>Default Interface Language</label>
-                  <div className={styles.selectWrapper}>
-                    <select
-                      name="language"
-                      value={formData.language}
-                      onChange={handleInputChange}
-                      className={styles.select}
-                    >
-                      <option value="English (United States)">English (United States)</option>
-                      <option value="English (India)">English (India)</option>
-                      <option value="Hindi">Hindi</option>
-                      <option value="Marathi">Marathi</option>
-                    </select>
-                    <ChevronDown size={18} className={styles.selectChevron} />
-                  </div>
-                </div>
-                */}
-
-                <div className={styles.fieldGroup}>
-                  <label className={styles.label}>Console Timezone</label>
-                  <div className={styles.selectWrapper}>
-                    <select
-                      name="timezone"
-                      value={formData.timezone}
-                      onChange={handleInputChange}
-                      className={styles.select}
-                    >
-                      <option value="Asia/Kolkata (GMT+05:30)">Asia/Kolkata (GMT+05:30)</option>
-                      <option value="Asia/Dubai (GMT+04:00)">Asia/Dubai (GMT+04:00)</option>
-                      <option value="UTC (GMT+00:00)">UTC (GMT+00:00)</option>
-                    </select>
-                    <ChevronDown size={18} className={styles.selectChevron} />
-                  </div>
-                </div>
-
-                <div className={styles.fieldGroup}>
-                  <label className={styles.label}>Primary Business Currency</label>
-                  <div className={styles.selectWrapper}>
-                    <select
-                      name="currency"
-                      value={formData.currency}
-                      onChange={handleInputChange}
-                      className={styles.select}
-                    >
-                      <option value="INR (₹) - Indian Rupee">INR (₹) - Indian Rupee</option>
-                      <option value="USD ($) - US Dollar">USD ($) - US Dollar</option>
-                      <option value="AED (AED) - UAE Dirham">AED (AED) - UAE Dirham</option>
-                    </select>
-                    <ChevronDown size={18} className={styles.selectChevron} />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column: Privacy & Data Options */}
-            <div className={styles.rightColumn}>
-              <div className={styles.card}>
-                <h2 className={styles.cardTitle}>Privacy &amp; Data Options</h2>
-
-                <div className={styles.notificationGroup}>
-                  <div className={styles.notificationRow}>
-                    <div className={styles.notificationInfo}>
-                      <span className={styles.notificationLabel}>Share Anonymized Usage Data</span>
-                      <span className={styles.notificationDesc}>Help us build better cloud operations by sharing aggregated diagnostic reports.</span>
-                    </div>
-                    <label className={styles.toggleSwitch}>
-                      <input
-                        type="checkbox"
-                        checked={formData.shareAnonymizedData}
-                        onChange={() => handleCheckboxToggle("shareAnonymizedData")}
-                      />
-                      <span className={styles.toggleSlider} />
-                    </label>
-                  </div>
-
-                  <div className={styles.notificationRow}>
-                    <div className={styles.notificationInfo}>
-                      <span className={styles.notificationLabel}>Auto-Delete Session History</span>
-                      <span className={styles.notificationDesc}>Remove logs and activity metrics older than 30 days automatically.</span>
-                    </div>
-                    <label className={styles.toggleSwitch}>
-                      <input
-                        type="checkbox"
-                        checked={formData.autoDeleteSessionHistory}
-                        onChange={() => handleCheckboxToggle("autoDeleteSessionHistory")}
-                      />
-                      <span className={styles.toggleSlider} />
-                    </label>
-                  </div>
-                </div>
+                <h2 className={styles.cardTitle}>Data &amp; Account Management</h2>
 
                 {/* Backup and Archival */}
-                <div className={styles.backupSection}>
-                  <span className={styles.label} style={{ display: "block", marginBottom: "10px", fontSize: "13px", fontWeight: 700 }}>
+                <div className={styles.backupSection} style={{ marginTop: 0, paddingTop: 0, borderTop: "none" }}>
+                  <span className={styles.label} style={{ display: "block", marginBottom: "8px", fontSize: "13px", fontWeight: 700 }}>
                     Backup and Archival
                   </span>
+                  <p style={{ fontSize: "13px", color: "#64748B", marginBottom: "16px", lineHeight: "1.5" }}>
+                    Export your complete store profile, menu catalog, operational schedules, and metrics, or permanently delete your seller account.
+                  </p>
                   <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
                     <button
                       type="button"

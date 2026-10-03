@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Camera, ChevronDown, Trash2, Plus, Bell } from "lucide-react";
+import { ChevronLeft, Camera, ChevronDown, Trash2, Plus, Minus, Bell } from "lucide-react";
 import styles from "./ResponsiveMenuItems.module.css";
 
 export interface ResponsiveVariantItem {
@@ -693,30 +693,76 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
             </div>
 
             <div className={styles.stockControls}>
-              <input
-                type="number"
-                min="0"
-                step="1"
-                className={styles.stockQtyInput}
-                value={stockQty}
-                onChange={(e) => {
-                  const raw = e.target.value;
-                  if (raw === "") {
-                    setStockQty("");
-                    return;
-                  }
-                  const clean = raw.replace(/[^\d]/g, "");
-                  const num = parseInt(clean, 10);
-                  setStockQty(isNaN(num) ? "0" : String(Math.max(0, num)));
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "-" || e.key === "e" || e.key === "E" || e.key === "+" || e.key === ".") {
-                    e.preventDefault();
-                  }
-                }}
-                placeholder="0"
-                aria-label="Stock quantity"
-              />
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <button
+                  type="button"
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    borderRadius: "8px",
+                    border: "1px solid #E2E8F0",
+                    backgroundColor: "#F8FAFC",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    color: "#475569"
+                  }}
+                  onClick={() => {
+                    const current = parseInt(String(stockQty), 10) || 0;
+                    setStockQty(Math.max(0, current - 1));
+                  }}
+                  aria-label="Decrease stock"
+                >
+                  <Minus size={14} />
+                </button>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  className={styles.stockQtyInput}
+                  value={stockQty}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    if (raw === "") {
+                      setStockQty("");
+                      return;
+                    }
+                    const clean = raw.replace(/[^\d]/g, "");
+                    const num = parseInt(clean, 10);
+                    setStockQty(isNaN(num) ? "0" : String(Math.max(0, num)));
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "-" || e.key === "e" || e.key === "E" || e.key === "+" || e.key === ".") {
+                      e.preventDefault();
+                    }
+                  }}
+                  placeholder="0"
+                  aria-label="Stock quantity"
+                />
+                <button
+                  type="button"
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    borderRadius: "8px",
+                    border: "1px solid #E2E8F0",
+                    backgroundColor: "#F8FAFC",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    color: "#475569"
+                  }}
+                  onClick={() => {
+                    const current = parseInt(String(stockQty), 10) || 0;
+                    setStockQty(current + 1);
+                  }}
+                  aria-label="Increase stock"
+                >
+                  <Plus size={14} />
+                </button>
+              </div>
               <button
                 type="button"
                 role="switch"

@@ -611,10 +611,11 @@ export const LocationModal: React.FC = () => {
                     setPincodeInput(p);
                   }
                 }
-                if (details?.street || details?.suburb || details?.locality) {
-                  const loc = details.street || details.suburb || details.locality || "";
-                  if (loc) setResolvedLocality(loc);
-                }
+                const street = details?.street;
+                const suburb = (details as any)?.suburb;
+                const locality = (details as any)?.locality || (details as any)?.city;
+                const loc = street || suburb || locality || "";
+                if (loc) setResolvedLocality(loc);
               }}
             />
 

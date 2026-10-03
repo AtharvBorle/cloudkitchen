@@ -202,6 +202,7 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
 
             setOrder({
               id: target.id,
+              orderId: target.orderId || target.id,
               createdAt: target.createdAt,
               placedTime: formatOrderDateTime(target.createdAt),
               cancelledTime: formatOrderDateTime(target.updatedAt || target.createdAt),

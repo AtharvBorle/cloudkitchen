@@ -959,7 +959,7 @@ export default function MyOrdersView() {
       setCancelModalOrder(null);
       setCancelError(null);
       showToast("Your order has been cancelled successfully.");
-      fetchOrders();
+      loadData();
     } catch (err: any) {
       console.error("Cancel order error:", err);
       throw err;

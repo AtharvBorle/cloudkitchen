@@ -326,8 +326,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             };
 
             const existing = basePrev.find(i => i.id === finalCartId);
-            const rawStock = item.maxStock !== undefined ? item.maxStock : (item.stockQuantity !== undefined ? item.stockQuantity : (existing?.maxStock !== undefined ? existing.maxStock : existing?.stockQuantity));
-            const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
+
+            const resolveStock = (val: any) =>
+                val !== undefined && val !== null && !isNaN(Number(val)) && Number(val) >= 0
+                    ? Number(val)
+                    : undefined;
+
+            const itemStock = resolveStock(item.maxStock) ?? resolveStock(item.stockQuantity);
+            const existingStock = resolveStock(existing?.maxStock) ?? resolveStock(existing?.stockQuantity);
+            const stockLimit = itemStock !== undefined ? itemStock : (existingStock !== undefined ? existingStock : -1);
             const itemImage = item.imageUrl || item.image || existing?.imageUrl || existing?.image;
 
             // Out-of-stock validation
@@ -439,8 +446,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
                 const existingIndex = updatedList.findIndex(i => i.id === finalCartId);
                 const existing = existingIndex !== -1 ? updatedList[existingIndex] : null;
-                const rawStock = item.maxStock !== undefined ? item.maxStock : (item.stockQuantity !== undefined ? item.stockQuantity : (existing?.maxStock !== undefined ? existing.maxStock : existing?.stockQuantity));
-                const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
+
+                const resolveStock = (val: any) =>
+                    val !== undefined && val !== null && !isNaN(Number(val)) && Number(val) >= 0
+                        ? Number(val)
+                        : undefined;
+
+                const itemStock = resolveStock(item.maxStock) ?? resolveStock(item.stockQuantity);
+                const existingStock = resolveStock(existing?.maxStock) ?? resolveStock(existing?.stockQuantity);
+                const stockLimit = itemStock !== undefined ? itemStock : (existingStock !== undefined ? existingStock : -1);
                 const itemImage = item.imageUrl || item.image || (existing ? (existing.imageUrl || existing.image) : undefined);
 
                 if (existingIndex !== -1 && existing) {
@@ -484,8 +498,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 return prev.filter(i => i.id !== itemId);
             }
 
-            const rawStock = existing.maxStock !== undefined ? existing.maxStock : existing.stockQuantity;
-            const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
+            const resolveStock = (val: any) =>
+                val !== undefined && val !== null && !isNaN(Number(val)) && Number(val) >= 0
+                    ? Number(val)
+                    : undefined;
+
+            const stockLimit = resolveStock(existing.maxStock) ?? resolveStock(existing.stockQuantity) ?? -1;
 
             if (stockLimit !== -1 && newQuantity > stockLimit) {
                 showToast(`We have only ${stockLimit} left in stock.`, "warning");

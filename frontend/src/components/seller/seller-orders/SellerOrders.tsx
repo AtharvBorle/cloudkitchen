@@ -422,13 +422,13 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
 
   // Calculate status counts respecting active date filter
   const counts = useMemo(() => {
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-    const startOfYesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0, 0);
-    const endOfYesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59, 999);
-    const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay(), 0, 0, 0, 0);
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+    const todayDate = new Date();
+    const startOfToday = new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate(), 0, 0, 0, 0);
+    const endOfToday = new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate(), 23, 59, 59, 999);
+    const startOfYesterday = new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate() - 1, 0, 0, 0, 0);
+    const endOfYesterday = new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate() - 1, 23, 59, 59, 999);
+    const startOfWeek = new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate() - todayDate.getDay(), 0, 0, 0, 0);
+    const startOfMonth = new Date(todayDate.getFullYear(), todayDate.getMonth(), 1, 0, 0, 0, 0);
 
     const baseList = orderList.filter((order) => {
       if (dateFilter !== "ALL") {

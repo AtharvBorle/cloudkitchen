@@ -211,6 +211,10 @@ export const UserCart: React.FC<UserCartProps> = ({
     minimumCartValue?: number;
     discountLabel?: string;
     calculatedDiscount?: number;
+    appliesTo?: string;
+    appliesToSellerId?: string | null;
+    appliesToProductId?: string | null;
+    [key: string]: any;
   } | null>(null);
   const appliedCouponData = appliedCoupon;
   const [isValidatingPromo, setIsValidatingPromo] = useState<boolean>(false);
@@ -2259,7 +2263,13 @@ export const UserCart: React.FC<UserCartProps> = ({
                           <span className={styles.discountValue} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                             <Tag size={14} />
                             <span>
-                              {couponCategoryDetails.categoryName} Category Discount ({appliedCoupon?.discountPercentage ? `${appliedCoupon.discountPercentage}% OFF` : appliedCoupon?.discountLabel || `${discountPercent}% OFF`})
+                              {couponCategoryDetails.categoryName} Category Discount (
+                              {(appliedCoupon?.discountType === "PERCENTAGE" || (Number(appliedCoupon?.discountPercentage || 0) > 0)) && (Number(appliedCoupon?.discountPercentage || discountPercent) > 0)
+                                ? `${appliedCoupon?.discountPercentage || discountPercent}% OFF`
+                                : appliedCoupon?.discountLabel && !appliedCoupon.discountLabel.includes("0%")
+                                ? appliedCoupon.discountLabel
+                                : appliedCoupon?.code || `Flat ₹${discountAmount} OFF`}
+                              )
                             </span>
                           </span>
                           <span className={styles.discountValue}>
@@ -2276,7 +2286,13 @@ export const UserCart: React.FC<UserCartProps> = ({
                           <span className={styles.discountValue} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                             <Tag size={14} />
                             <span>
-                              Item-Specific Discount ({appliedCoupon?.discountPercentage ? `${appliedCoupon.discountPercentage}% OFF` : appliedCoupon?.discountLabel || `${discountPercent}% OFF`})
+                              Item-Specific Discount (
+                              {(appliedCoupon?.discountType === "PERCENTAGE" || (Number(appliedCoupon?.discountPercentage || 0) > 0)) && (Number(appliedCoupon?.discountPercentage || discountPercent) > 0)
+                                ? `${appliedCoupon?.discountPercentage || discountPercent}% OFF`
+                                : appliedCoupon?.discountLabel && !appliedCoupon.discountLabel.includes("0%")
+                                ? appliedCoupon.discountLabel
+                                : appliedCoupon?.code || `Flat ₹${discountAmount} OFF`}
+                              )
                             </span>
                           </span>
                           <span className={styles.discountValue}>
@@ -2290,7 +2306,13 @@ export const UserCart: React.FC<UserCartProps> = ({
                     ) : (
                       <div className={styles.pricingRow}>
                         <span className={styles.discountValue}>
-                          Discount ({appliedCoupon?.discountPercentage ? `${appliedCoupon.discountPercentage}%` : appliedCoupon?.discountLabel || `${discountPercent}%`})
+                          Discount (
+                          {(appliedCoupon?.discountType === "PERCENTAGE" || (Number(appliedCoupon?.discountPercentage || 0) > 0)) && (Number(appliedCoupon?.discountPercentage || discountPercent) > 0)
+                            ? `${appliedCoupon?.discountPercentage || discountPercent}%`
+                            : appliedCoupon?.discountLabel && !appliedCoupon.discountLabel.includes("0%")
+                            ? appliedCoupon.discountLabel
+                            : appliedCoupon?.code || `Flat ₹${discountAmount} OFF`}
+                          )
                         </span>
                         <span className={styles.discountValue}>
                           - ₹{discountAmount.toLocaleString("en-IN")}
