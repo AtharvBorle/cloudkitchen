@@ -579,8 +579,8 @@ export const addServedPincode = async (req: Request) => {
     const body = await req.json();
     const { pincode, name } = body;
 
-    if (!pincode || !name) {
-        throw new ApiError("Pincode and Place Name are required", 400);
+    if (!pincode || !name || !name.toString().trim()) {
+        throw new ApiError("Address is required.", 400);
     }
 
     const cleanedPincode = pincode.toString().trim();
@@ -600,6 +600,14 @@ export const addServedPincode = async (req: Request) => {
             where: { id: existing.id },
             data: { name: cleanedName }
         });
+
+        try {
+            revalidateTag("explore", {});
+            revalidateTag("public-explore-data", {});
+            revalidateTag("categories", {});
+            revalidateTag("public-categories", {});
+        } catch (e) {}
+
         return { pincode: updated };
     }
 
@@ -610,6 +618,13 @@ export const addServedPincode = async (req: Request) => {
             name: cleanedName
         }
     });
+
+    try {
+        revalidateTag("explore", {});
+        revalidateTag("public-explore-data", {});
+        revalidateTag("categories", {});
+        revalidateTag("public-categories", {});
+    } catch (e) {}
 
     return { pincode: created };
 };
@@ -636,6 +651,13 @@ export const deleteServedPincode = async (id: string) => {
     await db.servedPincode.delete({
         where: { id }
     });
+
+    try {
+        revalidateTag("explore", {});
+        revalidateTag("public-explore-data", {});
+        revalidateTag("categories", {});
+        revalidateTag("public-categories", {});
+    } catch (e) {}
 
     return null;
 };

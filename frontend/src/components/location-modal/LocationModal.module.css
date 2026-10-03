@@ -310,6 +310,99 @@
   color: #ffffff;
 }
 
+/* Map Pin Section */
+.mapPinSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background-color: #f8fafc;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1.5px solid #e2e8f0;
+}
+
+.mapPinHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mapPinTitle {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mapPinSub {
+  font-size: 0.76rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.35;
+}
+
+.mapPinInfoCard {
+  background-color: #ffffff;
+  border-radius: 12px;
+  padding: 10px 14px;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mapPinInfoRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: #334155;
+}
+
+.mapPinInfoLabel {
+  font-weight: 600;
+  color: #64748b;
+}
+
+.mapPinInfoVal {
+  font-weight: 700;
+  color: #0f172a;
+  text-align: right;
+}
+
+.confirmPinBtn {
+  width: 100%;
+  height: 44px;
+  background-color: #ff6b00;
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  box-shadow: 0 4px 12px rgba(255, 107, 0, 0.2);
+}
+
+.confirmPinBtn:hover {
+  background-color: #e05d00;
+  box-shadow: 0 6px 16px rgba(255, 107, 0, 0.3);
+  transform: translateY(-1px);
+}
+
+.confirmPinBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* Divider */
 .divider {
   height: 1px;

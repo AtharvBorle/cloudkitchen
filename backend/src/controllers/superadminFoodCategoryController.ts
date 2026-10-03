@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { uploadImage } from "@/lib/upload";
+import { revalidateTag } from "next/cache";
 
 export const getFoodCategories = async () => {
     const session = await getAuthSession();
@@ -95,6 +96,13 @@ export const createFoodCategory = async (req: Request) => {
         }
     });
 
+    try {
+        revalidateTag("categories", {});
+        revalidateTag("public-categories", {});
+        revalidateTag("explore", {});
+        revalidateTag("public-explore-data", {});
+    } catch (e) {}
+
     return { foodCategory };
 };
 
@@ -114,6 +122,13 @@ export const deleteFoodCategory = async (id: string) => {
     await db.foodCategory.delete({
         where: { id }
     });
+
+    try {
+        revalidateTag("categories", {});
+        revalidateTag("public-categories", {});
+        revalidateTag("explore", {});
+        revalidateTag("public-explore-data", {});
+    } catch (e) {}
 
     return { success: true };
 };
@@ -168,6 +183,13 @@ export const createFoodSubCategory = async (req: Request) => {
         }
     });
 
+    try {
+        revalidateTag("categories", {});
+        revalidateTag("public-categories", {});
+        revalidateTag("explore", {});
+        revalidateTag("public-explore-data", {});
+    } catch (e) {}
+
     return { subCategory };
 };
 
@@ -187,6 +209,13 @@ export const deleteFoodSubCategory = async (id: string) => {
     await db.foodSubCategory.delete({
         where: { id }
     });
+
+    try {
+        revalidateTag("categories", {});
+        revalidateTag("public-categories", {});
+        revalidateTag("explore", {});
+        revalidateTag("public-explore-data", {});
+    } catch (e) {}
 
     return { success: true };
 };
@@ -236,6 +265,13 @@ export const updateFoodCategory = async (id: string, req: Request) => {
         }
     });
 
+    try {
+        revalidateTag("categories", {});
+        revalidateTag("public-categories", {});
+        revalidateTag("explore", {});
+        revalidateTag("public-explore-data", {});
+    } catch (e) {}
+
     return { foodCategory: updated };
 };
 
@@ -271,6 +307,13 @@ export const updateFoodSubCategory = async (id: string, req: Request) => {
         where: { id },
         data: dataToUpdate
     });
+
+    try {
+        revalidateTag("categories", {});
+        revalidateTag("public-categories", {});
+        revalidateTag("explore", {});
+        revalidateTag("public-explore-data", {});
+    } catch (e) {}
 
     return { subCategory: updated };
 };

@@ -43,7 +43,12 @@ export const createCategory = async (req: Request) => {
         data: { name, type }
     });
 
-    revalidateTag("categories", {});
+    try {
+        revalidateTag("categories", {});
+        revalidateTag("public-categories", {});
+        revalidateTag("explore", {});
+        revalidateTag("public-explore-data", {});
+    } catch (e) {}
 
     return { category };
 };

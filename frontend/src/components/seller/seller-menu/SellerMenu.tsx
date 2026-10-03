@@ -249,7 +249,7 @@ export default function SellerMenu({
     setPincodeSuccess("");
 
     const cleanPin = newPincode.trim();
-    const cleanName = newPlaceName.trim() || `Area ${cleanPin}`;
+    const cleanName = newPlaceName.trim();
 
     if (!cleanPin) {
       setPincodeError("Please enter a 6-digit pincode.");
@@ -258,6 +258,11 @@ export default function SellerMenu({
 
     if (!/^\d{6}$/.test(cleanPin)) {
       setPincodeError("Please enter a valid 6-digit numerical pincode (e.g., 411051).");
+      return;
+    }
+
+    if (!cleanName) {
+      setPincodeError("Address is required.");
       return;
     }
 
@@ -287,10 +292,7 @@ export default function SellerMenu({
       setPincodeSuccess(`Pincode ${cleanPin} (${cleanName}) added successfully!`);
     } catch (err: any) {
       console.error("Failed to add pincode:", err);
-      setServedPincodes((prev) => [...prev, { id: `pin-${Date.now()}`, pincode: cleanPin, name: cleanName }]);
-      setNewPincode("");
-      setNewPlaceName("");
-      setPincodeSuccess(`Pincode ${cleanPin} added.`);
+      setPincodeError(err.message || "Failed to add pincode.");
     } finally {
       setPincodeLoading(false);
     }
@@ -330,10 +332,15 @@ export default function SellerMenu({
 
   const handleSaveEdit = async (id: string) => {
     const cleanPin = editPincodeValue.trim();
-    const cleanName = editPlaceNameValue.trim() || `Area ${cleanPin}`;
+    const cleanName = editPlaceNameValue.trim();
 
     if (!cleanPin || !/^\d{6}$/.test(cleanPin)) {
       setPincodeError("Please enter a valid 6-digit pincode.");
+      return;
+    }
+
+    if (!cleanName) {
+      setPincodeError("Address is required.");
       return;
     }
 
@@ -355,12 +362,9 @@ export default function SellerMenu({
       );
       setEditingPincodeId(null);
       setPincodeSuccess(`Pincode updated to ${cleanPin} (${cleanName})!`);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to update pincode:", err);
-      setServedPincodes((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, pincode: cleanPin, name: cleanName } : p))
-      );
-      setEditingPincodeId(null);
+      setPincodeError(err.message || "Failed to update pincode.");
     } finally {
       setPincodeLoading(false);
     }
@@ -962,7 +966,7 @@ export default function SellerMenu({
                     marginBottom: "8px",
                   }}
                 >
-                  Add New Delivery Pincode
+                  Add New Delivery Pincode &amp; Address <span style={{ color: "#EA580C" }}>*</span>
                 </label>
                 <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
                   <input
@@ -970,7 +974,10 @@ export default function SellerMenu({
                     maxLength={6}
                     placeholder="Pincode (e.g. 411051)"
                     value={newPincode}
-                    onChange={(e) => setNewPincode(e.target.value.replace(/\D/g, ""))}
+                    onChange={(e) => {
+                      setNewPincode(e.target.value.replace(/\D/g, ""));
+                      if (pincodeError) setPincodeError("");
+                    }}
                     style={{
                       flex: "1 1 140px",
                       padding: "9px 12px",
@@ -984,9 +991,12 @@ export default function SellerMenu({
                   />
                   <input
                     type="text"
-                    placeholder="Area Name (e.g. Kothrud, Pune)"
+                    placeholder="Address / Area Name * (e.g. Kothrud, Pune)"
                     value={newPlaceName}
-                    onChange={(e) => setNewPlaceName(e.target.value)}
+                    onChange={(e) => {
+                      setNewPlaceName(e.target.value);
+                      if (pincodeError) setPincodeError("");
+                    }}
                     style={{
                       flex: "2 1 180px",
                       padding: "9px 12px",
@@ -1001,21 +1011,19 @@ export default function SellerMenu({
                   <button
                     type="button"
                     onClick={() => handleAddPincode()}
-                    disabled={pincodeLoading || !newPincode.trim()}
+                    disabled={pincodeLoading}
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
                       gap: "6px",
-                      backgroundColor:
-                        pincodeLoading || !newPincode.trim() ? "#CBD5E1" : "#EA580C",
+                      backgroundColor: pincodeLoading ? "#CBD5E1" : "#EA580C",
                       color: "#FFFFFF",
                       border: "none",
                       padding: "9px 16px",
                       borderRadius: "8px",
                       fontSize: "13px",
                       fontWeight: 600,
-                      cursor:
-                        pincodeLoading || !newPincode.trim() ? "not-allowed" : "pointer",
+                      cursor: pincodeLoading ? "not-allowed" : "pointer",
                       transition: "background 0.2s ease",
                     }}
                   >
@@ -1139,8 +1147,11 @@ export default function SellerMenu({
                             <input
                               type="text"
                               value={editPlaceNameValue}
-                              onChange={(e) => setEditPlaceNameValue(e.target.value)}
-                              placeholder="Area Name"
+                              onChange={(e) => {
+                                setEditPlaceNameValue(e.target.value);
+                                if (pincodeError) setPincodeError("");
+                              }}
+                              placeholder="Address / Area Name *"
                               style={{
                                 flex: 1,
                                 minWidth: "120px",

@@ -364,17 +364,52 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           const rawName = String(fc.name).trim();
           const lower = rawName.toLowerCase();
           const cleanKey = lower.replace(/[\s\-_]+/g, "");
-          if (!lower || lower === "food" || lower === "rooms") return;
+          if (!lower) return;
           const displayName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
           const isMismatchedImg = fc.imageUrl && String(fc.imageUrl).includes("zwy6klrcbxepkcjr1big");
           const customFallback = getCustomCategoryIcon(cleanKey, rawName);
 
+          const dynamicImage =
+            fc.imageUrl && !isMismatchedImg
+              ? String(fc.imageUrl).trim()
+              : fc.image && !isMismatchedImg
+              ? String(fc.image).trim()
+              : null;
+
+          // Special case: Food
+          if (lower === "food") {
+            const existingFood = categoryMap.get("food");
+            if (dynamicImage && existingFood) {
+              categoryMap.set("food", {
+                ...existingFood,
+                id: fc.id || existingFood.id,
+                image: dynamicImage,
+              });
+            }
+            return;
+          }
+
+          // Special case: Rooms
+          if (lower === "rooms" || lower === "room") {
+            const existingRooms = categoryMap.get("rooms");
+            categoryMap.set("rooms", {
+              id: fc.id || existingRooms?.id || "rooms",
+              name: "Rooms",
+              image: dynamicImage || existingRooms?.image || "/images/categories/cat-rooms.png",
+              emoji: "🛏️",
+              route: "/room-booking",
+            });
+            return;
+          }
+
+          // Dynamic image takes priority over static hardcoded fallback
           const mappedImage =
-            isMismatchedImg
+            dynamicImage ||
+            (isMismatchedImg
               ? "/images/categories/cat-meal.png"
               : CATEGORY_IMAGE_MAP[lower] ||
                 CATEGORY_IMAGE_MAP[cleanKey] ||
-                customFallback;
+                customFallback);
 
           const existing = categoryMap.get(lower);
 
@@ -386,12 +421,12 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
               emoji: getCustomCategoryEmoji(cleanKey),
               route: "/food-explore?category=" + encodeURIComponent(lower),
             });
-          } else if (fc.imageUrl && !isMismatchedImg && (!existing.image || existing.image === "/images/categories/cat-food.png")) {
+          } else {
             categoryMap.set(lower, {
               ...existing,
               id: fc.id || existing.id,
               name: displayName,
-              image: mappedImage,
+              image: dynamicImage || existing.image || mappedImage,
               route: existing.route || `/food-explore?category=${encodeURIComponent(lower)}`,
             });
           }
@@ -399,6 +434,9 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
 
         if (exploreRes?.foodCategories && Array.isArray(exploreRes.foodCategories) && exploreRes.foodCategories.length > 0) {
           exploreRes.foodCategories.forEach(processCatEntry);
+        }
+        if (categoriesRes?.foodCategories && Array.isArray(categoriesRes.foodCategories) && categoriesRes.foodCategories.length > 0) {
+          categoriesRes.foodCategories.forEach(processCatEntry);
         }
         if (categoriesRes?.categories && Array.isArray(categoriesRes.categories) && categoriesRes.categories.length > 0) {
           categoriesRes.categories.forEach(processCatEntry);
@@ -784,16 +822,62 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
     landmark?: string,
     sellerRadiusKm?: number | null
   ) => {
-    // 1. If coordinates exist on both sides, strictly enforce dynamic radius
-    if (hasUserCoords && sellerLat != null && sellerLng != null && !isNaN(Number(sellerLat)) && !isNaN(Number(sellerLng))) {
-      const dist = calculateDistanceKm(activeUserLat!, activeUserLng!, Number(sellerLat), Number(sellerLng));
-      const maxRadius = sellerRadiusKm && Number(sellerRadiusKm) > 0 ? Number(sellerRadiusKm) : MAX_DELIVERY_RADIUS_KM;
+    const maxRadius =
+      sellerRadiusKm !== undefined && sellerRadiusKm !== null && Number(sellerRadiusKm) > 0
+        ? Number(sellerRadiusKm)
+        : MAX_DELIVERY_RADIUS_KM;
+
+    // 1. Resolve user coordinates: either direct GPS/pinned lat/lng OR fallback from active pincode
+    const resolvedUserLat =
+      activeUserLat !== null && !isNaN(activeUserLat)
+        ? activeUserLat
+        : activePincode
+        ? getPincodeCoordinates(activePincode)?.lat ?? null
+        : null;
+
+    const resolvedUserLng =
+      activeUserLng !== null && !isNaN(activeUserLng)
+        ? activeUserLng
+        : activePincode
+        ? getPincodeCoordinates(activePincode)?.lng ?? null
+        : null;
+
+    // 2. Resolve seller coordinates: either direct seller lat/lng OR fallback from seller pincode
+    const resolvedSellerLat =
+      sellerLat != null && !isNaN(Number(sellerLat)) && Number(sellerLat) !== 0
+        ? Number(sellerLat)
+        : sellerPin
+        ? getPincodeCoordinates(sellerPin)?.lat ?? null
+        : null;
+
+    const resolvedSellerLng =
+      sellerLng != null && !isNaN(Number(sellerLng)) && Number(sellerLng) !== 0
+        ? Number(sellerLng)
+        : sellerPin
+        ? getPincodeCoordinates(sellerPin)?.lng ?? null
+        : null;
+
+    // 3. If both user and seller coordinates are resolved, STRICTLY enforce distance <= maxRadius
+    if (
+      resolvedUserLat !== null &&
+      resolvedUserLng !== null &&
+      resolvedSellerLat !== null &&
+      resolvedSellerLng !== null
+    ) {
+      const dist = calculateDistanceKm(
+        resolvedUserLat,
+        resolvedUserLng,
+        resolvedSellerLat,
+        resolvedSellerLng
+      );
       return dist <= maxRadius;
     }
-    // 2. Fallback: Pincode serviceability match
+
+    // 4. Fallback: Pincode serviceability match
     if (activePincode) {
       return isPincodeServiced(activePincode, sellerPin, servedPins, locality, landmark);
     }
+
     return true;
   };
 
