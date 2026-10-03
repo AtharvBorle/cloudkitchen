@@ -215,9 +215,10 @@ export default function CategoryBar({
                       filter: "drop-shadow(0px 4px 11.9px rgba(0, 0, 0, 0.25))",
                     }}
                     onError={(e) => {
-                      // Fallback to emoji if image cannot be loaded
-                      const target = e.currentTarget;
-                      target.style.display = "none";
+                      const target = e.currentTarget as HTMLImageElement;
+                      if (target && target.src && !target.src.includes("/images/categories/cat-food.png")) {
+                        target.src = "/images/categories/cat-food.png";
+                      }
                     }}
                   />
                 </div>

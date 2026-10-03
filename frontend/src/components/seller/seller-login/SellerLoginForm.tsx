@@ -33,7 +33,6 @@ export const SellerLoginForm: React.FC<SellerLoginFormProps> = ({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -185,25 +184,8 @@ export const SellerLoginForm: React.FC<SellerLoginFormProps> = ({
               />
             </div>
 
-            {/* Options Row: Remember Me & Forgot Password */}
-            <div className={styles.optionsRow}>
-              <label className={styles.checkboxContainer}>
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className={styles.hiddenCheckbox}
-                />
-                <div
-                  className={`${styles.customCheckbox} ${
-                    rememberMe ? styles.checkboxChecked : ""
-                  }`}
-                >
-                  {rememberMe && <Check size={12} strokeWidth={3.5} color="#FFFFFF" />}
-                </div>
-                <span className={styles.checkboxLabel}>Remember me</span>
-              </label>
-
+            {/* Forgot Password Link */}
+            <div className={styles.optionsRow} style={{ justifyContent: "flex-end" }}>
               <Link href={forgotPasswordHref} className={styles.forgotPasswordLink}>
                 Forgot Password?
               </Link>

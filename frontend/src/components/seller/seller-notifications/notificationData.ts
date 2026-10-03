@@ -154,8 +154,8 @@ export function createSampleAlert(category: NotificationCategory): SellerNotific
         timeAgo: "Just now",
         isRead: false,
         severity: "info",
-        actionLabel: "Live Delivery Map",
-        actionHref: "/seller/delivery",
+        actionLabel: "Track Dispatch",
+        actionHref: "/seller/orders",
       };
     }
     case "bookings": {

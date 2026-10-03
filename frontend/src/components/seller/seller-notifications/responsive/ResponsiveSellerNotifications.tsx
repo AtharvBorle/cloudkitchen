@@ -359,7 +359,11 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
                     <div className={styles.cardFooter}>
                       {notif.actionHref && (
                         <Link
-                          href={notif.actionHref}
+                          href={
+                            notif.actionLabel === "Track Dispatch" && notif.actionHref === "/seller/delivery"
+                              ? "/seller/orders"
+                              : notif.actionHref
+                          }
                           className={styles.cardActionLink}
                           onClick={(e) => e.stopPropagation()}
                         >
