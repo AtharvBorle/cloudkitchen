@@ -471,28 +471,30 @@ export const ResponsiveSellerOrdersDetails: React.FC<
             </div>
           </section>
 
-          {/* 5. Bottom Action Buttons (Hidden when Order is Cancelled) */}
-          {currentStatus !== "Cancelled" && (
-            <div className={styles.bottomActions}>
-              <button
-                type="button"
-                className={styles.callRiderButton}
-                onClick={handleCallRider}
-              >
-                Call Rider
-              </button>
+          {/* 5. Bottom Action Buttons */}
+          <div className={styles.bottomActions}>
+            <button
+              type="button"
+              className={`${styles.callRiderButton} ${currentStatus === "Cancelled" ? styles.callRiderButtonDisabled : ""}`}
+              disabled={currentStatus === "Cancelled"}
+              onClick={handleCallRider}
+            >
+              Call Rider
+            </button>
 
-              <button
-                type="button"
-                className={styles.assignRiderButton}
-                onClick={() =>
-                  router.push(`/seller/orders/assign-rider?orderId=${encodeURIComponent(orderId)}`)
+            <button
+              type="button"
+              className={`${styles.assignRiderButton} ${currentStatus === "Cancelled" ? styles.assignRiderButtonDisabled : ""}`}
+              disabled={currentStatus === "Cancelled"}
+              onClick={() => {
+                if (currentStatus !== "Cancelled") {
+                  router.push(`/seller/orders/assign-rider?orderId=${encodeURIComponent(orderId)}`);
                 }
-              >
-                Assign / Reassign Rider →
-              </button>
-            </div>
-          )}
+              }}
+            >
+              Assign / Reassign Rider →
+            </button>
+          </div>
         </main>
 
         {/* Toast Notification */}

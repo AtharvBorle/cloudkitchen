@@ -523,6 +523,17 @@
   transform: scale(0.99);
 }
 
+.callRiderButton:disabled,
+.callRiderButtonDisabled {
+  background-color: #CBD5E1;
+  color: #94A3B8;
+  cursor: not-allowed;
+  box-shadow: none;
+  opacity: 0.5;
+  transform: none !important;
+  pointer-events: none;
+}
+
 .assignRiderButton {
   width: 100%;
   height: 46px;
@@ -548,6 +559,18 @@
 
 .assignRiderButton:active {
   transform: scale(0.99);
+}
+
+.assignRiderButton:disabled,
+.assignRiderButtonDisabled {
+  background-color: #F8FAFC;
+  border-color: #E2E8F0;
+  color: #94A3B8;
+  cursor: not-allowed;
+  box-shadow: none;
+  opacity: 0.5;
+  transform: none !important;
+  pointer-events: none;
 }
 
 /* Toast Notification */
