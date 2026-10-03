@@ -2218,44 +2218,6 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                 </div>
               </div>
 
-              {/* 2. Marketing & Growth Alerts */}
-              <div className={styles.card}>
-                <h2 className={styles.cardTitle} style={{ margin: "0 0 4px 0", fontSize: "16px", fontWeight: 700 }}>
-                  Marketing &amp; Growth Alerts
-                </h2>
-
-                <div className={styles.notificationGroup}>
-                  <div className={styles.notificationRow}>
-                    <div className={styles.notificationInfo}>
-                      <span className={styles.notificationLabel}>Weekly Growth Performance</span>
-                      <span className={styles.notificationDesc}>Receive analytics detailing revenue, popular items, and rider performance.</span>
-                    </div>
-                    <label className={styles.toggleSwitch}>
-                      <input
-                        type="checkbox"
-                        checked={formData.weeklyGrowthPerformance}
-                        onChange={() => handleCheckboxToggle("weeklyGrowthPerformance")}
-                      />
-                      <span className={styles.toggleSlider} />
-                    </label>
-                  </div>
-
-                  <div className={styles.notificationRow}>
-                    <div className={styles.notificationInfo}>
-                      <span className={styles.notificationLabel}>Promotions &amp; Product Beta</span>
-                      <span className={styles.notificationDesc}>Receive updates regarding new cloud kitchen features, partner promos, and discounts.</span>
-                    </div>
-                    <label className={styles.toggleSwitch}>
-                      <input
-                        type="checkbox"
-                        checked={formData.promotionsProductBeta}
-                        onChange={() => handleCheckboxToggle("promotionsProductBeta")}
-                      />
-                      <span className={styles.toggleSlider} />
-                    </label>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         )}
