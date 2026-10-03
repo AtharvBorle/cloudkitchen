@@ -1466,7 +1466,7 @@ export const UserCart: React.FC<UserCartProps> = ({
   }, [subtotal, availableOffers]);
   const totalItemsCount = cartItems.reduce((acc, item) => acc + item.qty, 0);
 
-  const handleCheckoutClick = () => {
+  const handleCheckoutClick = async () => {
     if (cartItems.length === 0 || subtotal <= 0) {
       showToast("Your cart is empty. Please add a product to the cart before placing an order.");
       return;
@@ -1480,6 +1480,32 @@ export const UserCart: React.FC<UserCartProps> = ({
       openLocationModal();
       return;
     }
+
+    // Verify all cart items against live seller menu
+    if (sellerDetails?.foodItems && Array.isArray(sellerDetails.foodItems)) {
+      const liveFoodItems = sellerDetails.foodItems;
+      for (const item of cartItems) {
+        const live = liveFoodItems.find(
+          (f: any) =>
+            f.id === item.foodItemId ||
+            f.id === item.id ||
+            (f.name && item.name && f.name.toLowerCase().trim() === item.name.toLowerCase().trim())
+        );
+
+        if (!live || live.isAvailable === false) {
+          showToast(`"${item.name}" is no longer available and has been removed by the kitchen.`, "warning");
+          syncCartWithLiveMenu();
+          return;
+        }
+
+        if (live.stockQuantity !== undefined && live.stockQuantity !== -1 && live.stockQuantity < item.qty) {
+          showToast(`Not enough stock for "${item.name}". Only ${live.stockQuantity} available.`, "warning");
+          syncCartWithLiveMenu();
+          return;
+        }
+      }
+    }
+
     if (onProceedToCheckout) {
       onProceedToCheckout();
     } else if (status === "unauthenticated") {

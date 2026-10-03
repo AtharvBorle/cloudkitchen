@@ -148,6 +148,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
         let hasAnyUpdates = false;
         const updatesMap = new Map<string, Partial<CartItem>>();
+        const removedItemNames: string[] = [];
+        const unavailableItemIds = new Set<string>();
 
         await Promise.all(
             sellerIds.map(async (sid) => {
@@ -171,7 +173,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                                     (f.name && item.name && f.name.toLowerCase().trim() === item.name.toLowerCase().trim())
                             );
 
-                            if (live) {
+                            if (!live || live.isAvailable === false) {
+                                hasAnyUpdates = true;
+                                unavailableItemIds.add(item.id);
+                                removedItemNames.push(item.name);
+                            } else {
                                 const newBasePrice = Number(live.price);
                                 const currentBasePrice = item.basePrice !== undefined ? Number(item.basePrice) : Number(item.price) || 0;
                                 const addonsSum = (item.selectedAddons || []).reduce((sum, a) => sum + (Number(a.price) || 0), 0);
@@ -204,21 +210,28 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             })
         );
 
-        if (hasAnyUpdates && updatesMap.size > 0) {
+        if (hasAnyUpdates) {
             setCartItems(prev => {
-                const updated = prev.map(item => {
-                    const patch = updatesMap.get(item.id);
-                    if (!patch) return item;
-                    return {
-                        ...item,
-                        ...patch,
-                    };
-                });
+                const updated = prev
+                    .filter(item => !unavailableItemIds.has(item.id))
+                    .map(item => {
+                        const patch = updatesMap.get(item.id);
+                        if (!patch) return item;
+                        return {
+                            ...item,
+                            ...patch,
+                        };
+                    });
                 try {
                     localStorage.setItem("kitchen_cart", JSON.stringify(updated));
                 } catch {}
                 return updated;
             });
+
+            if (removedItemNames.length > 0) {
+                const uniqueNames = Array.from(new Set(removedItemNames)).join(", ");
+                showToast(`"${uniqueNames}" is no longer available and has been removed from your cart.`, "warning");
+            }
         }
     }, [cartItems]);
 
@@ -238,7 +251,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         }
     }, []);
 
-    // Sync prices on focus, visibility change, or storage update
+    // Sync prices and availability on focus, visibility change, or interval polling
     useEffect(() => {
         const handleSync = () => {
             syncCartWithLiveMenu();
@@ -253,16 +266,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                     handleSync();
                 }
             });
-        }
 
-        return () => {
-            if (typeof window !== "undefined") {
+            // Poll every 4s when there are items in the cart to detect deletions in real-time
+            const interval = setInterval(() => {
+                if (cartItems.length > 0) {
+                    handleSync();
+                }
+            }, 4000);
+
+            return () => {
                 window.removeEventListener("focus", handleSync);
                 window.removeEventListener("seller-menu-updated", handleSync);
                 window.removeEventListener("cart-sync-requested", handleSync);
-            }
-        };
-    }, [cartItems]);
+                clearInterval(interval);
+            };
+        }
+    }, [syncCartWithLiveMenu, cartItems.length]);
 
     // Save to local storage on change
     useEffect(() => {

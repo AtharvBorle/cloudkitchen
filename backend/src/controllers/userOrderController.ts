@@ -168,7 +168,7 @@ export const initiateOrderPayment = async (req: Request) => {
         throw new ApiError("Access denied. Customer account required to place orders.", 403);
     }
 
-    const { totalAmount, sellerId, addressId, deliveryAddress, latitude, longitude, pincode } = await req.json();
+    const { totalAmount, sellerId, items, addressId, deliveryAddress, latitude, longitude, pincode } = await req.json();
     if (!totalAmount || Number(totalAmount) <= 0) {
         throw new ApiError("Invalid total amount", 400);
     }
@@ -198,6 +198,38 @@ export const initiateOrderPayment = async (req: Request) => {
                 longitude,
                 pincode,
             });
+        }
+    }
+
+    // Validate cart items availability and stock before initiating payment
+    if (Array.isArray(items) && items.length > 0) {
+        const aggregatedQuantities = new Map<string, { quantity: number; name: string }>();
+        for (const cartItem of items) {
+            const foodItemId = cartItem.foodItemId || (typeof cartItem.id === "string" && cartItem.id.includes("_") ? cartItem.id.split("_")[0] : cartItem.id);
+            if (!foodItemId) continue;
+            const current = aggregatedQuantities.get(foodItemId) || { quantity: 0, name: cartItem.name || "Item" };
+            current.quantity += (cartItem.quantity || 1);
+            aggregatedQuantities.set(foodItemId, current);
+        }
+
+        for (const [foodItemId, { quantity, name }] of aggregatedQuantities.entries()) {
+            const foodItem = await db.foodItem.findUnique({ where: { id: foodItemId } }).catch(() => null);
+
+            if (!foodItem) {
+                throw new ApiError(`"${name}" is no longer available or has been removed by the kitchen. Please update your cart.`, 400);
+            }
+
+            if (seller && foodItem.sellerId !== seller.id && foodItem.sellerId !== seller.userId) {
+                throw new ApiError(`"${name}" belongs to a different kitchen. Please update your cart.`, 400);
+            }
+
+            if (!foodItem.isAvailable) {
+                throw new ApiError(`"${name}" is currently unavailable. Please update your cart.`, 400);
+            }
+
+            if (foodItem.stockQuantity !== -1 && foodItem.stockQuantity < quantity) {
+                throw new ApiError(`Not enough stock for "${name}". Only ${foodItem.stockQuantity} left.`, 400);
+            }
         }
     }
 
@@ -540,22 +572,28 @@ export const createOrder = async (req: Request) => {
     for (const [foodItemId, { quantity, name }] of aggregatedQuantities.entries()) {
         const foodItem = await db.foodItem.findUnique({ where: { id: foodItemId } }).catch(() => null);
 
-        if (foodItem) {
-            if (!foodItem.isAvailable) {
-                throw new ApiError(`Item ${name} is currently unavailable.`, 400);
-            }
+        if (!foodItem) {
+            throw new ApiError(`"${name}" is no longer available or has been removed by the kitchen. Please update your cart.`, 400);
+        }
 
-            if (foodItem.stockQuantity !== -1) {
-                if (foodItem.stockQuantity < quantity) {
-                    throw new ApiError(`Not enough stock for ${name}. Only ${foodItem.stockQuantity} left.`, 400);
-                }
-                const newStock = Math.max(0, foodItem.stockQuantity - quantity);
-                itemUpdates.push({
-                    id: foodItem.id,
-                    newStock,
-                    isAvailable: newStock > 0
-                });
+        if (foodItem.sellerId !== sellerProfile.id && foodItem.sellerId !== sellerProfile.userId) {
+            throw new ApiError(`"${name}" belongs to a different kitchen. Please update your cart.`, 400);
+        }
+
+        if (!foodItem.isAvailable) {
+            throw new ApiError(`"${name}" is currently unavailable. Please update your cart.`, 400);
+        }
+
+        if (foodItem.stockQuantity !== -1) {
+            if (foodItem.stockQuantity < quantity) {
+                throw new ApiError(`Not enough stock for "${name}". Only ${foodItem.stockQuantity} left.`, 400);
             }
+            const newStock = Math.max(0, foodItem.stockQuantity - quantity);
+            itemUpdates.push({
+                id: foodItem.id,
+                newStock,
+                isAvailable: newStock > 0
+            });
         }
     }
 

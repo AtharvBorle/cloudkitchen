@@ -1322,6 +1322,33 @@ const loadRazorpayScript = (): Promise<boolean> => {
       }
     }
 
+    // Validate items availability against live seller menu before proceeding
+    if (sellerDetails?.foodItems && Array.isArray(sellerDetails.foodItems)) {
+      const liveFoodItems = sellerDetails.foodItems;
+      for (const item of checkoutItems) {
+        const live = liveFoodItems.find(
+          (f: any) =>
+            f.id === item.foodItemId ||
+            f.id === item.id ||
+            (f.name && item.name && f.name.toLowerCase().trim() === item.name.toLowerCase().trim())
+        );
+
+        if (!live || live.isAvailable === false) {
+          showToast(`"${item.name}" is no longer available or has been removed by the kitchen. Please update your cart.`, "error");
+          syncCartWithLiveMenu();
+          setIsSubmitting(false);
+          return;
+        }
+
+        if (live.stockQuantity !== undefined && live.stockQuantity !== -1 && live.stockQuantity < item.qty) {
+          showToast(`Not enough stock for "${item.name}". Only ${live.stockQuantity} available.`, "error");
+          syncCartWithLiveMenu();
+          setIsSubmitting(false);
+          return;
+        }
+      }
+    }
+
     if (onPlaceOrder) {
       onPlaceOrder();
       return;
@@ -1402,6 +1429,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
           body: JSON.stringify({
             totalAmount: grandTotal,
             sellerId: sellerId || "seller",
+            items: orderItems,
             deliveryAddress: fullDeliveryAddress,
             ...locationPayload,
           }),
@@ -1417,6 +1445,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
             errMsg = "Please review your cart items and try again.";
           }
           showToast(errMsg, "error");
+          syncCartWithLiveMenu();
           setIsSubmitting(false);
           return;
         }
@@ -1642,6 +1671,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
           errorMsg = "Please review your cart items and try again.";
         }
         showToast(errorMsg, "error");
+        syncCartWithLiveMenu();
         setIsSubmitting(false);
         return;
       }
