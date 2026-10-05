@@ -119,6 +119,12 @@ export default function SuperadminSellersPage() {
     const handleUpdateSeller = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!editingSeller) return;
+
+        if (!editType.trim()) {
+            alert("Please select at least one Category Type for this seller.");
+            return;
+        }
+
         setLoading(true);
 
         try {
@@ -464,64 +470,133 @@ export default function SuperadminSellersPage() {
 
                         {/* Modal Body */}
                         <form onSubmit={handleUpdateSeller} style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
-                            {/* Row 1: Business Name & Category Type */}
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '6px', color: '#334155', fontWeight: '600' }}>
-                                        Business Name <span style={{ color: '#ef4444' }}>*</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={editBusinessName}
-                                        onChange={e => setEditBusinessName(e.target.value)}
-                                        style={{
-                                            width: '100%',
-                                            height: '44px',
-                                            padding: '0 14px',
-                                            borderRadius: '10px',
-                                            border: '1.5px solid #cbd5e1',
-                                            fontSize: '0.9rem',
-                                            color: '#0f172a',
-                                            backgroundColor: '#ffffff',
-                                            outline: 'none',
-                                            boxSizing: 'border-box',
-                                        }}
-                                        placeholder="Enter business name"
-                                        required
-                                    />
-                                </div>
+                            {/* Row 1: Business Name */}
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '6px', color: '#334155', fontWeight: '600' }}>
+                                    Business Name <span style={{ color: '#ef4444' }}>*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={editBusinessName}
+                                    onChange={e => setEditBusinessName(e.target.value)}
+                                    style={{
+                                        width: '100%',
+                                        height: '44px',
+                                        padding: '0 14px',
+                                        borderRadius: '10px',
+                                        border: '1.5px solid #cbd5e1',
+                                        fontSize: '0.9rem',
+                                        color: '#0f172a',
+                                        backgroundColor: '#ffffff',
+                                        outline: 'none',
+                                        boxSizing: 'border-box',
+                                    }}
+                                    placeholder="Enter business name"
+                                    required
+                                />
+                            </div>
 
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '6px', color: '#334155', fontWeight: '600' }}>
-                                        Category Type <span style={{ color: '#ef4444' }}>*</span>
+                            {/* Section: Category Types Multi-Select Checklist */}
+                            <div>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                    <label style={{ fontSize: '0.85rem', color: '#334155', fontWeight: '600' }}>
+                                        Category Types (Multi-Select) <span style={{ color: '#ef4444' }}>*</span>
                                     </label>
-                                    <select
-                                        value={editType}
-                                        onChange={e => setEditType(e.target.value)}
-                                        style={{
-                                            width: '100%',
-                                            height: '44px',
-                                            padding: '0 12px',
-                                            borderRadius: '10px',
-                                            border: '1.5px solid #cbd5e1',
-                                            fontSize: '0.9rem',
-                                            color: '#0f172a',
-                                            backgroundColor: '#ffffff',
-                                            outline: 'none',
-                                            appearance: 'auto',
-                                            boxSizing: 'border-box',
-                                        }}
-                                        required
-                                    >
-                                        <option value="">Select Category...</option>
-                                        {categories.map(cat => (
-                                            <option key={cat.id} value={cat.name}>{formatDisplayName(cat.name)}</option>
-                                        ))}
-                                        {editType && !categories.some(c => c.name === editType) && (
-                                            <option value={editType}>{formatDisplayName(editType)} (Legacy)</option>
-                                        )}
-                                    </select>
+                                    <span style={{
+                                        fontSize: '0.75rem',
+                                        fontWeight: '700',
+                                        color: selectedTypes.length > 0 ? '#2563eb' : '#ef4444',
+                                        backgroundColor: selectedTypes.length > 0 ? '#eff6ff' : '#fef2f2',
+                                        padding: '2px 8px',
+                                        borderRadius: '6px',
+                                        border: selectedTypes.length > 0 ? '1px solid #bfdbfe' : '1px solid #fecaca',
+                                    }}>
+                                        {selectedTypes.length} Selected
+                                    </span>
                                 </div>
+                                <div style={{
+                                    maxHeight: '160px',
+                                    overflowY: 'auto',
+                                    backgroundColor: '#f8fafc',
+                                    border: selectedTypes.length === 0 ? '1.5px solid #f87171' : '1.5px solid #cbd5e1',
+                                    borderRadius: '10px',
+                                    padding: '10px',
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                                    gap: '8px',
+                                    boxSizing: 'border-box',
+                                }}>
+                                    {categories.map(cat => {
+                                        const isChecked = selectedTypes.some(t => t.toLowerCase() === cat.name.toLowerCase());
+                                        return (
+                                            <label
+                                                key={cat.id}
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '8px',
+                                                    cursor: 'pointer',
+                                                    padding: '7px 10px',
+                                                    borderRadius: '8px',
+                                                    backgroundColor: isChecked ? '#eff6ff' : '#ffffff',
+                                                    border: isChecked ? '1.5px solid #3b82f6' : '1px solid #e2e8f0',
+                                                    transition: 'all 0.15s ease',
+                                                    userSelect: 'none',
+                                                }}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isChecked}
+                                                    onChange={() => handleToggleCategoryType(cat.name)}
+                                                    style={{
+                                                        width: '16px',
+                                                        height: '16px',
+                                                        accentColor: '#2563eb',
+                                                        cursor: 'pointer',
+                                                    }}
+                                                />
+                                                <span style={{ fontSize: '0.85rem', fontWeight: isChecked ? '700' : '500', color: isChecked ? '#1d4ed8' : '#334155' }}>
+                                                    {formatDisplayName(cat.name)}
+                                                </span>
+                                                <span style={{ fontSize: '0.72rem', color: '#94a3b8', marginLeft: 'auto' }}>
+                                                    ({cat.type})
+                                                </span>
+                                            </label>
+                                        );
+                                    })}
+                                    {/* Legacy categories */}
+                                    {selectedTypes.filter(st => !categories.some(c => c.name.toLowerCase() === st.toLowerCase())).map(legacyType => (
+                                        <label
+                                            key={legacyType}
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '8px',
+                                                cursor: 'pointer',
+                                                padding: '7px 10px',
+                                                borderRadius: '8px',
+                                                backgroundColor: '#fef3c7',
+                                                border: '1.5px solid #f59e0b',
+                                                userSelect: 'none',
+                                            }}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={true}
+                                                onChange={() => handleToggleCategoryType(legacyType)}
+                                                style={{ width: '16px', height: '16px', accentColor: '#d97706', cursor: 'pointer' }}
+                                            />
+                                            <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#b45309' }}>
+                                                {formatDisplayName(legacyType)} (Legacy)
+                                            </span>
+                                        </label>
+                                    ))}
+                                </div>
+                                {selectedTypes.length === 0 && (
+                                    <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: '#ef4444', fontWeight: '500' }}>
+                                        Please select at least one category type for this seller.
+                                    </p>
+                                )}
                             </div>
 
                             {/* Row 2: Owner Name & Phone Number */}
