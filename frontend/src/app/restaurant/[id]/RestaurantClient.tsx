@@ -444,7 +444,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
       duration: raw?.duration || "1 Week",
       period: plan.period,
       weeklyPrice: planPrice,
-      monthlyPrice: raw?.monthlyPrice || (planPrice * 4),
+      monthlyPrice: raw?.monthlyPrice || (raw?.duration && !raw.duration.toLowerCase().includes("week") ? planPrice : undefined),
       description: plan.subtitle,
       features: plan.features,
       mealTimings: raw?.mealTimings || [],
