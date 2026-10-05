@@ -1,6 +1,7 @@
 "use client";
 
 import { fetchApi } from "@/lib/fetch-api";
+import { useRoomModule } from "@/context/RoomModuleContext";
 import { useState, useMemo, useEffect } from "react";
 import {
     CheckCircle,
@@ -121,6 +122,7 @@ export const normalizeApplication = (app: any): ApplicationType => {
 };
 
 export default function RegistrationsClient({ initialApplications }: { initialApplications: ApplicationType[] }) {
+    const { isRoomEnabled } = useRoomModule();
     const [applications, setApplications] = useState<ApplicationType[]>(() =>
         (Array.isArray(initialApplications) ? initialApplications : []).map(normalizeApplication)
     );
@@ -263,38 +265,48 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
         }
     };
 
+    const visibleApplications = useMemo(() => {
+        if (isRoomEnabled) return applications;
+        return applications.filter((app) => {
+            const isProp =
+                (app.type || "").toLowerCase().includes("room") ||
+                (app.businessCategory || "") === "PROPERTY";
+            return !isProp;
+        });
+    }, [applications, isRoomEnabled]);
+
     // Partition applications
     const pendingApplications = useMemo(() => {
-        return applications.filter((app) => {
+        return visibleApplications.filter((app) => {
             const isOverallPending = app.verificationStatus === "PENDING" || app.verificationStatus === "REVISION";
             const isFoodPending = app.foodVerificationStatus === "PENDING" || app.foodVerificationStatus === "REVISION";
-            const isPropPending = app.propertyVerificationStatus === "PENDING" || app.propertyVerificationStatus === "REVISION";
+            const isPropPending = isRoomEnabled && (app.propertyVerificationStatus === "PENDING" || app.propertyVerificationStatus === "REVISION");
             return isOverallPending || isFoodPending || isPropPending;
         });
-    }, [applications]);
+    }, [visibleApplications, isRoomEnabled]);
 
     // Compute metrics
     const metrics = useMemo(() => {
-        const total = applications.length;
-        const approved = applications.filter(
-            (a) => a.verificationStatus === "APPROVED" && a.foodVerificationStatus !== "PENDING" && a.propertyVerificationStatus !== "PENDING"
+        const total = visibleApplications.length;
+        const approved = visibleApplications.filter(
+            (a) => a.verificationStatus === "APPROVED" && a.foodVerificationStatus !== "PENDING" && (!isRoomEnabled || a.propertyVerificationStatus !== "PENDING")
         ).length;
-        const rejected = applications.filter(
-            (a) => a.verificationStatus === "REJECTED" || a.foodVerificationStatus === "REJECTED" || a.propertyVerificationStatus === "REJECTED"
+        const rejected = visibleApplications.filter(
+            (a) => a.verificationStatus === "REJECTED" || a.foodVerificationStatus === "REJECTED" || (isRoomEnabled && a.propertyVerificationStatus === "REJECTED")
         ).length;
-        const revision = applications.filter(
-            (a) => a.verificationStatus === "REVISION" || a.foodVerificationStatus === "REVISION" || a.propertyVerificationStatus === "REVISION"
+        const revision = visibleApplications.filter(
+            (a) => a.verificationStatus === "REVISION" || a.foodVerificationStatus === "REVISION" || (isRoomEnabled && a.propertyVerificationStatus === "REVISION")
         ).length;
         const pending = pendingApplications.length;
 
         const approvedPct = total > 0 ? Math.round((approved / total) * 100) : 0;
 
         return { total, approved, approvedPct, rejected, revision, pending };
-    }, [applications, pendingApplications]);
+    }, [visibleApplications, pendingApplications, isRoomEnabled]);
 
     // Filter & Search Applications for History Tab
     const filteredHistoryApplications = useMemo(() => {
-        return applications.filter((app) => {
+        return visibleApplications.filter((app) => {
             // 1. Full text search
             if (searchQuery.trim()) {
                 const q = searchQuery.toLowerCase().trim();
@@ -354,8 +366,8 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                         app.verificationStatus === "APPROVED" &&
                         (app.foodVerificationStatus === "PENDING" ||
                             app.foodVerificationStatus === "REVISION" ||
-                            app.propertyVerificationStatus === "PENDING" ||
-                            app.propertyVerificationStatus === "REVISION");
+                            (isRoomEnabled && (app.propertyVerificationStatus === "PENDING" ||
+                            app.propertyVerificationStatus === "REVISION")));
                     if (!isUpgrade) return false;
                 } else if (categoryFilter === "FOOD") {
                     const isFood =
@@ -428,7 +440,7 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
             }
             return 0;
         });
-    }, [applications, searchQuery, statusFilter, categoryFilter, datePreset, startDate, endDate, sortBy]);
+    }, [visibleApplications, searchQuery, statusFilter, categoryFilter, datePreset, startDate, endDate, sortBy, isRoomEnabled]);
 
     const handleResetFilters = () => {
         setSearchQuery("");
@@ -547,8 +559,8 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                     </span>
                 ) : (app.foodVerificationStatus === "PENDING" ||
                     app.foodVerificationStatus === "REVISION" ||
-                    app.propertyVerificationStatus === "PENDING" ||
-                    app.propertyVerificationStatus === "REVISION") ? (
+                    (isRoomEnabled && (app.propertyVerificationStatus === "PENDING" ||
+                    app.propertyVerificationStatus === "REVISION"))) ? (
                     <span
                         style={{
                             fontSize: "0.75rem",
@@ -562,7 +574,7 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                         Category Upgrade (
                         {[
                             (app.foodVerificationStatus === "PENDING" || app.foodVerificationStatus === "REVISION") && "FOOD",
-                            (app.propertyVerificationStatus === "PENDING" || app.propertyVerificationStatus === "REVISION") && "PROPERTY",
+                            isRoomEnabled && (app.propertyVerificationStatus === "PENDING" || app.propertyVerificationStatus === "REVISION") && "PROPERTY",
                         ]
                             .filter(Boolean)
                             .join(" & ") || "Pending Upgrade"}
@@ -1036,7 +1048,7 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                                     <option value="NEW_REGISTRATION">New Seller Onboarding</option>
                                     <option value="UPGRADE">Category Upgrade Requests</option>
                                     <option value="FOOD">Food & Kitchen Stores</option>
-                                    <option value="PROPERTY">Rooms & Property Stays</option>
+                                    {isRoomEnabled && <option value="PROPERTY">Rooms & Property Stays</option>}
                                 </select>
                             </div>
 
@@ -1223,7 +1235,8 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                 const isFoodPending =
                     targetApp?.foodVerificationStatus === "PENDING" || targetApp?.foodVerificationStatus === "REVISION";
                 const isPropertyPending =
-                    targetApp?.propertyVerificationStatus === "PENDING" || targetApp?.propertyVerificationStatus === "REVISION";
+                    isRoomEnabled &&
+                    (targetApp?.propertyVerificationStatus === "PENDING" || targetApp?.propertyVerificationStatus === "REVISION");
                 const isCategoryUpgrade =
                     targetApp?.verificationStatus === "APPROVED" && (isFoodPending || isPropertyPending);
 
@@ -1332,7 +1345,7 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                                     </>
                                 )}
 
-                                {(!isCategoryUpgrade || isPropertyPending) && (
+                                {isRoomEnabled && (!isCategoryUpgrade || isPropertyPending) && (
                                     <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#334155" }}>
                                         <input
                                             type="checkbox"
@@ -1543,24 +1556,25 @@ function ApplicationCard({
     renderStatusBadge,
     showActions = true,
 }: ApplicationCardProps) {
+    const { isRoomEnabled } = useRoomModule();
     const kitchenImages = safeParseImages(app.kitchenImages);
     const cuisineImages = safeParseImages(app.cuisineImages);
-    const roomImages = safeParseImages(app.roomImages);
+    const roomImages = isRoomEnabled ? safeParseImages(app.roomImages) : [];
 
     const isPending =
         app.verificationStatus === "PENDING" ||
         app.verificationStatus === "REVISION" ||
         app.foodVerificationStatus === "PENDING" ||
         app.foodVerificationStatus === "REVISION" ||
-        app.propertyVerificationStatus === "PENDING" ||
-        app.propertyVerificationStatus === "REVISION";
+        (isRoomEnabled && (app.propertyVerificationStatus === "PENDING" ||
+        app.propertyVerificationStatus === "REVISION"));
 
     const isCategoryUpgrade =
         app.verificationStatus === "APPROVED" &&
         (app.foodVerificationStatus === "PENDING" ||
             app.foodVerificationStatus === "REVISION" ||
-            app.propertyVerificationStatus === "PENDING" ||
-            app.propertyVerificationStatus === "REVISION");
+            (isRoomEnabled && (app.propertyVerificationStatus === "PENDING" ||
+            app.propertyVerificationStatus === "REVISION")));
 
     return (
         <div
@@ -1826,7 +1840,9 @@ function ApplicationCard({
                                 <MapPin size={18} color="#64748B" />
                             </div>
                             <div>
-                                <p style={{ fontSize: "0.78rem", color: "#64748B", margin: 0 }}>Kitchen / Property Address</p>
+                                <p style={{ fontSize: "0.78rem", color: "#64748B", margin: 0 }}>
+                                    {isRoomEnabled ? "Kitchen / Property Address" : "Kitchen Address"}
+                                </p>
                                 <p style={{ fontWeight: "600", color: "#334155", margin: 0, fontSize: "0.92rem" }}>
                                     {app.kitchenAddress || "Not specified"}
                                 </p>
@@ -2162,7 +2178,7 @@ function ApplicationCard({
                         )}
 
                         {/* Room Photos Gallery */}
-                        {roomImages.length > 0 && (
+                        {isRoomEnabled && roomImages.length > 0 && (
                             <div style={{ marginTop: "0.5rem" }}>
                                 <h5 style={{ fontSize: "0.82rem", color: "#64748B", marginBottom: "0.4rem", fontWeight: "600" }}>
                                     Room Photos ({roomImages.length})

@@ -4,6 +4,7 @@ import { CartProvider } from '@/context/CartContext';
 import { FloatingCartBar } from '@/components/cart';
 import { Providers } from '@/components/Providers';
 import { LocationProvider } from '@/components/location-provider';
+import { RoomModuleProvider } from '@/context/RoomModuleContext';
 import ChatbotWidget from '@/components/chatbot-widget';
 import './globals.css';
 
@@ -36,13 +37,15 @@ export default function RootLayout({
     <html lang="en" className={poppins.variable} suppressHydrationWarning>
       <body className={`${inter.className} ${poppins.className}`} suppressHydrationWarning>
         <Providers>
-          <LocationProvider>
-            <CartProvider>
-              <main>{children}</main>
-              <FloatingCartBar />
-              <ChatbotWidget />
-            </CartProvider>
-          </LocationProvider>
+          <RoomModuleProvider>
+            <LocationProvider>
+              <CartProvider>
+                <main>{children}</main>
+                <FloatingCartBar />
+                <ChatbotWidget />
+              </CartProvider>
+            </LocationProvider>
+          </RoomModuleProvider>
         </Providers>
       </body>
     </html>

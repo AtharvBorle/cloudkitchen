@@ -33,6 +33,7 @@ import {
   ActiveLoginSessionsCard,
 } from "./security-settings/SellerSecuritySettings";
 import { useSellerProfile, updateCachedProfile, computeInitials } from "@/hooks/useSellerProfile";
+import { useRoomModule } from "@/context/RoomModuleContext";
 import { fetchApi } from "@/lib/fetch-api";
 import { validateEmail } from "@/lib/email-validation";
 import { validateKitchenName } from "@/lib/kitchen-validation";
@@ -216,6 +217,7 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
   onSave,
   onCancel,
 }) => {
+  const { isRoomEnabled } = useRoomModule();
   const searchParams = useSearchParams();
   const seller = useSellerProfile();
   const [activeTab, setActiveTab] = useState<SettingsTab>(() => {
@@ -2152,7 +2154,7 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
               {/* 1. Order & Booking Alerts */}
               <div className={styles.card}>
                 <h2 className={styles.cardTitle} style={{ margin: "0 0 4px 0", fontSize: "16px", fontWeight: 700 }}>
-                  Order &amp; Booking Alerts
+                  {isRoomEnabled ? "Order & Booking Alerts" : "Order Alerts"}
                 </h2>
 
                 <div className={styles.notificationGroup}>
@@ -2186,20 +2188,22 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                     </label>
                   </div>
 
-                  <div className={styles.notificationRow}>
-                    <div className={styles.notificationInfo}>
-                      <span className={styles.notificationLabel}>Room Bookings</span>
-                      <span className={styles.notificationDesc}>Alert when a customer books a cloud dining space or workspace.</span>
+                  {isRoomEnabled && (
+                    <div className={styles.notificationRow}>
+                      <div className={styles.notificationInfo}>
+                        <span className={styles.notificationLabel}>Room Bookings</span>
+                        <span className={styles.notificationDesc}>Alert when a customer books a cloud dining space or workspace.</span>
+                      </div>
+                      <label className={styles.toggleSwitch}>
+                        <input
+                          type="checkbox"
+                          checked={formData.bookingRequestAlert}
+                          onChange={() => handleCheckboxToggle("bookingRequestAlert")}
+                        />
+                        <span className={styles.toggleSlider} />
+                      </label>
                     </div>
-                    <label className={styles.toggleSwitch}>
-                      <input
-                        type="checkbox"
-                        checked={formData.bookingRequestAlert}
-                        onChange={() => handleCheckboxToggle("bookingRequestAlert")}
-                      />
-                      <span className={styles.toggleSlider} />
-                    </label>
-                  </div>
+                  )}
 
                   <div className={styles.notificationRow}>
                     <div className={styles.notificationInfo}>

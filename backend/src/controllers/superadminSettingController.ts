@@ -20,7 +20,8 @@ export const getSystemSetting = async (req: Request) => {
             SUPPORT_EMAIL: "support@neocloudkitchen.com",
             SUPPORT_PHONE: "+91 98765 43210",
             MAINTENANCE_MODE: "false",
-            AUTO_ASSIGN_DELIVERY: "true"
+            AUTO_ASSIGN_DELIVERY: "true",
+            ENABLE_ROOM_MODULE: "false"
         };
         for (const s of allSettings) {
             settingsMap[s.key] = s.value;
@@ -39,7 +40,29 @@ export const getSystemSetting = async (req: Request) => {
         return { key, value: "199" };
     }
 
+    if (!setting && key === "ENABLE_ROOM_MODULE") {
+        return { key, value: "false" };
+    }
+
     return setting || { key, value: null };
+};
+
+export const getPublicSystemSettings = async () => {
+    try {
+        const setting = await db.systemSettings.findUnique({
+            where: { key: "ENABLE_ROOM_MODULE" }
+        });
+        const isRoomEnabled = setting?.value === "true";
+        return {
+            isRoomEnabled,
+            ENABLE_ROOM_MODULE: isRoomEnabled ? "true" : "false"
+        };
+    } catch (e) {
+        return {
+            isRoomEnabled: false,
+            ENABLE_ROOM_MODULE: "false"
+        };
+    }
 };
 
 export const updateSystemSetting = async (req: Request) => {

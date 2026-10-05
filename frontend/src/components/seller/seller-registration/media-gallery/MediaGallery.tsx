@@ -8,6 +8,7 @@ import {
   saveSellerDraft,
   getSellerDraft,
 } from "@/lib/seller-registration-store";
+import { useRoomModule } from "@/context/RoomModuleContext";
 
 export interface MediaGalleryData {
   kitchenPhotos: (string | null)[];
@@ -63,10 +64,11 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
   const [dragTarget, setDragTarget] = useState<string | null>(null);
   const [hasSubmitted, setHasSubmitted] = useState(false);
 
+  const { isRoomEnabled } = useRoomModule();
   const sellerDraft = getSellerDraft();
   const sellerType = sellerDraft?.sellerType || "FOOD";
   const isFood = sellerType === "FOOD" || sellerType === "BOTH";
-  const isProperty = sellerType === "PROPERTY" || sellerType === "BOTH";
+  const isProperty = isRoomEnabled && (sellerType === "PROPERTY" || sellerType === "BOTH");
 
   const kitchenCount = kitchenPhotos.filter(Boolean).length;
   const cuisineCount = cuisinePhotos.filter(Boolean).length;

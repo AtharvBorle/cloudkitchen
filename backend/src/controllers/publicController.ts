@@ -142,7 +142,12 @@ export const getPublicExploreData = unstable_cache(
             });
         });
 
-        const availableRooms = sellers.flatMap(seller => {
+        const roomSetting = await db.systemSettings.findUnique({
+            where: { key: "ENABLE_ROOM_MODULE" }
+        });
+        const isRoomEnabled = roomSetting?.value === "true";
+
+        const availableRooms = isRoomEnabled ? sellers.flatMap(seller => {
             const hasActivePropertySub = seller.verificationStatus === "APPROVED" || seller.subscriptions.some(sub => 
                 sub.status === "ACTIVE" && 
                 (sub.validUntil === null || new Date(sub.validUntil) > now) &&
@@ -167,7 +172,7 @@ export const getPublicExploreData = unstable_cache(
                 sellerIsLocationPinned: seller.isLocationPinned,
                 sellerDeliveryRadiusKm: seller.deliveryRadiusKm ?? 5.0,
             }));
-        });
+        }) : [];
 
         return { foodItems, availableRooms, foodCategories, kitchens: activeSellersList };
     },

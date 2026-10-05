@@ -10,6 +10,7 @@ import { useCart } from "@/context/CartContext";
 import { AddToCartButton, BookRoomButton } from "@/components/cart-buttons";
 import { useLocation } from "@/components/location-provider";
 import { useSession } from "next-auth/react";
+import { useRoomModule } from "@/context/RoomModuleContext";
 import {
     calculateDistanceKm,
     MAX_DELIVERY_RADIUS_KM,
@@ -62,6 +63,7 @@ const isCurrentlyOpen = (item: any) => {
 };
 
 export default function UserDashboard() {
+    const { isRoomEnabled } = useRoomModule();
     const { addToCart, initiateRoomBooking } = useCart();
     const router = useRouter();
     const { defaultAddress, isLoading: isLocationLoading, openLocationModal } = useLocation();
@@ -402,7 +404,7 @@ export default function UserDashboard() {
                                 Delivery Location Not Selected
                             </h3>
                             <p style={{ margin: "3px 0 0 0", fontSize: "0.88rem", color: "#B45309" }}>
-                                Please select your delivery area to view cloud kitchens, fresh food, and rooms near you.
+                                Please select your delivery area to view cloud kitchens and fresh food{isRoomEnabled ? ", and rooms" : ""} near you.
                             </p>
                         </div>
                     </div>
@@ -699,10 +701,12 @@ export default function UserDashboard() {
                 </div>
             )}
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h2 style={{ fontSize: "1.5rem", fontWeight: "bold", color: "var(--text-main)" }}>Need a Place to Stay?</h2>
-                <Link href="/dashboard/user/rooms" style={{ color: 'var(--teal)', fontWeight: 'bold' }}>Browse Rooms &rarr;</Link>
-            </div>
+            {isRoomEnabled && (
+                <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                        <h2 style={{ fontSize: "1.5rem", fontWeight: "bold", color: "var(--text-main)" }}>Need a Place to Stay?</h2>
+                        <Link href="/dashboard/user/rooms" style={{ color: 'var(--teal)', fontWeight: 'bold' }}>Browse Rooms &rarr;</Link>
+                    </div>
 
             {filteredRooms.length === 0 ? (
                 <div style={{ backgroundColor: '#F8F9F9', padding: '40px 20px', textAlign: 'center', borderRadius: '12px', color: 'var(--text-muted)' }}>
@@ -762,6 +766,8 @@ export default function UserDashboard() {
                         </div>
                     ))}
                 </div>
+            )}
+                </>
             )}
 
 

@@ -5,6 +5,7 @@ import { performLogout } from "@/lib/logout";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useRoomModule } from "@/context/RoomModuleContext";
 
 export default function SuperadminLayout({
     children,
@@ -16,6 +17,7 @@ export default function SuperadminLayout({
     const pathname = usePathname();
     const [isCollapsed, setIsCollapsed] = useState(false);
     const toggleSidebar = () => setIsCollapsed(prev => !prev);
+    const { isRoomEnabled, setRoomEnabled, isLoading: isToggleLoading } = useRoomModule();
 
     useEffect(() => {
         if (status === "loading") return;
@@ -151,6 +153,16 @@ export default function SuperadminLayout({
                         }}>
                         Manage Refunds
                     </Link>
+                    <Link href="/dashboard/superadmin/settings"
+                        style={{
+                            padding: "var(--spacing-2) var(--spacing-3)",
+                            borderRadius: "var(--radius-md)",
+                            backgroundColor: pathname.includes("/settings") ? "var(--primary)" : "transparent",
+                            color: pathname.includes("/settings") ? "var(--text-inverse)" : "var(--text-main)",
+                            fontWeight: pathname.includes("/settings") ? "500" : "normal"
+                        }}>
+                        System Settings &amp; Modules
+                    </Link>
                 </nav>
 
                 <div style={{ padding: "var(--spacing-4)", borderTop: "1px solid var(--border)" }}>
@@ -186,7 +198,71 @@ export default function SuperadminLayout({
                             <line x1="3" y1="18" x2="21" y2="18"></line>
                         </svg>
                     </button>
-                    <h1 style={{ fontSize: "1.125rem", fontWeight: "600" }}>System Control Panel</h1>
+                    <h1 style={{ fontSize: "1.125rem", fontWeight: "600", margin: 0 }}>System Control Panel</h1>
+
+                    {/* Room Module Global Toggle Switch in Header */}
+                    <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "10px" }}>
+                        <div style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "10px",
+                            backgroundColor: isRoomEnabled ? "#F0FDF4" : "#F8FAFC",
+                            border: `1.5px solid ${isRoomEnabled ? "#86EFAC" : "#E2E8F0"}`,
+                            padding: "5px 12px",
+                            borderRadius: "9999px",
+                            transition: "all 0.2s ease",
+                            boxShadow: "0 1px 3px rgba(0,0,0,0.04)"
+                        }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                <span style={{ fontSize: "0.82rem", fontWeight: "700", color: isRoomEnabled ? "#15803D" : "#475569" }}>
+                                    Room Module:
+                                </span>
+                                <span style={{
+                                    fontSize: "0.68rem",
+                                    fontWeight: "800",
+                                    padding: "2px 6px",
+                                    borderRadius: "4px",
+                                    backgroundColor: isRoomEnabled ? "#DCFCE7" : "#E2E8F0",
+                                    color: isRoomEnabled ? "#166534" : "#64748B",
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.5px"
+                                }}>
+                                    {isRoomEnabled ? "Active" : "Disabled (Next Version)"}
+                                </span>
+                            </div>
+
+                            <button
+                                type="button"
+                                disabled={isToggleLoading}
+                                onClick={() => setRoomEnabled(!isRoomEnabled)}
+                                style={{
+                                    width: "42px",
+                                    height: "22px",
+                                    borderRadius: "11px",
+                                    backgroundColor: isRoomEnabled ? "#16A34A" : "#CBD5E1",
+                                    border: "none",
+                                    cursor: isToggleLoading ? "wait" : "pointer",
+                                    position: "relative",
+                                    transition: "background-color 0.2s ease",
+                                    padding: 0,
+                                    outline: "none"
+                                }}
+                                title={`Click to ${isRoomEnabled ? "disable" : "enable"} Room Module globally`}
+                            >
+                                <div style={{
+                                    width: "16px",
+                                    height: "16px",
+                                    borderRadius: "50%",
+                                    backgroundColor: "#FFFFFF",
+                                    position: "absolute",
+                                    top: "3px",
+                                    left: isRoomEnabled ? "23px" : "3px",
+                                    transition: "left 0.2s ease",
+                                    boxShadow: "0 1px 3px rgba(0,0,0,0.2)"
+                                }} />
+                            </button>
+                        </div>
+                    </div>
                 </header>
                 <div style={{ padding: "var(--spacing-6)", flex: 1, overflowY: "auto" }}>
                     {children}

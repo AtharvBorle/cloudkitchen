@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { X, CheckCircle2 } from "lucide-react";
 import { performLogout } from "@/lib/logout";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
+import { useRoomModule } from "@/context/RoomModuleContext";
 
 const formatDisplayName = (name: string) => {
     return name
@@ -16,6 +17,7 @@ const formatDisplayName = (name: string) => {
 };
 
 export default function SuperadminSellersPage() {
+    const { isRoomEnabled } = useRoomModule();
     const router = useRouter();
     const [categories, setCategories] = useState<any[]>([]);
     const [sellers, setSellers] = useState<any[]>([]);
@@ -258,7 +260,7 @@ export default function SuperadminSellersPage() {
                     <input type="text" value={newCatName} onChange={e => setNewCatName(e.target.value)} className="input-field" placeholder="Category Name (e.g., Bakery)" style={{ flex: 1, marginBottom: 0 }} required />
                     <select value={newCatType} onChange={e => setNewCatType(e.target.value)} className="input-field" style={{ width: '200px', marginBottom: 0, appearance: 'auto' }}>
                         <option value="FOOD">Food / Menu</option>
-                        <option value="ROOM">Room / Property</option>
+                        {isRoomEnabled && <option value="ROOM">Room / Property</option>}
                     </select>
                     <button type="submit" className="btn btn-coral" style={{ width: 'auto', padding: '14px 25px' }} disabled={loading}>
                         Add Category
@@ -266,11 +268,11 @@ export default function SuperadminSellersPage() {
                 </form>
 
                 <div style={{ marginTop: '20px' }}>
-                    {categories.length === 0 ? (
+                    {categories.filter(cat => isRoomEnabled || cat.type !== "ROOM").length === 0 ? (
                         <p style={{ color: 'var(--text-muted)' }}>No categories configured yet.</p>
                     ) : (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                            {categories.map(cat => (
+                            {categories.filter(cat => isRoomEnabled || cat.type !== "ROOM").map(cat => (
                                 <div key={cat.id} style={{ display: 'flex', alignItems: 'center', backgroundColor: '#F8F9F9', padding: '8px 15px', borderRadius: '20px', border: '1px solid #EAEAEA' }}>
                                     <span style={{ fontSize: '0.9rem', fontWeight: 'bold', marginRight: '10px' }}>
                                         {formatDisplayName(cat.name)} <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 'normal' }}>({cat.type})</span>
@@ -756,7 +758,7 @@ export default function SuperadminSellersPage() {
                                 </div>
 
                                 {/* Sub Row 2: Food & Property Verifications */}
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: isRoomEnabled ? '1fr 1fr' : '1fr', gap: '14px' }}>
                                     <div>
                                         <label style={{ display: 'block', fontSize: '0.82rem', marginBottom: '5px', color: '#475569', fontWeight: '600' }}>
                                             Food Verification
@@ -784,33 +786,35 @@ export default function SuperadminSellersPage() {
                                             <option value="REJECTED">Rejected</option>
                                         </select>
                                     </div>
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '0.82rem', marginBottom: '5px', color: '#475569', fontWeight: '600' }}>
-                                            Property Verification
-                                        </label>
-                                        <select
-                                            value={editPropertyVerificationStatus}
-                                            onChange={e => setEditPropertyVerificationStatus(e.target.value)}
-                                            style={{
-                                                width: '100%',
-                                                height: '42px',
-                                                padding: '0 10px',
-                                                borderRadius: '8px',
-                                                border: '1.5px solid #cbd5e1',
-                                                fontSize: '0.86rem',
-                                                backgroundColor: '#ffffff',
-                                                color: '#0f172a',
-                                                outline: 'none',
-                                                appearance: 'auto',
-                                                boxSizing: 'border-box',
-                                            }}
-                                        >
-                                            <option value="NONE">None (Not Registered)</option>
-                                            <option value="PENDING">Pending Approval</option>
-                                            <option value="APPROVED">Approved</option>
-                                            <option value="REJECTED">Rejected</option>
-                                        </select>
-                                    </div>
+                                    {isRoomEnabled && (
+                                        <div>
+                                            <label style={{ display: 'block', fontSize: '0.82rem', marginBottom: '5px', color: '#475569', fontWeight: '600' }}>
+                                                Property Verification
+                                            </label>
+                                            <select
+                                                value={editPropertyVerificationStatus}
+                                                onChange={e => setEditPropertyVerificationStatus(e.target.value)}
+                                                style={{
+                                                    width: '100%',
+                                                    height: '42px',
+                                                    padding: '0 10px',
+                                                    borderRadius: '8px',
+                                                    border: '1.5px solid #cbd5e1',
+                                                    fontSize: '0.86rem',
+                                                    backgroundColor: '#ffffff',
+                                                    color: '#0f172a',
+                                                    outline: 'none',
+                                                    appearance: 'auto',
+                                                    boxSizing: 'border-box',
+                                                }}
+                                            >
+                                                <option value="NONE">None (Not Registered)</option>
+                                                <option value="PENDING">Pending Approval</option>
+                                                <option value="APPROVED">Approved</option>
+                                                <option value="REJECTED">Rejected</option>
+                                            </select>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Sub Row 3: Account Status & Store Visibility */}

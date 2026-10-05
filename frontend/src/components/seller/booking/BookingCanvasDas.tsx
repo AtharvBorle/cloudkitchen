@@ -12,6 +12,8 @@ import { fetchApi } from "@/lib/fetch-api";
 import { useSellerProfile, computeInitials } from "@/hooks/useSellerProfile";
 import { Lock, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useRoomModule } from "@/context/RoomModuleContext";
 
 export interface BookingCanvasDasProps {
   topbarTitle?: string;
@@ -46,6 +48,15 @@ export default function BookingCanvasDas({
   onSearch,
   onNotificationClick,
 }: BookingCanvasDasProps) {
+  const router = useRouter();
+  const { isRoomEnabled } = useRoomModule();
+
+  useEffect(() => {
+    if (!isRoomEnabled) {
+      router.replace("/seller/dashboard");
+    }
+  }, [isRoomEnabled, router]);
+
   const seller = useSellerProfile();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -164,6 +175,8 @@ export default function BookingCanvasDas({
         b.id.toLowerCase().includes(q)
     );
   }, [bookingList, searchQuery]);
+
+  if (!isRoomEnabled) return null;
 
   return (
     <div

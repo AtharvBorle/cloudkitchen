@@ -7,6 +7,7 @@ import { SellerMapPicker, AddressDetails } from "./SellerMapPicker";
 import { saveSellerDraft } from "@/lib/seller-registration-store";
 import { fetchApi } from "@/lib/fetch-api";
 import { validateKitchenName } from "@/lib/kitchen-validation";
+import { useRoomModule } from "@/context/RoomModuleContext";
 
 export interface BusinessInformationData {
   businessName: string;
@@ -59,6 +60,7 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
   onContinue,
   onBack,
 }) => {
+  const { isRoomEnabled } = useRoomModule();
   const [formData, setFormData] = useState<BusinessInformationData>({
     businessName: initialData?.businessName || "",
     sellerType: initialData?.sellerType || "FOOD",
@@ -246,6 +248,12 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
     });
   };
 
+  useEffect(() => {
+    if (!isRoomEnabled && formData.sellerType !== "FOOD") {
+      handleSellerTypeSelect("FOOD");
+    }
+  }, [isRoomEnabled, formData.sellerType]);
+
   const toggleCategory = (catName: string) => {
     setFormData((prev) => {
       const exists = prev.categories.some(
@@ -400,40 +408,42 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
         </div>
 
         {/* 2. Seller Type (Segmented Tab Bar) */}
-        <div className={styles.fieldGroup}>
-          <label className={styles.label}>
-            Seller type <span className={styles.required}>*</span>
-          </label>
-          <div className={styles.segmentedControl}>
-            <button
-              type="button"
-              className={`${styles.segmentBtn} ${
-                formData.sellerType === "FOOD" ? styles.segmentBtnActive : ""
-              }`}
-              onClick={() => handleSellerTypeSelect("FOOD")}
-            >
-              Food
-            </button>
-            <button
-              type="button"
-              className={`${styles.segmentBtn} ${
-                formData.sellerType === "PROPERTY" ? styles.segmentBtnActive : ""
-              }`}
-              onClick={() => handleSellerTypeSelect("PROPERTY")}
-            >
-              Property
-            </button>
-            <button
-              type="button"
-              className={`${styles.segmentBtn} ${
-                formData.sellerType === "BOTH" ? styles.segmentBtnActive : ""
-              }`}
-              onClick={() => handleSellerTypeSelect("BOTH")}
-            >
-              Both
-            </button>
+        {isRoomEnabled && (
+          <div className={styles.fieldGroup}>
+            <label className={styles.label}>
+              Seller type <span className={styles.required}>*</span>
+            </label>
+            <div className={styles.segmentedControl}>
+              <button
+                type="button"
+                className={`${styles.segmentBtn} ${
+                  formData.sellerType === "FOOD" ? styles.segmentBtnActive : ""
+                }`}
+                onClick={() => handleSellerTypeSelect("FOOD")}
+              >
+                Food
+              </button>
+              <button
+                type="button"
+                className={`${styles.segmentBtn} ${
+                  formData.sellerType === "PROPERTY" ? styles.segmentBtnActive : ""
+                }`}
+                onClick={() => handleSellerTypeSelect("PROPERTY")}
+              >
+                Property
+              </button>
+              <button
+                type="button"
+                className={`${styles.segmentBtn} ${
+                  formData.sellerType === "BOTH" ? styles.segmentBtnActive : ""
+                }`}
+                onClick={() => handleSellerTypeSelect("BOTH")}
+              >
+                Both
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* 3. Business Category */}
         <div className={styles.fieldGroup}>

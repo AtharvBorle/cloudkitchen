@@ -9,6 +9,7 @@ import { useCart } from "@/context/CartContext";
 import { BookRoomButton } from "@/components/cart-buttons";
 import { useLocation } from "@/components/location-provider";
 import { useSession } from "next-auth/react";
+import { useRoomModule } from "@/context/RoomModuleContext";
 import {
     calculateDistanceKm,
     MAX_DELIVERY_RADIUS_KM,
@@ -202,6 +203,25 @@ export default function UserRoomsPage() {
             if (b.distanceKm !== undefined) return 1;
             return 0;
         });
+
+    const { isRoomEnabled } = useRoomModule();
+
+    if (!isRoomEnabled) {
+        return (
+            <div style={{ maxWidth: "600px", margin: "60px auto", padding: "40px 24px", textAlign: "center", backgroundColor: "white", borderRadius: "16px", boxShadow: "var(--shadow-card)" }}>
+                <div style={{ width: "64px", height: "64px", borderRadius: "50%", backgroundColor: "#FFF7ED", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+                    <span style={{ fontSize: "28px" }}>🏨</span>
+                </div>
+                <h1 style={{ fontSize: "1.6rem", fontWeight: "700", color: "#1E293B", marginBottom: "12px" }}>Rooms & Stays Coming Soon!</h1>
+                <p style={{ color: "#64748B", fontSize: "0.95rem", lineHeight: "1.6", marginBottom: "28px" }}>
+                    The Room booking module is launching in our next version. Explore fresh food and daily meal plans in the meantime!
+                </p>
+                <Link href="/dashboard/user" className="btn btn-primary" style={{ padding: "12px 28px", textDecoration: "none" }}>
+                    Go to Food Dashboard
+                </Link>
+            </div>
+        );
+    }
 
     return (
         <div style={{ paddingBottom: '50px' }}>

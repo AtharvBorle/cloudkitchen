@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useRoomModule } from "@/context/RoomModuleContext";
 import { fetchApi } from "@/lib/fetch-api";
 import styles from "./ResSellerPayment.module.css";
 
@@ -52,6 +53,7 @@ export default function ResponsiveSellerPayment() {
   const queryCategory = searchParams?.get("category") || "";
 
   const seller = useSellerProfile();
+  const { isRoomEnabled } = useRoomModule();
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [plans, setPlans] = useState<PlanItem[]>([]);
@@ -67,6 +69,12 @@ export default function ResponsiveSellerPayment() {
   const [couponError, setCouponError] = useState("");
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
+  useEffect(() => {
+    if (!isRoomEnabled && (activeCategoryFilter === "PROPERTY" || activeCategoryFilter === "BOTH")) {
+      setActiveCategoryFilter("FOOD");
+    }
+  }, [isRoomEnabled, activeCategoryFilter]);
 
   // Sync mobile token and initialize web session
   useEffect(() => {
@@ -144,15 +152,20 @@ export default function ResponsiveSellerPayment() {
     loadData();
   }, [queryPlanId, queryCategory, queryToken]);
 
-  const filteredPlans = plans.filter((p) => {
+  const availablePlans = useMemo(() => {
+    if (isRoomEnabled) return plans;
+    return plans.filter((p) => p.category === "FOOD" || !p.category);
+  }, [plans, isRoomEnabled]);
+
+  const filteredPlans = availablePlans.filter((p) => {
     if (activeCategoryFilter === "ALL") return true;
     if (activeCategoryFilter === "FOOD") return p.category === "FOOD";
-    if (activeCategoryFilter === "PROPERTY") return p.category === "PROPERTY";
-    if (activeCategoryFilter === "BOTH") return p.category === "BOTH";
+    if (isRoomEnabled && activeCategoryFilter === "PROPERTY") return p.category === "PROPERTY";
+    if (isRoomEnabled && activeCategoryFilter === "BOTH") return p.category === "BOTH";
     return true;
   });
 
-  const selectedPlan = plans.find((p) => p.id === selectedPlanId) || filteredPlans[0];
+  const selectedPlan = availablePlans.find((p) => p.id === selectedPlanId) || filteredPlans[0];
 
   const handleApplyCoupon = async () => {
     if (!couponCode.trim() || !selectedPlanId) return;
@@ -275,14 +288,16 @@ export default function ResponsiveSellerPayment() {
     statusData?.sellerProfile?.foodVerificationStatus === "APPROVED";
 
   const hasPropertyVerification =
-    statusData?.sellerProfile?.businessCategory === "PROPERTY" ||
+    isRoomEnabled &&
+    (statusData?.sellerProfile?.businessCategory === "PROPERTY" ||
     statusData?.sellerProfile?.businessCategory === "BOTH" ||
-    statusData?.sellerProfile?.propertyVerificationStatus === "APPROVED";
+    statusData?.sellerProfile?.propertyVerificationStatus === "APPROVED");
 
   const isDualVerified =
-    statusData?.sellerProfile?.businessCategory === "BOTH" ||
+    isRoomEnabled &&
+    (statusData?.sellerProfile?.businessCategory === "BOTH" ||
     (hasFoodVerification && hasPropertyVerification) ||
-    !statusData?.sellerProfile;
+    !statusData?.sellerProfile);
 
   return (
     <div className={styles.mobileContainer}>
@@ -354,9 +369,9 @@ export default function ResponsiveSellerPayment() {
             >
               {activeCategoryFilter === "FOOD"
                 ? "Food Kitchen Plans"
-                : activeCategoryFilter === "PROPERTY"
+                : isRoomEnabled && activeCategoryFilter === "PROPERTY"
                 ? "Rooms & Stay Plans"
-                : activeCategoryFilter === "BOTH"
+                : isRoomEnabled && activeCategoryFilter === "BOTH"
                 ? "Hybrid (Both) Plans"
                 : "Available Plans"} ({filteredPlans.length})
             </div>

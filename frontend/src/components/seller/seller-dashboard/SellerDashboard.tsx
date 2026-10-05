@@ -25,6 +25,7 @@ import { useSellerNotifications, addSellerNotification } from "@/hooks/useSeller
 import { playNewOrderChime } from "@/lib/audio-chime";
 import { performLogout } from "@/lib/logout";
 import { getRemainingSeconds } from "../seller-orders/SellerOrders";
+import { useRoomModule } from "@/context/RoomModuleContext";
 import styles from "./SellerDashboard.module.css";
 
 export interface OrderItem {
@@ -61,6 +62,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
   onSyncDevices,
   onRenewPlan,
 }) => {
+  const { isRoomEnabled } = useRoomModule();
   const router = useRouter();
   const seller = useSellerProfile();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -502,7 +504,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                         Account Verified — Subscription Plan Required
                       </h3>
                       <p style={{ fontSize: "12.5px", color: "#64748B", margin: 0 }}>
-                        Activate your partner subscription to unlock live order processing, menu management, and room booking tools.
+                        Activate your partner subscription to unlock live order processing and menu management tools{isRoomEnabled ? ", and room booking tools" : ""}.
                       </p>
                     </div>
                   </div>
@@ -533,7 +535,9 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                 <div className={styles.headerGroup}>
                   <h1 className={styles.title}>Operations Dashboard</h1>
                   <p className={styles.subtitle}>
-                    Real-time tracking of Neo Cloud Room revenue and food delivery metrics.
+                    {isRoomEnabled
+                      ? "Real-time tracking of Neo Cloud Room revenue and food delivery metrics."
+                      : "Real-time tracking of cloud kitchen revenue and food delivery metrics."}
                   </p>
                 </div>
               </div>
@@ -575,21 +579,23 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                 </div>
 
                 {/* Card 3: Pending Bookings */}
-                <div className={styles.statCard}>
-                  <div className={styles.cardHeader}>
-                    <span className={styles.cardLabel}>Rooms & Bookings</span>
-                    <div className={styles.iconBadge}>
-                      <Calendar size={18} strokeWidth={2.4} />
+                {isRoomEnabled && (
+                  <div className={styles.statCard}>
+                    <div className={styles.cardHeader}>
+                      <span className={styles.cardLabel}>Rooms & Bookings</span>
+                      <div className={styles.iconBadge}>
+                        <Calendar size={18} strokeWidth={2.4} />
+                      </div>
+                    </div>
+                    <h2 className={styles.cardValue}>
+                      {overview?.roomsCount !== undefined ? `${overview.roomsCount} Rooms` : "0 Rooms"}
+                    </h2>
+                    <div className={styles.cardFooter}>
+                      <span className={styles.badgeOrange}>Inventory</span>
+                      <span className={styles.footerMuted}>configured units</span>
                     </div>
                   </div>
-                  <h2 className={styles.cardValue}>
-                    {overview?.roomsCount !== undefined ? `${overview.roomsCount} Rooms` : "0 Rooms"}
-                  </h2>
-                  <div className={styles.cardFooter}>
-                    <span className={styles.badgeOrange}>Inventory</span>
-                    <span className={styles.footerMuted}>configured units</span>
-                  </div>
-                </div>
+                )}
 
                 {/* Card 4: COD Outstanding */}
                 <div className={styles.statCard}>
@@ -635,7 +641,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
               <div className={styles.tableCard}>
                 <div className={styles.tableHeader}>
                   <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-                    <h3 className={styles.tableTitle}>Recent Food & Room Orders</h3>
+                    <h3 className={styles.tableTitle}>{isRoomEnabled ? "Recent Food & Room Orders" : "Recent Food Orders"}</h3>
                     {searchQuery.trim() && (
                       <span
                         style={{
@@ -685,7 +691,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                       <tr>
                         <th>ORDER ID</th>
                         <th>CUSTOMER</th>
-                        <th>ROOM NO</th>
+                        {isRoomEnabled && <th>ROOM NO</th>}
                         <th>ITEMS</th>
                         <th>TOTAL</th>
                         <th>STATUS</th>
@@ -694,7 +700,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                     <tbody>
                       {displayedOrders.length === 0 ? (
                         <tr>
-                          <td colSpan={6} style={{ textAlign: "center", padding: "40px 16px", color: "#64748B" }}>
+                          <td colSpan={isRoomEnabled ? 6 : 5} style={{ textAlign: "center", padding: "40px 16px", color: "#64748B" }}>
                             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
                               <Search size={28} color="#94A3B8" />
                               <p style={{ margin: 0, fontWeight: 600, color: "#1E293B", fontSize: "14px" }}>
@@ -742,7 +748,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                             <tr key={order.id}>
                               <td className={styles.orderIdText}>{order.orderId}</td>
                               <td className={styles.customerText}>{order.customer}</td>
-                              <td className={styles.roomNoText}>{order.roomNo}</td>
+                              {isRoomEnabled && <td className={styles.roomNoText}>{order.roomNo}</td>}
                               <td className={styles.itemsText}>{order.items}</td>
                               <td className={styles.totalPriceText}>{order.total}</td>
                               <td className={styles.statusCell}>
