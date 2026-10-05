@@ -1,10 +1,23 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
+import { useSession } from "next-auth/react";
 import SignUpLeftComponent from "@/components/sign-up/SignUpLeftComponent";
 import SignUpRightComponent from "@/components/sign-up/SignUpRightComponent";
 
 export default function SignUpPage() {
+  const { data: session, status } = useSession();
+
+  useEffect(() => {
+    if (status === "authenticated" && session?.user) {
+      window.location.replace("/");
+    }
+  }, [status, session]);
+
+  if (status === "authenticated" && session?.user) {
+    return null;
+  }
+
   return (
     <div
       style={{

@@ -48,6 +48,7 @@ function AuthHistorySecurityLock() {
             pathname === "/login" ||
             pathname === "/auth/login" ||
             pathname === "/signup" ||
+            pathname === "/auth/register/user" ||
             pathname === "/seller/login" ||
             pathname === "/seller/res/login" ||
             pathname === "/seller" ||
@@ -64,8 +65,24 @@ function AuthHistorySecurityLock() {
         window.history.pushState({ authLocked: true }, "", window.location.href);
 
         const handlePopState = () => {
+            const currentPath = window.location.pathname;
+            const isTargetAuth = Boolean(
+                currentPath === "/login" ||
+                currentPath === "/auth/login" ||
+                currentPath === "/signup" ||
+                currentPath === "/auth/register/user" ||
+                currentPath === "/seller/login" ||
+                currentPath === "/seller/res/login" ||
+                currentPath === "/seller" ||
+                currentPath === "/auth/login/seller"
+            );
+
             // Prevent going back to previous page links or exiting the authenticated session
             window.history.pushState({ authLocked: true }, "", targetDashboard);
+            if (isTargetAuth) {
+                window.location.replace(targetDashboard);
+                return;
+            }
             if (window.location.pathname !== targetDashboard) {
                 router.replace(targetDashboard);
             }

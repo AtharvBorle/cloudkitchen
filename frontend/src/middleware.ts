@@ -148,9 +148,18 @@ export async function middleware(request: NextRequest) {
     pathname === "/auth/login/admin" ||
     pathname === "/admin/login";
   const isDeliveryLoginPage = pathname === "/auth/login/delivery";
+  const isUserLoginPage =
+    pathname === "/login" ||
+    pathname === "/auth/login" ||
+    pathname === "/signup" ||
+    pathname === "/auth/register/user" ||
+    pathname.startsWith("/auth/login/user");
 
-  if (isAuthenticated && userRole) {
-    const role = userRole.toUpperCase();
+  if (isAuthenticated) {
+    const role = (userRole || "USER").toUpperCase();
+    if (role === "USER" && isUserLoginPage) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
     if (
       (role === "ADMIN" || role === "SUPERADMIN" || role === "AGENT" || role === "SUPPORT") &&
       isAdminLoginPage
