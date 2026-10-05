@@ -22,7 +22,7 @@ import { useSellerNotifications } from "@/hooks/useSellerNotifications";
 import styles from "./ResponsiveSellerSubscription.module.css";
 
 
-export type PlanStatus = "All" | "Active" | "Paused" | "Draft";
+export type PlanStatus = "All" | "Active" | "Paused";
 export type PlanTier = "All" | "Bronze" | "Silver" | "Gold" | "Starter" | "Professional" | "Enterprise";
 export type SortOption = "Newest" | "Subscribers" | "Price: Low to High" | "Price: High to Low";
 
@@ -33,7 +33,7 @@ export interface ResponsiveSubscriptionPlan {
   tierVariant?: "orange" | "purple" | "indigo" | "blue";
   price: string;
   subscribersCount: number;
-  status: "Active" | "Paused" | "Draft";
+  status: "Active" | "Paused";
   createdAt: string;
   billingCycle?: "Weekly" | "Monthly" | "Quarterly";
   mealsPerDay?: number;
@@ -248,7 +248,6 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
                   All: "Active",
                   Active: "Paused",
                   Paused: "All",
-                  Draft: "All",
                 };
                 setStatusFilter(nextStatus[statusFilter] || "All");
               }}

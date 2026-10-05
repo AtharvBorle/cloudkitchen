@@ -2234,49 +2234,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                 </div>
               </div>
 
-              {/* 3. Marketing & Growth Alerts */}
-              <div className={styles.card}>
-                <div className={styles.cardHeaderRow}>
-                  <Clock size={17} className={styles.cardHeaderIcon} />
-                  <h2 className={styles.cardTitle}>Marketing &amp; Growth Alerts</h2>
-                </div>
-
-                <div className={styles.hoursRow}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                    <span className={styles.label}>Weekly Growth Performance</span>
-                    <span style={{ fontSize: "12px", color: "#64748B" }}>Weekly analytics on revenue, popular dishes &amp; ratings.</span>
-                  </div>
-                  <div className={styles.switchWrapper}>
-                    <label className={styles.toggleSwitch}>
-                      <input
-                        type="checkbox"
-                        checked={formData.weeklyGrowthPerformance}
-                        onChange={(e) => handleInputChange("weeklyGrowthPerformance", e.target.checked)}
-                      />
-                      <span className={styles.toggleSlider} />
-                    </label>
-                  </div>
-                </div>
-
-                <div className={styles.hoursRow}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                    <span className={styles.label}>Promotions &amp; Product Updates</span>
-                    <span style={{ fontSize: "12px", color: "#64748B" }}>Campaign insights, promotional tools and feature updates.</span>
-                  </div>
-                  <div className={styles.switchWrapper}>
-                    <label className={styles.toggleSwitch}>
-                      <input
-                        type="checkbox"
-                        checked={formData.promotionsProductBeta}
-                        onChange={(e) => handleInputChange("promotionsProductBeta", e.target.checked)}
-                      />
-                      <span className={styles.toggleSlider} />
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              {/* 4. Reviews & Reports */}
+              {/* 3. Reviews & Reports */}
               <div className={styles.card}>
                 <div className={styles.cardHeaderRow}>
                   <Star size={17} className={styles.cardHeaderIcon} />

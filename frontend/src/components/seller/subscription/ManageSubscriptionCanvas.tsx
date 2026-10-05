@@ -51,7 +51,7 @@ export type RecentSubscriber = MealSubscriber;
 export default function ManageSubscriptionCanvas() {
   const [plans, setPlans] = useState<PlanItem[]>([]);
   const [subscribers, setSubscribers] = useState<RecentSubscriber[]>([]);
-  const [activeTab, setActiveTab] = useState<"all" | "active" | "draft">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "active">("all");
   const [loading, setLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastType, setToastType] = useState<"success" | "error">("success");
@@ -148,7 +148,6 @@ export default function ManageSubscriptionCanvas() {
 
   const filteredPlans = plans.filter((plan) => {
     if (activeTab === "active") return plan.status === "Live";
-    if (activeTab === "draft") return plan.status === "Draft" || plan.status === "Paused" || plan.status === "Inactive";
     return true;
   });
 
@@ -498,23 +497,6 @@ export default function ManageSubscriptionCanvas() {
           >
             Active ({plans.filter((p) => p.status === "Live").length})
           </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("draft")}
-            style={{
-              padding: "8px 16px",
-              borderRadius: "6px",
-              border: "none",
-              fontSize: "13px",
-              fontWeight: activeTab === "draft" ? 700 : 500,
-              backgroundColor: activeTab === "draft" ? "#FF5500" : "transparent",
-              color: activeTab === "draft" ? "#FFFFFF" : "#64748B",
-              cursor: "pointer",
-              transition: "all 0.15s ease",
-            }}
-          >
-            Drafts ({plans.filter((p) => p.status === "Draft").length})
-          </button>
         </div>
 
         <span style={{ fontSize: "13px", color: "#64748B", fontWeight: 500 }}>
@@ -689,20 +671,6 @@ export default function ManageSubscriptionCanvas() {
                     {plan.duration === "1 Week" ? "/ week" : plan.duration === "2 Weeks" ? "/ 2 weeks" : plan.duration === "1 Month" ? "/ month" : `/${plan.duration || "cycle"}`}
                   </span>
                 </div>
-                {Boolean(plan.duration && !plan.duration.toLowerCase().includes("week") && plan.quarterlyPrice && plan.yearlyPrice) && (
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      marginTop: "6px",
-                      fontSize: "11.5px",
-                      color: "#64748B",
-                    }}
-                  >
-                    <span>Quarterly: {plan.quarterlyPrice}</span>
-                    <span>Yearly: {plan.yearlyPrice}</span>
-                  </div>
-                )}
               </div>
 
               {/* Inclusions List */}
@@ -810,12 +778,6 @@ export default function ManageSubscriptionCanvas() {
                     {plan.subscribersCount} Users
                   </div>
                   <div style={{ fontSize: "11.5px", color: "#64748B" }}>Active Subscribers</div>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: "14px", fontWeight: 700, color: "#16A34A" }}>
-                    {plan.monthlyRevenue}
-                  </div>
-                  <div style={{ fontSize: "11.5px", color: "#64748B" }}>Monthly Rev.</div>
                 </div>
               </div>
 

@@ -481,7 +481,7 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
           <footer className={styles.footerArea}>
             <div className={styles.draftPreviewRow}>
               <div className={styles.draftLeft}>
-                <span className={styles.draftLabel}>DRAFT PREVIEW</span>
+                <span className={styles.draftLabel}>PLAN PREVIEW</span>
                 <h4 className={styles.draftPlanName}>
                   {planName.trim() || "New Plan"}
                 </h4>
@@ -505,7 +505,7 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
               className={styles.discardButton}
               onClick={handleDiscard}
             >
-              Discard Draft
+              Cancel
             </button>
 
             <div className={styles.homeIndicator} aria-hidden="true" />

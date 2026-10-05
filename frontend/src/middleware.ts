@@ -141,7 +141,10 @@ export async function middleware(request: NextRequest) {
     pathname === "/login" ||
     pathname === "/auth/login" ||
     pathname === "/signup" ||
-    pathname.startsWith("/auth/login");
+    (pathname.startsWith("/auth/login") &&
+      !pathname.startsWith("/auth/login/admin") &&
+      !pathname.startsWith("/auth/login/delivery") &&
+      !pathname.startsWith("/auth/login/seller"));
   const isSellerLoginPage =
     pathname === "/seller" ||
     pathname === "/seller/login" ||
@@ -150,9 +153,12 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/seller/res/login") ||
     pathname === "/auth/login/seller";
   const isAdminLoginPage =
+    pathname === "/admin" ||
     pathname === "/auth/login/admin" ||
     pathname === "/admin/login";
-  const isDeliveryLoginPage = pathname === "/auth/login/delivery";
+  const isDeliveryLoginPage =
+    pathname === "/delivery" ||
+    pathname === "/auth/login/delivery";
 
   if (isAuthenticated && userRole) {
     const role = userRole.toUpperCase();
@@ -212,6 +218,7 @@ export async function middleware(request: NextRequest) {
 
   // Admin routes (protected)
   const isPublicAdminPath =
+    pathname === "/admin" ||
     pathname === "/auth/login/admin" ||
     pathname === "/admin/login";
 
@@ -228,6 +235,7 @@ export async function middleware(request: NextRequest) {
 
   // Delivery routes (protected)
   const isPublicDeliveryPath =
+    pathname === "/delivery" ||
     pathname === "/auth/login/delivery" ||
     pathname === "/delivery-addresses-desktop";
 

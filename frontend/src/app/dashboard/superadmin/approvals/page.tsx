@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, X, RotateCcw } from "lucide-react";
+import { performLogout } from "@/lib/logout";
 
 export default function SuperadminApprovals() {
     const router = useRouter();
@@ -65,7 +66,7 @@ export default function SuperadminApprovals() {
     };
 
     const handleLogout = async () => {
-        router.push("/api/auth/signout");
+        performLogout({ role: "SUPERADMIN" });
     };
 
     return (
