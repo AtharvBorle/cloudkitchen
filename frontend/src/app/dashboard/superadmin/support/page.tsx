@@ -191,7 +191,7 @@ export default function SuperAdminSupportPage() {
                 const foodCats = categoriesArray.filter((c: any) => c.type === "FOOD");
                 setBusinessCategories(foodCats);
                 if (foodCats.length > 0) {
-                    setSelectedBusinessCategoryIds([foodCats[0].id]);
+                    setSelectedBusinessCategoryIds(foodCats.map((c: any) => c.id));
                 }
             }
             
@@ -218,12 +218,30 @@ export default function SuperAdminSupportPage() {
                 setNewFoodCategoryName(reqDetails.name || "");
                 setSubcategoryName("");
                 setSelectedFoodCategoryId("CREATE_NEW");
-                if (businessCategories.length > 0) {
-                    setSelectedBusinessCategoryIds([businessCategories[0].id]);
+                
+                const sellerType = selectedTicket.user?.sellerProfile?.type || selectedTicket.user?.sellerProfile?.businessCategory || "";
+                let targetCategoryIds: string[] = [];
+
+                if (sellerType && businessCategories.length > 0) {
+                    const matched = businessCategories.filter((bc: any) =>
+                        bc.name.toLowerCase().includes(sellerType.toLowerCase()) ||
+                        sellerType.toLowerCase().includes(bc.name.toLowerCase())
+                    );
+                    if (matched.length > 0) {
+                        targetCategoryIds = matched.map((m: any) => m.id);
+                    }
+                }
+
+                if (targetCategoryIds.length === 0 && businessCategories.length > 0) {
+                    targetCategoryIds = businessCategories.map((bc: any) => bc.id);
+                }
+
+                if (targetCategoryIds.length > 0) {
+                    setSelectedBusinessCategoryIds(targetCategoryIds);
                 }
             }
         }
-    }, [selectedTicket]);
+    }, [selectedTicket, businessCategories]);
 
     const parseCategoryRequest = (description: string) => {
         if (!description) return null;

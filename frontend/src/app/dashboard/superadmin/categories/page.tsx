@@ -43,11 +43,6 @@ export default function FoodCategoriesPage() {
                 const data = await res.json();
                 setFoodCategories(data.foodCategories || []);
                 setParentCategories(data.parentCategories || []);
-                
-                // Initialize selected parent IDs if empty
-                if (data.parentCategories && data.parentCategories.length > 0 && selectedParentIds.length === 0) {
-                    setSelectedParentIds([data.parentCategories[0].id]);
-                }
             } else {
                 console.error("Failed to load categories");
             }
@@ -64,7 +59,11 @@ export default function FoodCategoriesPage() {
 
     const handleCreateFoodCategory = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newCatName.trim() || selectedParentIds.length === 0) return;
+        if (!newCatName.trim()) return;
+        if (selectedParentIds.length === 0) {
+            alert("Please select at least one parent category before creating.");
+            return;
+        }
         
         setActionLoading(true);
         try {
