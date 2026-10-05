@@ -116,7 +116,15 @@ export const listTickets = async () => {
                 select: {
                     name: true,
                     email: true,
-                    role: true
+                    role: true,
+                    sellerProfile: {
+                        select: {
+                            id: true,
+                            businessName: true,
+                            type: true,
+                            businessCategory: true
+                        }
+                    }
                 }
             }
         },
@@ -144,7 +152,15 @@ export const getTicketDetails = async (id: string) => {
                 select: {
                     name: true,
                     email: true,
-                    role: true
+                    role: true,
+                    sellerProfile: {
+                        select: {
+                            id: true,
+                            businessName: true,
+                            type: true,
+                            businessCategory: true
+                        }
+                    }
                 }
             },
             messages: {
