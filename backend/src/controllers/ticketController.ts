@@ -71,6 +71,18 @@ export const createTicket = async (req: Request) => {
     const isSuperAdmin = session.user.role === "SUPERADMIN" || session.user.role === "ADMIN" || session.user.role === "SUPPORT";
     const ticketUserId = (isSuperAdmin && userId) ? userId : session.user.id;
 
+    // Validate that regular customers must have placed at least one order before raising a support ticket
+    const isCustomer = !session.user.role || session.user.role === "USER";
+    const isSellerInquiry = (title?.toLowerCase().includes("seller") || description?.toLowerCase().includes("seller") || category === "NEW_CATEGORY_REQUEST");
+    if (isCustomer && !isSellerInquiry) {
+        const orderCount = await db.order.count({
+            where: { userId: session.user.id }
+        });
+        if (orderCount === 0) {
+            throw new ApiError("Support tickets are restricted to users who have placed an order. Please place an order first before raising a ticket.", 403);
+        }
+    }
+
     const normalizedPriority = priority
         ? (String(priority).toUpperCase() === "HIGH" ? "High" : String(priority).toUpperCase() === "LOW" ? "Low" : "Medium")
         : resolveTicketPriority({ title, description, category });
