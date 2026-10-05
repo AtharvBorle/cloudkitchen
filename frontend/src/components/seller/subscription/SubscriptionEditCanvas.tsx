@@ -1568,26 +1568,6 @@ export default function SubscriptionEditCanvas({
                   {formData.metadata.deployedDate}
                 </span>
               </div>
-
-              {/* Tax Code */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <span style={{ fontSize: "12.5px", color: "#64748B" }}>Tax Code</span>
-                <span
-                  style={{
-                    fontSize: "12.5px",
-                    fontWeight: 700,
-                    color: "#0F172A",
-                  }}
-                >
-                  {formData.metadata.taxCode}
-                </span>
-              </div>
             </div>
 
             {/* Action Buttons */}
@@ -1624,32 +1604,6 @@ export default function SubscriptionEditCanvas({
                 onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
               >
                 Save Changes
-              </button>
-
-              {/* Discard Modifications button */}
-              <button
-                type="button"
-                onClick={handleDiscard}
-                style={{
-                  width: "100%",
-                  height: "42px",
-                  backgroundColor: "#FFFFFF",
-                  color: "#475569",
-                  borderRadius: "8px",
-                  border: "1px solid #E2E8F0",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontFamily: "inherit",
-                  transition: "background-color 0.15s ease",
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#F8FAFC")}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#FFFFFF")}
-              >
-                Discard Modifications
               </button>
             </div>
           </div>

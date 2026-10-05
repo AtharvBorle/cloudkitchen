@@ -500,14 +500,6 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
               Create &amp; Deploy Plan
             </button>
 
-            <button
-              type="button"
-              className={styles.discardButton}
-              onClick={handleDiscard}
-            >
-              Cancel
-            </button>
-
             <div className={styles.homeIndicator} aria-hidden="true" />
           </footer>
         </main>

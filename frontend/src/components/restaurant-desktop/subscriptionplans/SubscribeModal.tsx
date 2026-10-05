@@ -14,7 +14,8 @@ import {
   Home,
   Briefcase,
   Search,
-  Check
+  Check,
+  Edit3
 } from "lucide-react";
 import { 
   loadRazorpayScript,
@@ -89,6 +90,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isDetectingGps, setIsDetectingGps] = useState(false);
   const suggestionsRef = useRef<HTMLDivElement>(null);
+  const phoneInputRef = useRef<HTMLInputElement>(null);
 
   // Initialize and load saved addresses
   useEffect(() => {
@@ -99,8 +101,10 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
     setShowManualAddressInput(false);
     setErrorMsg(null);
 
-    if ((session?.user as any)?.phone) {
-      setContactPhone((session?.user as any).phone);
+    const userPhone = (session?.user as any)?.phone;
+    if (userPhone) {
+      const cleanUserPhone = String(userPhone).replace(/\D/g, "").slice(-10);
+      setContactPhone(cleanUserPhone || userPhone);
     }
 
     // Prefill default address if empty
@@ -135,9 +139,13 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
               ].filter(Boolean);
               const line = parts.join(", ");
               setDeliveryAddress(line || defaultSaved.address || defaultSaved.label || "");
-              if (defaultSaved.recipientPhone && !(session?.user as any)?.phone) {
-                setContactPhone(defaultSaved.recipientPhone);
+              
+              const addrPhone = defaultSaved.recipientPhone || defaultSaved.phone || (session?.user as any)?.phone || "";
+              if (addrPhone) {
+                const cleanPhone = String(addrPhone).replace(/\D/g, "").slice(-10);
+                setContactPhone(cleanPhone || addrPhone);
               }
+              setIsEditingPhone(false);
             }
           }
         }
@@ -232,9 +240,14 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
     setDeliveryAddress(line || addr.address || addr.label || "");
     setSelectedSavedAddressId(addr.id);
     setIsChangingAddress(false);
-    if (addr.recipientPhone && !contactPhone) {
-      setContactPhone(addr.recipientPhone);
+    
+    // Show mobile number associated with selected address and keep uneditable
+    const addrPhone = addr.recipientPhone || addr.phone || (session?.user as any)?.phone || "";
+    if (addrPhone) {
+      const cleanPhone = String(addrPhone).replace(/\D/g, "").slice(-10);
+      setContactPhone(cleanPhone || addrPhone);
     }
+    setIsEditingPhone(false);
     setShowSuggestions(false);
   };
 
@@ -583,56 +596,74 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
             )}
           </div>
 
-          {/* Phone */}
+          {/* Mobile Number */}
           <div className={styles.formGroup}>
-            <label className={styles.formLabel}>
-              <Phone size={14} color="#EA580C" />
-              <span>Contact Phone Number</span>
-            </label>
+            <div className={styles.phoneLabelRow}>
+              <label className={styles.formLabel} style={{ marginBottom: 0 }}>
+                <Phone size={14} color="#EA580C" />
+                <span>Mobile Number</span>
+              </label>
+              <span className={styles.phoneSourceBadge}>
+                {selectedSavedAddressId ? "From Selected Address" : "Registered Contact"}
+              </span>
+            </div>
 
-            {!isEditingPhone && contactPhone ? (
-              <div className={styles.phoneCard}>
-                <div className={styles.phoneCardLeft}>
-                  <div className={styles.phoneCardIcon}>
-                    <Phone size={14} />
-                  </div>
-                  <div>
-                    <div className={styles.phoneCardNumber}>+91 {contactPhone}</div>
-                    <div className={styles.phoneCardLabel}>Account Registered Phone (Used for delivery &amp; OTP)</div>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsEditingPhone(true)}
-                  className={styles.editPhoneBtn}
-                >
-                  Edit Number
-                </button>
-              </div>
-            ) : (
-              <div className={styles.phoneEditRow}>
+            <div className={`${styles.phoneFieldRow} ${!isEditingPhone ? styles.phoneFieldRowLocked : styles.phoneFieldRowActive}`}>
+              <div className={styles.phoneInputLeft}>
+                <span className={styles.countryCode}>+91</span>
                 <input
+                  ref={phoneInputRef}
                   type="tel"
                   inputMode="numeric"
                   pattern="[0-9]{10}"
                   maxLength={10}
-                  className={styles.formInput}
-                  placeholder="e.g. 9876543210"
+                  readOnly={!isEditingPhone}
+                  className={`${styles.phoneInput} ${!isEditingPhone ? styles.phoneInputLocked : styles.phoneInputEditable}`}
+                  placeholder="Enter 10-digit mobile number"
                   value={contactPhone}
                   onChange={(e) => setContactPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                  style={{ flex: 1 }}
                 />
-                {contactPhone.length === 10 && (
-                  <button
-                    type="button"
-                    onClick={() => setIsEditingPhone(false)}
-                    className={styles.phoneDoneBtn}
-                  >
-                    Done
-                  </button>
-                )}
               </div>
-            )}
+
+              {!isEditingPhone ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditingPhone(true);
+                    setTimeout(() => phoneInputRef.current?.focus(), 50);
+                  }}
+                  className={styles.editPhoneBtn}
+                  title="Edit mobile number"
+                >
+                  <Edit3 size={13} />
+                  <span>Edit No</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const clean = contactPhone.replace(/\D/g, "");
+                    if (clean.length === 10 && /^[6-9]\d{9}$/.test(clean)) {
+                      setIsEditingPhone(false);
+                      setErrorMsg(null);
+                    } else {
+                      setErrorMsg("Please enter a valid 10-digit mobile number starting with 6-9.");
+                    }
+                  }}
+                  className={styles.phoneDoneBtn}
+                  title="Done editing mobile number"
+                >
+                  <Check size={13} />
+                  <span>Done</span>
+                </button>
+              )}
+            </div>
+
+            <p className={styles.phoneHint}>
+              {!isEditingPhone
+                ? "This mobile number is linked with the selected address for delivery tracking & OTP."
+                : "Editing mobile number for this subscription delivery."}
+            </p>
           </div>
 
           {/* Subscription Start Date Preference */}

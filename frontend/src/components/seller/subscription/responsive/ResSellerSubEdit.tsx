@@ -625,14 +625,10 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
                 <span className={styles.metadataKey}>Deployed Date</span>
                 <span className={styles.metadataVal}>{metadata.deployedDate}</span>
               </div>
-              <div className={styles.metadataRow}>
-                <span className={styles.metadataKey}>Tax Code</span>
-                <span className={styles.metadataVal}>{metadata.taxCode}</span>
-              </div>
             </div>
           </section>
 
-          {/* Buttons: Save Changes & Discard Modifications */}
+          {/* Buttons: Save Changes */}
           <div className={styles.actionButtonGroup}>
             <button
               type="button"
@@ -640,14 +636,6 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
               onClick={handleSave}
             >
               Save Changes
-            </button>
-
-            <button
-              type="button"
-              className={styles.discardButton}
-              onClick={handleDiscard}
-            >
-              Discard Modifications
             </button>
           </div>
 

@@ -48,6 +48,8 @@ import {
   Navigation,
   Home,
   Briefcase,
+  Check,
+  Edit3,
 } from "lucide-react";
 import styles from "./MySubscriptionPage.module.css";
 
@@ -150,6 +152,7 @@ function MySubscriptionContent() {
   const [showAddressSuggestions, setShowAddressSuggestions] = useState<boolean>(false);
   const [isDetectingGps, setIsDetectingGps] = useState<boolean>(false);
   const addressSuggestionsRef = useRef<HTMLDivElement>(null);
+  const phoneInputRef = useRef<HTMLInputElement>(null);
 
   // Click outside to close suggestions
   useEffect(() => {
@@ -421,7 +424,9 @@ function MySubscriptionContent() {
     setSelectedPlanForSub(plan);
     const initialAddr = defaultAddress?.address || defaultAddress?.label || (typeof window !== "undefined" ? localStorage.getItem("active-selected-address") || "" : "");
     setDeliveryAddressInput(initialAddr);
-    setContactPhoneInput((session.user as any)?.phone || "");
+    const userRawPhone = (session.user as any)?.phone || "";
+    const cleanUserPhone = userRawPhone ? String(userRawPhone).replace(/\D/g, "").slice(-10) : "";
+    setContactPhoneInput(cleanUserPhone || userRawPhone);
     setSubErrorMsg(null);
     setSubSuccessMsg(null);
     setIsChangingAddress(false);
@@ -451,9 +456,12 @@ function MySubscriptionContent() {
               ].filter(Boolean);
               const line = parts.join(", ");
               setDeliveryAddressInput(line || defaultSaved.address || defaultSaved.label || initialAddr);
-              if (defaultSaved.recipientPhone && !(session.user as any)?.phone) {
-                setContactPhoneInput(defaultSaved.recipientPhone);
+              const addrPhone = defaultSaved.recipientPhone || defaultSaved.phone || (session.user as any)?.phone || "";
+              if (addrPhone) {
+                const clean = String(addrPhone).replace(/\D/g, "").slice(-10);
+                setContactPhoneInput(clean || addrPhone);
               }
+              setIsEditingPhone(false);
             }
           }
         }
@@ -525,9 +533,14 @@ function MySubscriptionContent() {
     setDeliveryAddressInput(line || addr.address || addr.label || "");
     setSelectedSavedAddressId(addr.id);
     setIsChangingAddress(false);
-    if (addr.recipientPhone && !contactPhoneInput) {
-      setContactPhoneInput(addr.recipientPhone);
+    
+    // Show mobile number associated with selected address and keep uneditable
+    const addrPhone = addr.recipientPhone || addr.phone || (session?.user as any)?.phone || "";
+    if (addrPhone) {
+      const cleanPhone = String(addrPhone).replace(/\D/g, "").slice(-10);
+      setContactPhoneInput(cleanPhone || addrPhone);
     }
+    setIsEditingPhone(false);
     setShowAddressSuggestions(false);
   };
 
@@ -1589,56 +1602,74 @@ function MySubscriptionContent() {
                 )}
               </div>
 
-              {/* Contact Phone */}
+              {/* Mobile Number */}
               <div className={styles.formGroup}>
-                <label className={styles.formLabel}>
-                  <Phone size={13} color="#FF5500" />
-                  <span>Contact Phone Number</span>
-                </label>
+                <div className={styles.phoneLabelRow}>
+                  <label className={styles.formLabel} style={{ marginBottom: 0 }}>
+                    <Phone size={13} color="#FF5500" />
+                    <span>Mobile Number</span>
+                  </label>
+                  <span className={styles.phoneSourceBadge}>
+                    {selectedSavedAddressId ? "From Selected Address" : "Registered Contact"}
+                  </span>
+                </div>
 
-                {!isEditingPhone && contactPhoneInput ? (
-                  <div className={styles.phoneCard}>
-                    <div className={styles.phoneCardLeft}>
-                      <div className={styles.phoneCardIcon}>
-                        <Phone size={14} />
-                      </div>
-                      <div>
-                        <div className={styles.phoneCardNumber}>+91 {contactPhoneInput}</div>
-                        <div className={styles.phoneCardLabel}>Account Registered Phone (Used for delivery &amp; OTP)</div>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setIsEditingPhone(true)}
-                      className={styles.editPhoneBtn}
-                    >
-                      Edit Number
-                    </button>
-                  </div>
-                ) : (
-                  <div className={styles.phoneEditRow}>
+                <div className={`${styles.phoneFieldRow} ${!isEditingPhone ? styles.phoneFieldRowLocked : styles.phoneFieldRowActive}`}>
+                  <div className={styles.phoneInputLeft}>
+                    <span className={styles.countryCode}>+91</span>
                     <input
+                      ref={phoneInputRef}
                       type="tel"
                       inputMode="numeric"
                       pattern="[0-9]{10}"
                       maxLength={10}
-                      placeholder="e.g. 9876543210"
+                      readOnly={!isEditingPhone}
+                      className={`${styles.phoneInput} ${!isEditingPhone ? styles.phoneInputLocked : styles.phoneInputEditable}`}
+                      placeholder="Enter 10-digit mobile number"
                       value={contactPhoneInput}
                       onChange={(e) => setContactPhoneInput(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                      className={styles.formInput}
-                      style={{ flex: 1 }}
                     />
-                    {contactPhoneInput.length === 10 && (
-                      <button
-                        type="button"
-                        onClick={() => setIsEditingPhone(false)}
-                        className={styles.phoneDoneBtn}
-                      >
-                        Done
-                      </button>
-                    )}
                   </div>
-                )}
+
+                  {!isEditingPhone ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsEditingPhone(true);
+                        setTimeout(() => phoneInputRef.current?.focus(), 50);
+                      }}
+                      className={styles.editPhoneBtn}
+                      title="Edit mobile number"
+                    >
+                      <Edit3 size={13} />
+                      <span>Edit No</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const clean = contactPhoneInput.replace(/\D/g, "");
+                        if (clean.length === 10 && /^[6-9]\d{9}$/.test(clean)) {
+                          setIsEditingPhone(false);
+                          setSubErrorMsg(null);
+                        } else {
+                          setSubErrorMsg("Please enter a valid 10-digit mobile number starting with 6-9.");
+                        }
+                      }}
+                      className={styles.phoneDoneBtn}
+                      title="Done editing mobile number"
+                    >
+                      <Check size={13} />
+                      <span>Done</span>
+                    </button>
+                  )}
+                </div>
+
+                <p className={styles.phoneHint}>
+                  {!isEditingPhone
+                    ? "This mobile number is linked with the selected address for delivery tracking & OTP."
+                    : "Editing mobile number for this subscription delivery."}
+                </p>
               </div>
 
               {/* Start Date Preference */}

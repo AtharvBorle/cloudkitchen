@@ -1298,79 +1298,134 @@
   color: #0F172A;
 }
 
-/* Phone Card Styles */
-.phoneCard {
+/* Phone Field & Edit Styles */
+.phoneLabelRow {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #F8FAFC;
-  border: 1px solid #E2E8F0;
-  border-radius: 12px;
-  padding: 10px 14px;
+  margin-bottom: 6px;
 }
 
-.phoneCardLeft {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.phoneCardIcon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: #FFF7ED;
-  color: #FF5500;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.phoneCardNumber {
-  font-size: 0.88rem;
+.phoneSourceBadge {
+  font-size: 0.68rem;
   font-weight: 700;
+  color: #FF5500;
+  background: #FFF7ED;
+  border: 1px solid #FFEDD5;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.phoneFieldRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #FFFFFF;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 4px 6px 4px 12px;
+  transition: all 0.2s ease;
+  min-height: 44px;
+}
+
+.phoneFieldRowLocked {
+  background: #F8FAFC;
+  border-color: #E2E8F0;
+}
+
+.phoneFieldRowActive {
+  background: #FFFFFF;
+  border-color: #FF5500;
+  box-shadow: 0 0 0 3px rgba(255, 85, 0, 0.12);
+}
+
+.phoneInputLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.countryCode {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #475569;
+  user-select: none;
+}
+
+.phoneInput {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #0F172A;
+  width: 100%;
+  font-family: inherit;
+  letter-spacing: 0.04em;
+}
+
+.phoneInputLocked {
+  cursor: default;
+  color: #1E293B;
+}
+
+.phoneInputEditable {
+  cursor: text;
   color: #0F172A;
 }
 
-.phoneCardLabel {
-  font-size: 0.72rem;
-  color: #64748B;
-}
-
 .editPhoneBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   background: #FFF7ED;
-  color: #EA580C;
+  color: #FF5500;
   border: 1px solid #FED7AA;
   border-radius: 8px;
-  padding: 4px 10px;
-  font-size: 0.76rem;
+  padding: 6px 12px;
+  font-size: 0.78rem;
   font-weight: 700;
   cursor: pointer;
+  white-space: nowrap;
   transition: all 0.15s ease;
+  flex-shrink: 0;
 }
 
 .editPhoneBtn:hover {
   background: #FFEDD5;
   color: #C2410C;
-}
-
-.phoneEditRow {
-  display: flex;
-  gap: 8px;
-  align-items: center;
+  border-color: #FDBA74;
 }
 
 .phoneDoneBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   background: #FF5500;
   color: #FFFFFF;
   border: none;
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: 6px 14px;
   font-size: 0.78rem;
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
+  transition: background 0.15s ease;
+  flex-shrink: 0;
+}
+
+.phoneDoneBtn:hover {
+  background: #E04B00;
+}
+
+.phoneHint {
+  margin: 5px 0 0 0;
+  font-size: 0.72rem;
+  color: #64748B;
+  line-height: 1.35;
 }
 
 
