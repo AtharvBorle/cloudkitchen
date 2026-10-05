@@ -102,6 +102,6 @@ export async function performLogout(options?: {
   await discardExistingSession();
 
   if (typeof window !== "undefined") {
-    window.location.href = targetUrl;
+    window.location.replace(targetUrl);
   }
 }

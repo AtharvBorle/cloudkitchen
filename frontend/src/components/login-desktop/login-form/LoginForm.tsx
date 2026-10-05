@@ -231,10 +231,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         } else {
           const params = new URLSearchParams(window.location.search);
           const callbackUrl = params.get("callbackUrl") || "/";
-          window.location.href = callbackUrl;
+          window.location.replace(callbackUrl);
         }
       } catch (err) {
-        window.location.href = "/";
+        window.location.replace("/");
       } finally {
         setIsLoading(false);
       }
@@ -290,7 +290,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         } else {
           const params = new URLSearchParams(window.location.search);
           const callbackUrl = params.get("callbackUrl") || "/";
-          window.location.href = callbackUrl;
+          window.location.replace(callbackUrl);
         }
       } catch (err) {
         setError("An unexpected error occurred. Please try again.");

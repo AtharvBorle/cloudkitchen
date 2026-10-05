@@ -108,15 +108,15 @@ export const ResSellerLogin: React.FC<ResSellerLoginProps> = ({
               const explicitCallback = searchParams?.get("callbackUrl");
 
               if (vStatus === "APPROVED") {
-                router.push(explicitCallback || "/seller/res/dashboard");
+                router.replace(explicitCallback || "/seller/res/dashboard");
               } else if (vStatus === "REVISION") {
-                router.push(
+                router.replace(
                   explicitCallback && explicitCallback.startsWith("/seller/revision")
                     ? explicitCallback
                     : "/seller/revision"
                 );
               } else if (vStatus === "REJECTED" || vStatus === "PENDING") {
-                router.push(
+                router.replace(
                   explicitCallback &&
                     (explicitCallback.startsWith("/seller/verification") ||
                       explicitCallback.startsWith("/seller/registration"))
@@ -124,14 +124,14 @@ export const ResSellerLogin: React.FC<ResSellerLoginProps> = ({
                     : "/seller/verification-status"
                 );
               } else {
-                router.push(explicitCallback || "/seller/verification-status");
+                router.replace(explicitCallback || "/seller/verification-status");
               }
             } else {
-              router.push("/seller/registration");
+              router.replace("/seller/registration");
             }
           } catch (routeErr) {
             console.error("Post-login status check error:", routeErr);
-            router.push("/seller/verification-status");
+            router.replace("/seller/verification-status");
           }
         }
       }

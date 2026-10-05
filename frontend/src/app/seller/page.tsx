@@ -13,7 +13,8 @@ export default function SellerPortalRoot() {
         if (status === "authenticated" && session?.user) {
             const role = session.user.role;
             if (role === "SELLER") {
-                router.replace("/seller/dashboard");
+                const isMobile = typeof window !== "undefined" && window.innerWidth <= 768;
+                router.replace(isMobile ? "/seller/res/dashboard" : "/seller/dashboard");
             }
             // If the user is logged in with a non-seller role (e.g. USER, ADMIN, DELIVERY),
             // do NOT auto-redirect away. Let them see Seller login so they can log in cleanly.

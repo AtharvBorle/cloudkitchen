@@ -123,7 +123,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
     if (session?.user) {
       performLogout({ role: (session.user as any)?.role });
     } else {
-      router.push(`/login?callbackUrl=${encodeURIComponent(pathname || "/settings-desktop")}`);
+      window.location.href = "/login";
     }
   };
 
@@ -400,7 +400,9 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
           className={styles.profileSection}
           onClick={() => {
             onClose();
-            if (isSeller) {
+            if (!session?.user) {
+              window.location.href = "/login";
+            } else if (isSeller) {
               router.push("/seller/dashboard");
             } else if (isAdmin) {
               router.push("/dashboard/admin");
