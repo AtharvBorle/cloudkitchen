@@ -1,31 +1,10 @@
 "use client";
 
-import React, { useEffect } from "react";
-import { useSession } from "next-auth/react";
+import React from "react";
 import SignUpLeftComponent from "@/components/sign-up/SignUpLeftComponent";
 import SignUpRightComponent from "@/components/sign-up/SignUpRightComponent";
 
 export default function SignUpPage() {
-  const { data: session, status } = useSession();
-  const [isExplicitLogout, setIsExplicitLogout] = React.useState(false);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const isLoggedOut = new URLSearchParams(window.location.search).get("logged_out") === "true";
-      if (isLoggedOut) {
-        setIsExplicitLogout(true);
-        return;
-      }
-    }
-
-    if (status === "authenticated" && session?.user) {
-      window.location.replace("/");
-    }
-  }, [status, session]);
-
-  if (!isExplicitLogout && status === "authenticated" && session?.user) {
-    return null;
-  }
 
   return (
     <div

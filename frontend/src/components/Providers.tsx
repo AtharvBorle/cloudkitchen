@@ -56,9 +56,7 @@ function AuthHistorySecurityLock() {
             pathname === "/auth/login/seller"
         );
 
-        // 1. If authenticated user lands on any login route via back-button, redirect to dashboard
         if (isAuthRoute) {
-            window.location.replace(targetDashboard);
             return;
         }
 

@@ -38,17 +38,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   const { data: session, status: authStatus } = useSession();
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const isLoggedOut = new URLSearchParams(window.location.search).get("logged_out") === "true";
-      if (isLoggedOut) {
-        return;
-      }
-    }
     if (authStatus === "authenticated" && session?.user) {
       const callbackUrl = typeof window !== "undefined"
         ? new URLSearchParams(window.location.search).get("callbackUrl")
         : null;
-      router.replace(callbackUrl || "/");
+      if (callbackUrl) {
+        router.replace(callbackUrl);
+      }
     }
   }, [authStatus, session, router]);
 
@@ -70,16 +66,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [successNotice, setSuccessNotice] = useState("");
-
-  const isLoggedOutParam = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("logged_out") === "true";
-
-  if (!isLoggedOutParam && authStatus === "loading") {
-    return <div className={styles.formContainer} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>Loading...</div>;
-  }
-
-  if (!isLoggedOutParam && authStatus === "authenticated" && session?.user) {
-    return null;
-  }
 
   // Refs for 6 OTP boxes
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
