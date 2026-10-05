@@ -10,7 +10,8 @@ function AuthHistorySecurityLock() {
     const { data: session, status } = useSession();
 
     useEffect(() => {
-        if (status !== "authenticated" || !session?.user) {
+        const isLoggedOut = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("logged_out") === "true";
+        if (isLoggedOut || status !== "authenticated" || !session?.user) {
             return;
         }
 
@@ -65,6 +66,11 @@ function AuthHistorySecurityLock() {
         window.history.pushState({ authLocked: true }, "", window.location.href);
 
         const handlePopState = () => {
+            const isLoggedOutNow = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("logged_out") === "true";
+            if (isLoggedOutNow) {
+                return;
+            }
+
             const currentPath = window.location.pathname;
             const isTargetAuth = Boolean(
                 currentPath === "/login" ||

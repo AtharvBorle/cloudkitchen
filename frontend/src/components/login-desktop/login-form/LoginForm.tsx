@@ -38,6 +38,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   const { data: session, status: authStatus } = useSession();
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const isLoggedOut = new URLSearchParams(window.location.search).get("logged_out") === "true";
+      if (isLoggedOut) {
+        return;
+      }
+    }
     if (authStatus === "authenticated" && session?.user) {
       const callbackUrl = typeof window !== "undefined"
         ? new URLSearchParams(window.location.search).get("callbackUrl")
@@ -65,11 +71,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   const [error, setError] = useState("");
   const [successNotice, setSuccessNotice] = useState("");
 
-  if (authStatus === "loading") {
+  const isLoggedOutParam = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("logged_out") === "true";
+
+  if (!isLoggedOutParam && authStatus === "loading") {
     return <div className={styles.formContainer} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>Loading...</div>;
   }
 
-  if (authStatus === "authenticated" && session?.user) {
+  if (!isLoggedOutParam && authStatus === "authenticated" && session?.user) {
     return null;
   }
 

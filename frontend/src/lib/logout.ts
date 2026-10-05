@@ -78,6 +78,12 @@ export async function discardExistingSession(): Promise<void> {
   clearAllAuthData();
 
   try {
+    await fetch("/api/auth/logout", { method: "POST" });
+  } catch (err) {
+    console.warn("Server cookie clear failed:", err);
+  }
+
+  try {
     await signOut({ redirect: false });
   } catch (err) {
     console.warn("NextAuth signOut during session discard warning:", err);
@@ -97,7 +103,10 @@ export async function performLogout(options?: {
   role?: string | null;
   redirectTo?: string;
 }): Promise<void> {
-  const targetUrl = options?.redirectTo || getLoginRouteForRole(options?.role);
+  let targetUrl = options?.redirectTo || getLoginRouteForRole(options?.role);
+  if (!targetUrl.includes("logged_out=true")) {
+    targetUrl += (targetUrl.includes("?") ? "&" : "?") + "logged_out=true";
+  }
 
   await discardExistingSession();
 
