@@ -29,6 +29,7 @@ const POPULAR_AREAS = [
   { pincode: "411045", name: "Baner, Pune", lat: 18.5590, lng: 73.7868 },
   { pincode: "411007", name: "Aundh, Pune", lat: 18.5580, lng: 73.8075 },
   { pincode: "411057", name: "Hinjawadi, Pune", lat: 18.5913, lng: 73.7389 },
+  { pincode: "411058", name: "Warje, Pune", lat: 18.4891, lng: 73.8105 },
   { pincode: "411004", name: "Deccan, Pune", lat: 18.5173, lng: 73.8415 },
   { pincode: "411014", name: "Viman Nagar, Pune", lat: 18.5679, lng: 73.9143 },
   { pincode: "411051", name: "Karve Nagar, Pune", lat: 18.4912, lng: 73.8217 },
@@ -146,7 +147,8 @@ export const LocationModal: React.FC = () => {
   // 1. Handle Pincode / Area Selection (Centers Map on Area & Updates Pin)
   const handleSelectAreaOrPin = async (
     targetInput: string,
-    areaOverride?: { pincode: string; name: string; lat: number; lng: number } | null
+    areaOverride?: { pincode: string; name: string; lat: number; lng: number } | null,
+    autoClose: boolean = false
   ) => {
     const raw = (targetInput || "").trim();
     if (!raw && !areaOverride) {
@@ -165,12 +167,13 @@ export const LocationModal: React.FC = () => {
       finalLat = areaOverride.lat;
       finalLng = areaOverride.lng;
     } else {
-      const pinMatch = raw.match(/\b\d{6}\b/);
+      const pinDigits = raw.replace(/\D/g, "");
+      const pinMatch = pinDigits.length === 6 ? pinDigits : raw.match(/\b\d{6}\b/)?.[0];
       if (pinMatch) {
-        cleanPin = pinMatch[0];
+        cleanPin = pinMatch;
         const matched = POPULAR_AREAS.find((a) => a.pincode === cleanPin);
         const pinInfo = getPincodeCoordinates(cleanPin);
-        localityName = matched?.name || pinInfo?.locality || `PIN ${cleanPin}`;
+        localityName = matched?.name || (pinInfo ? `${pinInfo.locality}, ${pinInfo.city}` : `PIN ${cleanPin}`);
         finalLat = matched?.lat ?? pinInfo?.lat ?? null;
         finalLng = matched?.lng ?? pinInfo?.lng ?? null;
       } else {
@@ -210,7 +213,7 @@ export const LocationModal: React.FC = () => {
       if (finalLat === null || finalLng === null) {
         setIsSearchingLocation(true);
         try {
-          const searchQuery = `${raw}, Pune, Maharashtra, India`;
+          const searchQuery = cleanPin ? `${cleanPin}, India` : `${raw}, Pune, Maharashtra, India`;
           const res = await fetch(
             `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
               searchQuery
@@ -241,27 +244,60 @@ export const LocationModal: React.FC = () => {
     }
 
     if (finalLat === null || finalLng === null) {
-      showNotification("error", "Location not found. Please enter a valid 6-digit pincode (e.g. 411038) or choose an area below");
-      return;
+      if (cleanPin && cleanPin.length === 6) {
+        finalLat = 18.5204;
+        finalLng = 73.8567;
+        localityName = localityName || `Pune Area (${cleanPin})`;
+      } else {
+        showNotification("error", "Location not found. Please enter a valid 6-digit pincode (e.g. 411038) or choose an area below");
+        return;
+      }
     }
 
     const effectivePin = cleanPin || resolvedPincode || "411051";
+    const effectiveLocality = localityName || `PIN ${effectivePin}`;
     setPincodeInput(effectivePin);
     setResolvedPincode(effectivePin);
-    setResolvedLocality(localityName || `PIN ${effectivePin}`);
+    setResolvedLocality(effectiveLocality);
     setMapLat(finalLat);
     setMapLng(finalLng);
     setLatitude(finalLat);
     setLongitude(finalLng);
     setSelectedAreaInfo(areaOverride || POPULAR_AREAS.find((a) => a.pincode === effectivePin) || null);
-    showNotification("success", `Map centered on ${localityName || effectivePin}. Adjust the pin to your exact doorstep.`);
+
+    // Apply & persist the location immediately across the application
+    setGuestLocation(effectivePin, effectiveLocality, "Pune", finalLat, finalLng);
+    if (session?.user) {
+      fetchApi("/api/user/location", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pincode: effectivePin, lat: finalLat, lng: finalLng }),
+      })
+        .then(() => refreshAddress())
+        .catch((e) => console.warn("Background location sync warning:", e));
+    }
+
+    if (autoClose) {
+      showNotification("success", `✓ PIN Code updated to ${effectivePin} (${effectiveLocality})!`);
+      setTimeout(() => {
+        closeLocationModal();
+        if (typeof window !== "undefined") {
+          const el = document.getElementById("places-section");
+          if (el) el.scrollIntoView({ behavior: "smooth" });
+        }
+      }, 500);
+    } else {
+      showNotification("success", `PIN Code updated to ${effectivePin} (${effectiveLocality}). Adjust doorstep pin below if needed.`);
+    }
   };
 
   // 2. Handle Confirming Pinned Delivery Location
   const handleConfirmPinnedLocation = () => {
     setIsApplying(true);
-    const cleanPin = (resolvedPincode || pincodeInput || "").replace(/\D/g, "").slice(0, 6) || "411051";
-    const locName = resolvedLocality || (selectedAreaInfo?.name ?? `PIN ${cleanPin}`);
+    const typedPin = (pincodeInput || "").replace(/\D/g, "").slice(0, 6);
+    const cleanPin = typedPin.length === 6 ? typedPin : ((resolvedPincode || typedPin || "").replace(/\D/g, "").slice(0, 6) || "411051");
+    const pinInfo = getPincodeCoordinates(cleanPin);
+    const locName = resolvedLocality || (selectedAreaInfo?.name ?? (pinInfo ? `${pinInfo.locality}, ${pinInfo.city}` : `PIN ${cleanPin}`));
     const city = "Pune";
     const finalLat = mapLat;
     const finalLng = mapLng;
@@ -329,7 +365,15 @@ export const LocationModal: React.FC = () => {
             setPincodeInput(pin);
             setResolvedPincode(pin);
             setResolvedLocality(locality);
-            showNotification("success", `GPS Location Detected! Adjust the pin below and click Confirm.`);
+            setGuestLocation(pin, locality, "Pune", lat, lng);
+            if (session?.user) {
+              fetchApi("/api/user/location", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ pincode: pin, lat, lng }),
+              }).catch(() => {});
+            }
+            showNotification("success", `GPS Location Detected: ${locality} (${pin})`);
           }
         } catch (err) {
           console.error("GPS Reverse Geocode Error:", err);
@@ -450,8 +494,31 @@ export const LocationModal: React.FC = () => {
     }
   };
 
+  const handleModalClose = () => {
+    const cleanDigits = (pincodeInput || "").replace(/\D/g, "").slice(0, 6);
+    if (cleanDigits.length === 6 && cleanDigits !== defaultAddress?.pincode) {
+      const pinInfo = getPincodeCoordinates(cleanDigits);
+      const matched = POPULAR_AREAS.find((a) => a.pincode === cleanDigits);
+      const locName = matched?.name || (pinInfo ? `${pinInfo.locality}, ${pinInfo.city}` : `PIN ${cleanDigits}`);
+      const finalLat = matched?.lat ?? pinInfo?.lat ?? mapLat;
+      const finalLng = matched?.lng ?? pinInfo?.lng ?? mapLng;
+
+      setGuestLocation(cleanDigits, locName, "Pune", finalLat, finalLng);
+      if (session?.user) {
+        fetchApi("/api/user/location", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pincode: cleanDigits, lat: finalLat, lng: finalLng }),
+        })
+          .then(() => refreshAddress())
+          .catch(() => {});
+      }
+    }
+    closeLocationModal();
+  };
+
   return (
-    <div className={styles.modalBackdrop} onClick={closeLocationModal}>
+    <div className={styles.modalBackdrop} onClick={handleModalClose}>
       <div className={styles.modalCard} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
         {/* Header */}
         <div className={styles.modalHeader}>
@@ -467,7 +534,7 @@ export const LocationModal: React.FC = () => {
           <button
             type="button"
             className={styles.closeBtn}
-            onClick={closeLocationModal}
+            onClick={handleModalClose}
             aria-label="Close location modal"
           >
             <X size={18} />
@@ -533,12 +600,27 @@ export const LocationModal: React.FC = () => {
                       val.trim().length >= 3 && a.name.toLowerCase().includes(val.trim().toLowerCase())
                     );
                     setSelectedAreaInfo(matchedByPin || matchedByName || null);
+                    if (cleanDigits.length === 6) {
+                      setResolvedPincode(cleanDigits);
+                      const pinInfo = getPincodeCoordinates(cleanDigits);
+                      const loc = matchedByPin?.name || (pinInfo ? `${pinInfo.locality}, ${pinInfo.city}` : "");
+                      if (loc) setResolvedLocality(loc);
+                      const lat = matchedByPin?.lat ?? pinInfo?.lat;
+                      const lng = matchedByPin?.lng ?? pinInfo?.lng;
+                      if (lat && lng) {
+                        setMapLat(lat);
+                        setMapLng(lng);
+                        setLatitude(lat);
+                        setLongitude(lng);
+                      }
+                    }
                   }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
                       if (pincodeInput.trim()) {
-                        handleSelectAreaOrPin(pincodeInput, selectedAreaInfo);
+                        const cleanDigits = pincodeInput.replace(/\D/g, "");
+                        handleSelectAreaOrPin(pincodeInput, selectedAreaInfo, cleanDigits.length === 6);
                       }
                     }
                   }}
@@ -549,10 +631,15 @@ export const LocationModal: React.FC = () => {
                 type="button"
                 className={styles.applyBtn}
                 disabled={!pincodeInput.trim() || isSearchingLocation}
-                onClick={() => handleSelectAreaOrPin(pincodeInput, selectedAreaInfo)}
+                onClick={() => {
+                  const cleanDigits = pincodeInput.replace(/\D/g, "");
+                  handleSelectAreaOrPin(pincodeInput, selectedAreaInfo, cleanDigits.length === 6);
+                }}
               >
                 {isSearchingLocation ? (
                   <Loader2 className="animate-spin" size={16} />
+                ) : pincodeInput.replace(/\D/g, "").length === 6 ? (
+                  "Apply"
                 ) : (
                   "Search"
                 )}
@@ -572,7 +659,7 @@ export const LocationModal: React.FC = () => {
                     type="button"
                     className={`${styles.chipBtn} ${isActive ? styles.chipBtnActive : ""}`}
                     onClick={() => {
-                      handleSelectAreaOrPin(area.pincode, area);
+                      handleSelectAreaOrPin(area.pincode, area, false);
                     }}
                   >
                     <MapPin size={12} />
