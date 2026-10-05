@@ -551,6 +551,7 @@
   0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.6); }
   70% { transform: scale(1.15); box-shadow: 0 0 0 6px rgba(220, 38, 38, 0); }
   100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+}
 
 .statusTimer {
   background-color: #FFF7ED;
