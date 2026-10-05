@@ -1006,6 +1006,7 @@
   top: calc(100% + 8px);
   right: 0;
   width: 195px;
+  max-width: calc(100vw - 24px);
   background-color: #ffffff;
   border-radius: 20px;
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.04);
@@ -1018,6 +1019,24 @@
   box-sizing: border-box;
   animation: dietPopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   transform-origin: top right;
+}
+
+.dietDropdownLeft {
+  left: 0 !important;
+  right: auto !important;
+  transform-origin: top left !important;
+}
+
+.dietDropdownRight {
+  right: 0 !important;
+  left: auto !important;
+  transform-origin: top right !important;
+}
+
+.mobileSecondRow .vegWrapper:only-child .dietDropdown {
+  left: 0;
+  right: auto;
+  transform-origin: top left;
 }
 
 @keyframes dietPopIn {

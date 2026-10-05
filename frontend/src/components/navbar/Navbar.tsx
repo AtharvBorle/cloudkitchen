@@ -290,6 +290,30 @@ export const Navbar: React.FC<NavbarProps> = ({
   const shouldHideSearch = hideSearch !== undefined ? hideSearch : false;
   const shouldHideVegToggle = hideVegToggle !== undefined ? hideVegToggle : false;
 
+  const mobileVegRef = useRef<HTMLDivElement>(null);
+  const [mobileDropdownAlign, setMobileDropdownAlign] = useState<"left" | "right">(() =>
+    shouldHideSearch ? "left" : "right"
+  );
+
+  useEffect(() => {
+    const updateAlign = () => {
+      if (mobileVegRef.current) {
+        const rect = mobileVegRef.current.getBoundingClientRect();
+        if (rect.left < window.innerWidth / 2) {
+          setMobileDropdownAlign("left");
+        } else {
+          setMobileDropdownAlign("right");
+        }
+      }
+    };
+
+    if (isDietDropdownOpen) {
+      updateAlign();
+      window.addEventListener("resize", updateAlign);
+      return () => window.removeEventListener("resize", updateAlign);
+    }
+  }, [isDietDropdownOpen]);
+
   const handleNavClick = (item: string) => {
     setInternalActiveItem(item);
     setIsMobileMenuOpen(false);
@@ -1234,7 +1258,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* Veg / Diet Selector Pill + Dropdown Popover */}
             {!shouldHideVegToggle && (
-              <div className={styles.vegWrapper}>
+              <div ref={mobileVegRef} className={styles.vegWrapper}>
                 <button
                   type="button"
                   className={`${styles.dietPillBtn} ${
@@ -1268,7 +1292,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                       onClick={() => setIsDietDropdownOpen(false)}
                     />
                     <div
-                      className={styles.dietDropdown}
+                      className={`${styles.dietDropdown} ${
+                        mobileDropdownAlign === "left"
+                          ? styles.dietDropdownLeft
+                          : styles.dietDropdownRight
+                      }`}
                       role="menu"
                       aria-orientation="vertical"
                     >
