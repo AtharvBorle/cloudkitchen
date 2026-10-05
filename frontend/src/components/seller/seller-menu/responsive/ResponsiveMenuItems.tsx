@@ -69,7 +69,7 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
   initialSelectedFoodTypes,
   initialDescription = "",
   initialStockQty = "",
-  initialIsInStock: _initialIsInStock = true,
+  initialIsInStock = true,
   initialVariants = DEFAULT_VARIANTS,
   initialSchedules = DEFAULT_SCHEDULES,
   initialImageUrl,
@@ -116,7 +116,6 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
     });
   };
   const [description, setDescription] = useState(initialDescription);
-  const [stockQty, setStockQty] = useState<number | string>(initialStockQty);
   const [variants, setVariants] = useState<ResponsiveVariantItem[]>(initialVariants);
   const [schedules, setSchedules] = useState<ResponsiveDaySchedule[]>(initialSchedules);
   const [imagePreview, setImagePreview] = useState<string | null>(initialImageUrl || null);
@@ -228,11 +227,6 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
       return;
     }
 
-    if (stockQty === "" || isNaN(parseInt(String(stockQty), 10)) || parseInt(String(stockQty), 10) < 0) {
-      alert("Stock Quantity is required (enter 0 or more).");
-      return;
-    }
-
     if (!description || !description.trim()) {
       alert("Description is required.");
       return;
@@ -243,7 +237,13 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
       return;
     }
 
-    const cleanStock = Math.max(0, parseInt(String(stockQty), 10) || 0);
+    const parsedStock =
+      initialStockQty !== undefined && initialStockQty !== null && initialStockQty !== ""
+        ? parseInt(String(initialStockQty), 10)
+        : NaN;
+    const cleanStock = !isNaN(parsedStock) && parsedStock >= 0
+      ? parsedStock
+      : (initialIsInStock !== false ? 99 : 0);
 
     const data = {
       itemName,
@@ -253,7 +253,7 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
       selectedFoodTypes,
       description,
       stockQty: cleanStock,
-      isInStock: cleanStock > 0,
+      isInStock: initialIsInStock !== undefined ? initialIsInStock : cleanStock > 0,
       variants,
       schedules,
       imageFile,
@@ -591,46 +591,7 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
             </div>
           </div>
 
-          {/* 9. In Stock Card */}
-          <div className={styles.stockCard}>
-            <div className={styles.stockInfo}>
-              <span className={styles.stockTitle}>
-                In stock (Stock Quantity) <span style={{ color: "#EF4444" }}>*</span>
-              </span>
-              <span className={styles.stockSubtitle}>
-                Make this item available immediately
-              </span>
-            </div>
-
-            <div className={styles.stockControls}>
-              <input
-                type="number"
-                min="0"
-                step="1"
-                className={styles.stockQtyInput}
-                value={stockQty}
-                onChange={(e) => {
-                  const raw = e.target.value;
-                  if (raw === "") {
-                    setStockQty("");
-                    return;
-                  }
-                  const clean = raw.replace(/[^\d]/g, "");
-                  const num = parseInt(clean, 10);
-                  setStockQty(isNaN(num) ? "0" : String(Math.max(0, num)));
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "-" || e.key === "e" || e.key === "E" || e.key === "+" || e.key === ".") {
-                    e.preventDefault();
-                  }
-                }}
-                placeholder="0"
-                aria-label="Stock quantity"
-              />
-            </div>
-          </div>
-
-          {/* 10. Bottom Action: Save / Update item */}
+          {/* Bottom Action: Save / Update item */}
           <button type="submit" className={styles.saveButton}>
             {initialItemName ? "Update item" : "Save item"}
           </button>
