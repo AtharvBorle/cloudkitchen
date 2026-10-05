@@ -677,14 +677,15 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
                           display: "flex",
                           alignItems: "center",
                           gap: "6px",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap"
+                          flexWrap: "wrap",
+                          minWidth: 0,
                         }}
                       >
-                        <span>{appliedCouponData?.code || appliedPromo}</span>
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%" }}>
+                          {appliedCouponData?.code || appliedPromo}
+                        </span>
                         {(appliedCouponData as any)?.isAutoApply && (
-                          <span style={{ fontSize: "0.68rem", backgroundColor: "#BBF7D0", color: "#15803D", padding: "1px 6px", borderRadius: "4px", fontWeight: "700", flexShrink: 0 }}>
+                          <span style={{ fontSize: "0.68rem", backgroundColor: "#BBF7D0", color: "#15803D", padding: "1px 6px", borderRadius: "4px", fontWeight: "700", flexShrink: 0, whiteSpace: "nowrap" }}>
                             ⚡ AUTO-APPLIED
                           </span>
                         )}
@@ -1055,9 +1056,11 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
 
       {/* Toast Feedback */}
       {toastMessage && (
-        <div className={styles.toastMessage}>
-          <CheckCircle2 size={18} color="#10B981" />
-          <span>{toastMessage}</span>
+        <div className={styles.toastMessage} style={{ pointerEvents: "none", zIndex: 99999 }}>
+          <CheckCircle2 size={18} color="#10B981" style={{ flexShrink: 0 }} />
+          <span style={{ fontWeight: 600, fontSize: "0.85rem", lineHeight: 1.35, wordBreak: "normal", overflowWrap: "break-word" }}>
+            {toastMessage}
+          </span>
         </div>
       )}
     </div>

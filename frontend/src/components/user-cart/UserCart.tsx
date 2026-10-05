@@ -1978,14 +1978,15 @@ export const UserCart: React.FC<UserCartProps> = ({
                           display: "flex",
                           alignItems: "center",
                           gap: "6px",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap"
+                          flexWrap: "wrap",
+                          minWidth: 0,
                         }}
                       >
-                        <span>{appliedCouponData?.code || appliedPromo}</span>
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%" }}>
+                          {appliedCouponData?.code || appliedPromo}
+                        </span>
                         {(appliedCouponData as any)?.isAutoApply && (
-                          <span style={{ fontSize: "0.68rem", backgroundColor: "#BBF7D0", color: "#15803D", padding: "1px 6px", borderRadius: "4px", fontWeight: "700", flexShrink: 0 }}>
+                          <span style={{ fontSize: "0.68rem", backgroundColor: "#BBF7D0", color: "#15803D", padding: "1px 6px", borderRadius: "4px", fontWeight: "700", flexShrink: 0, whiteSpace: "nowrap" }}>
                             ⚡ AUTO-APPLIED
                           </span>
                         )}
@@ -2562,9 +2563,6 @@ export const UserCart: React.FC<UserCartProps> = ({
         <div
           className={styles.toastMessage}
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
             backgroundColor:
               toast.type === "error"
                 ? "#FEF2F2"
@@ -2584,14 +2582,17 @@ export const UserCart: React.FC<UserCartProps> = ({
                 ? "#FCD34D"
                 : "#86EFAC"
             }`,
-            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08)",
+            boxShadow: "0 10px 30px -4px rgba(0, 0, 0, 0.16), 0 4px 10px rgba(0, 0, 0, 0.06)",
             zIndex: 99999,
+            pointerEvents: "none",
           }}
         >
-          {toast.type === "error" && <AlertCircle size={20} color="#DC2626" style={{ flexShrink: 0 }} />}
-          {toast.type === "warning" && <AlertTriangle size={20} color="#D97706" style={{ flexShrink: 0 }} />}
-          {(toast.type === "success" || toast.type === "info") && <CheckCircle2 size={20} color="#10B981" style={{ flexShrink: 0 }} />}
-          <span style={{ fontWeight: 600, fontSize: "0.88rem" }}>{toast.message}</span>
+          {toast.type === "error" && <AlertCircle size={18} color="#DC2626" style={{ flexShrink: 0 }} />}
+          {toast.type === "warning" && <AlertTriangle size={18} color="#D97706" style={{ flexShrink: 0 }} />}
+          {(toast.type === "success" || toast.type === "info") && <CheckCircle2 size={18} color="#10B981" style={{ flexShrink: 0 }} />}
+          <span style={{ fontWeight: 600, fontSize: "0.85rem", lineHeight: 1.35, wordBreak: "normal", overflowWrap: "break-word", textAlign: "left" }}>
+            {toast.message}
+          </span>
         </div>
       )}
 
