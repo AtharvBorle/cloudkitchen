@@ -357,7 +357,12 @@ export function isKitchenMatchingDiet(
 
   if (norm === "non_veg") {
     // If it is 100% Pure Veg with no non-veg dishes, exclude from non-veg filter
-    if (isDeclaredPureVeg && !isBothVegAndNonVeg && kitchenDishes.length > 0 && kitchenDishes.every((d) => !isNonVegDish(d))) {
+    if (
+      (isDeclaredPureVeg || rawFoodType === "PURE_VEG" || rawFoodType === "VEG" || rawFoodType === "VEG_ONLY" || rawFoodType === "PUREVEG" || rawFoodType === "VEGAN" || rawFoodType === "JAIN") &&
+      !isBothVegAndNonVeg &&
+      kitchenDishes.length > 0 &&
+      kitchenDishes.every((d) => !isNonVegDish(d))
+    ) {
       return false;
     }
     if (isDeclaredNonVeg || isBothVegAndNonVeg) return true;
@@ -967,6 +972,206 @@ export function isKitchenServingCuisine(
 }
 
 /**
+ * Returns offer details and badge text if a dish has active seller/item-specific offers, discounts, or coupons.
+ * Evaluates all applicable item offers and selects the single BEST discount (maximum savings) for this item.
+ */
+export function getDishOfferBadge(
+  dish: {
+    id?: string | null;
+    name?: string | null;
+    categoryName?: string | null;
+    sellerId?: string | null;
+    sellerTrackingId?: string | null;
+    price?: number;
+    originalPrice?: number;
+    discountPercent?: number;
+    offerTag?: string;
+  },
+  coupons: Array<{
+    id?: string | null;
+    code?: string | null;
+    description?: string | null;
+    appliesToSellerId?: string | null;
+    appliesToProductId?: string | null;
+    sellerId?: string | null;
+    discountPercentage?: number | null;
+    discountAmount?: number | null;
+    minimumCartValue?: number | null;
+    maxDiscountAmount?: number | null;
+    isActive?: boolean;
+  }> = []
+): { hasOffer: boolean; badgeText: string | null; discountPercentage?: number | null; discountAmount?: number | null } {
+  if (!dish) return { hasOffer: false, badgeText: null, discountPercentage: 0, discountAmount: 0 };
+
+  const candidates: Array<{
+    type: string;
+    pct: number;
+    amount: number;
+    badgeText: string;
+    priority: number;
+  }> = [];
+
+  const dishPrice = Number(dish.price) || 0;
+  const dishOrigPrice = Number(dish.originalPrice) || 0;
+  const dName = String(dish.name || "").toLowerCase();
+  const dCategory = String(dish.categoryName || (dish as any).category || "").toLowerCase();
+  const dId = String(dish.id || "").toLowerCase().trim();
+  const dSeller = String(dish.sellerId || "").toLowerCase().trim();
+  const dTrack = String(dish.sellerTrackingId || "").toLowerCase().trim();
+
+  // 1. Direct item discount percentage (set by seller on this dish)
+  if (dish.discountPercent && Number(dish.discountPercent) > 0) {
+    const pct = Number(dish.discountPercent);
+    candidates.push({
+      type: "DIRECT_PCT",
+      pct,
+      amount: (dishPrice * pct) / 100,
+      badgeText: `${Math.round(pct)}% OFF`,
+      priority: 10,
+    });
+  }
+
+  // 2. Direct originalPrice vs current price discount
+  if (dishOrigPrice > dishPrice && dishPrice > 0) {
+    const amt = dishOrigPrice - dishPrice;
+    const pct = (amt / dishOrigPrice) * 100;
+    candidates.push({
+      type: "ORIG_PRICE",
+      pct,
+      amount: amt,
+      badgeText: `${Math.round(pct)}% OFF`,
+      priority: 10,
+    });
+  }
+
+  // 3. Direct offer tag on dish
+  if (dish.offerTag && String(dish.offerTag).trim()) {
+    candidates.push({
+      type: "OFFER_TAG",
+      pct: 1,
+      amount: 1,
+      badgeText: String(dish.offerTag).trim(),
+      priority: 5,
+    });
+  }
+
+  // 4. Item-specific Coupons
+  if (coupons && coupons.length > 0) {
+    for (const cp of coupons) {
+      if (cp.isActive === false) continue;
+
+      const cpSeller = String(cp.appliesToSellerId || cp.sellerId || "").toLowerCase().trim();
+      const cpProd = String(cp.appliesToProductId || "").toLowerCase().trim();
+      const rawCode = String(cp.code || "").toLowerCase();
+      const cpCleanCode = rawCode.replace(/[^a-z]/g, "");
+      const cpDesc = String(cp.description || "").toLowerCase();
+
+      const cpAppliesTo = String((cp as any).appliesTo || "").toUpperCase();
+      const cpCatId = String((cp as any).appliesToCategoryId || "").toLowerCase().trim();
+      const cpProdList = cpProd.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+      const cpCatList = cpCatId.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+      const dCatId = String((dish as any).categoryId || "").toLowerCase().trim();
+
+      // Check direct product ID match (single or comma-separated or appliesTo=ITEMS)
+      const isProductMatch = (cpProd && dId && (cpProd === dId || cpProdList.includes(dId))) ||
+        (cpAppliesTo === "ITEMS" && cpProdList.includes(dId));
+
+      // Check direct category match (appliesTo=CATEGORY or categoryId/categoryName match)
+      const isCategoryCouponMatch =
+        (cpAppliesTo === "CATEGORY" || cpCatList.length > 0) &&
+        (
+          (dCatId && cpCatList.includes(dCatId)) ||
+          (dCategory && cpCatList.includes(dCategory)) ||
+          (cpProdList.length > 0 && (cpProdList.includes(dCatId) || cpProdList.includes(dCategory)))
+        );
+
+      // Check seller match
+      const isSellerMatch = cpSeller && cpSeller !== "global" && cpSeller !== "all" && (
+        (dSeller && cpSeller === dSeller) ||
+        (dTrack && cpSeller === dTrack)
+      );
+
+      // Check if coupon specifically targets food item categories / keywords (e.g. burger, pizza, biryani, cake, etc.)
+      const specificKeywords = [
+        "burger", "burgers", "pizza", "pizzas", "biryani", "cake", "cakes", "pastry",
+        "dosa", "thali", "rice", "wrap", "salad", "shake", "coffee", "tea",
+        "paneer", "chicken", "mutton", "fish", "dessert"
+      ];
+      const matchedKeywords = specificKeywords.filter((kw) => {
+        const root = kw.endsWith("s") ? kw.slice(0, -1) : kw;
+        return cpCleanCode.includes(root) || new RegExp(`\\b${root}(s|es)?\\b`, "i").test(cpDesc);
+      });
+
+      const isKeywordItemMatch = matchedKeywords.length > 0 && matchedKeywords.some((kw) => {
+        const root = kw.endsWith("s") ? kw.slice(0, -1) : kw;
+        return dName.includes(root) || dCategory.includes(root);
+      });
+
+      // ONLY match coupons that are specifically attached to this product OR specifically target this item category!
+      // (Do NOT slap general store/cart coupons onto random dishes)
+      if (!isProductMatch && !isCategoryCouponMatch && !isKeywordItemMatch) {
+        continue;
+      }
+
+      // If coupon belongs to a different seller and is not global, skip
+      if (cpSeller && cpSeller !== "global" && cpSeller !== "all" && !isSellerMatch) {
+        continue;
+      }
+
+      // Calculate discount amount and percentage
+      let effectivePct = 0;
+      let effectiveAmt = 0;
+
+      if (cp.discountPercentage && Number(cp.discountPercentage) > 0) {
+        effectivePct = Number(cp.discountPercentage);
+        effectiveAmt = (dishPrice * effectivePct) / 100;
+        if (
+          cp.maxDiscountAmount &&
+          Number(cp.maxDiscountAmount) > 0 &&
+          effectiveAmt > Number(cp.maxDiscountAmount)
+        ) {
+          effectiveAmt = Number(cp.maxDiscountAmount);
+          effectivePct = dishPrice > 0 ? (effectiveAmt / dishPrice) * 100 : effectivePct;
+        }
+      } else if (cp.discountAmount && Number(cp.discountAmount) > 0) {
+        effectiveAmt = Number(cp.discountAmount);
+        effectivePct = dishPrice > 0 ? Math.min(100, (effectiveAmt / dishPrice) * 100) : 0;
+      }
+
+      if (effectiveAmt > 0 || effectivePct > 0) {
+        const badgeText = effectivePct > 0 ? `${Math.round(effectivePct)}% OFF` : `₹${Math.round(effectiveAmt)} OFF`;
+        candidates.push({
+          type: "COUPON",
+          pct: effectivePct,
+          amount: effectiveAmt,
+          badgeText,
+          priority: isProductMatch ? 10 : 9,
+        });
+      }
+    }
+  }
+
+  if (candidates.length === 0) {
+    return { hasOffer: false, badgeText: null, discountPercentage: 0, discountAmount: 0 };
+  }
+
+  // Sort candidates to find the BEST (highest discount savings amount and percentage)
+  candidates.sort((a, b) => {
+    if (b.amount !== a.amount) return b.amount - a.amount;
+    if (b.pct !== a.pct) return b.pct - a.pct;
+    return (b.priority || 0) - (a.priority || 0);
+  });
+
+  const best = candidates[0];
+  return {
+    hasOffer: true,
+    badgeText: best.badgeText,
+    discountPercentage: best.pct,
+    discountAmount: best.amount,
+  };
+}
+
+/**
  * Checks whether a dish has active seller/item-specific offers, discounts, or coupons.
  */
 export function isDishHavingOffers(
@@ -981,28 +1186,16 @@ export function isDishHavingOffers(
   },
   coupons: Array<{
     id?: string | null;
+    code?: string | null;
     appliesToSellerId?: string | null;
+    appliesToProductId?: string | null;
     sellerId?: string | null;
+    discountPercentage?: number | null;
+    discountAmount?: number | null;
     isActive?: boolean;
   }> = []
 ): boolean {
-  // 1. Direct item-level discount / offer
-  if (dish.originalPrice && dish.price && Number(dish.price) < Number(dish.originalPrice)) return true;
-  if (dish.discountPercent && Number(dish.discountPercent) > 0) return true;
-  if (dish.offerTag && String(dish.offerTag).trim() !== "") return true;
-
-  // 2. Coupon match (must be specifically assigned to this seller/kitchen)
-  if (!coupons || coupons.length === 0) return false;
-
-  const dSeller = (dish.sellerId || "").toLowerCase().trim();
-  const dTrack = (dish.sellerTrackingId || "").toLowerCase().trim();
-
-  return coupons.some((cp) => {
-    if (cp.isActive === false) return false;
-    const target = (cp.appliesToSellerId || cp.sellerId || "").toLowerCase().trim();
-    if (!target || target === "global" || target === "all") return false;
-    return (dSeller && target === dSeller) || (dTrack && target === dTrack);
-  });
+  return getDishOfferBadge(dish, coupons).hasOffer;
 }
 
 /**

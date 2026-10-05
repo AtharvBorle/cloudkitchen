@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Menu as MenuIcon, Plus, Search, Minus, UtensilsCrossed, Bell } from "lucide-react";
+import { Menu as MenuIcon, Plus, Search, Minus, UtensilsCrossed, Bell, SquarePen } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import PaginationControls from "../../common/PaginationControls";
 import styles from "./ResponsiveMenu.module.css";
@@ -27,6 +27,7 @@ export interface ResponsiveMenuProps {
   ownerName?: string;
   dishes?: ResponsiveDishItem[];
   onAddItem?: () => void;
+  onEditDish?: (dishId: string) => void;
   onStockChange?: (dishId: string, newStock: number) => void;
   onToggleAvailability?: (dishId: string, isAvailable: boolean) => void;
   onSyncDevices?: () => void;
@@ -41,6 +42,7 @@ export const ResponsiveMenu: React.FC<ResponsiveMenuProps> = ({
   ownerName,
   dishes = EMPTY_DISHES,
   onAddItem,
+  onEditDish,
   onStockChange,
   onToggleAvailability,
   onSyncDevices,
@@ -81,6 +83,14 @@ export const ResponsiveMenu: React.FC<ResponsiveMenuProps> = ({
       onAddItem();
     } else {
       router.push("/seller/menu/item");
+    }
+  };
+
+  const handleEditDish = (dishId: string) => {
+    if (onEditDish) {
+      onEditDish(dishId);
+    } else {
+      router.push(`/seller/edit-menu?id=${dishId}`);
     }
   };
 
@@ -255,106 +265,122 @@ export const ResponsiveMenu: React.FC<ResponsiveMenuProps> = ({
             <div className={styles.itemsList}>
               {paginatedDishes.map((dish) => (
                 <article key={dish.id} className={styles.itemCard}>
-                  {/* Left: Thumbnail & Details */}
-                  <div className={styles.itemLeft}>
-                    <div className={styles.imageWrapper}>
-                      <img
-                        src={dish.imageUrl}
-                        alt={dish.name}
-                        className={styles.dishImage}
-                        onError={(e) => {
-                          // Fallback on image load error
-                          (e.target as HTMLElement).style.display = "none";
-                        }}
-                      />
-                    </div>
-                    <div className={styles.itemDetails}>
-                      <h2 className={styles.dishName}>{dish.name}</h2>
-                      <p className={styles.dishPrice}>{dish.price}</p>
-                      {dish.addons && dish.addons.length > 0 && (
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "2px" }}>
-                          {dish.addons.map((a, idx) => (
-                            <span
-                              key={idx}
-                              style={{
-                                fontSize: "0.68rem",
-                                fontWeight: 600,
-                                color: "#EA580C",
-                                backgroundColor: "#FFF7ED",
-                                border: "1px solid #FFEDD5",
-                                padding: "1px 5px",
-                                borderRadius: "4px",
-                              }}
-                            >
-                              +{a.name} (₹{a.price})
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      {dish.types && dish.types.length > 0 && (
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "3px" }}>
-                          {dish.types.includes("VEG") && (
-                            <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#16A34A", backgroundColor: "#DCFCE7", padding: "1px 5px", borderRadius: "4px" }}>
-                              VEG
-                            </span>
-                          )}
-                          {dish.types.includes("NON-VEG") && (
-                            <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#DC2626", backgroundColor: "#FEE2E2", padding: "1px 5px", borderRadius: "4px" }}>
-                              NON-VEG
-                            </span>
-                          )}
-                          {dish.types.includes("VEGAN") && (
-                            <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#059669", backgroundColor: "#D1FAE5", padding: "1px 5px", borderRadius: "4px" }}>
-                              VEGAN
-                            </span>
-                          )}
-                          {dish.types.includes("JAIN") && (
-                            <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#D97706", backgroundColor: "#FEF3C7", padding: "1px 5px", borderRadius: "4px" }}>
-                              JAIN
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Right: Quantity Stepper & Availability Toggle */}
-                  <div className={styles.itemRight}>
-                    {dish.isAvailable && (
-                      <div className={styles.stepperContainer}>
-                        <button
-                          type="button"
-                          className={styles.stepperBtn}
-                          onClick={() => handleStockDecrement(dish.id)}
-                          aria-label="Decrease quantity"
-                        >
-                          <Minus size={14} />
-                        </button>
-                        <span className={styles.stepperValue}>{dish.stockQty}</span>
-                        <button
-                          type="button"
-                          className={styles.stepperBtn}
-                          onClick={() => handleStockIncrement(dish.id)}
-                          aria-label="Increase quantity"
-                        >
-                          <Plus size={14} />
-                        </button>
+                  {/* Card Header: Thumbnail + Name & Type & Price + Edit Button */}
+                  <div className={styles.cardHeader}>
+                    <div className={styles.cardMainInfo}>
+                      <div className={styles.imageWrapper}>
+                        <img
+                          src={dish.imageUrl}
+                          alt={dish.name}
+                          className={styles.dishImage}
+                          onError={(e) => {
+                            // Fallback on image load error
+                            (e.target as HTMLElement).style.display = "none";
+                          }}
+                        />
                       </div>
-                    )}
 
-                    {/* On/Off Toggle Switch */}
+                      <div className={styles.itemDetails}>
+                        <div className={styles.titleRow}>
+                          <h2 className={styles.dishName}>{dish.name}</h2>
+                          {dish.types && dish.types.length > 0 && (
+                            <div className={styles.typeBadgesGroup}>
+                              {dish.types.includes("VEG") && (
+                                <span className={styles.badgeVeg}>VEG</span>
+                              )}
+                              {dish.types.includes("NON-VEG") && (
+                                <span className={styles.badgeNonVeg}>NON-VEG</span>
+                              )}
+                              {dish.types.includes("VEGAN") && (
+                                <span className={styles.badgeVegan}>VEGAN</span>
+                              )}
+                              {dish.types.includes("JAIN") && (
+                                <span className={styles.badgeJain}>JAIN</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <p className={styles.dishPrice}>{dish.price}</p>
+                      </div>
+                    </div>
+
+                    {/* Edit Dish Button (Identical to Web Desktop) */}
                     <button
                       type="button"
-                      role="switch"
-                      aria-checked={dish.isAvailable}
-                      className={`${styles.toggleSwitch} ${
-                        dish.isAvailable ? styles.toggleSwitchActive : ""
-                      }`}
-                      onClick={() => handleToggle(dish.id)}
-                      aria-label={`Toggle availability for ${dish.name}`}
+                      className={styles.editDishBtn}
+                      onClick={() => handleEditDish(dish.id)}
+                      aria-label={`Edit ${dish.name}`}
+                      title="Edit dish"
                     >
-                      <span className={styles.toggleThumb} />
+                      <SquarePen size={16} strokeWidth={2.2} />
                     </button>
+                  </div>
+
+                  {/* Optional Add-ons Chips Row */}
+                  {dish.addons && dish.addons.length > 0 && (
+                    <div className={styles.addonsRow}>
+                      {dish.addons.map((a, idx) => (
+                        <span key={idx} className={styles.addonBadge}>
+                          +{a.name} (₹{a.price})
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Card Footer: Stock Status, Quantity Stepper & On/Off Availability Switch */}
+                  <div className={styles.cardFooter}>
+                    <div className={styles.stockStatusIndicator}>
+                      <span
+                        className={`${styles.statusDot} ${
+                          dish.isAvailable ? styles.statusDotActive : styles.statusDotInactive
+                        }`}
+                      />
+                      <span
+                        className={`${styles.statusLabel} ${
+                          dish.isAvailable ? styles.statusLabelActive : styles.statusLabelInactive
+                        }`}
+                      >
+                        {dish.isAvailable ? "In Stock" : "Out of Stock"}
+                      </span>
+                    </div>
+
+                    <div className={styles.controlsGroup}>
+                      {dish.isAvailable && (
+                        <div className={styles.stepperContainer}>
+                          <button
+                            type="button"
+                            className={styles.stepperBtn}
+                            onClick={() => handleStockDecrement(dish.id)}
+                            aria-label="Decrease quantity"
+                          >
+                            <Minus size={14} />
+                          </button>
+                          <span className={styles.stepperValue}>{dish.stockQty}</span>
+                          <button
+                            type="button"
+                            className={styles.stepperBtn}
+                            onClick={() => handleStockIncrement(dish.id)}
+                            aria-label="Increase quantity"
+                          >
+                            <Plus size={14} />
+                          </button>
+                        </div>
+                      )}
+
+                      {/* On/Off Toggle Switch */}
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={dish.isAvailable}
+                        className={`${styles.toggleSwitch} ${
+                          dish.isAvailable ? styles.toggleSwitchActive : ""
+                        }`}
+                        onClick={() => handleToggle(dish.id)}
+                        aria-label={`Toggle availability for ${dish.name}`}
+                      >
+                        <span className={styles.toggleThumb} />
+                      </button>
+                    </div>
                   </div>
                 </article>
               ))}

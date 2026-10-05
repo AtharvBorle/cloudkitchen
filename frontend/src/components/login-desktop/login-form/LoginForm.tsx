@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import { discardExistingSession } from "@/lib/logout";
 import { validateEmail } from "@/lib/email-validation";
 import styles from "./LoginForm.module.css";
@@ -35,6 +35,16 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   onLoginWithOtp,
 }) => {
   const router = useRouter();
+  const { data: session, status: authStatus } = useSession();
+
+  useEffect(() => {
+    if (authStatus === "authenticated" && session?.user) {
+      const callbackUrl = typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("callbackUrl")
+        : null;
+      router.replace(callbackUrl || "/");
+    }
+  }, [authStatus, session, router]);
 
   // Login Mode: "password" | "otp"
   const [loginMode, setLoginMode] = useState<"password" | "otp">("password");
@@ -54,6 +64,14 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [successNotice, setSuccessNotice] = useState("");
+
+  if (authStatus === "loading") {
+    return <div className={styles.formContainer} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>Loading...</div>;
+  }
+
+  if (authStatus === "authenticated" && session?.user) {
+    return null;
+  }
 
   // Refs for 6 OTP boxes
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);

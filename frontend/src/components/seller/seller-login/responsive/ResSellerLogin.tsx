@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Check } from "lucide-react";
 import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
 import { fetchApi } from "@/lib/fetch-api";
@@ -30,12 +30,28 @@ export const ResSellerLogin: React.FC<ResSellerLoginProps> = ({
 }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { data: session, status: authStatus } = useSession();
+
+  useEffect(() => {
+    if (authStatus === "authenticated" && session?.user?.role === "SELLER") {
+      const explicitCallback = searchParams?.get("callbackUrl");
+      router.replace(explicitCallback || "/seller/res/dashboard");
+    }
+  }, [authStatus, session, router, searchParams]);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+
+  if (authStatus === "loading") {
+    return <div className={styles.pageContainer} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: '#FFFBF7' }}>Loading...</div>;
+  }
+
+  if (authStatus === "authenticated" && session?.user?.role === "SELLER") {
+    return null;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

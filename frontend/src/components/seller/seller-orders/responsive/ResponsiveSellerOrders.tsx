@@ -7,8 +7,6 @@ import { useRouter } from "next/navigation";
 import {
   Menu,
   Bell,
-  Star,
-  ShoppingBag,
   ChevronRight,
   PackageCheck,
   CheckCircle2,
@@ -23,7 +21,7 @@ import { getRemainingSeconds } from "../SellerOrders";
 import { fetchApi } from "@/lib/fetch-api";
 import styles from "./ResponsiveSellerOrders.module.css";
 
-export type OrderFilterTab = "New" | "Preparing" | "Out" | "Done" | "All";
+export type OrderFilterTab = "New" | "Preparing" | "Out" | "Done" | "Cancelled" | "All";
 
 export interface ResponsiveOrderItem {
   id: string;
@@ -143,6 +141,13 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
   const preparingCount = ordersList.filter((o) => o.status === "Preparing").length;
   const outCount = ordersList.filter((o) => o.status === "Out").length;
   const doneCount = ordersList.filter((o) => o.status === "Done").length;
+  const cancelledCount = ordersList.filter((o) => {
+    let eff = o.status;
+    if (eff === "New" && getRemainingSeconds(o.createdAt, now) <= 0) {
+      eff = "Cancelled";
+    }
+    return eff === "Cancelled";
+  }).length;
 
   const filteredOrders = ordersList.filter((order) => {
     let effStatus = order.status;
@@ -326,6 +331,17 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
             <span>Done</span>
             <span className={styles.pillBadge}>{doneCount}</span>
           </button>
+
+          <button
+            type="button"
+            role="tab"
+            aria-selected={selectedTab === "Cancelled"}
+            className={`${styles.filterPill} ${selectedTab === "Cancelled" ? styles.filterPillActive : ""}`}
+            onClick={() => setSelectedTab("Cancelled")}
+          >
+            <span>Cancelled</span>
+            <span className={styles.pillBadge}>{cancelledCount}</span>
+          </button>
         </div>
 
         {/* Orders Content Area */}
@@ -374,16 +390,12 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
                       <p className={styles.itemsLine}>{order.itemsText}</p>
                     </div>
 
-                    {/* Prior Orders & Total */}
+                    {/* Total Amount */}
                     <div className={styles.secondaryInfoRow}>
-                      <div className={styles.priorOrdersWrapper}>
-                        <ShoppingBag size={14} className={styles.packageIcon} />
-                        <span>({order.priorOrdersCount} orders)</span>
-                      </div>
                       <span className={styles.totalAmountText}>{order.totalAmount}</span>
                     </div>
 
-                    {/* Customer Stats: ⭐ 4.5 • 128 Delivered • 3 Cancelled (Click to view Reliability Modal) */}
+                    {/* Customer Status: Delivered or Cancelled (Click to view Reliability Modal) */}
                     <div
                       className={styles.customerStatsRow}
                       onClick={(e) => {
@@ -393,20 +405,17 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
                       title="View Customer Reliability Score"
                       style={{ cursor: "pointer" }}
                     >
-                      <div className={styles.ratingStat}>
-                        <Star size={14} className={styles.starIcon} />
-                        <span>{order.rating.toFixed(1)}</span>
-                      </div>
-
-                      <div className={styles.deliveredStat}>
-                        <span className={styles.statDotGreen} />
-                        <span>{order.deliveredCount} Delivered</span>
-                      </div>
-
-                      <div className={styles.cancelledStat}>
-                        <span className={styles.statDotRed} />
-                        <span>{order.cancelledCount} Cancelled</span>
-                      </div>
+                      {order.status === "Cancelled" || (order.status === "New" && getRemainingSeconds(order.createdAt, now) <= 0) ? (
+                        <div className={styles.cancelledStat}>
+                          <span className={styles.statDotRed} />
+                          <span>Cancelled</span>
+                        </div>
+                      ) : (
+                        <div className={styles.deliveredStat}>
+                          <span className={styles.statDotGreen} />
+                          <span>Delivered</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Action Buttons */}

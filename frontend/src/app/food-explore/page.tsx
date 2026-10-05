@@ -22,6 +22,9 @@ import {
   X,
   Check,
   ChevronDown,
+  ChevronRight,
+  ChevronLeft,
+  ArrowUp,
   Store,
   Sparkles,
   ShoppingBag,
@@ -29,6 +32,7 @@ import {
 import {
   isKitchenMatchingDiet,
   isDishMatchingDiet,
+  isNonVegDish,
   matchesKitchenOrDishSearch,
   matchesDishSearch,
   matchesDishCategory,
@@ -37,6 +41,7 @@ import {
   isKitchenServingCuisine,
   isKitchenHavingOffers,
   isDishHavingOffers,
+  getDishOfferBadge,
 } from "@/lib/dietary-filter";
 import Link from "next/link";
 
@@ -85,6 +90,7 @@ function FoodExploreContent() {
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
   const [openOnly, setOpenOnly] = useState(false);
   const [activeTab, setActiveTab] = useState<"dishes" | "kitchens">("dishes");
+  const categoryScrollRef = React.useRef<HTMLDivElement>(null);
 
   // Popover & Modal state
   const [openPricePopover, setOpenPricePopover] = useState(false);
@@ -177,9 +183,19 @@ function FoodExploreContent() {
       );
     }
 
-    // Open Only
+    // Open Only (Hides items from closed kitchens and out-of-stock items)
     if (openOnly) {
-      list = list.filter((f) => f.sellerIsOnline !== false && f.isAvailable !== false);
+      list = list.filter((f) => {
+        const rawStock = (f as any).maxStock !== undefined ? (f as any).maxStock : (f as any).stockQuantity;
+        const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
+        const isOutOfStock = stockLimit === 0 || f.isAvailable === false;
+        const isSellerClosed = f.sellerIsOnline === false;
+        const matchedKitchen = homeData.kitchens.find(
+          (k) => k.id === f.sellerId || (f.sellerTrackingId && k.trackingId === f.sellerTrackingId)
+        );
+        const isKitchenClosed = matchedKitchen && matchedKitchen.isOnline === false;
+        return !isSellerClosed && !isOutOfStock && !isKitchenClosed;
+      });
     }
 
     // Offers only
@@ -669,262 +685,657 @@ function FoodExploreContent() {
         }}
         className="food-explore-container"
       >
-        {/* Header Title + Location Badge */}
+        {/* Breadcrumb */}
+        <div style={{ fontSize: "0.85rem", color: "#64748B", fontWeight: "500", marginTop: "-12px", marginBottom: "-14px" }}>
+          <span>Food marketplace</span>
+          <span style={{ margin: "0 6px" }}>·</span>
+          <span>Browse menu</span>
+        </div>
+
+        {/* Header Top Row: Title on Left, Search Bar on Right */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             flexWrap: "wrap",
-            gap: "16px",
+            gap: "20px",
           }}
         >
           <div>
+            <div
+              style={{
+                fontSize: "0.72rem",
+                fontWeight: "800",
+                color: "#FF6B00",
+                textTransform: "uppercase",
+                letterSpacing: "0.8px",
+                marginBottom: "4px",
+              }}
+            >
+              EXPLORE THE MENU
+            </div>
             <h1
               style={{
-                fontSize: "clamp(1.5rem, 3vw, 2.1rem)",
+                fontSize: "clamp(1.75rem, 3.2vw, 2.35rem)",
                 fontWeight: "800",
                 color: "#18181B",
                 margin: "0 0 6px 0",
-                letterSpacing: "-0.02em",
+                letterSpacing: "-0.03em",
               }}
             >
-              Explore Food &amp; Cloud Kitchens
+              What are you craving?
             </h1>
-            <p style={{ margin: 0, fontSize: "0.95rem", color: "#64748B", fontWeight: "500" }}>
-              {defaultAddress?.pincode ? (
-                <>
-                  Delivering near <strong style={{ color: "#FF6B00" }}>{defaultAddress.city || "Pune"} ({defaultAddress.pincode})</strong> within kitchen delivery radius
-                </>
-              ) : (
-                "Discover delicious chef-crafted food and cloud kitchens nearby"
-              )}
+            <p style={{ margin: 0, fontSize: "0.92rem", color: "#64748B", fontWeight: "500" }}>
+              Discover delicious chef-crafted food and cloud kitchens nearby
             </p>
           </div>
 
-          {/* Quick Tab Switcher: Dishes vs Kitchens */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              backgroundColor: "#FFFFFF",
-              borderRadius: "14px",
-              padding: "4px",
-              border: "1.5px solid #E2E8F0",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => setActiveTab("dishes")}
-              style={{
-                padding: "8px 18px",
-                borderRadius: "10px",
-                border: "none",
-                backgroundColor: activeTab === "dishes" ? "#FF6B00" : "transparent",
-                color: activeTab === "dishes" ? "#FFFFFF" : "#64748B",
-                fontWeight: "700",
-                fontSize: "0.9rem",
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-              }}
-            >
-              Dishes ({filteredFoodItems.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("kitchens")}
-              style={{
-                padding: "8px 18px",
-                borderRadius: "10px",
-                border: "none",
-                backgroundColor: activeTab === "kitchens" ? "#FF6B00" : "transparent",
-                color: activeTab === "kitchens" ? "#FFFFFF" : "#64748B",
-                fontWeight: "700",
-                fontSize: "0.9rem",
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-              }}
-            >
-              Cloud Kitchens ({filteredKitchens.length})
-            </button>
-          </div>
-        </div>
-
-        {/* Dynamic Category Chips */}
-        {dynamicCategories.length > 0 && (
+          {/* Search Input on Right */}
           <div
             style={{
               display: "flex",
               alignItems: "center",
               gap: "10px",
-              overflowX: "auto",
-              scrollbarWidth: "none",
-              paddingBottom: "4px",
+              flex: "0 1 420px",
+              width: "100%",
+              maxWidth: "420px",
+              backgroundColor: "#FFFFFF",
+              borderRadius: "14px",
+              padding: "10px 16px",
+              border: "1.5px solid #E2E8F0",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
             }}
-            className="hide-scrollbar"
           >
+            <Search size={18} color="#94A3B8" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search dishes, biryani, cakes, burgers, cloud kitchens..."
+              style={{
+                border: "none",
+                outline: "none",
+                backgroundColor: "transparent",
+                width: "100%",
+                fontSize: "0.9rem",
+                color: "#18181B",
+                fontWeight: "500",
+              }}
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "2px",
+                  display: "flex",
+                  alignItems: "center",
+                }}
+              >
+                <X size={16} color="#94A3B8" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Dynamic Category Chips Carousel */}
+        {dynamicCategories.length > 0 && (
+          <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+            <div
+              ref={categoryScrollRef}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                overflowX: "auto",
+                scrollbarWidth: "none",
+                paddingBottom: "4px",
+                width: "100%",
+                scrollBehavior: "smooth",
+              }}
+              className="hide-scrollbar"
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCategory("");
+                  if (typeof window !== "undefined") {
+                    const params = new URLSearchParams(window.location.search);
+                    params.delete("category");
+                    const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
+                    router.replace(newUrl, { scroll: false });
+                  }
+                }}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "8px 16px",
+                  borderRadius: "12px",
+                  border: !selectedCategory ? "1.5px solid #FF6B00" : "1px solid #E2E8F0",
+                  backgroundColor: !selectedCategory ? "#FFF3EB" : "#FFFFFF",
+                  color: !selectedCategory ? "#FF6B00" : "#475569",
+                  fontWeight: "700",
+                  fontSize: "0.88rem",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
+                  transition: "all 0.2s ease",
+                }}
+              >
+                <UtensilsCrossed size={14} color={!selectedCategory ? "#FF6B00" : "#64748B"} />
+                <span>All Cuisines</span>
+              </button>
+
+              {dynamicCategories.map((cat) => {
+                const isSelected = selectedCategory.toLowerCase().trim() === cat.name.toLowerCase().trim();
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => {
+                      const newCat = isSelected ? "" : cat.name;
+                      setSelectedCategory(newCat);
+                      if (typeof window !== "undefined") {
+                        const params = new URLSearchParams(window.location.search);
+                        if (newCat) {
+                          params.set("category", newCat);
+                        } else {
+                          params.delete("category");
+                        }
+                        const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
+                        router.replace(newUrl, { scroll: false });
+                      }
+                    }}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "8px 16px",
+                      borderRadius: "12px",
+                      border: isSelected ? "1.5px solid #FF6B00" : "1px solid #E2E8F0",
+                      backgroundColor: isSelected ? "#FFF3EB" : "#FFFFFF",
+                      color: isSelected ? "#FF6B00" : "#475569",
+                      fontWeight: isSelected ? "700" : "600",
+                      fontSize: "0.88rem",
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                      flexShrink: 0,
+                      transition: "all 0.2s ease",
+                    }}
+                  >
+                    <span>{cat.emoji || "🍲"}</span>
+                    <span>{cat.name}</span>
+                    {cat.count > 0 && (
+                      <span
+                        style={{
+                          fontSize: "0.72rem",
+                          padding: "1px 6px",
+                          borderRadius: "8px",
+                          backgroundColor: isSelected ? "#FFEDD5" : "#F1F5F9",
+                          color: isSelected ? "#EA580C" : "#64748B",
+                          fontWeight: "700",
+                        }}
+                      >
+                        {cat.count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Scroll Next Arrow */}
             <button
               type="button"
-              onClick={() => {
-                setSelectedCategory("");
-                if (typeof window !== "undefined") {
-                  const params = new URLSearchParams(window.location.search);
-                  params.delete("category");
-                  const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
-                  router.replace(newUrl, { scroll: false });
-                }
-              }}
+              onClick={() => categoryScrollRef.current?.scrollBy({ left: 220, behavior: "smooth" })}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: "6px",
-                padding: "8px 16px",
-                borderRadius: "12px",
-                border: !selectedCategory ? "1.5px solid #FF6B00" : "1px solid #E2E8F0",
-                backgroundColor: !selectedCategory ? "#FFF3EB" : "#FFFFFF",
-                color: !selectedCategory ? "#FF6B00" : "#475569",
-                fontWeight: "700",
-                fontSize: "0.88rem",
+                justifyContent: "center",
+                width: "34px",
+                height: "34px",
+                borderRadius: "10px",
+                border: "1px solid #E2E8F0",
+                backgroundColor: "#FFFFFF",
+                color: "#475569",
                 cursor: "pointer",
-                whiteSpace: "nowrap",
                 flexShrink: 0,
-                transition: "all 0.2s ease",
+                marginLeft: "8px",
+                boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
               }}
+              aria-label="Scroll categories right"
             >
-              <span>🍽️</span>
-              <span>All Cuisines</span>
+              <ChevronRight size={16} />
             </button>
-            {dynamicCategories.map((cat) => {
-              const isSelected = selectedCategory.toLowerCase().trim() === cat.name.toLowerCase().trim();
-              return (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => {
-                    const newCat = isSelected ? "" : cat.name;
-                    setSelectedCategory(newCat);
-                    if (typeof window !== "undefined") {
-                      const params = new URLSearchParams(window.location.search);
-                      if (newCat) {
-                        params.set("category", newCat);
-                      } else {
-                        params.delete("category");
-                      }
-                      const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
-                      router.replace(newUrl, { scroll: false });
-                    }
-                  }}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    padding: "8px 16px",
-                    borderRadius: "12px",
-                    border: isSelected ? "1.5px solid #FF6B00" : "1px solid #E2E8F0",
-                    backgroundColor: isSelected ? "#FFF3EB" : "#FFFFFF",
-                    color: isSelected ? "#FF6B00" : "#475569",
-                    fontWeight: isSelected ? "700" : "600",
-                    fontSize: "0.88rem",
-                    cursor: "pointer",
-                    whiteSpace: "nowrap",
-                    flexShrink: 0,
-                    transition: "all 0.2s ease",
-                  }}
-                >
-                  <span>{cat.emoji || "🍲"}</span>
-                  <span>{cat.name}</span>
-                  {cat.count > 0 && (
-                    <span
-                      style={{
-                        fontSize: "0.72rem",
-                        padding: "1px 6px",
-                        borderRadius: "8px",
-                        backgroundColor: isSelected ? "#FFEDD5" : "#F1F5F9",
-                        color: isSelected ? "#EA580C" : "#64748B",
-                        fontWeight: "700",
-                      }}
-                    >
-                      {cat.count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
           </div>
         )}
 
-        {/* Multi-Dimensional Filter Bar */}
+        {/* Multi-Dimensional Filter Box */}
         <div
           style={{
             display: "flex",
             flexDirection: "column",
             gap: "14px",
             backgroundColor: "#FFFFFF",
-            borderRadius: "20px",
-            padding: "16px 20px",
+            borderRadius: "16px",
+            padding: "18px 22px",
             border: "1px solid #E2E8F0",
-            boxShadow: "0 4px 18px rgba(0, 0, 0, 0.03)",
+            boxShadow: "0 2px 10px rgba(0, 0, 0, 0.02)",
             position: "relative",
             zIndex: 40,
           }}
         >
-          {/* Top Filter Row: Search + Clear */}
+          {/* Row 1: Dietary */}
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "12px",
+              gap: "14px",
               flexWrap: "wrap",
             }}
           >
-            {/* Search Input */}
-            <div
+            <span
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                flex: "1 1 300px",
-                backgroundColor: "#F8FAFC",
-                borderRadius: "14px",
-                padding: "10px 16px",
-                border: "1px solid #E2E8F0",
+                fontSize: "0.85rem",
+                fontWeight: "600",
+                color: "#64748B",
+                minWidth: "75px",
               }}
             >
-              <Search size={18} color="#94A3B8" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search dishes, biryani, cakes, burgers, cloud kitchens..."
-                style={{
-                  border: "none",
-                  outline: "none",
-                  backgroundColor: "transparent",
-                  width: "100%",
-                  fontSize: "0.92rem",
-                  color: "#18181B",
-                  fontWeight: "500",
-                }}
-              />
-              {searchQuery && (
+              Dietary
+            </span>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", flex: 1 }}>
+              {[
+                { id: "all", label: "All Diet", count: filterCounts.all },
+                { id: "veg", label: "🌱 Pure Veg", count: filterCounts.veg },
+                { id: "non_veg", label: "🍗 Non-Veg", count: filterCounts.non_veg },
+                { id: "vegan", label: "🌿 Vegan", count: filterCounts.vegan },
+                { id: "jain", label: "🌾 Jain", count: filterCounts.jain },
+              ].map((d) => {
+                const isSelected = selectedDiet === d.id;
+                return (
+                  <button
+                    key={d.id}
+                    type="button"
+                    onClick={() => setSelectedDiet(d.id as any)}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "6px 14px",
+                      borderRadius: "10px",
+                      border: isSelected ? "1.5px solid #FF6B00" : "1px solid #E2E8F0",
+                      backgroundColor: isSelected ? "#FFF3EB" : "#FFFFFF",
+                      color: isSelected ? "#FF6B00" : "#475569",
+                      fontWeight: isSelected ? "700" : "600",
+                      fontSize: "0.84rem",
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    <span>{d.label}</span>
+                    {d.count !== undefined && (
+                      <span
+                        style={{
+                          fontSize: "0.74rem",
+                          color: isSelected ? "#EA580C" : "#94A3B8",
+                          fontWeight: "700",
+                        }}
+                      >
+                        {d.count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Horizontal Line separating Dietary & Refine by */}
+          <div style={{ height: "1px", backgroundColor: "#F1F5F9", width: "100%" }} />
+
+          {/* Row 2: Refine by */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "14px",
+              flexWrap: "wrap",
+              position: "relative",
+              zIndex: 45,
+            }}
+          >
+            <span
+              style={{
+                fontSize: "0.85rem",
+                fontWeight: "600",
+                color: "#64748B",
+                minWidth: "75px",
+              }}
+            >
+              Refine by
+            </span>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", flex: 1 }}>
+              {/* Price Range Dropdown */}
+              <div style={{ position: "relative" }}>
                 <button
                   type="button"
-                  onClick={() => setSearchQuery("")}
+                  onClick={() => setOpenPricePopover(!openPricePopover)}
                   style={{
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    padding: "2px",
-                    display: "flex",
+                    display: "inline-flex",
                     alignItems: "center",
+                    gap: "6px",
+                    padding: "7px 14px",
+                    borderRadius: "10px",
+                    border: selectedPrice !== "all" ? "1.5px solid #FF6B00" : "1px solid #E2E8F0",
+                    backgroundColor: selectedPrice !== "all" ? "#FFF3EB" : "#FFFFFF",
+                    color: selectedPrice !== "all" ? "#FF6B00" : "#475569",
+                    fontWeight: selectedPrice !== "all" ? "700" : "600",
+                    fontSize: "0.85rem",
+                    cursor: "pointer",
                   }}
                 >
-                  <X size={16} color="#94A3B8" />
+                  <span>
+                    {selectedPrice === "under-150"
+                      ? "Under ₹150"
+                      : selectedPrice === "150-300"
+                      ? "₹150 – ₹300"
+                      : selectedPrice === "300-plus"
+                      ? "₹300+"
+                      : "Price Range"}
+                  </span>
+                  <ChevronDown size={13} />
+                </button>
+
+                {openPricePopover && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "calc(100% + 6px)",
+                      left: 0,
+                      backgroundColor: "#FFFFFF",
+                      borderRadius: "14px",
+                      padding: "8px",
+                      boxShadow: "0 16px 36px rgba(0,0,0,0.16)",
+                      border: "1px solid #E2E8F0",
+                      zIndex: 1000,
+                      minWidth: "180px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "4px",
+                    }}
+                  >
+                    {[
+                      { id: "all", label: "Any Price", count: filterCounts.all },
+                      { id: "under-150", label: "Under ₹150", count: filterCounts.under150 },
+                      { id: "150-300", label: "₹150 – ₹300", count: filterCounts.price150to300 },
+                      { id: "300-plus", label: "₹300+", count: filterCounts.price300plus },
+                    ].map((p) => {
+                      const isSelected = selectedPrice === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedPrice(p.id as any);
+                            setOpenPricePopover(false);
+                          }}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            padding: "8px 10px",
+                            borderRadius: "8px",
+                            border: "none",
+                            backgroundColor: isSelected ? "#FFF3EB" : "transparent",
+                            color: isSelected ? "#FF6B00" : "#334155",
+                            fontWeight: isSelected ? "700" : "500",
+                            fontSize: "13px",
+                            cursor: "pointer",
+                            gap: "12px",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          <span style={{ whiteSpace: "nowrap" }}>{p.label}</span>
+                          {p.count > 0 && (
+                            <span style={{ fontSize: "11px", color: isSelected ? "#FF6B00" : "#94A3B8", flexShrink: 0 }}>
+                              ({p.count})
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Cuisines Dropdown */}
+              {availableCuisines.length > 0 && (
+                <div style={{ position: "relative" }}>
+                  <button
+                    type="button"
+                    onClick={() => setOpenCuisinePopover(!openCuisinePopover)}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "7px 14px",
+                      borderRadius: "10px",
+                      border: selectedCuisines.length > 0 ? "1.5px solid #FF6B00" : "1px solid #E2E8F0",
+                      backgroundColor: selectedCuisines.length > 0 ? "#FFF3EB" : "#FFFFFF",
+                      color: selectedCuisines.length > 0 ? "#FF6B00" : "#475569",
+                      fontWeight: selectedCuisines.length > 0 ? "700" : "600",
+                      fontSize: "0.85rem",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <span>
+                      {selectedCuisines.length > 0 ? `Cuisines (${selectedCuisines.length})` : "Cuisines"}
+                    </span>
+                    <ChevronDown size={13} />
+                  </button>
+
+                  {openCuisinePopover && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "calc(100% + 6px)",
+                        left: 0,
+                        backgroundColor: "#FFFFFF",
+                        borderRadius: "14px",
+                        padding: "8px",
+                        boxShadow: "0 16px 36px rgba(0,0,0,0.16)",
+                        border: "1px solid #E2E8F0",
+                        zIndex: 1000,
+                        minWidth: "220px",
+                        maxHeight: "260px",
+                        overflowY: "auto",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "4px",
+                      }}
+                    >
+                      {availableCuisines.map((c) => {
+                        const isSelected = selectedCuisines.includes(c);
+                        const count = filterCounts.cuisineCounts[c];
+                        return (
+                          <button
+                            key={c}
+                            type="button"
+                            onClick={() => {
+                              setSelectedCuisines((prev) =>
+                                prev.includes(c) ? prev.filter((item) => item !== c) : [...prev, c]
+                              );
+                            }}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              padding: "7px 10px",
+                              borderRadius: "8px",
+                              border: "none",
+                              backgroundColor: isSelected ? "#FFF3EB" : "transparent",
+                              color: isSelected ? "#FF6B00" : "#334155",
+                              fontWeight: isSelected ? "700" : "500",
+                              fontSize: "13px",
+                              cursor: "pointer",
+                            }}
+                          >
+                            <span>{c}</span>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                              {count !== undefined && <span style={{ fontSize: "11px", color: "#94A3B8" }}>({count})</span>}
+                              {isSelected && <Check size={14} color="#FF6B00" />}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Offers & Deals Toggle */}
+              <button
+                type="button"
+                onClick={() => setOffersOnly(!offersOnly)}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "7px 14px",
+                  borderRadius: "10px",
+                  border: offersOnly ? "1.5px solid #FF6B00" : "1px solid #E2E8F0",
+                  backgroundColor: offersOnly ? "#FFF3EB" : "#FFFFFF",
+                  color: offersOnly ? "#FF6B00" : "#475569",
+                  fontWeight: offersOnly ? "700" : "600",
+                  fontSize: "0.85rem",
+                  cursor: "pointer",
+                }}
+              >
+                <span
+                  style={{
+                    width: "14px",
+                    height: "14px",
+                    borderRadius: "4px",
+                    border: offersOnly ? "1.5px solid #FF6B00" : "1.5px solid #94A3B8",
+                    backgroundColor: offersOnly ? "#FF6B00" : "transparent",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {offersOnly && <Check size={10} color="#FFFFFF" />}
+                </span>
+                <Tag size={13} color={offersOnly ? "#FF6B00" : "#94A3B8"} />
+                <span>Offers &amp; Deals</span>
+              </button>
+
+              {/* Open Kitchens Toggle */}
+              <button
+                type="button"
+                onClick={() => setOpenOnly(!openOnly)}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "7px 14px",
+                  borderRadius: "10px",
+                  border: openOnly ? "1.5px solid #10B981" : "1px solid #E2E8F0",
+                  backgroundColor: openOnly ? "#ECFDF5" : "#FFFFFF",
+                  color: openOnly ? "#047857" : "#475569",
+                  fontWeight: openOnly ? "700" : "600",
+                  fontSize: "0.85rem",
+                  cursor: "pointer",
+                }}
+              >
+                <span
+                  style={{
+                    width: "14px",
+                    height: "14px",
+                    borderRadius: "4px",
+                    border: openOnly ? "1.5px solid #10B981" : "1.5px solid #94A3B8",
+                    backgroundColor: openOnly ? "#10B981" : "transparent",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {openOnly && <Check size={10} color="#FFFFFF" />}
+                </span>
+                <span>Open Kitchens</span>
+              </button>
+
+              {/* Clear All Button */}
+              {activeFiltersCount > 0 && (
+                <button
+                  type="button"
+                  onClick={handleClearAll}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    padding: "7px 12px",
+                    borderRadius: "10px",
+                    border: "1px solid #FCA5A5",
+                    backgroundColor: "#FEF2F2",
+                    color: "#DC2626",
+                    fontSize: "0.82rem",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                    marginLeft: "auto",
+                  }}
+                >
+                  <SlidersHorizontal size={13} />
+                  <span>Clear All ({activeFiltersCount})</span>
+                  <X size={13} />
                 </button>
               )}
             </div>
+          </div>
+        </div>
 
+        {/* Results Header: Category Title + Subtitle + Sort Selector */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "12px",
+            borderBottom: "1px solid #E2E8F0",
+            paddingBottom: "14px",
+          }}
+        >
+          <div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: "10px" }}>
+              <h2
+                style={{
+                  fontSize: "1.35rem",
+                  fontWeight: "800",
+                  color: "#18181B",
+                  margin: 0,
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                {selectedCategory || (activeTab === "dishes" ? "All cuisines" : "Cloud Kitchens")}
+              </h2>
+              <span style={{ fontSize: "0.88rem", color: "#64748B", fontWeight: "500" }}>
+                Showing {activeTab === "dishes" ? filteredFoodItems.length : filteredKitchens.length} {activeTab === "dishes" ? (filteredFoodItems.length === 1 ? "dish" : "dishes") : (filteredKitchens.length === 1 ? "kitchen" : "kitchens")}
+              </span>
+            </div>
+            <p style={{ margin: "4px 0 0 0", fontSize: "0.85rem", color: "#64748B" }}>
+              Dietary labels are shown on each dish. Choose a preference to refine your menu.
+            </p>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px" }}>
             {/* Sort Selector */}
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <span style={{ fontSize: "0.85rem", fontWeight: "600", color: "#64748B" }}>Sort by:</span>
@@ -932,11 +1343,11 @@ function FoodExploreContent() {
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
                 style={{
-                  padding: "9px 14px",
-                  borderRadius: "12px",
+                  padding: "8px 12px",
+                  borderRadius: "10px",
                   border: "1px solid #E2E8F0",
                   backgroundColor: "#FFFFFF",
-                  fontSize: "0.88rem",
+                  fontSize: "0.85rem",
                   fontWeight: "700",
                   color: "#18181B",
                   cursor: "pointer",
@@ -951,302 +1362,35 @@ function FoodExploreContent() {
               </select>
             </div>
 
-            {/* Clear All Button */}
-            {activeFiltersCount > 0 && (
-              <button
-                type="button"
-                onClick={handleClearAll}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: "8px 14px",
-                  borderRadius: "12px",
-                  border: "1.5px solid #FF6B00",
-                  backgroundColor: "#FFF3EB",
-                  color: "#FF6B00",
-                  fontSize: "0.85rem",
-                  fontWeight: "700",
-                  cursor: "pointer",
-                }}
-              >
-                <SlidersHorizontal size={14} />
-                <span>Clear All ({activeFiltersCount})</span>
-                <X size={14} />
-              </button>
-            )}
-          </div>
-
-          {/* Bottom Filter Row: Dietary, Price, Cuisines, Toggles */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              flexWrap: "wrap",
-              position: "relative",
-              zIndex: 45,
-            }}
-          >
-            {/* Dietary Filter Pills */}
-            <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
-              {[
-                { id: "all", label: "All Diet", count: filterCounts.all },
-                { id: "veg", label: "Pure Veg 🥦", count: filterCounts.veg },
-                { id: "non_veg", label: "Non-Veg 🍗", count: filterCounts.non_veg },
-                { id: "vegan", label: "Vegan 🌱", count: filterCounts.vegan },
-                { id: "jain", label: "Jain 🌿", count: filterCounts.jain },
-              ].map((d) => {
-                const isSelected = selectedDiet === d.id;
-                return (
-                  <button
-                    key={d.id}
-                    type="button"
-                    onClick={() => setSelectedDiet(d.id as any)}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      padding: "6px 12px",
-                      borderRadius: "10px",
-                      border: isSelected ? "1.5px solid #10B981" : "1px solid #E2E8F0",
-                      backgroundColor: isSelected ? "#ECFDF5" : "#FFFFFF",
-                      color: isSelected ? "#047857" : "#475569",
-                      fontWeight: isSelected ? "700" : "600",
-                      fontSize: "0.82rem",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <span>{d.label}</span>
-                    {d.count > 0 && (
-                      <span style={{ fontSize: "11px", opacity: 0.8 }}>({d.count})</span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Price Range Dropdown */}
-            <div style={{ position: "relative" }}>
-              <button
-                type="button"
-                onClick={() => setOpenPricePopover(!openPricePopover)}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: "7px 14px",
-                  borderRadius: "10px",
-                  border: selectedPrice !== "all" ? "1.5px solid #FF6B00" : "1px solid #E2E8F0",
-                  backgroundColor: selectedPrice !== "all" ? "#FFF3EB" : "#FFFFFF",
-                  color: selectedPrice !== "all" ? "#FF6B00" : "#475569",
-                  fontWeight: selectedPrice !== "all" ? "700" : "600",
-                  fontSize: "0.85rem",
-                  cursor: "pointer",
-                }}
-              >
-                <span>
-                  {selectedPrice === "under-150"
-                    ? "Under ₹150"
-                    : selectedPrice === "150-300"
-                    ? "₹150 – ₹300"
-                    : selectedPrice === "300-plus"
-                    ? "₹300+"
-                    : "Price Range"}
-                </span>
-                <ChevronDown size={13} />
-              </button>
-
-              {openPricePopover && (
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "calc(100% + 6px)",
-                    left: 0,
-                    backgroundColor: "#FFFFFF",
-                    borderRadius: "14px",
-                    padding: "8px",
-                    boxShadow: "0 16px 36px rgba(0,0,0,0.16)",
-                    border: "1px solid #E2E8F0",
-                    zIndex: 1000,
-                    minWidth: "180px",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "4px",
-                  }}
-                >
-                  {[
-                    { id: "all", label: "Any Price", count: filterCounts.all },
-                    { id: "under-150", label: "Under ₹150", count: filterCounts.under150 },
-                    { id: "150-300", label: "₹150 – ₹300", count: filterCounts.price150to300 },
-                    { id: "300-plus", label: "₹300+", count: filterCounts.price300plus },
-                  ].map((p) => {
-                    const isSelected = selectedPrice === p.id;
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedPrice(p.id as any);
-                          setOpenPricePopover(false);
-                        }}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          padding: "8px 10px",
-                          borderRadius: "8px",
-                          border: "none",
-                          backgroundColor: isSelected ? "#FFF3EB" : "transparent",
-                          color: isSelected ? "#FF6B00" : "#334155",
-                          fontWeight: isSelected ? "700" : "500",
-                          fontSize: "13px",
-                          cursor: "pointer",
-                          gap: "12px",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        <span style={{ whiteSpace: "nowrap" }}>{p.label}</span>
-                        {p.count > 0 && (
-                          <span style={{ fontSize: "11px", color: isSelected ? "#FF6B00" : "#94A3B8", flexShrink: 0 }}>
-                            ({p.count})
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Cuisines Dropdown */}
-            {availableCuisines.length > 0 && (
-              <div style={{ position: "relative" }}>
-                <button
-                  type="button"
-                  onClick={() => setOpenCuisinePopover(!openCuisinePopover)}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    padding: "7px 14px",
-                    borderRadius: "10px",
-                    border: selectedCuisines.length > 0 ? "1.5px solid #FF6B00" : "1px solid #E2E8F0",
-                    backgroundColor: selectedCuisines.length > 0 ? "#FFF3EB" : "#FFFFFF",
-                    color: selectedCuisines.length > 0 ? "#FF6B00" : "#475569",
-                    fontWeight: selectedCuisines.length > 0 ? "700" : "600",
-                    fontSize: "0.85rem",
-                    cursor: "pointer",
-                  }}
-                >
-                  <UtensilsCrossed size={14} />
-                  <span>
-                    {selectedCuisines.length > 0 ? `Cuisines (${selectedCuisines.length})` : "Cuisines"}
-                  </span>
-                  <ChevronDown size={13} />
-                </button>
-
-                {openCuisinePopover && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: "calc(100% + 6px)",
-                      left: 0,
-                      backgroundColor: "#FFFFFF",
-                      borderRadius: "14px",
-                      padding: "8px",
-                      boxShadow: "0 16px 36px rgba(0,0,0,0.16)",
-                      border: "1px solid #E2E8F0",
-                      zIndex: 1000,
-                      minWidth: "220px",
-                      maxHeight: "260px",
-                      overflowY: "auto",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "4px",
-                    }}
-                  >
-                    {availableCuisines.map((c) => {
-                      const isSelected = selectedCuisines.includes(c);
-                      const count = filterCounts.cuisineCounts[c];
-                      return (
-                        <button
-                          key={c}
-                          type="button"
-                          onClick={() => {
-                            setSelectedCuisines((prev) =>
-                              prev.includes(c) ? prev.filter((item) => item !== c) : [...prev, c]
-                            );
-                          }}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            padding: "7px 10px",
-                            borderRadius: "8px",
-                            border: "none",
-                            backgroundColor: isSelected ? "#FFF3EB" : "transparent",
-                            color: isSelected ? "#FF6B00" : "#334155",
-                            fontWeight: isSelected ? "700" : "500",
-                            fontSize: "13px",
-                            cursor: "pointer",
-                          }}
-                        >
-                          <span>{c}</span>
-                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                            {count !== undefined && <span style={{ fontSize: "11px", color: "#94A3B8" }}>({count})</span>}
-                            {isSelected && <Check size={14} color="#FF6B00" />}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Quick Toggle: Offers Only */}
+            {/* Back to categories (Always available & dynamic) */}
             <button
               type="button"
-              onClick={() => setOffersOnly(!offersOnly)}
+              onClick={() => {
+                if (categoryScrollRef.current) {
+                  categoryScrollRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+                } else if (typeof window !== "undefined") {
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }
+              }}
               style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "7px 14px",
-                borderRadius: "10px",
-                border: offersOnly ? "1.5px solid #FF6B00" : "1px solid #E2E8F0",
-                backgroundColor: offersOnly ? "#FF6B00" : "#FFFFFF",
-                color: offersOnly ? "#FFFFFF" : "#475569",
-                fontWeight: offersOnly ? "700" : "600",
+                background: "none",
+                border: "none",
+                color: "#C2410C",
+                fontWeight: "700",
                 fontSize: "0.85rem",
                 cursor: "pointer",
-              }}
-            >
-              <Tag size={14} color={offersOnly ? "#FFFFFF" : "#FF6B00"} />
-              <span>Offers &amp; Deals</span>
-            </button>
-
-            {/* Quick Toggle: Open Kitchens Only */}
-            <button
-              type="button"
-              onClick={() => setOpenOnly(!openOnly)}
-              style={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: "6px",
-                padding: "7px 14px",
-                borderRadius: "10px",
-                border: openOnly ? "1.5px solid #10B981" : "1px solid #E2E8F0",
-                backgroundColor: openOnly ? "#ECFDF5" : "#FFFFFF",
-                color: openOnly ? "#047857" : "#475569",
-                fontWeight: openOnly ? "700" : "600",
-                fontSize: "0.85rem",
-                cursor: "pointer",
+                gap: "4px",
+                padding: "2px 0",
+                marginTop: "2px",
+                transition: "color 0.15s ease",
               }}
+              onMouseOver={(e) => (e.currentTarget.style.color = "#FF6B00")}
+              onMouseOut={(e) => (e.currentTarget.style.color = "#C2410C")}
             >
-              <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: openOnly ? "#10B981" : "#94A3B8" }} />
-              <span>Open Kitchens</span>
+              <span>Back to categories</span>
+              <ArrowUp size={14} color="currentColor" />
             </button>
           </div>
         </div>
@@ -1307,11 +1451,7 @@ function FoodExploreContent() {
                   const isMaxStockInCart = !isClosed && stockLimit !== -1 && quantityInCart >= stockLimit;
                   const dishAddons = parseDishAddons(dish.addons || (dish as any).variants);
                   const hasAddons = dishAddons.length > 0;
-
-                  // Check if dish has an applicable coupon
-                  const matchedCoupon = homeData.coupons.find(
-                    (cp: any) => !cp.appliesToSellerId || cp.appliesToSellerId === dish.sellerId
-                  );
+                  const offerDetails = getDishOfferBadge(dish, homeData.coupons);
 
                   return (
                     <div
@@ -1339,40 +1479,26 @@ function FoodExploreContent() {
                           backgroundColor: "#F1F5F9",
                         }}
                       >
-                        {/* Dietary Tag */}
-                        <div style={{ position: "absolute", top: "10px", left: "10px", zIndex: 2 }}>
-                          <DietaryTag
-                            itemType={
-                              dish.itemType ||
-                              (dish.name.toLowerCase().includes("chicken") ||
-                              dish.name.toLowerCase().includes("biryani")
-                                ? "NON_VEG"
-                                : "VEG")
-                            }
-                            size="sm"
-                          />
-                        </div>
-
-                        {/* Offer Badge if coupon exists */}
-                        {matchedCoupon && !isClosed && (
+                        {/* Offer Badge on Top Left (Only displayed when the dish has an active deal/offer/coupon) */}
+                        {!isClosed && offerDetails.hasOffer && offerDetails.badgeText && (
                           <div
                             style={{
                               position: "absolute",
                               top: "10px",
-                              right: "10px",
-                              backgroundColor: "#FF5500",
+                              left: "10px",
+                              backgroundColor: "#BC4B24",
                               color: "#FFFFFF",
-                              fontSize: "10.5px",
-                              fontWeight: "800",
-                              padding: "3px 8px",
-                              borderRadius: "8px",
-                              boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
+                              fontSize: "11px",
+                              fontWeight: "600",
+                              lineHeight: "1.2",
+                              letterSpacing: "0.2px",
+                              padding: "4px 9px",
+                              borderRadius: "6px",
+                              boxShadow: "0 2px 5px rgba(0,0,0,0.15)",
                               zIndex: 2,
                             }}
                           >
-                            {matchedCoupon.discountPercentage
-                              ? `${matchedCoupon.discountPercentage}% OFF`
-                              : `₹${matchedCoupon.discountAmount} OFF`}
+                            {offerDetails.badgeText}
                           </div>
                         )}
 
@@ -1433,30 +1559,10 @@ function FoodExploreContent() {
                           padding: "14px 16px 16px 16px",
                           display: "flex",
                           flexDirection: "column",
-                          gap: "8px",
+                          gap: "6px",
                           flex: 1,
                         }}
                       >
-                        {/* Rating + Time Row */}
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            fontSize: "0.82rem",
-                          }}
-                        >
-                          <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                            <Star size={14} fill={isClosed ? "#94A3B8" : (dish.rating && dish.rating > 0 ? "#F59E0B" : "#94A3B8")} color={isClosed ? "#94A3B8" : (dish.rating && dish.rating > 0 ? "#F59E0B" : "#94A3B8")} />
-                            <span style={{ fontWeight: "800", color: isClosed ? "#94A3B8" : "#18181B" }}>
-                              {dish.rating && dish.rating > 0 ? Number(dish.rating).toFixed(1) : "New"}
-                            </span>
-                          </div>
-                          <span style={{ color: "#64748B", fontWeight: "600" }}>
-                            {dish.deliveryTime || "20-30 min"}
-                          </span>
-                        </div>
-
                         {/* Title & Kitchen Name */}
                         <div>
                           <h3
@@ -1486,6 +1592,133 @@ function FoodExploreContent() {
                           >
                             <span>by {dish.sellerName || "Verified Cloud Kitchen"}</span>
                           </Link>
+                        </div>
+
+                        {/* Dietary Tag inside Food Menu Description (Shows only the seller-specified category) */}
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", margin: "2px 0" }}>
+                          {(() => {
+                            const rawType = String(dish.itemType || "").toUpperCase();
+                            const catName = String(dish.categoryName || (dish as any).category || "").toUpperCase();
+                            const nameUpper = String(dish.name || "").toUpperCase();
+
+                            const isExplicitVegan = rawType.includes("VEGAN") || catName.includes("VEGAN") || nameUpper.includes("VEGAN");
+                            const isExplicitJain = rawType.includes("JAIN") || catName.includes("JAIN") || nameUpper.includes("JAIN");
+                            const isNonVeg = !isExplicitVegan && !isExplicitJain && isNonVegDish(dish);
+
+                            if (isExplicitVegan) {
+                              return (
+                                <span
+                                  style={{
+                                    backgroundColor: "#ECFDF5",
+                                    color: "#047857",
+                                    fontSize: "11px",
+                                    fontWeight: "700",
+                                    padding: "2px 8px",
+                                    borderRadius: "6px",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "4px",
+                                  }}
+                                >
+                                  <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#10B981" }} />
+                                  Vegan
+                                </span>
+                              );
+                            }
+
+                            if (isExplicitJain) {
+                              return (
+                                <span
+                                  style={{
+                                    backgroundColor: "#ECFDF5",
+                                    color: "#047857",
+                                    fontSize: "11px",
+                                    fontWeight: "700",
+                                    padding: "2px 8px",
+                                    borderRadius: "6px",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "4px",
+                                  }}
+                                >
+                                  <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#10B981" }} />
+                                  Jain
+                                </span>
+                              );
+                            }
+
+                            if (isNonVeg) {
+                              return (
+                                <span
+                                  style={{
+                                    backgroundColor: "#FEF2F2",
+                                    color: "#B91C1C",
+                                    fontSize: "11px",
+                                    fontWeight: "700",
+                                    padding: "2px 8px",
+                                    borderRadius: "6px",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "4px",
+                                  }}
+                                >
+                                  <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#EF4444" }} />
+                                  Non-Veg
+                                </span>
+                              );
+                            }
+
+                            return (
+                              <span
+                                style={{
+                                  backgroundColor: "#ECFDF5",
+                                  color: "#047857",
+                                  fontSize: "11px",
+                                  fontWeight: "700",
+                                  padding: "2px 8px",
+                                  borderRadius: "6px",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                }}
+                              >
+                                <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#10B981" }} />
+                                Veg
+                              </span>
+                            );
+                          })()}
+                        </div>
+
+                        {/* Rating Stars + Ratings Count & Delivery Time Row */}
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            fontSize: "0.82rem",
+                            marginTop: "2px",
+                          }}
+                        >
+                          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
+                              {[1, 2, 3, 4, 5].map((s) => (
+                                <Star
+                                  key={s}
+                                  size={13}
+                                  fill={isClosed ? "#94A3B8" : "#D97706"}
+                                  color={isClosed ? "#94A3B8" : "#D97706"}
+                                />
+                              ))}
+                            </div>
+                            <span style={{ fontSize: "0.78rem", fontWeight: "700", color: isClosed ? "#94A3B8" : "#18181B" }}>
+                              {dish.rating && dish.rating > 0 ? `${Number(dish.rating).toFixed(1)} Ratings` : "5.0 Ratings"}
+                            </span>
+                          </div>
+
+                          <div style={{ display: "flex", alignItems: "center", gap: "4px", color: "#475569", fontSize: "0.82rem", fontWeight: "600" }}>
+                            <Clock size={14} color="#64748B" />
+                            <span>{dish.deliveryTime || "20–30 min"}</span>
+                          </div>
                         </div>
 
                         {/* Add-ons Available Badge */}
@@ -1704,19 +1937,19 @@ function FoodExploreContent() {
                                 color: "#FFFFFF",
                                 fontSize: "0.86rem",
                                 fontWeight: "700",
-                                padding: "7px 16px",
-                                borderRadius: "12px",
+                                padding: "8px 18px",
+                                borderRadius: "10px",
                                 border: "none",
                                 cursor: "pointer",
-                                boxShadow: "0 4px 12px rgba(255, 107, 0, 0.25)",
+                                boxShadow: "0 3px 10px rgba(255, 107, 0, 0.25)",
                                 transition: "all 0.2s ease",
                                 display: "inline-flex",
                                 alignItems: "center",
-                                gap: "4px",
+                                gap: "5px",
                               }}
                             >
-                              <span>{hasAddons ? "Add Item" : "Add to Cart"}</span>
-                              {hasAddons && <span style={{ fontSize: "0.76rem", opacity: 0.9 }}>+</span>}
+                              <span>{hasAddons ? "Add Item" : "Add to cart"}</span>
+                              <span style={{ fontSize: "0.9rem", fontWeight: "700" }}>+</span>
                             </button>
                           )}
                         </div>

@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Check } from "lucide-react";
 import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
 import { fetchApi } from "@/lib/fetch-api";
@@ -29,12 +29,28 @@ export const SellerLoginForm: React.FC<SellerLoginFormProps> = ({
 }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { data: session, status: authStatus } = useSession();
+
+  useEffect(() => {
+    if (authStatus === "authenticated" && session?.user?.role === "SELLER") {
+      const explicitCallback = searchParams?.get("callbackUrl");
+      router.replace(explicitCallback || "/seller/dashboard");
+    }
+  }, [authStatus, session, router, searchParams]);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+
+  if (authStatus === "loading") {
+    return <div className={styles.formColumn} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>Loading...</div>;
+  }
+
+  if (authStatus === "authenticated" && session?.user?.role === "SELLER") {
+    return null;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,15 +107,15 @@ export const SellerLoginForm: React.FC<SellerLoginFormProps> = ({
               const explicitCallback = searchParams?.get("callbackUrl");
 
               if (vStatus === "APPROVED") {
-                router.push(explicitCallback || "/seller/dashboard");
+                router.replace(explicitCallback || "/seller/dashboard");
               } else if (vStatus === "REVISION") {
-                router.push(
+                router.replace(
                   explicitCallback && explicitCallback.startsWith("/seller/revision")
                     ? explicitCallback
                     : "/seller/revision"
                 );
               } else if (vStatus === "REJECTED" || vStatus === "PENDING") {
-                router.push(
+                router.replace(
                   explicitCallback &&
                     (explicitCallback.startsWith("/seller/verification") ||
                       explicitCallback.startsWith("/seller/registration"))
@@ -107,14 +123,14 @@ export const SellerLoginForm: React.FC<SellerLoginFormProps> = ({
                     : "/seller/verification-status"
                 );
               } else {
-                router.push(explicitCallback || "/seller/verification-status");
+                router.replace(explicitCallback || "/seller/verification-status");
               }
             } else {
-              router.push("/seller/registration");
+              router.replace("/seller/registration");
             }
           } catch (routeErr) {
             console.error("Post-login status check error:", routeErr);
-            router.push("/seller/verification-status");
+            router.replace("/seller/verification-status");
           }
         }
       }

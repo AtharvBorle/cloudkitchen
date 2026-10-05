@@ -259,6 +259,9 @@ export default function DashboardBody({
         padding: "0",
         boxSizing: "border-box",
         marginBottom: "24px",
+        position: "relative",
+        zIndex: 1,
+        clear: "both",
       }}
       aria-label={title}
     >
@@ -272,6 +275,8 @@ export default function DashboardBody({
           boxShadow: "0 6px 24px rgba(0, 0, 0, 0.03)",
           padding: "24px 28px",
           boxSizing: "border-box",
+          position: "relative",
+          overflow: "hidden",
         }}
         className="top-rated-container-card"
       >
@@ -684,6 +689,10 @@ export default function DashboardBody({
           color: #FFFFFF !important;
         }
         @media (max-width: 1024px) {
+          .top-rated-container-card {
+            padding: 20px 16px !important;
+            border-radius: 20px !important;
+          }
           .top-rated-grid {
             grid-template-columns: 1fr !important;
           }
@@ -694,22 +703,34 @@ export default function DashboardBody({
           }
         }
         @media (max-width: 640px) {
+          .top-rated-container-card {
+            padding: 14px 10px !important;
+            border-radius: 18px !important;
+          }
+          .top-rated-title {
+            font-size: 1.22rem !important;
+          }
           .top-rated-card {
             padding: 8px 10px !important;
-            gap: 8px !important;
-            min-height: 74px !important;
+            gap: 6px !important;
+            min-height: 70px !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important;
           }
           .top-rated-thumb {
-            width: 52px !important;
-            height: 52px !important;
-            min-width: 52px !important;
+            width: 48px !important;
+            height: 48px !important;
+            min-width: 48px !important;
           }
           .top-rated-name {
-            font-size: 0.86rem !important;
+            font-size: 0.84rem !important;
           }
           .top-rated-order-btn {
             padding: 5px 12px !important;
             font-size: 0.76rem !important;
+            flex-shrink: 0 !important;
           }
         }
       `}</style>

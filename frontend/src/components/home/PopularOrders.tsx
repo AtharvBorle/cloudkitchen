@@ -149,6 +149,9 @@ export default function PopularOrders({
         width: "100%",
         background: "transparent",
         padding: "0",
+        position: "relative",
+        zIndex: 1,
+        clear: "both",
       }}
     >
       <div
@@ -162,6 +165,7 @@ export default function PopularOrders({
           gap: "20px",
           boxSizing: "border-box",
         }}
+        className="popular-orders-container"
       >
         {/* Header Row: Title + See All */}
         <div
@@ -550,6 +554,9 @@ export default function PopularOrders({
           background-color: #E65F00 !important;
         }
         @media (max-width: 1024px) {
+          .popular-orders-container {
+            min-height: auto !important;
+          }
           .offers-grid-layout {
             display: flex !important;
             flex-direction: row !important;

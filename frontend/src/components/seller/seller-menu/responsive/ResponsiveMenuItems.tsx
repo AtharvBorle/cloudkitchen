@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Camera, ChevronDown, Trash2, Plus, Minus, Bell } from "lucide-react";
+import { ChevronLeft, Camera, ChevronDown, Trash2, Plus, Bell } from "lucide-react";
 import styles from "./ResponsiveMenuItems.module.css";
 
 export interface ResponsiveVariantItem {
@@ -48,74 +48,14 @@ export interface ResponsiveMenuItemsProps {
   }) => void;
 }
 
-export function normalizeTimeTo24h(timeStr: string): string {
-  if (!timeStr || !timeStr.trim()) return "";
-  const clean = timeStr.trim();
-  if (/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(clean)) {
-    const [h, m] = clean.split(":");
-    return `${h.padStart(2, "0")}:${m.padStart(2, "0")}`;
-  }
-  const match = clean.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
-  if (match) {
-    let hours = parseInt(match[1], 10);
-    const minutes = match[2];
-    const modifier = match[3] ? match[3].toUpperCase() : null;
-    if (modifier === "PM" && hours < 12) hours += 12;
-    if (modifier === "AM" && hours === 12) hours = 0;
-    return `${String(hours).padStart(2, "0")}:${minutes}`;
-  }
-  return clean;
-}
-
-export function parseTimeToMinutes(timeStr: string): number | null {
-  const norm = normalizeTimeTo24h(timeStr);
-  if (!norm || !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(norm)) return null;
-  const [h, m] = norm.split(":").map(Number);
-  return h * 60 + m;
-}
-
-export function validateDaySchedules(schedules: ResponsiveDaySchedule[]): { valid: boolean; error?: string } {
-  for (const s of schedules) {
-    if (s.isOpen) {
-      if (!s.openTime || !s.closeTime || !s.openTime.trim() || !s.closeTime.trim()) {
-        return {
-          valid: false,
-          error: `Please set valid Start Time and End Time for ${s.day}, or turn off the toggle if the item is not available on ${s.day}.`,
-        };
-      }
-      const openMin = parseTimeToMinutes(s.openTime);
-      const closeMin = parseTimeToMinutes(s.closeTime);
-      if (openMin === null) {
-        return {
-          valid: false,
-          error: `Invalid Start Time "${s.openTime}" for ${s.day}. Please enter a valid time.`,
-        };
-      }
-      if (closeMin === null) {
-        return {
-          valid: false,
-          error: `Invalid End Time "${s.closeTime}" for ${s.day}. Please enter a valid time.`,
-        };
-      }
-      if (closeMin <= openMin) {
-        return {
-          valid: false,
-          error: `Invalid operational hours for ${s.day}: End Time (${s.closeTime}) must be later than Start Time (${s.openTime}).`,
-        };
-      }
-    }
-  }
-  return { valid: true };
-}
-
 const DEFAULT_SCHEDULES: ResponsiveDaySchedule[] = [
-  { day: "Monday", openTime: "09:00", closeTime: "22:00", isOpen: true },
-  { day: "Tuesday", openTime: "09:00", closeTime: "22:00", isOpen: true },
-  { day: "Wednesday", openTime: "09:00", closeTime: "22:00", isOpen: true },
-  { day: "Thursday", openTime: "09:00", closeTime: "22:00", isOpen: true },
-  { day: "Friday", openTime: "09:00", closeTime: "22:00", isOpen: true },
-  { day: "Saturday", openTime: "09:00", closeTime: "22:00", isOpen: true },
-  { day: "Sunday", openTime: "09:00", closeTime: "22:00", isOpen: true },
+  { day: "Monday", openTime: "09:00 AM", closeTime: "10:00 PM", isOpen: true },
+  { day: "Tuesday", openTime: "09:00 AM", closeTime: "10:00 PM", isOpen: true },
+  { day: "Wednesday", openTime: "09:00 AM", closeTime: "10:00 PM", isOpen: true },
+  { day: "Thursday", openTime: "09:00 AM", closeTime: "10:00 PM", isOpen: true },
+  { day: "Friday", openTime: "09:00 AM", closeTime: "10:00 PM", isOpen: true },
+  { day: "Saturday", openTime: "09:00 AM", closeTime: "10:00 PM", isOpen: true },
+  { day: "Sunday", openTime: "09:00 AM", closeTime: "10:00 PM", isOpen: true },
 ];
 
 const DEFAULT_VARIANTS: ResponsiveVariantItem[] = [];
@@ -304,12 +244,6 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
       return;
     }
 
-    const scheduleValidation = validateDaySchedules(schedules);
-    if (!scheduleValidation.valid) {
-      alert(scheduleValidation.error);
-      return;
-    }
-
     const cleanStock = Math.max(0, parseInt(String(stockQty), 10) || 0);
 
     const data = {
@@ -349,7 +283,7 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
             <ChevronLeft size={24} />
           </button>
 
-          <h1 className={styles.headerTitle}>Add item</h1>
+          <h1 className={styles.headerTitle}>{initialItemName ? "Edit item" : "Add item"}</h1>
 
           <button
             type="button"
@@ -579,29 +513,6 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
               {schedules.map((schedule) => (
                 <div key={schedule.day} className={styles.scheduleRow}>
                   <span className={styles.dayLabel}>{schedule.day}</span>
-                  <div className={styles.timeWrapper}>
-                    <input
-                      type="time"
-                      className={styles.timeBox}
-                      value={normalizeTimeTo24h(schedule.openTime)}
-                      disabled={!schedule.isOpen}
-                      onChange={(e) =>
-                        handleTimeChange(schedule.day, "openTime", e.target.value)
-                      }
-                      aria-label={`${schedule.day} start time`}
-                    />
-                    <span className={styles.toText}>to</span>
-                    <input
-                      type="time"
-                      className={styles.timeBox}
-                      value={normalizeTimeTo24h(schedule.closeTime)}
-                      disabled={!schedule.isOpen}
-                      onChange={(e) =>
-                        handleTimeChange(schedule.day, "closeTime", e.target.value)
-                      }
-                      aria-label={`${schedule.day} end time`}
-                    />
-                  </div>
                   <button
                     type="button"
                     role="switch"
@@ -693,76 +604,30 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
             </div>
 
             <div className={styles.stockControls}>
-              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <button
-                  type="button"
-                  style={{
-                    width: "32px",
-                    height: "32px",
-                    borderRadius: "8px",
-                    border: "1px solid #E2E8F0",
-                    backgroundColor: "#F8FAFC",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    cursor: "pointer",
-                    color: "#475569"
-                  }}
-                  onClick={() => {
-                    const current = parseInt(String(stockQty), 10) || 0;
-                    setStockQty(Math.max(0, current - 1));
-                  }}
-                  aria-label="Decrease stock"
-                >
-                  <Minus size={14} />
-                </button>
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
-                  className={styles.stockQtyInput}
-                  value={stockQty}
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    if (raw === "") {
-                      setStockQty("");
-                      return;
-                    }
-                    const clean = raw.replace(/[^\d]/g, "");
-                    const num = parseInt(clean, 10);
-                    setStockQty(isNaN(num) ? "0" : String(Math.max(0, num)));
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "-" || e.key === "e" || e.key === "E" || e.key === "+" || e.key === ".") {
-                      e.preventDefault();
-                    }
-                  }}
-                  placeholder="0"
-                  aria-label="Stock quantity"
-                />
-                <button
-                  type="button"
-                  style={{
-                    width: "32px",
-                    height: "32px",
-                    borderRadius: "8px",
-                    border: "1px solid #E2E8F0",
-                    backgroundColor: "#F8FAFC",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    cursor: "pointer",
-                    color: "#475569"
-                  }}
-                  onClick={() => {
-                    const current = parseInt(String(stockQty), 10) || 0;
-                    setStockQty(current + 1);
-                  }}
-                  aria-label="Increase stock"
-                >
-                  <Plus size={14} />
-                </button>
-              </div>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                className={styles.stockQtyInput}
+                value={stockQty}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  if (raw === "") {
+                    setStockQty("");
+                    return;
+                  }
+                  const clean = raw.replace(/[^\d]/g, "");
+                  const num = parseInt(clean, 10);
+                  setStockQty(isNaN(num) ? "0" : String(Math.max(0, num)));
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "-" || e.key === "e" || e.key === "E" || e.key === "+" || e.key === ".") {
+                    e.preventDefault();
+                  }
+                }}
+                placeholder="0"
+                aria-label="Stock quantity"
+              />
               <button
                 type="button"
                 role="switch"
@@ -778,9 +643,9 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
             </div>
           </div>
 
-          {/* 10. Bottom Action: Save item */}
+          {/* 10. Bottom Action: Save / Update item */}
           <button type="submit" className={styles.saveButton}>
-            Save item
+            {initialItemName ? "Update item" : "Save item"}
           </button>
         </form>
       </div>

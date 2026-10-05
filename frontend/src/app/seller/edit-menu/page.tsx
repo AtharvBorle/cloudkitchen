@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
-import { EditMenu } from '@/components/seller';
+import { EditMenu, SellerResponsiveWrapper } from '@/components/seller';
+import ResponsiveMenuItemPage from '@/app/seller/res/menu/item/page';
 
 export const metadata: Metadata = {
   title: 'Edit Menu Dish | Neo Cloud Kitchen',
@@ -7,5 +8,10 @@ export const metadata: Metadata = {
 };
 
 export default function EditMenuPage() {
-  return <EditMenu />;
+  return (
+    <SellerResponsiveWrapper
+      desktop={<EditMenu />}
+      mobile={<ResponsiveMenuItemPage />}
+    />
+  );
 }
