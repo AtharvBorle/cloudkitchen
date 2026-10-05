@@ -5,9 +5,11 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { performLogout } from "@/lib/logout";
 import { CheckCircle2, AlertCircle, AlertTriangle, Users, Trash2 } from "lucide-react";
+import { useRoomModule } from "@/context/RoomModuleContext";
 
 export default function SuperadminSubscriptionsPage() {
     const router = useRouter();
+    const { isRoomEnabled } = useRoomModule();
     const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
     const showToast = (message: string, type: "success" | "error" = "success") => {
         setToast({ message, type });
@@ -572,7 +574,7 @@ export default function SuperadminSubscriptionsPage() {
 
                 {/* Active Plans List */}
                 <div style={{ marginBottom: '30px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
-                    {plans.map((plan) => (
+                    {plans.filter((plan: any) => isRoomEnabled || plan.category !== "PROPERTY").map((plan) => (
                         <div key={plan.id} style={{ border: '1px solid #EAEAEA', borderRadius: '8px', padding: '20px', backgroundColor: '#F8F9F9', position: 'relative', opacity: plan.isActive ? 1 : 0.7, borderLeft: plan.isActive ? 'none' : '4px solid var(--text-muted)' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', gap: '10px' }}>
                                 <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -608,7 +610,7 @@ export default function SuperadminSubscriptionsPage() {
                             </ul>
                         </div>
                     ))}
-                    {plans.length === 0 && <p style={{ color: 'var(--text-muted)' }}>No plans created yet.</p>}
+                    {plans.filter((plan: any) => isRoomEnabled || plan.category !== "PROPERTY").length === 0 && <p style={{ color: 'var(--text-muted)' }}>No plans created yet.</p>}
                 </div>
 
                 <hr style={{ margin: '30px 0', border: 'none', borderTop: '1px solid #EAEAEA' }} />
@@ -626,9 +628,18 @@ export default function SuperadminSubscriptionsPage() {
 
                     <div>
                         <select value={newPlanCategory} onChange={e => setNewPlanCategory(e.target.value)} className="input-field" style={{ marginBottom: 0, width: '100%' }}>
-                            <option value="BOTH">All/Both Categories (FOOD & PROPERTY)</option>
-                            <option value="FOOD">Food Focus Only (FOOD)</option>
-                            <option value="PROPERTY">Property Focus Only (PROPERTY)</option>
+                            {isRoomEnabled ? (
+                                <>
+                                    <option value="BOTH">All/Both Categories (FOOD & PROPERTY)</option>
+                                    <option value="FOOD">Food Focus Only (FOOD)</option>
+                                    <option value="PROPERTY">Property Focus Only (PROPERTY)</option>
+                                </>
+                            ) : (
+                                <>
+                                    <option value="BOTH">All Categories (Food)</option>
+                                    <option value="FOOD">Food Focus Only (FOOD)</option>
+                                </>
+                            )}
                         </select>
                     </div>
 
@@ -715,7 +726,7 @@ export default function SuperadminSubscriptionsPage() {
                             style={{ marginBottom: 0, width: '100%' }}
                         >
                             <option value="">All Plans (Global)</option>
-                            {plans.map((plan: any) => (
+                            {plans.filter((plan: any) => isRoomEnabled || plan.category !== "PROPERTY").map((plan: any) => (
                                 <option key={plan.id} value={plan.id}>{plan.name} (₹{plan.price})</option>
                             ))}
                         </select>
@@ -896,9 +907,18 @@ export default function SuperadminSubscriptionsPage() {
                             <div className="input-group">
                                 <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Plan Category</label>
                                 <select value={editPlanCategory} onChange={e => setEditPlanCategory(e.target.value)} className="input-field">
-                                    <option value="BOTH">All/Both Categories (FOOD & PROPERTY)</option>
-                                    <option value="FOOD">Food Focus Only (FOOD)</option>
-                                    <option value="PROPERTY">Property Focus Only (PROPERTY)</option>
+                                    {isRoomEnabled ? (
+                                        <>
+                                            <option value="BOTH">All/Both Categories (FOOD & PROPERTY)</option>
+                                            <option value="FOOD">Food Focus Only (FOOD)</option>
+                                            <option value="PROPERTY">Property Focus Only (PROPERTY)</option>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <option value="BOTH">All Categories (Food)</option>
+                                            <option value="FOOD">Food Focus Only (FOOD)</option>
+                                        </>
+                                    )}
                                 </select>
                             </div>
                             <div className="input-group">
@@ -991,7 +1011,7 @@ export default function SuperadminSubscriptionsPage() {
                                     className="input-field"
                                 >
                                     <option value="">All Plans (Global)</option>
-                                    {plans.map((plan: any) => (
+                                    {plans.filter((plan: any) => isRoomEnabled || plan.category !== "PROPERTY").map((plan: any) => (
                                         <option key={plan.id} value={plan.id}>{plan.name} (₹{plan.price})</option>
                                     ))}
                                 </select>

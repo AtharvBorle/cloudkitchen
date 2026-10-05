@@ -34,6 +34,7 @@ import { useSession } from "next-auth/react";
 import { performLogout } from "@/lib/logout";
 import { MobileSidebar } from "@/components/mobile-sidebar";
 import { CustomerNotificationBell } from "@/components/notifications";
+import { useRoomModule } from "@/context/RoomModuleContext";
 import styles from "./Navbar.module.css";
 import logoImg from "./logo-nav.png";
 import profilePic from "./Rectangle.jpg";
@@ -139,6 +140,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   const { cartItems } = useCart();
   const { defaultAddress, openLocationModal } = useLocation();
   const { data: session } = useSession();
+  const { isRoomEnabled } = useRoomModule();
+
+  const effectiveNavItems = navItems.filter((item) => isRoomEnabled || item !== "Rooms");
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [internalActiveItem, setInternalActiveItem] = useState<string>(initialActiveItem);
@@ -200,7 +204,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     ) {
       return navItems.includes("Food") ? "Food" : "Explore";
     }
-    if (pathname.startsWith("/room-booking")) {
+    if (isRoomEnabled && pathname.startsWith("/room-booking")) {
       return "Rooms";
     }
     if (pathname.startsWith("/explore/furniture")) {
@@ -361,7 +365,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   // Section-aware search target, placeholder, and label
   const getSectionSearchConfig = () => {
-    if (pathname.startsWith("/room-booking") || currentActiveItem === "Rooms") {
+    if (isRoomEnabled && (pathname.startsWith("/room-booking") || currentActiveItem === "Rooms")) {
       return {
         section: "Rooms",
         placeholder: "Search rooms, stays, coliving...",
@@ -644,7 +648,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* 2. CENTER SECTION (Desktop Only) */}
           <nav className={styles.centerSection} aria-label="Desktop Navigation">
-            {navItems.map((item) => {
+            {effectiveNavItems.map((item) => {
               const isActive = currentActiveItem === item;
               return (
                 <button

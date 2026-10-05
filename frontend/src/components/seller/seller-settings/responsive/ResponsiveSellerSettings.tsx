@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import SellerNotificationChannels from "../notification-channels/SellerNotificationChannels";
+import { useRoomModule } from "@/context/RoomModuleContext";
 import {
   PasswordManagementCard,
   ActiveLoginSessionsCard,
@@ -229,6 +230,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
   onSave,
   onSyncDevices,
 }) => {
+  const { isRoomEnabled } = useRoomModule();
   const router = useRouter();
   const searchParams = useSearchParams();
   const seller = useSellerProfile();
@@ -2162,7 +2164,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
               <div className={styles.card}>
                 <div className={styles.cardHeaderRow}>
                   <Package size={17} className={styles.cardHeaderIcon} />
-                  <h2 className={styles.cardTitle}>Order &amp; Booking Alerts</h2>
+                  <h2 className={styles.cardTitle}>{isRoomEnabled ? "Order & Booking Alerts" : "Order Alerts"}</h2>
                 </div>
 
                 <div className={styles.hoursRow}>
@@ -2199,22 +2201,24 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                   </div>
                 </div>
 
-                <div className={styles.hoursRow}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                    <span className={styles.label}>Room Bookings</span>
-                    <span style={{ fontSize: "12px", color: "#64748B" }}>Alert when a customer books a space or room.</span>
+                {isRoomEnabled && (
+                  <div className={styles.hoursRow}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                      <span className={styles.label}>Room Bookings</span>
+                      <span style={{ fontSize: "12px", color: "#64748B" }}>Alert when a customer books a space or room.</span>
+                    </div>
+                    <div className={styles.switchWrapper}>
+                      <label className={styles.toggleSwitch}>
+                        <input
+                          type="checkbox"
+                          checked={formData.bookingRequestAlert}
+                          onChange={(e) => handleInputChange("bookingRequestAlert", e.target.checked)}
+                        />
+                        <span className={styles.toggleSlider} />
+                      </label>
+                    </div>
                   </div>
-                  <div className={styles.switchWrapper}>
-                    <label className={styles.toggleSwitch}>
-                      <input
-                        type="checkbox"
-                        checked={formData.bookingRequestAlert}
-                        onChange={(e) => handleInputChange("bookingRequestAlert", e.target.checked)}
-                      />
-                      <span className={styles.toggleSlider} />
-                    </label>
-                  </div>
-                </div>
+                )}
 
                 <div className={styles.hoursRow}>
                   <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>

@@ -9,6 +9,7 @@ import {
   hydrateSellerDraftAsync,
   SellerRegistrationDraft,
 } from "@/lib/seller-registration-store";
+import { useRoomModule } from "@/context/RoomModuleContext";
 
 export interface ConfirmRegistrationProps {
   draft?: Partial<SellerRegistrationDraft>;
@@ -25,6 +26,7 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
   onSubmit,
   onBack,
 }) => {
+  const { isRoomEnabled } = useRoomModule();
   const [liveDraft, setLiveDraft] = useState<SellerRegistrationDraft>(() => getSellerDraft());
 
   useEffect(() => {
@@ -58,7 +60,7 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
   const business = {
     name: activeDraft.businessName || "—",
     type:
-      activeDraft.sellerType === "FOOD"
+      !isRoomEnabled || activeDraft.sellerType === "FOOD"
         ? "Food"
         : activeDraft.sellerType === "PROPERTY"
         ? "Property"
@@ -100,7 +102,7 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
   const allImages = [
     ...(activeDraft.kitchenPhotos || []),
     ...(activeDraft.cuisinePhotos || []),
-    ...(activeDraft.roomPhotos || []),
+    ...(isRoomEnabled ? (activeDraft.roomPhotos || []) : []),
   ].filter((src) => Boolean(src && src !== "data:image/present")) as string[];
 
   const previewImages = allImages.slice(0, 3);

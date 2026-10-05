@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { performLogout } from "@/lib/logout";
+import { useRoomModule } from "@/context/RoomModuleContext";
 import {
   X,
   Home,
@@ -69,7 +70,8 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
   const router = useRouter();
   const pathname = usePathname();
   const { data: session } = useSession();
-  const isRoomRoute = Boolean(pathname?.startsWith("/room-booking") || activeItem === "Rooms");
+  const { isRoomEnabled } = useRoomModule();
+  const isRoomRoute = Boolean(isRoomEnabled && (pathname?.startsWith("/room-booking") || activeItem === "Rooms"));
   const isSettingsRoute = Boolean(
     pathname?.startsWith("/settings-desktop") ||
     pathname?.startsWith("/my-subscriptions-desktop") ||
@@ -103,7 +105,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
-      setIsRoomsDropdownOpen(Boolean(pathname?.startsWith("/room-booking") || activeItem === "Rooms"));
+      setIsRoomsDropdownOpen(Boolean(isRoomEnabled && (pathname?.startsWith("/room-booking") || activeItem === "Rooms")));
       setIsSettingsDropdownOpen(Boolean(isSettingsRoute));
     } else {
       document.body.style.overflow = "";
@@ -111,7 +113,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
     return () => {
       document.body.style.overflow = "";
     };
-  }, [isOpen, pathname, activeItem, isSettingsRoute]);
+  }, [isOpen, pathname, activeItem, isSettingsRoute, isRoomEnabled]);
 
   const userRole = ((session?.user as any)?.role || "USER").toUpperCase();
   const isSeller = userRole === "SELLER";
@@ -183,14 +185,16 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
       icon: <ShoppingBag className={styles.navIcon} size={19} />,
       hasBadge: false,
     },
-    {
-      label: "Rooms",
-      href: "/room-booking",
-      icon: <BedDouble className={styles.navIcon} size={18} />,
-      hasBadge: true,
-      badgeText: "NEW",
-      isDropdown: true,
-    },
+    ...(isRoomEnabled ? [
+      {
+        label: "Rooms",
+        href: "/room-booking",
+        icon: <BedDouble className={styles.navIcon} size={18} />,
+        hasBadge: true,
+        badgeText: "NEW",
+        isDropdown: true,
+      }
+    ] : []),
     {
       label: "Settings",
       href: isSeller ? "/seller/settings" : "/settings-desktop",

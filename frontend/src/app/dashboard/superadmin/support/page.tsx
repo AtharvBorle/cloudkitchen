@@ -20,6 +20,7 @@ import { fetchApi } from "@/lib/fetch-api";
 
 import { MessageSquare, Clock, CheckCircle2, User, Send, Loader2, RefreshCw, AlertCircle, Filter, Paperclip } from "lucide-react";
 import { TicketAttachmentRenderer } from "@/components/common/TicketAttachmentRenderer";
+import { useRoomModule } from "@/context/RoomModuleContext";
 
 
 
@@ -28,6 +29,7 @@ import { TicketAttachmentRenderer } from "@/components/common/TicketAttachmentRe
 
 
 export default function SuperAdminSupportPage() {
+    const { isRoomEnabled } = useRoomModule();
 
 
 
@@ -2317,7 +2319,7 @@ export default function SuperAdminSupportPage() {
 
 
 
-                            <option value="ROOM">Room</option>
+                            {isRoomEnabled && <option value="ROOM">Room</option>}
 
 
 
@@ -6287,7 +6289,7 @@ export default function SuperAdminSupportPage() {
 
 
 
-                                    <option value="ROOM">ROOM</option>
+                                    {isRoomEnabled && <option value="ROOM">ROOM</option>}
 
 
 
@@ -6579,7 +6581,7 @@ export default function SuperAdminSupportPage() {
 
 
 
-                                            {(newTicketCategory === 'ROOM' || newTicketCategory === 'PAYMENT' || newTicketCategory === 'OTHER') && (
+                                            {isRoomEnabled && (newTicketCategory === 'ROOM' || newTicketCategory === 'PAYMENT' || newTicketCategory === 'OTHER') && (
 
 
 

@@ -21,6 +21,7 @@ import { useLocation } from "@/components/location-provider";
 import { useRecentSearches } from "@/lib/useRecentSearches";
 import { HouseMapPicker } from "@/components/house-map-picker";
 import { matchesSearchQuery } from "@/lib/dietary-filter";
+import { useRoomModule } from "@/context/RoomModuleContext";
 
 interface SuggestionItem {
   id: string;
@@ -70,6 +71,7 @@ export default function HeroSection({
   const router = useRouter();
   const { defaultAddress, setGuestLocation, openLocationModal } = useLocation();
   const { recentSearches, addSearch, removeSearch, clearSearches, trendingSearches } = useRecentSearches();
+  const { isRoomEnabled } = useRoomModule();
 
   const [searchQuery, setSearchQuery] = useState(currentSearchQuery || "");
   const [selectedLocation, setSelectedLocation] = useState("Select Location");
@@ -179,7 +181,7 @@ export default function HeroSection({
     });
 
     // 3. Check available rooms
-    if (availableRooms && availableRooms.length > 0) {
+    if (isRoomEnabled && availableRooms && availableRooms.length > 0) {
       availableRooms.forEach((r) => {
         if (r.title && matchesSearchQuery(r.title, searchQuery)) {
           const key = `room-${r.title.toLowerCase().trim()}`;
@@ -214,7 +216,7 @@ export default function HeroSection({
     });
 
     return suggestions.slice(0, 7);
-  }, [searchQuery, availableItems, availableKitchens, availableRooms]);
+  }, [searchQuery, availableItems, availableKitchens, availableRooms, isRoomEnabled]);
 
   const executeSearch = (query: string, location?: string) => {
     const finalQuery = query.trim();
@@ -740,7 +742,7 @@ export default function HeroSection({
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: "700", color: "#64748B", marginBottom: "8px" }}>
                     <Sparkles size={13} color="#FF6B00" />
-                    <span>SUGGESTED DISHES, RESTAURANTS &amp; ROOMS</span>
+                    <span>{isRoomEnabled ? "SUGGESTED DISHES, RESTAURANTS & ROOMS" : "SUGGESTED DISHES & RESTAURANTS"}</span>
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                     {liveSuggestions.map((item) => (
