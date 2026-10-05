@@ -137,7 +137,13 @@ export async function middleware(request: NextRequest) {
   // ──────────────────────────────────────────
   // 4. LOGIN PAGE GUARDS — allow users to access login pages directly to sign in or switch accounts
   // ──────────────────────────────────────────
+  const isUserLoginPage =
+    pathname === "/login" ||
+    pathname === "/auth/login" ||
+    pathname === "/signup" ||
+    pathname.startsWith("/auth/login");
   const isSellerLoginPage =
+    pathname === "/seller" ||
     pathname === "/seller/login" ||
     pathname === "/seller/res/login" ||
     pathname.startsWith("/seller/login") ||
@@ -150,6 +156,9 @@ export async function middleware(request: NextRequest) {
 
   if (isAuthenticated && userRole) {
     const role = userRole.toUpperCase();
+    if (role === "USER" && isUserLoginPage) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
     if (
       (role === "ADMIN" || role === "SUPERADMIN" || role === "AGENT" || role === "SUPPORT") &&
       isAdminLoginPage
@@ -158,6 +167,9 @@ export async function middleware(request: NextRequest) {
     }
     if (role === "DELIVERY" && isDeliveryLoginPage) {
       return NextResponse.redirect(new URL("/dashboard/delivery", request.url));
+    }
+    if (role === "SELLER" && isSellerLoginPage) {
+      return NextResponse.redirect(new URL("/seller/dashboard", request.url));
     }
   }
 

@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import { discardExistingSession } from "@/lib/logout";
 import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
 import styles from "./SellerLogin.module.css";
@@ -22,6 +22,14 @@ export const SellerLogin: React.FC<SellerLoginProps> = ({
   createAccountHref = "/seller/registration",
 }) => {
   const router = useRouter();
+  const { data: session, status: authStatus } = useSession();
+
+  useEffect(() => {
+    if (authStatus === "authenticated" && session?.user?.role === "SELLER") {
+      router.replace("/seller/dashboard");
+    }
+  }, [authStatus, session, router]);
+
   const [identifier, setIdentifier] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [showPassword, setShowPassword] = React.useState(false);
@@ -61,7 +69,7 @@ export const SellerLogin: React.FC<SellerLoginProps> = ({
         if (onSuccess) {
           onSuccess();
         } else {
-          router.push("/seller/dashboard");
+          router.replace("/seller/dashboard");
         }
       }
     } catch (err) {

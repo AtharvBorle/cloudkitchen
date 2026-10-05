@@ -49,7 +49,7 @@ export const updateApprovalStatus = async (req: Request, type: string, id: strin
             data: { approvalStatus: status, adminNote }
         });
         try {
-            revalidateTag("popup-banners");
+            revalidateTag("popup-banners", {});
             revalidatePath("/api/public/popup-banners");
         } catch (e) {}
         return { banner: updated };
@@ -59,8 +59,8 @@ export const updateApprovalStatus = async (req: Request, type: string, id: strin
             data: { approvalStatus: status, adminNote }
         });
         try {
-            revalidateTag("coupons");
-            revalidateTag("public-coupons");
+            revalidateTag("coupons", {});
+            revalidateTag("public-coupons", {});
             revalidatePath("/api/public/coupons");
             revalidatePath("/api/coupons");
         } catch (e) {}

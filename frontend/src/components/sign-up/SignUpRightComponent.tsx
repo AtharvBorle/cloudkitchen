@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import {
   User,
   Mail,
@@ -32,6 +32,13 @@ export default function SignUpRightComponent({
   onSuccessRedirect = "/explore-desktop",
 }: SignUpRightComponentProps) {
   const router = useRouter();
+  const { data: session, status: authStatus } = useSession();
+
+  useEffect(() => {
+    if (authStatus === "authenticated" && session?.user) {
+      router.replace("/");
+    }
+  }, [authStatus, session, router]);
 
   // Form Fields State
   const [fullName, setFullName] = useState("");
@@ -43,6 +50,14 @@ export default function SignUpRightComponent({
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  if (authStatus === "loading") {
+    return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>Loading...</div>;
+  }
+
+  if (authStatus === "authenticated" && session?.user) {
+    return null;
+  }
 
   // OTP Verification State
   const [otpSent, setOtpSent] = useState(false);

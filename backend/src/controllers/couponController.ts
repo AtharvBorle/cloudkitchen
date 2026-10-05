@@ -239,8 +239,8 @@ export const createCoupon = async (req: Request) => {
         });
 
         try {
-            revalidateTag("coupons");
-            revalidateTag("public-coupons");
+            revalidateTag("coupons", {});
+            revalidateTag("public-coupons", {});
             revalidatePath("/api/public/coupons");
             revalidatePath("/api/coupons");
             revalidatePath("/api/seller/dashboard/offers");
@@ -523,8 +523,8 @@ export const updateCoupon = async (req: Request, couponId: string) => {
     });
 
     try {
-        revalidateTag("coupons");
-        revalidateTag("public-coupons");
+        revalidateTag("coupons", {});
+        revalidateTag("public-coupons", {});
         revalidatePath("/api/public/coupons");
         revalidatePath("/api/coupons");
         revalidatePath("/api/seller/dashboard/offers");
@@ -568,8 +568,8 @@ export const deleteCoupon = async (couponId: string) => {
     });
 
     try {
-        revalidateTag("coupons");
-        revalidateTag("public-coupons");
+        revalidateTag("coupons", {});
+        revalidateTag("public-coupons", {});
         revalidatePath("/api/public/coupons");
         revalidatePath("/api/coupons");
         revalidatePath("/api/seller/dashboard/offers");

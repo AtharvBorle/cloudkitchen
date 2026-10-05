@@ -916,10 +916,12 @@ export default function Properties({ places, foodItems = [] }: PropertiesProps) 
             flex-direction: column !important;
             align-items: center !important;
             height: auto !important;
+            min-height: auto !important;
           }
           .Properties2 {
             width: 100% !important;
             height: auto !important;
+            min-height: auto !important;
           }
           .PlacesGrid {
             grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
@@ -932,6 +934,10 @@ export default function Properties({ places, foodItems = [] }: PropertiesProps) 
           }
           .properties-container {
             gap: 16px !important;
+            min-height: auto !important;
+          }
+          .Properties2 {
+            min-height: auto !important;
           }
         }
         @media (max-width: 768px) {

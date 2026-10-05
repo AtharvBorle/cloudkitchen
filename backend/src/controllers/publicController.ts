@@ -172,7 +172,7 @@ export const getPublicExploreData = unstable_cache(
         return { foodItems, availableRooms, foodCategories, kitchens: activeSellersList };
     },
     ["public-explore-data"],
-    { revalidate: 5, tags: ["explore", "public-explore-data"] }
+    { revalidate: 30, tags: ["explore"] }
 );
 
 export const getPublicRoomAvailability = (id: string) => unstable_cache(
@@ -243,24 +243,23 @@ export const getPublicCoupons = async (sellerId: string | null, userId?: string 
         const now = new Date();
 
         const filteredCoupons = activeCoupons.filter((c: any) => {
-            // 1. Seller match: If coupon is restricted to a seller, it must only be returned when that seller is requested
+            // 1. Seller match
             const cSid = c.appliesToSellerId;
             if (cSid && cSid !== "GLOBAL" && cSid !== "ALL" && cSid !== "null" && cSid !== "undefined" && String(cSid).trim() !== "") {
-                if (!cleanSellerId && !resolvedSellerId) {
-                    return false;
-                }
-                const targetKeys = [
-                    cleanSellerId,
-                    resolvedSellerId,
-                    matchedSeller?.id,
-                    matchedSeller?.trackingId,
-                    matchedSeller?.userId,
-                    matchedSeller?.businessName,
-                    matchedSeller?.user?.name
-                ].filter(Boolean).map((s: string) => String(s).toLowerCase().trim());
+                if (cleanSellerId || resolvedSellerId) {
+                    const targetKeys = [
+                        cleanSellerId,
+                        resolvedSellerId,
+                        matchedSeller?.id,
+                        matchedSeller?.trackingId,
+                        matchedSeller?.userId,
+                        matchedSeller?.businessName,
+                        matchedSeller?.user?.name
+                    ].filter(Boolean).map((s: string) => String(s).toLowerCase().trim());
 
-                if (!targetKeys.includes(String(cSid).toLowerCase().trim())) {
-                    return false;
+                    if (!targetKeys.includes(String(cSid).toLowerCase().trim())) {
+                        return false;
+                    }
                 }
             }
 
@@ -453,20 +452,15 @@ export const validateCouponForCart = async (req: Request) => {
         throw new ApiError(`Coupon "${coupon.code}" has reached its maximum usage limit.`, 400);
     }
 
-    const numSubtotal = Number(subtotal) || 0;
-    if (numSubtotal <= 0 || !Array.isArray(items) || items.length === 0) {
-        throw new ApiError(`Please add items to your cart before applying coupon "${coupon.code}".`, 400);
-    }
-
     // Check seller store restriction
     const cSid = coupon.appliesToSellerId;
     if (cSid && cSid !== "GLOBAL" && cSid !== "ALL" && cSid !== "null" && cSid !== "undefined" && String(cSid).trim() !== "") {
         const couponSeller = await db.sellerProfile.findFirst({
             where: {
                 OR: [
-                    { id: coupon.appliesToSellerId },
-                    { trackingId: coupon.appliesToSellerId },
-                    { userId: coupon.appliesToSellerId }
+                    { id: cSid },
+                    { trackingId: cSid },
+                    { userId: cSid }
                 ]
             },
             select: { id: true, businessName: true, trackingId: true, userId: true }
@@ -502,10 +496,6 @@ export const validateCouponForCart = async (req: Request) => {
         const couponKitchenName = couponSeller?.businessName ? `"${couponSeller.businessName}"` : "its specific kitchen";
         const cartKitchenName = cartSeller?.businessName ? `"${cartSeller.businessName}"` : "another kitchen";
 
-        if (!cartSeller && (!sellerId || sellerId === "seller")) {
-            throw new ApiError(`Coupon "${coupon.code}" is exclusive to ${couponKitchenName} and cannot be applied without items from that kitchen in your cart.`, 400);
-        }
-
         if (cartSeller && couponSeller && cartSeller.id !== couponSeller.id) {
             throw new ApiError(`Coupon "${coupon.code}" is exclusive to ${couponKitchenName} and cannot be applied to orders from ${cartKitchenName}.`, 400);
         }
@@ -517,6 +507,7 @@ export const validateCouponForCart = async (req: Request) => {
 
     // Check minimum cart value
     const minCart = coupon.minimumCartValue ?? 0;
+    const numSubtotal = Number(subtotal) || 0;
     if (minCart > 0 && numSubtotal < minCart) {
         throw new ApiError(`Coupon "${coupon.code}" requires a minimum order of ₹${minCart}. (Your cart is ₹${numSubtotal})`, 400);
     }

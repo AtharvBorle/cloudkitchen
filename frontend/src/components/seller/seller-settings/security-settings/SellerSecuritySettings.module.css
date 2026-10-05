@@ -199,6 +199,30 @@
   text-decoration: none;
 }
 
+.logoutSingleDeviceBtn {
+  background: none;
+  border: 1px solid #FECACA;
+  background-color: #FEF2F2;
+  color: #DC2626;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.logoutSingleDeviceBtn:hover {
+  background-color: #FEE2E2;
+  border-color: #FCA5A5;
+}
+
+.logoutSingleDeviceBtn:active {
+  transform: scale(0.96);
+}
+
 .passwordSubmitRow {
   display: flex;
   justify-content: flex-start;

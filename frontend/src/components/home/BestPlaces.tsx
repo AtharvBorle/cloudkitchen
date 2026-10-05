@@ -47,6 +47,9 @@ export default function BestPlaces({
         padding: "0",
         boxSizing: "border-box",
         marginBottom: "24px",
+        position: "relative",
+        zIndex: 1,
+        clear: "both",
       }}
       aria-label={title}
     >
@@ -60,6 +63,8 @@ export default function BestPlaces({
           boxShadow: "0 6px 24px rgba(0, 0, 0, 0.03)",
           padding: "24px 28px",
           boxSizing: "border-box",
+          position: "relative",
+          overflow: "hidden",
         }}
         className="popular-dishes-container-card"
       >
@@ -311,15 +316,26 @@ export default function BestPlaces({
           transform: scale(1.05);
         }
         @media (max-width: 1024px) {
+          .popular-dishes-container-card {
+            padding: 20px 18px !important;
+            border-radius: 20px !important;
+          }
           .popular-dishes-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
             gap: 14px !important;
           }
         }
         @media (max-width: 640px) {
+          .popular-dishes-container-card {
+            padding: 16px 12px !important;
+            border-radius: 18px !important;
+          }
+          .popular-dishes-title {
+            font-size: 1.22rem !important;
+          }
           .popular-dishes-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-            gap: 12px !important;
+            gap: 10px !important;
           }
           .dish-img-box {
             height: 110px !important;

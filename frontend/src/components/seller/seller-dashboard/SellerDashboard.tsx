@@ -117,6 +117,20 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
     }
   }, [seller.authStatus, seller.profile?.verificationStatus, router]);
 
+  // Lock browser back-button at root dashboard so seller stays on dashboard until explicit logout
+  useEffect(() => {
+    window.history.pushState(null, "", window.location.href);
+
+    const handlePopState = () => {
+      window.history.pushState(null, "", window.location.href);
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, []);
+
   useEffect(() => {
     async function loadStatus() {
       try {
