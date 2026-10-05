@@ -69,7 +69,7 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
   initialSelectedFoodTypes,
   initialDescription = "",
   initialStockQty = "",
-  initialIsInStock = true,
+  initialIsInStock: _initialIsInStock = true,
   initialVariants = DEFAULT_VARIANTS,
   initialSchedules = DEFAULT_SCHEDULES,
   initialImageUrl,
@@ -117,7 +117,6 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
   };
   const [description, setDescription] = useState(initialDescription);
   const [stockQty, setStockQty] = useState<number | string>(initialStockQty);
-  const [isInStock, setIsInStock] = useState(initialIsInStock);
   const [variants, setVariants] = useState<ResponsiveVariantItem[]>(initialVariants);
   const [schedules, setSchedules] = useState<ResponsiveDaySchedule[]>(initialSchedules);
   const [imagePreview, setImagePreview] = useState<string | null>(initialImageUrl || null);
@@ -254,7 +253,7 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
       selectedFoodTypes,
       description,
       stockQty: cleanStock,
-      isInStock,
+      isInStock: cleanStock > 0,
       variants,
       schedules,
       imageFile,
@@ -628,18 +627,6 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
                 placeholder="0"
                 aria-label="Stock quantity"
               />
-              <button
-                type="button"
-                role="switch"
-                aria-checked={isInStock}
-                className={`${styles.toggleSwitch} ${
-                  isInStock ? styles.toggleSwitchActive : ""
-                }`}
-                onClick={() => setIsInStock((prev) => !prev)}
-                aria-label="Toggle in stock"
-              >
-                <span className={styles.toggleThumb} />
-              </button>
             </div>
           </div>
 
