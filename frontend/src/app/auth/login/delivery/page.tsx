@@ -10,12 +10,6 @@ import { validateEmail } from "@/lib/email-validation";
 
 export default function DeliveryLoginPage() {
     const router = useRouter();
-    
-    useEffect(() => {
-        if (typeof window !== "undefined" && window.location.pathname === "/auth/login/delivery") {
-            router.replace("/delivery");
-        }
-    }, [router]);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);

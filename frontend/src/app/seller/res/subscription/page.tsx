@@ -13,7 +13,7 @@ export default function ResponsiveSellerSubscriptionPage() {
     return stored.map((p) => {
       const tierLower = (p.tier || "").toLowerCase();
       const tierVariant: "blue" | "indigo" | "orange" | "purple" = tierLower === "gold" ? "purple" : tierLower === "silver" ? "blue" : "orange";
-      const status: "Draft" | "Paused" | "Active" = p.status === "Live" ? "Active" : p.status === "Paused" ? "Paused" : "Draft";
+      const status: "Active" | "Paused" = p.status === "Live" ? "Active" : "Paused";
       return {
         id: p.id,
         title: p.name,

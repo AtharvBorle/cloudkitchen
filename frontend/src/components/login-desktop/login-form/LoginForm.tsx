@@ -65,14 +65,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   const [error, setError] = useState("");
   const [successNotice, setSuccessNotice] = useState("");
 
-  if (authStatus === "loading") {
-    return <div className={styles.formContainer} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>Loading...</div>;
-  }
-
-  if (authStatus === "authenticated" && session?.user) {
-    return null;
-  }
-
   // Refs for 6 OTP boxes
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -96,6 +88,14 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     }
     return () => clearInterval(interval);
   }, [resendTimer]);
+
+  if (authStatus === "loading") {
+    return <div className={styles.formContainer} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>Loading...</div>;
+  }
+
+  if (authStatus === "authenticated" && session?.user) {
+    return null;
+  }
 
   const handleCreateAccount = () => {
     if (onCreateAccount) {

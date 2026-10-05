@@ -706,32 +706,6 @@ function EditMenuInner({
               </button>
             </div>
 
-            {/* Day-wise Operational Hours */}
-            <div className={styles.subSection}>
-              <label className={styles.subSectionTitle}>Day-wise Operational Hours</label>
-              <div className={styles.scheduleList}>
-                {schedules.map((schedule) => (
-                  <div key={schedule.day} className={styles.scheduleRow}>
-                    <span className={styles.scheduleDay}>{schedule.day}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleToggleDay(schedule.day)}
-                      className={`${styles.toggleSwitch} ${
-                        schedule.isOpen ? styles.toggleSwitchActive : ''
-                      }`}
-                      aria-label={`Toggle ${schedule.day} hours`}
-                    >
-                      <span
-                        className={`${styles.toggleThumb} ${
-                          schedule.isOpen ? styles.toggleThumbActive : ''
-                        }`}
-                      />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
             {/* Dish Image Representation */}
             <div className={styles.subSection}>
               <label className={styles.subSectionTitle}>

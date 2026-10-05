@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import { ChevronDown } from "lucide-react";
 import styles from "./SellerNotificationChannels.module.css";
 
 export interface NotificationChannelsData {
@@ -154,86 +153,6 @@ export const SellerNotificationChannels: React.FC<SellerNotificationChannelsProp
                 />
                 <span className={styles.toggleSlider} />
               </label>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 2. Quiet Hours & Do Not Disturb Card */}
-      <section className={styles.card} aria-labelledby="quiet-hours-heading">
-        <div className={styles.cardHeader}>
-          <h2 id="quiet-hours-heading" className={styles.cardTitle}>
-            Quiet Hours &amp; Do Not Disturb
-          </h2>
-        </div>
-
-        {/* Enable Quiet Hours Row */}
-        <div className={styles.quietHoursRow}>
-          <div className={styles.itemInfo}>
-            <h3 className={styles.itemTitle}>Enable Quiet Hours</h3>
-            <p className={styles.itemSubtitle}>
-              Silence all marketing and automated report alerts during specific times.
-            </p>
-          </div>
-          <div className={styles.switchWrapper}>
-            <label className={styles.toggleSwitch} aria-label="Toggle Enable Quiet Hours">
-              <input
-                type="checkbox"
-                role="switch"
-                aria-checked={currentValues.enableQuietHours}
-                checked={currentValues.enableQuietHours}
-                onChange={() => handleToggle("enableQuietHours")}
-              />
-              <span className={styles.toggleSlider} />
-            </label>
-          </div>
-        </div>
-
-        {/* Start Time & End Time Inputs */}
-        <div className={styles.timeGrid}>
-          {/* Start Time */}
-          <div className={styles.timeField}>
-            <label htmlFor="quiet-hours-start" className={styles.timeLabel}>
-              Start Time
-            </label>
-            <div className={styles.timeInputWrapper}>
-              <select
-                id="quiet-hours-start"
-                className={styles.timeSelect}
-                value={currentValues.quietHoursStart}
-                disabled={!currentValues.enableQuietHours}
-                onChange={(e) => handleTimeChange("quietHoursStart", e.target.value)}
-              >
-                {TIME_SLOT_OPTIONS.map((slot) => (
-                  <option key={slot} value={slot}>
-                    {slot}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown size={18} className={styles.selectChevron} />
-            </div>
-          </div>
-
-          {/* End Time */}
-          <div className={styles.timeField}>
-            <label htmlFor="quiet-hours-end" className={styles.timeLabel}>
-              End Time
-            </label>
-            <div className={styles.timeInputWrapper}>
-              <select
-                id="quiet-hours-end"
-                className={styles.timeSelect}
-                value={currentValues.quietHoursEnd}
-                disabled={!currentValues.enableQuietHours}
-                onChange={(e) => handleTimeChange("quietHoursEnd", e.target.value)}
-              >
-                {TIME_SLOT_OPTIONS.map((slot) => (
-                  <option key={slot} value={slot}>
-                    {slot}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown size={18} className={styles.selectChevron} />
             </div>
           </div>
         </div>

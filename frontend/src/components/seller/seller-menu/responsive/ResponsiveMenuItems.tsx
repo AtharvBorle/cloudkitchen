@@ -506,31 +506,7 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
             />
           </div>
 
-          {/* 7. Day-wise Operational Hours */}
-          <div className={styles.formGroup}>
-            <h2 className={styles.sectionTitle}>Day-wise Operational Hours</h2>
-            <div className={styles.scheduleList}>
-              {schedules.map((schedule) => (
-                <div key={schedule.day} className={styles.scheduleRow}>
-                  <span className={styles.dayLabel}>{schedule.day}</span>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={schedule.isOpen}
-                    className={`${styles.toggleSwitch} ${
-                      schedule.isOpen ? styles.toggleSwitchActive : ""
-                    }`}
-                    onClick={() => handleToggleDay(schedule.day)}
-                    aria-label={`Toggle hours for ${schedule.day}`}
-                  >
-                    <span className={styles.toggleThumb} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* 8. Dish Add-Ons */}
+          {/* 7. Dish Add-Ons */}
           <div className={styles.formGroup}>
             <h2 className={styles.sectionTitle}>
               Dish Add-Ons <span style={{ fontSize: "0.85rem", fontWeight: "normal", color: "#64748B" }}>(Optional add-ons with extra price)</span>

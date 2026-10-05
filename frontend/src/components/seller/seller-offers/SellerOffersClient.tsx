@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Plus, Tag, Percent, ArrowUpRight, TrendingUp, AlertCircle, Edit2, Trash2, CheckCircle2 } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
+import PaginationControls from "../common/PaginationControls";
 
 interface SellerOffersClientProps {
     sellerId: string;
@@ -16,6 +17,8 @@ export default function SellerOffersClient({ sellerId, products }: SellerOffersC
     const [filterStatus, setFilterStatus] = useState<"ALL" | "ACTIVE" | "EXPIRED" | "DRAFT">("ALL");
     const [couponToDelete, setCouponToDelete] = useState<{ id: string; code: string } | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [currentPage, setCurrentPage] = useState<number>(1);
+    const [pageSize, setPageSize] = useState<number | "All">(10);
 
     const loadOffers = async () => {
         try {
@@ -88,6 +91,19 @@ export default function SellerOffersClient({ sellerId, products }: SellerOffersC
     const activeCount = offers.filter(o => o.isActive && !isOfferDraft(o) && (!o.endDate || new Date(o.endDate) >= new Date())).length;
     const draftCount = offers.filter(o => isOfferDraft(o)).length;
     const totalUsage = offers.reduce((sum, o) => sum + (o.currentUsage || o.usedCount || 0), 0);
+
+    // Reset to page 1 whenever filter changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [filterStatus]);
+
+    // Slice paginated offers
+    const paginatedOffers = React.useMemo(() => {
+        if (pageSize === "All") return filteredOffers;
+        const numSize = Number(pageSize) || 10;
+        const startIndex = (currentPage - 1) * numSize;
+        return filteredOffers.slice(startIndex, startIndex + numSize);
+    }, [filteredOffers, currentPage, pageSize]);
 
     return (
         <div style={{ width: "100%", fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}>
@@ -292,7 +308,7 @@ export default function SellerOffersClient({ sellerId, products }: SellerOffersC
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredOffers.map(offer => {
+                                {paginatedOffers.map(offer => {
                                     const isExpired = offer.endDate && new Date(offer.endDate) < new Date();
                                     const discountLabel = offer.discountType === "PERCENTAGE" || offer.discountPercentage
                                         ? `${offer.discountPercentage || offer.discountValue}% OFF`
@@ -404,6 +420,21 @@ export default function SellerOffersClient({ sellerId, products }: SellerOffersC
                             </tbody>
                         </table>
                     </div>
+
+                    {/* Pagination Controls */}
+                    {filteredOffers.length > 0 && (
+                        <div style={{ padding: "16px 20px", borderTop: "1px solid #E2E8F0" }}>
+                            <PaginationControls
+                                currentPage={currentPage}
+                                totalItems={filteredOffers.length}
+                                pageSize={pageSize}
+                                onPageChange={setCurrentPage}
+                                onPageSizeChange={setPageSize}
+                                itemName="offers"
+                                pageSizeOptions={[10, 20, 25, 50, "All"]}
+                            />
+                        </div>
+                    )}
                 </div>
             )}
 
