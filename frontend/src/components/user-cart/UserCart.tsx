@@ -835,7 +835,7 @@ export const UserCart: React.FC<UserCartProps> = ({
           const foodItemId = String(it.foodItemId || "").toLowerCase();
           const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
           const name = String(it.name || "").toLowerCase().trim();
-          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
+          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name || (name && (name.includes(k) || k.includes(name))));
         });
         targetSub = matchingItems.reduce((acc, it) => acc + it.price * it.qty, 0);
       }
@@ -925,6 +925,7 @@ export const UserCart: React.FC<UserCartProps> = ({
             items: cartItems.map((it) => ({
               id: it.id,
               foodItemId: it.foodItemId,
+              name: it.name,
               price: it.price,
               quantity: it.qty,
               categoryId: it.categoryId,
@@ -1011,7 +1012,7 @@ export const UserCart: React.FC<UserCartProps> = ({
         return allowedKeys.some((k) => k === catId || k === catName || (catName && catName.includes(k)) || (k && catName && k.includes(catName)) || (name && name.includes(k)));
       }
 
-      return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
+      return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name || (name && (name.includes(k) || k.includes(name))));
     });
   };
 
@@ -1219,6 +1220,7 @@ export const UserCart: React.FC<UserCartProps> = ({
           items: cartItems.map((it) => ({
             id: it.id,
             foodItemId: it.foodItemId,
+            name: it.name,
             price: it.price,
             quantity: it.qty,
             categoryId: it.categoryId,
@@ -1241,6 +1243,7 @@ export const UserCart: React.FC<UserCartProps> = ({
         setDiscountPercent(pct);
         if (typeof window !== "undefined") {
           try {
+            sessionStorage.setItem("applied_cart_coupon", JSON.stringify(cData));
             sessionStorage.setItem("appliedCoupon", JSON.stringify(cData));
             localStorage.setItem("appliedCoupon", JSON.stringify(cData));
           } catch (e) {}
@@ -1395,7 +1398,7 @@ export const UserCart: React.FC<UserCartProps> = ({
             return allowedKeys.some((k) => k === catId || k === catName || (catName && catName.includes(k)) || (k && catName && k.includes(catName)) || (name && name.includes(k)));
           }
 
-          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
+          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name || (name && (name.includes(k) || k.includes(name))));
         });
 
         if (matchingItems.length === 0) return 0;

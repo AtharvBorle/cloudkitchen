@@ -488,7 +488,8 @@ export const validateCouponForCart = async (req: Request) => {
 
         // If cartSeller not found yet, check from cart items
         if (!cartSeller && Array.isArray(items) && items.length > 0) {
-            const firstItemId = items[0].foodItemId || items[0].id;
+            const rawFirstId = String(items[0].foodItemId || items[0].id || "");
+            const firstItemId = rawFirstId.includes("_") ? rawFirstId.split("_")[0] : rawFirstId;
             if (firstItemId) {
                 const fi = await db.foodItem.findUnique({
                     where: { id: firstItemId },
@@ -607,20 +608,77 @@ export const validateCouponForCart = async (req: Request) => {
 
                 matchingItemIdsList = Array.from(matchingItemIds);
             } else {
+                // Specific Items Scope (appliesTo === "ITEMS" or specific product configured)
+                // 1. Resolve all food items in database matching allowedKeys by ID or by name
+                const matchingFoodItemsInDb = await db.foodItem.findMany({
+                    where: {
+                        OR: [
+                            { id: { in: allowedKeys } },
+                            { name: { in: allowedKeys, mode: "insensitive" } }
+                        ]
+                    },
+                    select: { id: true, name: true, sellerId: true }
+                });
+
+                const expandedAllowedKeys = new Set<string>(allowedKeys);
+                matchingFoodItemsInDb.forEach((fi: any) => {
+                    expandedAllowedKeys.add(fi.id.toLowerCase());
+                    expandedAllowedKeys.add(fi.name.toLowerCase().trim());
+                });
+
+                // 2. Resolve database names and details for cart items if available
+                const cartItemIds = items.map((it: any) => {
+                    const raw = String(it.foodItemId || it.id || "");
+                    return raw.includes("_") ? raw.split("_")[0] : raw;
+                }).filter(Boolean);
+
+                const cartFoodItemsInDb = await db.foodItem.findMany({
+                    where: { id: { in: cartItemIds } },
+                    select: { id: true, name: true, sellerId: true }
+                });
+
+                const cartItemNamesMap = new Map<string, string>();
+                cartFoodItemsInDb.forEach((fi: any) => {
+                    cartItemNamesMap.set(fi.id.toLowerCase(), fi.name.toLowerCase().trim());
+                });
+
                 const matchingItems = items.filter((it: any) => {
                     const itemId = String(it.id || "").toLowerCase();
                     const foodItemId = String(it.foodItemId || "").toLowerCase();
                     const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
                     const name = String(it.name || "").toLowerCase().trim();
-                    return allowedKeys.some(k => k === itemId || k === foodItemId || k === baseId || k === name);
+                    const dbName = cartItemNamesMap.get(foodItemId) || cartItemNamesMap.get(baseId) || cartItemNamesMap.get(itemId) || "";
+
+                    return (
+                        (itemId && expandedAllowedKeys.has(itemId)) ||
+                        (foodItemId && expandedAllowedKeys.has(foodItemId)) ||
+                        (baseId && expandedAllowedKeys.has(baseId)) ||
+                        (name && expandedAllowedKeys.has(name)) ||
+                        (dbName && expandedAllowedKeys.has(dbName)) ||
+                        allowedKeys.some((k: string) =>
+                            k === itemId ||
+                            k === foodItemId ||
+                            k === baseId ||
+                            (name && (k === name || name.includes(k) || k.includes(name))) ||
+                            (dbName && (k === dbName || dbName.includes(k) || k.includes(dbName)))
+                        )
+                    );
                 });
+
                 if (matchingItems.length === 0) {
                     throw new ApiError(`Coupon "${coupon.code}" is only valid on specific items not present in your cart.`, 400);
                 }
+
                 matchingProductSubtotal = matchingItems.reduce((sum: number, it: any) => {
-                    return sum + (Number(it.price) || 0) * (Number(it.quantity || it.qty || 1));
+                    const price = Number(it.price) || 0;
+                    const qty = Number(it.quantity || it.qty || 1);
+                    return sum + price * qty;
                 }, 0);
-                matchingItemIdsList = matchingItems.map((it: any) => String(it.foodItemId || it.id).toLowerCase());
+
+                matchingItemIdsList = matchingItems.map((it: any) => {
+                    const base = String(it.foodItemId || it.id || "").toLowerCase();
+                    return base.includes("_") ? base.split("_")[0] : base;
+                });
             }
         }
     }
@@ -683,9 +741,6 @@ export const validateCouponForCart = async (req: Request) => {
         discountLabel = `${pct}% OFF`;
     } else {
         const flatAmt = coupon.discountAmount || 0;
-        if (flatAmt > 0 && numSubtotal < flatAmt) {
-            throw new ApiError(`Coupon "${coupon.code}" provides a ₹${flatAmt} discount and requires an order total of at least ₹${flatAmt}. (Your cart is ₹${numSubtotal})`, 400);
-        }
         calculatedDiscount = Math.min(flatAmt, baseDiscountSubtotal);
         discountLabel = `₹${flatAmt} OFF`;
     }

@@ -132,6 +132,31 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
         loadCatalog();
     }, []);
 
+    const selectableFoodItems = React.useMemo(() => {
+        if (scopeType === "SELLER" && sellerId) {
+            const sid = String(sellerId).toLowerCase().trim();
+            return allFoodItems.filter(item => {
+                const itemSid = String(item.sellerId || (item.seller as any)?.id || "").toLowerCase().trim();
+                const itemTrackingId = String((item.seller as any)?.trackingId || "").toLowerCase().trim();
+                const itemUserId = String((item.seller as any)?.userId || "").toLowerCase().trim();
+                return itemSid === sid || itemTrackingId === sid || itemUserId === sid;
+            });
+        }
+        return allFoodItems;
+    }, [allFoodItems, scopeType, sellerId]);
+
+    const editSelectableFoodItems = React.useMemo(() => {
+        if (editScopeType === "SELLER" && editSellerId) {
+            const sid = String(editSellerId).toLowerCase().trim();
+            return allFoodItems.filter(item => {
+                const itemSid = String(item.sellerId || (item.seller as any)?.id || "").toLowerCase().trim();
+                const itemTrackingId = String((item.seller as any)?.trackingId || "").toLowerCase().trim();
+                const itemUserId = String((item.seller as any)?.userId || "").toLowerCase().trim();
+                return itemSid === sid || itemTrackingId === sid || itemUserId === sid;
+            });
+        }
+        return allFoodItems;
+    }, [allFoodItems, editScopeType, editSellerId]);
 
     const handleCreateCoupon = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -805,40 +830,77 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                                 {appliesTo === "ITEMS" && (
                                     <div style={{ backgroundColor: "white", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "12px" }}>
                                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                                            <span style={{ fontSize: "0.85rem", fontWeight: "600", color: "#334155" }}>Choose Applicable Food Items:</span>
+                                            <span style={{ fontSize: "0.85rem", fontWeight: "600", color: "#334155" }}>
+                                                Choose Applicable Food Items{scopeType === "SELLER" && sellerId ? " (from Selected Kitchen)" : ""}:
+                                            </span>
                                             <span style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: "600" }}>{selectedItemIds.length} item selected</span>
                                         </div>
-                                        <input
-                                            type="text"
-                                            placeholder="Search items (e.g. Paneer Makhni)..."
-                                            value={itemSearchQuery}
-                                            onChange={(e) => setItemSearchQuery(e.target.value)}
-                                            style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "0.85rem", marginBottom: "8px" }}
-                                        />
-                                        <div style={{ maxHeight: "150px", overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "6px" }}>
-                                            {allFoodItems
-                                                .filter((item) => (item.name || "").toLowerCase().includes(itemSearchQuery.toLowerCase()))
-                                                .map((item) => {
-                                                    const checked = selectedItemIds.includes(item.name) || selectedItemIds.includes(item.id);
-                                                    return (
-                                                        <label key={item.id} style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", cursor: "pointer", padding: "6px 8px", borderRadius: "6px", backgroundColor: checked ? "#fee2e2" : "#f8fafc", border: `1px solid ${checked ? "#fca5a5" : "#e2e8f0"}` }}>
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={checked}
-                                                                onChange={(e) => {
-                                                                    const val = item.name || item.id;
-                                                                    if (e.target.checked) {
-                                                                        setSelectedItemIds([...selectedItemIds, val]);
-                                                                    } else {
-                                                                        setSelectedItemIds(selectedItemIds.filter((x) => x !== val && x !== item.id && x !== item.name));
-                                                                    }
-                                                                }}
-                                                            />
-                                                            <span style={{ fontWeight: checked ? "700" : "500", color: checked ? "#991b1b" : "#334155", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</span>
-                                                        </label>
-                                                    );
-                                                })}
-                                        </div>
+                                        {scopeType === "SELLER" && !sellerId ? (
+                                            <div style={{ padding: "12px", textAlign: "center", color: "#b91c1c", backgroundColor: "#fef2f2", borderRadius: "6px", fontSize: "0.85rem", fontWeight: "500" }}>
+                                                Please select a seller above first to view and select dishes from that kitchen.
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Search items (e.g. Paneer Makhni)..."
+                                                    value={itemSearchQuery}
+                                                    onChange={(e) => setItemSearchQuery(e.target.value)}
+                                                    style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "0.85rem", marginBottom: "8px" }}
+                                                />
+                                                <div style={{ maxHeight: "160px", overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "6px" }}>
+                                                    {selectableFoodItems
+                                                        .filter((item) => (item.name || "").toLowerCase().includes(itemSearchQuery.toLowerCase()))
+                                                        .map((item) => {
+                                                            const checked = selectedItemIds.some(
+                                                                (x) =>
+                                                                    x === item.name ||
+                                                                    x === item.id ||
+                                                                    x.toLowerCase() === (item.name || "").toLowerCase() ||
+                                                                    x.toLowerCase() === (item.id || "").toLowerCase()
+                                                            );
+                                                            return (
+                                                                <label key={item.id} style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", cursor: "pointer", padding: "6px 8px", borderRadius: "6px", backgroundColor: checked ? "#fee2e2" : "#f8fafc", border: `1px solid ${checked ? "#fca5a5" : "#e2e8f0"}` }}>
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={checked}
+                                                                        onChange={(e) => {
+                                                                            const val = item.name || item.id;
+                                                                            if (e.target.checked) {
+                                                                                setSelectedItemIds([...selectedItemIds, val]);
+                                                                            } else {
+                                                                                setSelectedItemIds(
+                                                                                    selectedItemIds.filter(
+                                                                                        (x) =>
+                                                                                            x !== val &&
+                                                                                            x !== item.id &&
+                                                                                            x !== item.name &&
+                                                                                            x.toLowerCase() !== (item.id || "").toLowerCase() &&
+                                                                                            x.toLowerCase() !== (item.name || "").toLowerCase()
+                                                                                    )
+                                                                                );
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                    <div style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                                                                        <span style={{ fontWeight: checked ? "700" : "500", color: checked ? "#991b1b" : "#334155", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                                                            {item.name}
+                                                                        </span>
+                                                                        <span style={{ fontSize: "0.7rem", color: "#64748b" }}>
+                                                                            ₹{item.price}{scopeType === "GLOBAL" && item.sellerName ? ` • ${item.sellerName}` : ""}
+                                                                        </span>
+                                                                    </div>
+                                                                </label>
+                                                            );
+                                                        })}
+                                                    {selectableFoodItems.length === 0 && (
+                                                        <div style={{ gridColumn: "1 / -1", padding: "12px", textAlign: "center", color: "#64748b", fontSize: "0.85rem" }}>
+                                                            No food items available for this kitchen.
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -1347,40 +1409,77 @@ export default function AdminCouponsClient({ availableSellers, userRole }: { ava
                                 {editAppliesTo === "ITEMS" && (
                                     <div style={{ backgroundColor: "white", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "12px" }}>
                                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                                            <span style={{ fontSize: "0.85rem", fontWeight: "600", color: "#334155" }}>Choose Applicable Food Items:</span>
+                                            <span style={{ fontSize: "0.85rem", fontWeight: "600", color: "#334155" }}>
+                                                Choose Applicable Food Items{editScopeType === "SELLER" && editSellerId ? " (from Selected Kitchen)" : ""}:
+                                            </span>
                                             <span style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: "600" }}>{editSelectedItemIds.length} item selected</span>
                                         </div>
-                                        <input
-                                            type="text"
-                                            placeholder="Search items (e.g. Paneer Makhni)..."
-                                            value={editItemSearchQuery}
-                                            onChange={(e) => setEditItemSearchQuery(e.target.value)}
-                                            style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "0.85rem", marginBottom: "8px" }}
-                                        />
-                                        <div style={{ maxHeight: "150px", overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "6px" }}>
-                                            {allFoodItems
-                                                .filter((item) => (item.name || "").toLowerCase().includes(editItemSearchQuery.toLowerCase()))
-                                                .map((item) => {
-                                                    const checked = editSelectedItemIds.includes(item.name) || editSelectedItemIds.includes(item.id);
-                                                    return (
-                                                        <label key={item.id} style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", cursor: "pointer", padding: "6px 8px", borderRadius: "6px", backgroundColor: checked ? "#fee2e2" : "#f8fafc", border: `1px solid ${checked ? "#fca5a5" : "#e2e8f0"}` }}>
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={checked}
-                                                                onChange={(e) => {
-                                                                    const val = item.name || item.id;
-                                                                    if (e.target.checked) {
-                                                                        setEditSelectedItemIds([...editSelectedItemIds, val]);
-                                                                    } else {
-                                                                        setEditSelectedItemIds(editSelectedItemIds.filter((x) => x !== val && x !== item.id && x !== item.name));
-                                                                    }
-                                                                }}
-                                                            />
-                                                            <span style={{ fontWeight: checked ? "700" : "500", color: checked ? "#991b1b" : "#334155", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</span>
-                                                        </label>
-                                                    );
-                                                })}
-                                        </div>
+                                        {editScopeType === "SELLER" && !editSellerId ? (
+                                            <div style={{ padding: "12px", textAlign: "center", color: "#b91c1c", backgroundColor: "#fef2f2", borderRadius: "6px", fontSize: "0.85rem", fontWeight: "500" }}>
+                                                Please select a seller above first to view and select dishes from that kitchen.
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Search items (e.g. Paneer Makhni)..."
+                                                    value={editItemSearchQuery}
+                                                    onChange={(e) => setEditItemSearchQuery(e.target.value)}
+                                                    style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "0.85rem", marginBottom: "8px" }}
+                                                />
+                                                <div style={{ maxHeight: "160px", overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "6px" }}>
+                                                    {editSelectableFoodItems
+                                                        .filter((item) => (item.name || "").toLowerCase().includes(editItemSearchQuery.toLowerCase()))
+                                                        .map((item) => {
+                                                            const checked = editSelectedItemIds.some(
+                                                                (x) =>
+                                                                    x === item.name ||
+                                                                    x === item.id ||
+                                                                    x.toLowerCase() === (item.name || "").toLowerCase() ||
+                                                                    x.toLowerCase() === (item.id || "").toLowerCase()
+                                                            );
+                                                            return (
+                                                                <label key={item.id} style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", cursor: "pointer", padding: "6px 8px", borderRadius: "6px", backgroundColor: checked ? "#fee2e2" : "#f8fafc", border: `1px solid ${checked ? "#fca5a5" : "#e2e8f0"}` }}>
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={checked}
+                                                                        onChange={(e) => {
+                                                                            const val = item.name || item.id;
+                                                                            if (e.target.checked) {
+                                                                                setEditSelectedItemIds([...editSelectedItemIds, val]);
+                                                                            } else {
+                                                                                setEditSelectedItemIds(
+                                                                                    editSelectedItemIds.filter(
+                                                                                        (x) =>
+                                                                                            x !== val &&
+                                                                                            x !== item.id &&
+                                                                                            x !== item.name &&
+                                                                                            x.toLowerCase() !== (item.id || "").toLowerCase() &&
+                                                                                            x.toLowerCase() !== (item.name || "").toLowerCase()
+                                                                                    )
+                                                                                );
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                    <div style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                                                                        <span style={{ fontWeight: checked ? "700" : "500", color: checked ? "#991b1b" : "#334155", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                                                            {item.name}
+                                                                        </span>
+                                                                        <span style={{ fontSize: "0.7rem", color: "#64748b" }}>
+                                                                            ₹{item.price}{editScopeType === "GLOBAL" && item.sellerName ? ` • ${item.sellerName}` : ""}
+                                                                        </span>
+                                                                    </div>
+                                                                </label>
+                                                            );
+                                                        })}
+                                                    {editSelectableFoodItems.length === 0 && (
+                                                        <div style={{ gridColumn: "1 / -1", padding: "12px", textAlign: "center", color: "#64748b", fontSize: "0.85rem" }}>
+                                                            No food items available for this kitchen.
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 )}
                             </div>

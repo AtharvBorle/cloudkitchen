@@ -196,9 +196,17 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
         }
       }
       if (offer.appliesToProductId) {
-        const hasProduct = cartItems.some(
-          (it) => it.id === offer.appliesToProductId || it.foodItemId === offer.appliesToProductId
-        );
+        const allowedKeys = String(offer.appliesToProductId)
+          .split(",")
+          .map((s) => s.trim().toLowerCase())
+          .filter(Boolean);
+        const hasProduct = cartItems.some((it) => {
+          const itemId = String(it.id || "").toLowerCase();
+          const foodItemId = String(it.foodItemId || "").toLowerCase();
+          const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+          const name = String(it.name || "").toLowerCase().trim();
+          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name || (name && (name.includes(k) || k.includes(name))));
+        });
         if (!hasProduct) return false;
       }
       return true;
@@ -307,7 +315,7 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
           const foodItemId = String(it.foodItemId || "").toLowerCase();
           const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
           const name = String(it.name || "").toLowerCase().trim();
-          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
+          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name || (name && (name.includes(k) || k.includes(name))));
         });
         if (!hasMatchingProduct) {
           const code = appliedCoupon.code || appliedPromo || "Applied";
@@ -379,6 +387,8 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
           subtotal: currentSubtotal,
           items: cartItems.map((it) => ({
             id: it.id,
+            foodItemId: it.foodItemId,
+            name: it.name,
             price: it.price,
             quantity: it.qty,
           })),
@@ -430,7 +440,7 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
           const foodItemId = String(it.foodItemId || "").toLowerCase();
           const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
           const name = String(it.name || "").toLowerCase().trim();
-          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
+          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name || (name && (name.includes(k) || k.includes(name))));
         });
         if (matchingItems.length === 0) return 0;
         targetSubtotal = matchingItems.reduce((acc, it) => acc + it.price * it.qty, 0);

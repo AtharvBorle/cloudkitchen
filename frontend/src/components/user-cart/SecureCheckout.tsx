@@ -898,7 +898,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
         const catName = String(it.categoryName || (it.foodCategory as any)?.name || (it.category as any)?.name || it.category || it.foodCategory || "").toLowerCase().trim();
         isMatch = allowedKeys.some((k) => k === catId || k === catName || (catName && catName.includes(k)) || (k && catName && k.includes(catName)) || (name && name.includes(k)));
       } else {
-        isMatch = allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
+        isMatch = allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name || (name && (name.includes(k) || k.includes(name))));
       }
 
       if (isMatch) {
@@ -950,7 +950,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
             return allowedKeys.some((k) => k === catId || k === catName || (catName && catName.includes(k)) || (k && catName && k.includes(catName)) || (name && name.includes(k)));
           }
 
-          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
+          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name || (name && (name.includes(k) || k.includes(name))));
         });
         if (matchingItems.length === 0) return 0;
         targetSubtotal = matchingItems.reduce((acc, it) => acc + it.price, 0);
@@ -1127,9 +1127,17 @@ const loadRazorpayScript = (): Promise<boolean> => {
       if (subtotal < minCart) return false;
 
       if (offer.appliesToProductId) {
-        const hasProduct = checkoutItems.some(
-          (it) => it.id === offer.appliesToProductId || it.foodItemId === offer.appliesToProductId
-        );
+        const allowedKeys = String(offer.appliesToProductId)
+          .split(",")
+          .map((s) => s.trim().toLowerCase())
+          .filter(Boolean);
+        const hasProduct = checkoutItems.some((it) => {
+          const itemId = String(it.id || "").toLowerCase();
+          const foodItemId = String(it.foodItemId || "").toLowerCase();
+          const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+          const name = String(it.name || "").toLowerCase().trim();
+          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name || (name && (name.includes(k) || k.includes(name))));
+        });
         if (!hasProduct) return false;
       }
       return true;
@@ -1230,7 +1238,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
           const foodItemId = String(it.foodItemId || "").toLowerCase();
           const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
           const name = String(it.name || "").toLowerCase().trim();
-          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
+          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name || (name && (name.includes(k) || k.includes(name))));
         });
         if (!hasMatchingProduct) {
           const code = appliedCoupon.code || promoCode || "Applied";
@@ -1287,7 +1295,8 @@ const loadRazorpayScript = (): Promise<boolean> => {
           items: checkoutItems.map((it) => ({
             id: it.id,
             foodItemId: it.foodItemId,
-            price: it.price,
+            name: it.name,
+            price: it.qty > 0 ? (it.price / it.qty) : it.price,
             quantity: it.qty,
             categoryId: it.categoryId,
             foodCategoryId: it.foodCategoryId,

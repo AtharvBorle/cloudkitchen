@@ -1072,9 +1072,10 @@ export function getDishOfferBadge(
       const cpCatList = cpCatId.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
       const dCatId = String((dish as any).categoryId || "").toLowerCase().trim();
 
-      // Check direct product ID match (single or comma-separated or appliesTo=ITEMS)
+      // Check direct product ID or dish name match (single or comma-separated or appliesTo=ITEMS)
       const isProductMatch = (cpProd && dId && (cpProd === dId || cpProdList.includes(dId))) ||
-        (cpAppliesTo === "ITEMS" && cpProdList.includes(dId));
+        (cpAppliesTo === "ITEMS" && (cpProdList.includes(dId) || cpProdList.includes(dName) || (dName && cpProdList.some(p => p === dName || dName.includes(p) || p.includes(dName))))) ||
+        (cpProdList.includes(dName) || (dName && cpProdList.some(p => p === dName || dName.includes(p) || p.includes(dName))));
 
       // Check direct category match (appliesTo=CATEGORY or categoryId/categoryName match)
       const isCategoryCouponMatch =
