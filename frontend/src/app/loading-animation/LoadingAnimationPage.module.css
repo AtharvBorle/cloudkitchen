@@ -1,0 +1,375 @@
+/* ==========================================================================
+   LOADING ANIMATION STUDIO DEMO PAGE STYLES
+   ========================================================================== */
+
+.pageContainer {
+  min-height: 100vh;
+  background-color: #F8FAFC;
+  font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
+  color: #0F172A;
+  padding-bottom: 60px;
+}
+
+/* Header */
+.topHeader {
+  background: #FFFFFF;
+  border-bottom: 1px solid #E2E8F0;
+  padding: 20px 24px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+
+.headerInner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.brandCol {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.scooterBadgeIcon {
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(135deg, #FA6D6B 0%, #E11D48 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  box-shadow: 0 4px 12px rgba(250, 109, 107, 0.35);
+}
+
+.pageTitle {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0;
+}
+
+.pageSubtitle {
+  font-size: 13px;
+  color: #64748B;
+  margin: 2px 0 0 0;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fullscreenBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #0F172A;
+  color: #FFFFFF;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.15);
+}
+
+.fullscreenBtn:hover {
+  background: #1E293B;
+  transform: translateY(-1px);
+}
+
+/* Main Content Layout */
+.mainLayout {
+  max-width: 1200px;
+  margin: 28px auto 0 auto;
+  padding: 0 20px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 28px;
+}
+
+@media (min-width: 1024px) {
+  .mainLayout {
+    grid-template-columns: 1.45fr 1fr;
+  }
+}
+
+/* Stage Card */
+.stageCard {
+  background: #FFFFFF;
+  border-radius: 20px;
+  border: 1px solid #E2E8F0;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.stageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.stageTitle {
+  font-size: 17px;
+  font-weight: 800;
+  color: #0F172A;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stageControlsRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.iconBtn {
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  color: #334155;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.iconBtn:hover {
+  background: #E2E8F0;
+  color: #0F172A;
+}
+
+.iconBtnActive {
+  background: #FA6D6B;
+  color: #FFFFFF;
+  border-color: #FA6D6B;
+}
+
+/* Control Panel Card */
+.controlPanelCard {
+  background: #FFFFFF;
+  border-radius: 20px;
+  border: 1px solid #E2E8F0;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.controlSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sectionLabel {
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Pill Selectors */
+.pillGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.pillBtn {
+  background: #F8FAFC;
+  border: 1.5px solid #E2E8F0;
+  color: #475569;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.pillBtn:hover {
+  border-color: #CBD5E1;
+  background: #F1F5F9;
+}
+
+.pillBtnActive {
+  background: #FFF1F2;
+  border-color: #FA6D6B;
+  color: #E11D48;
+  box-shadow: 0 2px 8px rgba(250, 109, 107, 0.15);
+}
+
+/* Scrub Slider */
+.sliderTrack {
+  width: 100%;
+  accent-color: #FA6D6B;
+  height: 6px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+/* Milestone Buttons */
+.milestonesGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.milestoneBtn {
+  background: #F8FAFC;
+  border: 1.5px solid #E2E8F0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.milestoneBtn:hover {
+  background: #F1F5F9;
+  border-color: #CBD5E1;
+}
+
+.milestoneActive {
+  background: #F0FDF4;
+  border-color: #10B981;
+  color: #065F46;
+}
+
+/* Big Action Trigger Buttons */
+.actionBtnsRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.honkActionBtn {
+  background: linear-gradient(135deg, #FA6D6B 0%, #E11D48 100%);
+  color: #FFFFFF;
+  border: none;
+  padding: 12px 18px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 14px rgba(250, 109, 107, 0.35);
+  transition: all 0.2s ease;
+}
+
+.honkActionBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(250, 109, 107, 0.45);
+}
+
+.simulateBtn {
+  background: #0284C7;
+  color: #FFFFFF;
+  border: none;
+  padding: 12px 18px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3);
+  transition: all 0.2s ease;
+}
+
+.simulateBtn:hover {
+  transform: translateY(-2px);
+  background: #0369A1;
+}
+
+/* Fullscreen Modal Overlay */
+.fullscreenModal {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: fadeIn 0.25s ease;
+}
+
+.fullscreenModalContent {
+  width: 100%;
+  max-width: 680px;
+  position: relative;
+}
+
+.closeModalBtn {
+  position: absolute;
+  top: -50px;
+  right: 0;
+  background: #FFFFFF;
+  color: #0F172A;
+  border: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  font-size: 18px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

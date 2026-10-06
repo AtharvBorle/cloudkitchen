@@ -1,0 +1,787 @@
+/* ==========================================================================
+   DELIVERY BOY LOADER - UNIQUE INTERACTIVE ANIMATION COMPONENT
+   ========================================================================== */
+
+.loaderWrapper {
+  position: relative;
+  width: 100%;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+  font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
+  transition: background 0.5s ease;
+}
+
+/* Fullscreen mode when used as a full-page modal/interstitial */
+.fullscreenWrapper {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  border-radius: 0;
+  height: 100vh !important;
+  width: 100vw !important;
+}
+
+/* ==========================================================================
+   THEMES (DAY, SUNSET, NIGHT)
+   ========================================================================== */
+
+.themeDay {
+  background: linear-gradient(180deg, #7DD3FC 0%, #BAE6FD 45%, #E0F2FE 75%, #F0F9FF 100%);
+}
+
+.themeSunset {
+  background: linear-gradient(180deg, #E11D48 0%, #F97316 40%, #FBBF24 75%, #FEF08A 100%);
+}
+
+.themeNight {
+  background: linear-gradient(180deg, #050814 0%, #0F172A 50%, #1E293B 100%);
+}
+
+/* ==========================================================================
+   SCENIC SKY & BACKGROUND PARALLAX LAYERS
+   ========================================================================== */
+
+.skyStage {
+  position: relative;
+  width: 100%;
+  height: 240px;
+  overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  .skyStage {
+    height: 300px;
+  }
+}
+
+/* Celestial Body (Sun / Moon) */
+.celestialBody {
+  position: absolute;
+  top: 24px;
+  right: 12%;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: none;
+}
+
+.sunGlow {
+  background: radial-gradient(circle, #FEF08A 20%, #FBBF24 70%, #F59E0B 100%);
+  box-shadow: 0 0 35px rgba(251, 191, 36, 0.7), 0 0 70px rgba(245, 158, 11, 0.4);
+}
+
+.sunsetSun {
+  background: radial-gradient(circle, #FDE047 30%, #FB923C 75%, #EA580C 100%);
+  box-shadow: 0 0 45px rgba(251, 146, 60, 0.8), 0 0 80px rgba(234, 88, 12, 0.5);
+  top: 45px;
+}
+
+.moonGlow {
+  background: radial-gradient(circle, #F8FAFC 25%, #E2E8F0 80%, #CBD5E1 100%);
+  box-shadow: 0 0 25px rgba(248, 250, 252, 0.6), 0 0 50px rgba(148, 163, 184, 0.3);
+}
+
+/* Floating Clouds (Parallax drifting) */
+.cloudLayer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.cloudItem {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(2px);
+  border-radius: 40px;
+  animation: floatClouds linear infinite;
+}
+
+.themeNight .cloudItem {
+  background: rgba(30, 41, 59, 0.45);
+}
+
+.themeSunset .cloudItem {
+  background: rgba(255, 237, 213, 0.55);
+}
+
+.cloud1 {
+  width: 110px;
+  height: 28px;
+  top: 35px;
+  left: -120px;
+  animation-duration: 22s;
+}
+
+.cloud2 {
+  width: 150px;
+  height: 34px;
+  top: 75px;
+  left: -160px;
+  animation-duration: 32s;
+  animation-delay: 7s;
+}
+
+.cloud3 {
+  width: 90px;
+  height: 24px;
+  top: 110px;
+  left: -100px;
+  animation-duration: 26s;
+  animation-delay: 14s;
+}
+
+@keyframes floatClouds {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(calc(100vw + 250px));
+  }
+}
+
+/* Distant Skyline / Cityscape Silhouette */
+.citySkyline {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 200%;
+  height: 90px;
+  background-repeat: repeat-x;
+  background-position: bottom left;
+  pointer-events: none;
+  opacity: 0.35;
+  transition: opacity 0.4s ease;
+}
+
+.themeNight .citySkyline {
+  opacity: 0.6;
+}
+
+.citySkylineParallax {
+  animation: scrollSkyline 14s linear infinite;
+}
+
+@keyframes scrollSkyline {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+/* ==========================================================================
+   ROADWAY & ASPHALT
+   ========================================================================== */
+
+.roadStage {
+  position: relative;
+  width: 100%;
+  height: 80px;
+  background: #1E293B;
+  border-top: 4px solid #334155;
+  box-shadow: inset 0 8px 16px rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  .roadStage {
+    height: 90px;
+  }
+}
+
+/* Curb / Sidewalk edge */
+.curbStrip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: repeating-linear-gradient(
+    90deg,
+    #F59E0B 0px,
+    #F59E0B 28px,
+    #1E293B 28px,
+    #1E293B 56px
+  );
+  animation: scrollCurb 0.6s linear infinite;
+}
+
+/* Dashed lane marking in road center */
+.roadDashes {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 200%;
+  height: 4px;
+  margin-top: -2px;
+  background: repeating-linear-gradient(
+    90deg,
+    #F8FAFC 0px,
+    #F8FAFC 36px,
+    transparent 36px,
+    transparent 72px
+  );
+  opacity: 0.85;
+}
+
+.roadDashesActive {
+  animation: scrollRoad 0.7s linear infinite;
+}
+
+@keyframes scrollRoad {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-72px);
+  }
+}
+
+@keyframes scrollCurb {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-56px);
+  }
+}
+
+/* Neon glow line for Night mode */
+.themeNight .roadDashes {
+  background: repeating-linear-gradient(
+    90deg,
+    #38BDF8 0px,
+    #38BDF8 36px,
+    transparent 36px,
+    transparent 72px
+  );
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.8);
+}
+
+/* ==========================================================================
+   DELIVERY SCOOTER RIDER CONTAINER & MOTION
+   ========================================================================== */
+
+.riderAnchor {
+  position: absolute;
+  bottom: 24px;
+  z-index: 10;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Mode 1: Moving across the screen from left to right */
+.riderMovingAcross {
+  animation: rideAcrossScreen 4.8s cubic-bezier(0.42, 0, 0.58, 1) infinite;
+}
+
+@keyframes rideAcrossScreen {
+  0% {
+    left: -200px;
+    transform: scale(0.95);
+  }
+  10% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.02);
+  }
+  90% {
+    transform: scale(1);
+  }
+  100% {
+    left: calc(100% + 150px);
+    transform: scale(0.96);
+  }
+}
+
+/* Speed variations */
+.speedFast {
+  animation-duration: 2.6s !important;
+}
+
+.speedNitro {
+  animation-duration: 1.6s !important;
+}
+
+/* Bobbing / engine suspension vibration on the bike */
+.riderBobbing {
+  animation: bikeEngineBob 0.22s ease-in-out infinite alternate;
+  display: inline-block;
+  position: relative;
+}
+
+@keyframes bikeEngineBob {
+  0% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-2.5px) rotate(0.4deg);
+  }
+  100% {
+    transform: translateY(0.5px) rotate(-0.3deg);
+  }
+}
+
+/* Fun interactive Wheelie / Jump on click */
+.wheelieJump {
+  animation: doWheelie 0.85s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards !important;
+}
+
+@keyframes doWheelie {
+  0% {
+    transform: translateY(0) rotate(0deg);
+  }
+  30% {
+    transform: translateY(-28px) rotate(-16deg);
+  }
+  65% {
+    transform: translateY(-8px) rotate(-8deg);
+  }
+  85% {
+    transform: translateY(2px) rotate(2deg);
+  }
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+}
+
+/* The Rider Image */
+.riderImage {
+  width: 175px;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 14px 10px rgba(0, 0, 0, 0.35));
+  pointer-events: auto;
+}
+
+@media (min-width: 768px) {
+  .riderImage {
+    width: 220px;
+  }
+}
+
+/* Subtle contact shadow on the road surface */
+.contactShadow {
+  position: absolute;
+  bottom: 4px;
+  left: 20px;
+  right: 25px;
+  height: 12px;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 75%);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: shadowPulse 0.22s ease-in-out infinite alternate;
+}
+
+@keyframes shadowPulse {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1.05);
+    opacity: 0.85;
+  }
+}
+
+/* ==========================================================================
+   HEADLIGHT BEAM (NIGHT & SUNSET)
+   ========================================================================== */
+
+.headlightBeam {
+  position: absolute;
+  top: 75px;
+  left: 140px;
+  width: 180px;
+  height: 60px;
+  background: linear-gradient(
+    90deg,
+    rgba(254, 240, 138, 0.45) 0%,
+    rgba(254, 240, 138, 0.2) 50%,
+    transparent 100%
+  );
+  clip-path: polygon(0% 40%, 100% 0%, 100% 100%, 0% 60%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: 5;
+}
+
+.themeNight .headlightBeam,
+.themeSunset .headlightBeam {
+  opacity: 1;
+}
+
+@media (min-width: 768px) {
+  .headlightBeam {
+    top: 92px;
+    left: 170px;
+    width: 220px;
+    height: 75px;
+  }
+}
+
+/* ==========================================================================
+   EXHAUST SMOKE & SPEED WIND PARTICLES
+   ========================================================================== */
+
+.exhaustSmokeContainer {
+  position: absolute;
+  bottom: 20px;
+  left: -20px;
+  pointer-events: none;
+}
+
+.smokeParticle {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.65);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+  animation: smokePuff 0.7s cubic-bezier(0.165, 0.84, 0.44, 1) infinite;
+}
+
+.themeNight .smokeParticle {
+  background: rgba(148, 163, 184, 0.45);
+}
+
+.smoke1 {
+  width: 14px;
+  height: 14px;
+  bottom: 2px;
+  left: 0;
+  animation-delay: 0s;
+}
+
+.smoke2 {
+  width: 18px;
+  height: 18px;
+  bottom: 8px;
+  left: -8px;
+  animation-delay: 0.22s;
+}
+
+.smoke3 {
+  width: 22px;
+  height: 22px;
+  bottom: 14px;
+  left: -16px;
+  animation-delay: 0.44s;
+}
+
+@keyframes smokePuff {
+  0% {
+    transform: translate(0, 0) scale(0.3);
+    opacity: 0.9;
+  }
+  60% {
+    transform: translate(-24px, -12px) scale(1.2);
+    opacity: 0.5;
+  }
+  100% {
+    transform: translate(-42px, -22px) scale(1.6);
+    opacity: 0;
+  }
+}
+
+/* Nitro fire trails when speed is Nitro */
+.nitroFire {
+  position: absolute;
+  bottom: 12px;
+  left: -18px;
+  width: 28px;
+  height: 12px;
+  background: linear-gradient(270deg, #3B82F6 0%, #06B6D4 60%, transparent 100%);
+  border-radius: 20px;
+  box-shadow: 0 0 16px #06B6D4;
+  animation: nitroFlicker 0.1s infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes nitroFlicker {
+  0% {
+    transform: scaleX(0.85);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scaleX(1.3);
+    opacity: 1;
+  }
+}
+
+/* ==========================================================================
+   DELICIOUS FOOD AROMA PARTICLES (STEAM & FOOD ICONS)
+   ========================================================================== */
+
+.foodAromaContainer {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  pointer-events: none;
+}
+
+.aromaItem {
+  position: absolute;
+  font-size: 15px;
+  animation: floatAroma 1.8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  opacity: 0;
+}
+
+.aroma1 {
+  right: 10px;
+  animation-delay: 0s;
+}
+
+.aroma2 {
+  right: 26px;
+  animation-delay: 0.6s;
+}
+
+.aroma3 {
+  right: 4px;
+  animation-delay: 1.2s;
+}
+
+@keyframes floatAroma {
+  0% {
+    transform: translate(0, 0) scale(0.4) rotate(0deg);
+    opacity: 0;
+  }
+  25% {
+    transform: translate(-8px, -18px) scale(1) rotate(-8deg);
+    opacity: 1;
+  }
+  75% {
+    transform: translate(-18px, -40px) scale(0.9) rotate(8deg);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translate(-28px, -58px) scale(0.3) rotate(-12deg);
+    opacity: 0;
+  }
+}
+
+/* ==========================================================================
+   SPEECH BUBBLE & HORN HONK INTERACTION
+   ========================================================================== */
+
+.speechBubble {
+  position: absolute;
+  top: -46px;
+  left: 25px;
+  background: #FFFFFF;
+  color: #0F172A;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 6px 12px;
+  border-radius: 14px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+  white-space: nowrap;
+  pointer-events: none;
+  animation: speechPop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  z-index: 20;
+}
+
+.speechBubble::after {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 24px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid #FFFFFF;
+}
+
+@keyframes speechPop {
+  0% {
+    transform: scale(0.4) translateY(12px);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* ==========================================================================
+   DESTINATION DOORSTEP / HOUSE CHECKPOINT (For Progress mode)
+   ========================================================================== */
+
+.destinationPin {
+  position: absolute;
+  right: 18px;
+  bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 8;
+  pointer-events: none;
+}
+
+.destinationHouse {
+  width: 44px;
+  height: 44px;
+  background: #FFFFFF;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  font-size: 22px;
+}
+
+.destinationLabel {
+  font-size: 11px;
+  font-weight: 800;
+  color: #0F172A;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-top: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   BOTTOM STATUS & PROGRESS BAR
+   ========================================================================== */
+
+.statusFooter {
+  padding: 18px 24px 22px 24px;
+  background: #FFFFFF;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.themeNight .statusFooter {
+  background: #0F172A;
+  border-top: 1px solid #1E293B;
+  color: #F8FAFC;
+}
+
+.statusHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.statusTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0F172A;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.themeNight .statusTitle {
+  color: #F8FAFC;
+}
+
+.percentageBadge {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--primary, #FA6D6B);
+  background: #FFF1F2;
+  padding: 2px 10px;
+  border-radius: 12px;
+}
+
+.themeNight .percentageBadge {
+  background: rgba(250, 109, 107, 0.18);
+  color: #FDA4AF;
+}
+
+.progressBarContainer {
+  width: 100%;
+  height: 9px;
+  background: #E2E8F0;
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+}
+
+.themeNight .progressBarContainer {
+  background: #334155;
+}
+
+.progressBarFill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #FA6D6B 0%, #F59E0B 50%, #10B981 100%);
+  transition: width 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  position: relative;
+}
+
+.progressBarGlow {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 20px;
+  background: rgba(255, 255, 255, 0.7);
+  filter: blur(2px);
+  animation: glowShimmer 1.2s infinite;
+}
+
+@keyframes glowShimmer {
+  0% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.3;
+  }
+}
+
+.statusSubtext {
+  font-size: 13px;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.themeNight .statusSubtext {
+  color: #94A3B8;
+}
+
+/* Success Celebration Badge */
+.celebrationCard {
+  background: #ECFDF5;
+  border: 1.5px solid #A7F3D0;
+  color: #065F46;
+  padding: 12px 16px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  animation: celebrationPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes celebrationPop {
+  0% {
+    transform: scale(0.92);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
