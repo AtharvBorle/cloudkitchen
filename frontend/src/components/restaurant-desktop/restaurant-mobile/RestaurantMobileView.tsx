@@ -53,6 +53,20 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>("All");
+  const [isLikedAnimating, setIsLikedAnimating] = useState(false);
+  const [animKey, setAnimKey] = useState(0);
+
+  const handleToggleFavorite = () => {
+    setIsFavorite((prev) => {
+      const next = !prev;
+      if (next) {
+        setIsLikedAnimating(true);
+        setAnimKey((k) => k + 1);
+        setTimeout(() => setIsLikedAnimating(false), 850);
+      }
+      return next;
+    });
+  };
   const [couponCopied, setCouponCopied] = useState<boolean>(false);
 
   const getItemQuantity = (itemId: string) => {
@@ -222,14 +236,32 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
             <button
               type="button"
               className={styles.iconCircleBtn}
-              onClick={() => setIsFavorite((prev) => !prev)}
+              onClick={handleToggleFavorite}
               aria-label="Favorite"
             >
+              {isLikedAnimating && (
+                <>
+                  <span className={styles.heartRippleRing} key={`ring-${animKey}`} />
+                  <span className={`${styles.miniHeartParticle} ${styles.miniHeart1}`} key={`mh1-${animKey}`}>
+                    <Heart size={10} fill="#EF4444" color="#EF4444" />
+                  </span>
+                  <span className={`${styles.miniHeartParticle} ${styles.miniHeart2}`} key={`mh2-${animKey}`}>
+                    <Heart size={12} fill="#F43F5E" color="#F43F5E" />
+                  </span>
+                  <span className={`${styles.miniHeartParticle} ${styles.miniHeart3}`} key={`mh3-${animKey}`}>
+                    <Heart size={9} fill="#FB7185" color="#FB7185" />
+                  </span>
+                  <span className={`${styles.miniHeartParticle} ${styles.miniHeart4}`} key={`mh4-${animKey}`}>
+                    <Heart size={8} fill="#FDA4AF" color="#FDA4AF" />
+                  </span>
+                </>
+              )}
               <Heart
                 size={18}
                 strokeWidth={2.2}
                 fill={isFavorite ? "#EF4444" : "none"}
                 color={isFavorite ? "#EF4444" : "#0F172A"}
+                className={isLikedAnimating ? styles.heartIconBalloon : ""}
               />
             </button>
           </div>
