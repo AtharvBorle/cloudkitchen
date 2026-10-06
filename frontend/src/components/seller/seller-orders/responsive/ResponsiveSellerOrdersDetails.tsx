@@ -283,23 +283,22 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                 <rect x="25" y="80" width="90" height="70" rx="6" fill="#E2E8F0" />
                 <rect x="250" y="75" width="105" height="75" rx="6" fill="#E2E8F0" />
 
-                {/* Present Green Cloud-like Circle (Smooth Running Animation) */}
-                <g className={styles.runningGreenCloud}>
-                  <animateTransform
-                    attributeName="transform"
-                    type="rotate"
-                    from="0 190 85"
-                    to="360 190 85"
-                    dur="8s"
-                    repeatCount="indefinite"
-                  />
-                  <path
-                    d="M130 65 C140 45, 230 40, 245 65 C260 90, 240 140, 210 145 C180 150, 140 135, 125 105 C115 85, 120 75, 130 65 Z"
-                    fill="#DCFCE7"
-                    stroke="#86EFAC"
-                    strokeWidth="1.5"
-                  />
-                </g>
+                {/* Present Green Cloud-like Circle (Fixed Position with Running Border Animation) */}
+                <path
+                  d="M130 65 C140 45, 230 40, 245 65 C260 90, 240 140, 210 145 C180 150, 140 135, 125 105 C115 85, 120 75, 130 65 Z"
+                  fill="#DCFCE7"
+                  stroke="#86EFAC"
+                  strokeWidth="1.5"
+                  className={styles.fixedGreenCloud}
+                />
+                <path
+                  d="M130 65 C140 45, 230 40, 245 65 C260 90, 240 140, 210 145 C180 150, 140 135, 125 105 C115 85, 120 75, 130 65 Z"
+                  fill="none"
+                  stroke="#10B981"
+                  strokeWidth="2"
+                  strokeDasharray="8 6"
+                  className={styles.runningCloudBorder}
+                />
 
                 {/* Primary Roads */}
                 <path

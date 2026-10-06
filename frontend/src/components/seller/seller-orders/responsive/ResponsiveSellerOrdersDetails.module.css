@@ -165,19 +165,30 @@
   display: block;
 }
 
-/* Present Green Cloud Animation */
-.runningGreenCloud {
-  transform-box: view-box;
-  transform-origin: 190px 85px;
-  animation: runGreenCloud 8s linear infinite;
+/* Present Green Cloud Fixed Portion Running Animation */
+.fixedGreenCloud {
+  animation: fixedCloudBreathe 3s ease-in-out infinite alternate;
 }
 
-@keyframes runGreenCloud {
+@keyframes fixedCloudBreathe {
   0% {
-    transform: rotate(0deg);
+    fill-opacity: 0.85;
   }
   100% {
-    transform: rotate(360deg);
+    fill-opacity: 1;
+  }
+}
+
+.runningCloudBorder {
+  animation: runCloudBorder 2s linear infinite;
+}
+
+@keyframes runCloudBorder {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -70;
   }
 }
 
