@@ -79,11 +79,25 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
   const [isLoadingOffers, setIsLoadingOffers] = useState<boolean>(false);
 
   const formattedDefaultAddress = React.useMemo(() => {
-    if (!defaultAddress) return defaultAddressProp || "No address selected";
-    const parts = [defaultAddress.houseNumber, defaultAddress.street, defaultAddress.locality, defaultAddress.landmark].filter(Boolean);
-    const line = parts.join(", ");
-    return defaultAddress.pincode ? `${line} - ${defaultAddress.pincode}` : line;
-  }, [defaultAddress, defaultAddressProp]);
+    if (defaultAddress) {
+      const parts = [defaultAddress.houseNumber, defaultAddress.street, defaultAddress.locality, defaultAddress.landmark].filter(Boolean);
+      const line = parts.join(", ");
+      if (line && defaultAddress.pincode) {
+        return `${line} - ${defaultAddress.pincode}`;
+      }
+      return line || defaultAddress.pincode || defaultAddressProp || "No address selected";
+    }
+    if (savedAddresses && savedAddresses.length > 0) {
+      const def = savedAddresses.find((a) => a.isDefault) || savedAddresses[0];
+      const parts = [def.houseNumber, def.street, def.locality, def.landmark].filter(Boolean);
+      const line = parts.join(", ");
+      if (line && def.pincode) {
+        return `${line} - ${def.pincode}`;
+      }
+      return line || def.pincode || defaultAddressProp || "No address selected";
+    }
+    return defaultAddressProp || "No address selected";
+  }, [defaultAddress, defaultAddressProp, savedAddresses]);
 
   const [currentAddress, setCurrentAddress] = useState<string>(formattedDefaultAddress);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState<boolean>(false);
@@ -850,7 +864,17 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
               <h2 className={styles.summaryTitle}>Order Summary</h2>
 
               {/* Delivery Address Section */}
-              <div className={styles.deliveryBlock}>
+              <div
+                className={styles.deliveryBlock}
+                onClick={() => {
+                  if (savedAddresses && savedAddresses.length > 0) {
+                    setIsAddressModalOpen(true);
+                  } else {
+                    openLocationModal();
+                  }
+                }}
+                style={{ cursor: "pointer" }}
+              >
                 <div className={styles.addressHeaderRow}>
                   <div className={styles.addressPinBox}>
                     <MapPin size={20} />
@@ -864,7 +888,14 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
                 <button
                   type="button"
                   className={styles.changeAddressBtn}
-                  onClick={() => setIsAddressModalOpen(true)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (savedAddresses && savedAddresses.length > 0) {
+                      setIsAddressModalOpen(true);
+                    } else {
+                      openLocationModal();
+                    }
+                  }}
                 >
                   <span>Change</span>
                   <span aria-hidden="true">&gt;</span>
@@ -1016,7 +1047,7 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
                     }}
                   >
                     <Plus size={15} />
-                    <span>Add New Address</span>
+                    <span>Choose Location / Add Address</span>
                   </button>
                 </div>
               )}
@@ -1046,7 +1077,7 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
                   }}
                 >
                   <Plus size={15} />
-                  <span>Add Another Address</span>
+                  <span>Add Another Address / Change Location</span>
                 </button>
               )}
             </div>

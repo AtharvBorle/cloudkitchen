@@ -261,13 +261,19 @@ export const UserCart: React.FC<UserCartProps> = ({
     if (defaultAddress) {
       const parts = [defaultAddress.houseNumber, defaultAddress.street, defaultAddress.locality, defaultAddress.landmark].filter(Boolean);
       const line = parts.join(", ");
-      return defaultAddress.pincode ? `${line} - ${defaultAddress.pincode}` : line;
+      if (line && defaultAddress.pincode) {
+        return `${line} - ${defaultAddress.pincode}`;
+      }
+      return line || defaultAddress.pincode || defaultAddressProp || "No address selected";
     }
     if (savedAddresses && savedAddresses.length > 0) {
       const def = savedAddresses.find((a) => a.isDefault) || savedAddresses[0];
       const parts = [def.houseNumber, def.street, def.locality, def.landmark].filter(Boolean);
       const line = parts.join(", ");
-      return def.pincode ? `${line} - ${def.pincode}` : line;
+      if (line && def.pincode) {
+        return `${line} - ${def.pincode}`;
+      }
+      return line || def.pincode || defaultAddressProp || "No address selected";
     }
     return defaultAddressProp || "No address selected";
   }, [defaultAddress, defaultAddressProp, savedAddresses]);
@@ -2520,7 +2526,7 @@ export const UserCart: React.FC<UserCartProps> = ({
                     }}
                   >
                     <Plus size={15} />
-                    <span>Add New Address</span>
+                    <span>Choose Location / Add Address</span>
                   </button>
                 </div>
               )}
@@ -2550,7 +2556,7 @@ export const UserCart: React.FC<UserCartProps> = ({
                   }}
                 >
                   <Plus size={15} />
-                  <span>Add Another Address</span>
+                  <span>Add Another Address / Change Location</span>
                 </button>
               )}
             </div>

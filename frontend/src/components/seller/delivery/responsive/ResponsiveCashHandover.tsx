@@ -57,18 +57,11 @@ export const ResponsiveCashHandover: React.FC<ResponsiveCashHandoverProps> = ({
   const [discrepancyReason, setDiscrepancyReason] = useState("Cash shortage in handover");
   const [actualCashReceived, setActualCashReceived] = useState("");
   const [discrepancyNotes, setDiscrepancyNotes] = useState("");
-  const [discrepancies, setDiscrepancies] = useState<DiscrepancyRecord[]>([]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       try {
-        const stored = localStorage.getItem("seller_cash_discrepancies");
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed)) {
-            setDiscrepancies(parsed);
-          }
-        }
+        localStorage.removeItem("seller_cash_discrepancies");
       } catch {}
     }
   }, []);
@@ -145,17 +138,14 @@ export const ResponsiveCashHandover: React.FC<ResponsiveCashHandoverProps> = ({
       }),
     };
 
-    const updated = [newRecord, ...discrepancies];
-    setDiscrepancies(updated);
     if (typeof window !== "undefined") {
       try {
-        localStorage.setItem("seller_cash_discrepancies", JSON.stringify(updated));
         window.dispatchEvent(new CustomEvent("seller-discrepancy-submitted", { detail: newRecord }));
       } catch {}
     }
 
     setIsReporting(false);
-    showToast(`Discrepancy ticket #${ticketNum} submitted & tracked.`);
+    showToast(`Discrepancy ticket #${ticketNum} reported.`);
   };
 
   const handleExportCsv = () => {
@@ -206,8 +196,6 @@ export const ResponsiveCashHandover: React.FC<ResponsiveCashHandoverProps> = ({
     URL.revokeObjectURL(url);
     showToast("Handover ledger CSV downloaded successfully.");
   };
-
-  const riderDiscrepancies = discrepancies.filter((d) => d.riderName === riderName || !d.riderName);
 
   return (
     <div className={styles.screenWrapper}>
@@ -373,36 +361,6 @@ export const ResponsiveCashHandover: React.FC<ResponsiveCashHandoverProps> = ({
               </button>
             )}
           </div>
-
-          {/* Tracked Discrepancy Records Section */}
-          {riderDiscrepancies.length > 0 && (
-            <section className={styles.discrepancySection}>
-              <h4 className={styles.sectionLabel}>TRACKED DISCREPANCIES ({riderDiscrepancies.length})</h4>
-              {riderDiscrepancies.map((disc) => (
-                <div key={disc.id} className={styles.discrepancyCard}>
-                  <div className={styles.discrepancyHeader}>
-                    <span className={styles.ticketId}>#{disc.ticketId}</span>
-                    <span className={disc.status === "RESOLVED" ? styles.statusBadgeResolved : styles.statusBadgeReview}>
-                      {disc.status === "RESOLVED" ? "✓ Resolved" : "⏳ Under Review"}
-                    </span>
-                  </div>
-                  <div className={styles.discrepancyRow}>
-                    <span>Reason: <strong>{disc.reason}</strong></span>
-                    <span className={styles.discrepancyAmount}>Shortage: {disc.shortageAmount}</span>
-                  </div>
-                  <div className={styles.discrepancyRow}>
-                    <span>Expected: {disc.expectedAmount} | Received: {disc.actualAmount}</span>
-                    <span style={{ fontSize: "11px", color: "#94A3B8" }}>{disc.createdAt}</span>
-                  </div>
-                  {disc.note && (
-                    <div className={styles.discrepancyNote}>
-                      Note: &ldquo;{disc.note}&rdquo;
-                    </div>
-                  )}
-                </div>
-              ))}
-            </section>
-          )}
         </main>
 
         {/* Report Discrepancy Modal */}
