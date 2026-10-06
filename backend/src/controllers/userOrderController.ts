@@ -414,9 +414,9 @@ export const createOrder = async (req: Request) => {
         }
 
         // Seller match check
-        if (validatedCoupon.appliesToSellerId && validatedCoupon.appliesToSellerId !== sellerProfile.id && validatedCoupon.appliesToSellerId !== sellerProfile.trackingId) {
+        if (validatedCoupon.appliesToSellerId && validatedCoupon.appliesToSellerId !== sellerProfile.id && validatedCoupon.appliesToSellerId !== sellerProfile.trackingId && validatedCoupon.appliesToSellerId !== sellerProfile.userId) {
             const couponSeller = await db.sellerProfile.findFirst({
-                where: { OR: [{ id: validatedCoupon.appliesToSellerId }, { trackingId: validatedCoupon.appliesToSellerId }] },
+                where: { OR: [{ id: validatedCoupon.appliesToSellerId }, { trackingId: validatedCoupon.appliesToSellerId }, { userId: validatedCoupon.appliesToSellerId }] },
                 select: { businessName: true }
             });
             const couponKitchenName = couponSeller?.businessName ? `"${couponSeller.businessName}"` : "its specific kitchen";
@@ -469,13 +469,61 @@ export const createOrder = async (req: Request) => {
                     throw new ApiError(`Coupon "${validatedCoupon.code}" is only valid for items in specific categories not found in your cart.`, 400);
                 }
             } else {
+                // Specific Items Scope (appliesTo === "ITEMS" or specific product configured)
+                const matchingFoodItemsInDb = await db.foodItem.findMany({
+                    where: {
+                        OR: [
+                            { id: { in: allowedKeys } },
+                            { name: { in: allowedKeys, mode: "insensitive" } }
+                        ]
+                    },
+                    select: { id: true, name: true, sellerId: true }
+                });
+
+                const expandedAllowedKeys = new Set<string>(allowedKeys);
+                matchingFoodItemsInDb.forEach((fi: any) => {
+                    expandedAllowedKeys.add(fi.id.toLowerCase());
+                    expandedAllowedKeys.add(fi.name.toLowerCase().trim());
+                });
+
+                const cartItemIds = items.map((it: any) => {
+                    const raw = String(it.foodItemId || it.id || "");
+                    return raw.includes("_") ? raw.split("_")[0] : raw;
+                }).filter(Boolean);
+
+                const cartFoodItemsInDb = await db.foodItem.findMany({
+                    where: { id: { in: cartItemIds } },
+                    select: { id: true, name: true, sellerId: true }
+                });
+
+                const cartItemNamesMap = new Map<string, string>();
+                cartFoodItemsInDb.forEach((fi: any) => {
+                    cartItemNamesMap.set(fi.id.toLowerCase(), fi.name.toLowerCase().trim());
+                });
+
                 const hasProduct = items.some((it: any) => {
                     const itemId = String(it.id || "").toLowerCase();
                     const foodItemId = String(it.foodItemId || "").toLowerCase();
                     const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
                     const name = String(it.name || "").toLowerCase().trim();
-                    return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
+                    const dbName = cartItemNamesMap.get(foodItemId) || cartItemNamesMap.get(baseId) || cartItemNamesMap.get(itemId) || "";
+
+                    return (
+                        (itemId && expandedAllowedKeys.has(itemId)) ||
+                        (foodItemId && expandedAllowedKeys.has(foodItemId)) ||
+                        (baseId && expandedAllowedKeys.has(baseId)) ||
+                        (name && expandedAllowedKeys.has(name)) ||
+                        (dbName && expandedAllowedKeys.has(dbName)) ||
+                        allowedKeys.some((k: string) =>
+                            k === itemId ||
+                            k === foodItemId ||
+                            k === baseId ||
+                            (name && (k === name || name.includes(k) || k.includes(name))) ||
+                            (dbName && (k === dbName || dbName.includes(k) || k.includes(dbName)))
+                        )
+                    );
                 });
+
                 if (!hasProduct) {
                     throw new ApiError(`Coupon "${validatedCoupon.code}" is only valid on specific items not found in your cart`, 400);
                 }
@@ -504,14 +552,6 @@ export const createOrder = async (req: Request) => {
         const minCart = Number(validatedCoupon.minimumCartValue ?? (validatedCoupon as any).minOrderAmount ?? 0);
         if (minCart > 0 && baseTotal < minCart) {
             throw new ApiError(`This coupon requires a minimum cart value of ₹${minCart}. (Your cart is ₹${baseTotal})`, 400);
-        }
-
-        const isPercentage = validatedCoupon.discountType === "PERCENTAGE" || (validatedCoupon.discountPercentage && !validatedCoupon.discountAmount);
-        if (!isPercentage && validatedCoupon.discountAmount) {
-            const flatAmt = Number(validatedCoupon.discountAmount);
-            if (flatAmt > 0 && baseTotal < flatAmt) {
-                throw new ApiError(`Coupon "${validatedCoupon.code}" provides a ₹${flatAmt} discount and requires an order total of at least ₹${flatAmt}. (Your cart is ₹${baseTotal})`, 400);
-            }
         }
 
         // 2. Max Usages Per User check
