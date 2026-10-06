@@ -292,7 +292,7 @@ export default function SubscriptionEditCanvas({
         features: formData.includedFeatures.filter((f) => f.checked !== false).map((f) => f.label),
         mealTimings: formData.mealTimings.map((m) => `${m.mealName}: ${m.timing}`),
         allowCancel: false,
-        pauseBillingPeriod: formData.pauseBillingPeriod || (formData.allowPauseBilling ? "30 Days" : "None"),
+        pauseBillingPeriod: formData.allowPauseBilling ? (formData.pauseBillingPeriod || "30 Days") : "None",
       });
     }
 
@@ -311,28 +311,6 @@ export default function SubscriptionEditCanvas({
       onDiscard();
     } else {
       router.push("/seller/subscription");
-    }
-  };
-
-  const handleArchive = async () => {
-    if (targetPlanId) {
-      const res = await deleteMealPlan(targetPlanId);
-      if (!res.success) {
-        setSaveStatus(res.message || "Cannot delete plan with active subscribers. Please inactivate it instead.");
-        setTimeout(() => {
-          setSaveStatus(null);
-        }, 5000);
-        return;
-      }
-    }
-    if (onArchive) {
-      onArchive();
-    } else {
-      setSaveStatus("Plan deleted successfully");
-      setTimeout(() => {
-        setSaveStatus(null);
-        router.push("/seller/subscription");
-      }, 900);
     }
   };
 
@@ -1257,7 +1235,7 @@ export default function SubscriptionEditCanvas({
               Subscription Policies
             </h2>
 
-            {/* Policy: Allow User to Pause Billing */}
+            {/* Policy: Allow User to Pause Subscription */}
             <div
               style={{
                 display: "flex",
@@ -1274,7 +1252,7 @@ export default function SubscriptionEditCanvas({
                     color: "#0F172A",
                   }}
                 >
-                  Allow User to Pause Billing
+                  Allow User to Pause Subscription
                 </span>
                 <span
                   style={{
@@ -1283,116 +1261,94 @@ export default function SubscriptionEditCanvas({
                     fontWeight: 400,
                   }}
                 >
-                  Enable temporary pause states instead of absolute subscription termination.
+                  When enabled, users can pause their meal subscription for up to the max configured days.
                 </span>
               </div>
 
-              {/* Days Dropdown (1-30 Days) */}
-              <div style={{ position: "relative", minWidth: "130px", flexShrink: 0 }}>
-                <select
-                  value={formData.pauseBillingPeriod || "30 Days"}
-                  onChange={(e) => handleInputChange("pauseBillingPeriod", e.target.value)}
+              {/* Toggle switch + Days dropdown */}
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={formData.allowPauseBilling}
+                  onClick={() => handleInputChange("allowPauseBilling", !formData.allowPauseBilling)}
                   style={{
-                    width: "100%",
-                    height: "38px",
-                    backgroundColor: "#FFFFFF",
-                    border: "1px solid #E2E8F0",
-                    borderRadius: "8px",
-                    padding: "0 28px 0 12px",
-                    fontSize: "13px",
-                    fontWeight: 600,
-                    color: "#0F172A",
-                    outline: "none",
+                    width: "44px",
+                    height: "24px",
+                    backgroundColor: formData.allowPauseBilling ? "#FF5500" : "#CBD5E1",
+                    borderRadius: "9999px",
+                    position: "relative",
+                    border: "none",
                     cursor: "pointer",
-                    appearance: "none",
-                    boxSizing: "border-box",
+                    padding: 0,
+                    transition: "background-color 0.25s ease",
                   }}
+                  title={formData.allowPauseBilling ? "Disable pause subscription" : "Enable pause subscription"}
                 >
-                  {Array.from({ length: 30 }, (_, i) => {
-                    const day = i + 1;
-                    const val = `${day} ${day === 1 ? "Day" : "Days"}`;
-                    return (
-                      <option key={val} value={val}>
-                        {val}
-                      </option>
-                    );
-                  })}
-                </select>
-                <span
-                  style={{
-                    position: "absolute",
-                    right: "10px",
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    fontSize: "10px",
-                    color: "#64748B",
-                    pointerEvents: "none",
-                  }}
-                >
-                  ▼
-                </span>
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: "2px",
+                      left: "2px",
+                      width: "20px",
+                      height: "20px",
+                      backgroundColor: "#FFFFFF",
+                      borderRadius: "50%",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                      transform: formData.allowPauseBilling ? "translateX(20px)" : "translateX(0)",
+                      transition: "transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+                    }}
+                  />
+                </button>
+
+                {/* Days Dropdown (1-30 Days) */}
+                <div style={{ position: "relative", minWidth: "120px", opacity: formData.allowPauseBilling ? 1 : 0.4, pointerEvents: formData.allowPauseBilling ? "auto" : "none" }}>
+                  <select
+                    value={formData.pauseBillingPeriod || "30 Days"}
+                    disabled={!formData.allowPauseBilling}
+                    onChange={(e) => handleInputChange("pauseBillingPeriod", e.target.value)}
+                    style={{
+                      width: "100%",
+                      height: "38px",
+                      backgroundColor: "#FFFFFF",
+                      border: "1px solid #E2E8F0",
+                      borderRadius: "8px",
+                      padding: "0 28px 0 12px",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      color: "#0F172A",
+                      outline: "none",
+                      cursor: "pointer",
+                      appearance: "none",
+                      boxSizing: "border-box",
+                    }}
+                  >
+                    {Array.from({ length: 30 }, (_, i) => {
+                      const day = i + 1;
+                      const val = `${day} ${day === 1 ? "Day" : "Days"}`;
+                      return (
+                        <option key={val} value={val}>
+                          {val}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  <span
+                    style={{
+                      position: "absolute",
+                      right: "10px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      fontSize: "10px",
+                      color: "#64748B",
+                      pointerEvents: "none",
+                    }}
+                  >
+                    ▼
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
-
-          {/* Card 6: Danger Zone */}
-          <div
-            style={{
-              backgroundColor: "#FFF5F5",
-              borderRadius: "12px",
-              border: "1px solid #FCA5A5",
-              padding: "24px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "12px",
-              boxSizing: "border-box",
-            }}
-          >
-            <h2
-              style={{
-                fontSize: "15px",
-                fontWeight: 700,
-                color: "#EF4444",
-                margin: 0,
-              }}
-            >
-              Danger Zone
-            </h2>
-
-            <p
-              style={{
-                fontSize: "12.5px",
-                color: "#64748B",
-                lineHeight: 1.5,
-                margin: 0,
-              }}
-            >
-              Archiving this plan will prevent new subscribers from purchasing it. Existing
-              active subscriptions will continue until their billing cycle finishes.
-            </p>
-
-            <button
-              type="button"
-              onClick={handleArchive}
-              style={{
-                backgroundColor: "#EF4444",
-                color: "#FFFFFF",
-                fontSize: "13px",
-                fontWeight: 700,
-                borderRadius: "6px",
-                padding: "10px 18px",
-                border: "none",
-                cursor: "pointer",
-                width: "fit-content",
-                marginTop: "4px",
-                fontFamily: "inherit",
-                transition: "opacity 0.15s ease",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
-              onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
-            >
-              Archive Plan Tier
-            </button>
           </div>
         </div>
 

@@ -67,6 +67,17 @@ export interface SubscribeModalProps {
   onSubscribed?: (newSubscription: any) => void;
 }
 
+function extract10DigitPhone(rawPhone?: any): string {
+  if (!rawPhone) return "";
+  let digits = String(rawPhone).replace(/\D/g, "");
+  if (digits.length === 12 && digits.startsWith("91")) {
+    digits = digits.slice(2);
+  } else if (digits.length > 10) {
+    digits = digits.slice(-10);
+  }
+  return digits.slice(0, 10);
+}
+
 export const SubscribeModal: React.FC<SubscribeModalProps> = ({
   isOpen,
   onClose,
@@ -103,8 +114,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
 
     const userPhone = (session?.user as any)?.phone;
     if (userPhone) {
-      const cleanUserPhone = String(userPhone).replace(/\D/g, "").slice(-10);
-      setContactPhone(cleanUserPhone || userPhone);
+      setContactPhone(extract10DigitPhone(userPhone));
     }
 
     // Prefill default address if empty
@@ -141,10 +151,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
               setDeliveryAddress(line || defaultSaved.address || defaultSaved.label || "");
               
               const addrPhone = defaultSaved.recipientPhone || defaultSaved.phone || (session?.user as any)?.phone || "";
-              if (addrPhone) {
-                const cleanPhone = String(addrPhone).replace(/\D/g, "").slice(-10);
-                setContactPhone(cleanPhone || addrPhone);
-              }
+              setContactPhone(extract10DigitPhone(addrPhone));
               setIsEditingPhone(false);
             }
           }
@@ -243,10 +250,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
     
     // Show mobile number associated with selected address and keep uneditable
     const addrPhone = addr.recipientPhone || addr.phone || (session?.user as any)?.phone || "";
-    if (addrPhone) {
-      const cleanPhone = String(addrPhone).replace(/\D/g, "").slice(-10);
-      setContactPhone(cleanPhone || addrPhone);
-    }
+    setContactPhone(extract10DigitPhone(addrPhone));
     setIsEditingPhone(false);
     setShowSuggestions(false);
   };
@@ -610,7 +614,6 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
 
             <div className={`${styles.phoneFieldRow} ${!isEditingPhone ? styles.phoneFieldRowLocked : styles.phoneFieldRowActive}`}>
               <div className={styles.phoneInputLeft}>
-                <span className={styles.countryCode}>+91</span>
                 <input
                   ref={phoneInputRef}
                   type="tel"
@@ -621,7 +624,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
                   className={`${styles.phoneInput} ${!isEditingPhone ? styles.phoneInputLocked : styles.phoneInputEditable}`}
                   placeholder="Enter 10-digit mobile number"
                   value={contactPhone}
-                  onChange={(e) => setContactPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                  onChange={(e) => setContactPhone(extract10DigitPhone(e.target.value))}
                 />
               </div>
 

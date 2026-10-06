@@ -106,6 +106,17 @@ interface SellerInfo {
 
 type BillingCycle = "all" | "weekly" | "biweekly" | "monthly";
 
+function extract10DigitPhone(rawPhone?: any): string {
+  if (!rawPhone) return "";
+  let digits = String(rawPhone).replace(/\D/g, "");
+  if (digits.length === 12 && digits.startsWith("91")) {
+    digits = digits.slice(2);
+  } else if (digits.length > 10) {
+    digits = digits.slice(-10);
+  }
+  return digits.slice(0, 10);
+}
+
 function MySubscriptionContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -425,8 +436,7 @@ function MySubscriptionContent() {
     const initialAddr = defaultAddress?.address || defaultAddress?.label || (typeof window !== "undefined" ? localStorage.getItem("active-selected-address") || "" : "");
     setDeliveryAddressInput(initialAddr);
     const userRawPhone = (session.user as any)?.phone || "";
-    const cleanUserPhone = userRawPhone ? String(userRawPhone).replace(/\D/g, "").slice(-10) : "";
-    setContactPhoneInput(cleanUserPhone || userRawPhone);
+    setContactPhoneInput(extract10DigitPhone(userRawPhone));
     setSubErrorMsg(null);
     setSubSuccessMsg(null);
     setIsChangingAddress(false);
@@ -457,10 +467,7 @@ function MySubscriptionContent() {
               const line = parts.join(", ");
               setDeliveryAddressInput(line || defaultSaved.address || defaultSaved.label || initialAddr);
               const addrPhone = defaultSaved.recipientPhone || defaultSaved.phone || (session.user as any)?.phone || "";
-              if (addrPhone) {
-                const clean = String(addrPhone).replace(/\D/g, "").slice(-10);
-                setContactPhoneInput(clean || addrPhone);
-              }
+              setContactPhoneInput(extract10DigitPhone(addrPhone));
               setIsEditingPhone(false);
             }
           }
@@ -536,10 +543,7 @@ function MySubscriptionContent() {
     
     // Show mobile number associated with selected address and keep uneditable
     const addrPhone = addr.recipientPhone || addr.phone || (session?.user as any)?.phone || "";
-    if (addrPhone) {
-      const cleanPhone = String(addrPhone).replace(/\D/g, "").slice(-10);
-      setContactPhoneInput(cleanPhone || addrPhone);
-    }
+    setContactPhoneInput(extract10DigitPhone(addrPhone));
     setIsEditingPhone(false);
     setShowAddressSuggestions(false);
   };
@@ -1019,12 +1023,6 @@ function MySubscriptionContent() {
                       <DeliveryTimes slots={customSlots} />
                       <SubscriptionBenefits benefits={customBenefits} />
                     </div>
-
-                    {/* Subscription Actions */}
-                    <SubscriptionActions
-                      onChangePlan={() => setIsChangingPlan(true)}
-                      status={subscription.status}
-                    />
                   </>
                 )}
               </div>
@@ -1616,7 +1614,6 @@ function MySubscriptionContent() {
 
                 <div className={`${styles.phoneFieldRow} ${!isEditingPhone ? styles.phoneFieldRowLocked : styles.phoneFieldRowActive}`}>
                   <div className={styles.phoneInputLeft}>
-                    <span className={styles.countryCode}>+91</span>
                     <input
                       ref={phoneInputRef}
                       type="tel"
@@ -1627,7 +1624,7 @@ function MySubscriptionContent() {
                       className={`${styles.phoneInput} ${!isEditingPhone ? styles.phoneInputLocked : styles.phoneInputEditable}`}
                       placeholder="Enter 10-digit mobile number"
                       value={contactPhoneInput}
-                      onChange={(e) => setContactPhoneInput(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                      onChange={(e) => setContactPhoneInput(extract10DigitPhone(e.target.value))}
                     />
                   </div>
 

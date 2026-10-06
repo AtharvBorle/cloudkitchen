@@ -672,6 +672,10 @@ export const LocationModal: React.FC = () => {
                         showNotification("error", "You can add a maximum of 5 delivery addresses. Please delete an existing address first.");
                         return;
                       }
+                      setHouseNumber("");
+                      setStreet("");
+                      setLandmark("");
+                      setFormPincode("");
                       setShowAddForm(true);
                     }}
                     title={savedAddresses && savedAddresses.length >= 5 ? "Maximum 5 addresses reached" : "Add Address"}

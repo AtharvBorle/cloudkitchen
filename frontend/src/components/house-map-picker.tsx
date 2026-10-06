@@ -18,6 +18,7 @@ interface HouseMapPickerProps {
     onChange: (lat: number, lng: number, details?: AddressDetails) => void;
     label?: string;
     height?: string;
+    skipInitialReverseGeocode?: boolean;
 }
 
 interface SearchResultItem {
@@ -44,7 +45,7 @@ interface SearchResultItem {
     };
 }
 
-export function HouseMapPicker({ latitude, longitude, onChange, label, height }: HouseMapPickerProps) {
+export function HouseMapPicker({ latitude, longitude, onChange, label, height, skipInitialReverseGeocode = false }: HouseMapPickerProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<any>(null);
     const markerRef = useRef<any>(null);
@@ -186,8 +187,8 @@ export function HouseMapPicker({ latitude, longitude, onChange, label, height }:
                     }
                 }, 200);
 
-                // Trigger initial geocoding if we are using the fallback/gps location
-                if (latitude === null || longitude === null) {
+                // Trigger initial geocoding if we are using the fallback/gps location and not skipping initial geocode
+                if (!skipInitialReverseGeocode && (latitude === null || longitude === null)) {
                     reverseGeocode(initialLat, initialLng);
                 }
 
