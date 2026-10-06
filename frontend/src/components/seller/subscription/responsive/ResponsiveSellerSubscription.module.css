@@ -302,22 +302,23 @@
 .filterRow {
   display: flex;
   align-items: center;
-  gap: 10px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-  padding-bottom: 2px;
+  gap: 8px;
+  overflow: visible;
+  position: relative;
+  z-index: 20;
+  flex-wrap: wrap;
 }
 
-.filterRow::-webkit-scrollbar {
-  display: none;
+.dropdownWrapper {
+  position: relative;
+  display: inline-flex;
 }
 
 .filterChip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 14px;
+  padding: 7px 13px;
   border-radius: 9999px;
   font-size: 13px;
   font-weight: 600;
@@ -331,6 +332,7 @@
   flex-shrink: 0;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 
 .filterChip:hover {
@@ -340,12 +342,101 @@
 
 .filterChipActive {
   border: 1.5px solid #F97316;
-  color: #F97316;
+  color: #EA580C;
   background-color: #FFF7ED;
 }
 
 .filterChipActive:hover {
   background-color: #FFEDD5;
+}
+
+.chevronIcon {
+  color: #94A3B8;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), color 0.15s ease;
+}
+
+.filterChipActive .chevronIcon {
+  color: #EA580C;
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+.dropdownBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: transparent;
+}
+
+.dropdownMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.14), 0 8px 10px -6px rgba(15, 23, 42, 0.08);
+  min-width: 170px;
+  z-index: 50;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: dropdownFadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.dropdownRight {
+  left: auto;
+  right: 0;
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.dropdownItem {
+  background: transparent;
+  border: none;
+  padding: 9px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #334155;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  font-family: inherit;
+  transition: background-color 0.12s ease, color 0.12s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dropdownItem:hover {
+  background-color: #F8FAFC;
+  color: #0F172A;
+}
+
+.dropdownItemActive {
+  background-color: #FFF7ED !important;
+  color: #EA580C !important;
+  font-weight: 700;
+}
+
+.checkIcon {
+  color: #EA580C;
+  flex-shrink: 0;
 }
 
 /* Subscription Plans List */

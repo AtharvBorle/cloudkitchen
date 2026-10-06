@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Bell,
+  Check,
 } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
@@ -53,6 +54,27 @@ export interface ResponsiveSellerSubscriptionProps {
 
 const EMPTY_PLANS: ResponsiveSubscriptionPlan[] = [];
 
+const STATUS_OPTIONS: { label: string; value: PlanStatus }[] = [
+  { label: "All Statuses", value: "All" },
+  { label: "Active", value: "Active" },
+  { label: "Paused", value: "Paused" },
+  { label: "Draft", value: "Draft" },
+];
+
+const BASE_TIER_OPTIONS: { label: string; value: PlanTier }[] = [
+  { label: "All Tiers", value: "All" },
+  { label: "Bronze", value: "Bronze" },
+  { label: "Silver", value: "Silver" },
+  { label: "Gold", value: "Gold" },
+];
+
+const SORT_OPTIONS: { label: string; value: SortOption }[] = [
+  { label: "Newest First", value: "Newest" },
+  { label: "Most Subscribers", value: "Subscribers" },
+  { label: "Price: Low to High", value: "Price: Low to High" },
+  { label: "Price: High to Low", value: "Price: High to Low" },
+];
+
 export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscriptionProps> = ({
   ownerName,
   plans,
@@ -77,8 +99,56 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
   const [statusFilter, setStatusFilter] = useState<PlanStatus>("All");
   const [tierFilter, setTierFilter] = useState<PlanTier>("All");
   const [sortBy, setSortBy] = useState<SortOption>("Newest");
+  const [openDropdown, setOpenDropdown] = useState<"status" | "tier" | "sort" | null>(null);
+  const statusRef = useRef<HTMLDivElement>(null);
+  const tierRef = useRef<HTMLDivElement>(null);
+  const sortRef = useRef<HTMLDivElement>(null);
+
   const activePlans = plans || EMPTY_PLANS;
   const [selectedPlanPreview, setSelectedPlanPreview] = useState<ResponsiveSubscriptionPlan | null>(null);
+
+  const tierOptions = useMemo(() => {
+    const list = [...BASE_TIER_OPTIONS];
+    activePlans.forEach((p) => {
+      if (p.tier && !list.some((item) => item.value === p.tier)) {
+        list.push({ label: `${p.tier} Tier`, value: p.tier as PlanTier });
+      }
+    });
+    return list;
+  }, [activePlans]);
+
+  // Close dropdown on outside click or escape
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node;
+      if (
+        statusRef.current?.contains(target) ||
+        tierRef.current?.contains(target) ||
+        sortRef.current?.contains(target)
+      ) {
+        return;
+      }
+      setOpenDropdown(null);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpenDropdown(null);
+      }
+    };
+
+    if (openDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("touchstart", handleClickOutside);
+      document.addEventListener("keydown", handleKeyDown);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [openDropdown]);
 
   const handleBackClick = () => {
     if (onBack) {
@@ -237,65 +307,140 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
             <span>Create New Plan</span>
           </button>
 
-          {/* 2. Filter & Sort Row (Pills) */}
+          {/* 2. Filter & Sort Row (Dropdown Pills) */}
           <section className={styles.filterRow} aria-label="Subscription Filters">
-            {/* Status Filter Pill */}
-            <button
-              type="button"
-              className={`${styles.filterChip} ${statusFilter !== "All" ? styles.filterChipActive : ""}`}
-              onClick={() => {
-                const nextStatus: Record<PlanStatus, PlanStatus> = {
-                  All: "Active",
-                  Active: "Paused",
-                  Paused: "All",
-                  Draft: "All",
-                };
-                setStatusFilter(nextStatus[statusFilter] || "All");
-              }}
-            >
-              <span>Status: {statusFilter}</span>
-              <ChevronDown size={14} />
-            </button>
+            {/* Status Filter Pill & Dropdown */}
+            <div className={styles.dropdownWrapper} ref={statusRef}>
+              <button
+                type="button"
+                className={`${styles.filterChip} ${statusFilter !== "All" || openDropdown === "status" ? styles.filterChipActive : ""}`}
+                onClick={() => setOpenDropdown((prev) => (prev === "status" ? null : "status"))}
+                aria-haspopup="listbox"
+                aria-expanded={openDropdown === "status"}
+              >
+                <span>Status: {statusFilter}</span>
+                <ChevronDown
+                  size={14}
+                  className={`${styles.chevronIcon} ${openDropdown === "status" ? styles.chevronOpen : ""}`}
+                />
+              </button>
 
-            {/* Plan Tier Filter Pill */}
-            <button
-              type="button"
-              className={`${styles.filterChip} ${tierFilter !== "All" ? styles.filterChipActive : ""}`}
-              onClick={() => {
-                const nextTier: Record<PlanTier, PlanTier> = {
-                  All: "Bronze",
-                  Bronze: "Silver",
-                  Silver: "Gold",
-                  Gold: "All",
-                  Starter: "Bronze",
-                  Professional: "Silver",
-                  Enterprise: "Gold",
-                };
-                setTierFilter(nextTier[tierFilter] || "All");
-              }}
-            >
-              <span>Plan Tier: {tierFilter}</span>
-              <ChevronDown size={14} />
-            </button>
+              {openDropdown === "status" && (
+                <div className={styles.dropdownMenu} role="listbox" aria-label="Filter by Status">
+                  {STATUS_OPTIONS.map((opt) => {
+                    const isSelected = statusFilter === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        className={`${styles.dropdownItem} ${isSelected ? styles.dropdownItemActive : ""}`}
+                        onClick={() => {
+                          setStatusFilter(opt.value);
+                          setOpenDropdown(null);
+                        }}
+                        role="option"
+                        aria-selected={isSelected}
+                      >
+                        <span>{opt.label}</span>
+                        {isSelected && <Check size={14} className={styles.checkIcon} />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
-            {/* Sort Filter Pill */}
-            <button
-              type="button"
-              className={`${styles.filterChip} ${sortBy !== "Newest" ? styles.filterChipActive : ""}`}
-              onClick={() => {
-                const nextSort: Record<SortOption, SortOption> = {
-                  Newest: "Subscribers",
-                  Subscribers: "Price: Low to High",
-                  "Price: Low to High": "Price: High to Low",
-                  "Price: High to Low": "Newest",
-                };
-                setSortBy(nextSort[sortBy] || "Newest");
-              }}
-            >
-              <span>Sort: {sortBy}</span>
-              <ChevronDown size={14} />
-            </button>
+            {/* Plan Tier Filter Pill & Dropdown */}
+            <div className={styles.dropdownWrapper} ref={tierRef}>
+              <button
+                type="button"
+                className={`${styles.filterChip} ${tierFilter !== "All" || openDropdown === "tier" ? styles.filterChipActive : ""}`}
+                onClick={() => setOpenDropdown((prev) => (prev === "tier" ? null : "tier"))}
+                aria-haspopup="listbox"
+                aria-expanded={openDropdown === "tier"}
+              >
+                <span>Plan Tier: {tierFilter}</span>
+                <ChevronDown
+                  size={14}
+                  className={`${styles.chevronIcon} ${openDropdown === "tier" ? styles.chevronOpen : ""}`}
+                />
+              </button>
+
+              {openDropdown === "tier" && (
+                <div className={styles.dropdownMenu} role="listbox" aria-label="Filter by Plan Tier">
+                  {tierOptions.map((opt) => {
+                    const isSelected = tierFilter === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        className={`${styles.dropdownItem} ${isSelected ? styles.dropdownItemActive : ""}`}
+                        onClick={() => {
+                          setTierFilter(opt.value);
+                          setOpenDropdown(null);
+                        }}
+                        role="option"
+                        aria-selected={isSelected}
+                      >
+                        <span>{opt.label}</span>
+                        {isSelected && <Check size={14} className={styles.checkIcon} />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Sort Filter Pill & Dropdown */}
+            <div className={styles.dropdownWrapper} ref={sortRef}>
+              <button
+                type="button"
+                className={`${styles.filterChip} ${sortBy !== "Newest" || openDropdown === "sort" ? styles.filterChipActive : ""}`}
+                onClick={() => setOpenDropdown((prev) => (prev === "sort" ? null : "sort"))}
+                aria-haspopup="listbox"
+                aria-expanded={openDropdown === "sort"}
+              >
+                <span>Sort: {sortBy}</span>
+                <ChevronDown
+                  size={14}
+                  className={`${styles.chevronIcon} ${openDropdown === "sort" ? styles.chevronOpen : ""}`}
+                />
+              </button>
+
+              {openDropdown === "sort" && (
+                <div className={`${styles.dropdownMenu} ${styles.dropdownRight}`} role="listbox" aria-label="Sort Plans">
+                  {SORT_OPTIONS.map((opt) => {
+                    const isSelected = sortBy === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        className={`${styles.dropdownItem} ${isSelected ? styles.dropdownItemActive : ""}`}
+                        onClick={() => {
+                          setSortBy(opt.value);
+                          setOpenDropdown(null);
+                        }}
+                        role="option"
+                        aria-selected={isSelected}
+                      >
+                        <span>{opt.label}</span>
+                        {isSelected && <Check size={14} className={styles.checkIcon} />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </section>
+
+          {/* Transparent Backdrop to close any open dropdown when tapping outside */}
+          {openDropdown && (
+            <div
+              className={styles.dropdownBackdrop}
+              onClick={() => setOpenDropdown(null)}
+              aria-hidden="true"
+            />
+          )}
 
           {/* 3. Subscription Plans List */}
           <section className={styles.plansList} aria-label="Subscription Plans List">
