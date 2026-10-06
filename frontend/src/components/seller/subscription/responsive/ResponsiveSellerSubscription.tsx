@@ -318,15 +318,15 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
                 aria-haspopup="listbox"
                 aria-expanded={openDropdown === "status"}
               >
-                <span>Status: {statusFilter}</span>
+                <span className={styles.filterChipText}>Status: {statusFilter}</span>
                 <ChevronDown
-                  size={14}
+                  size={13}
                   className={`${styles.chevronIcon} ${openDropdown === "status" ? styles.chevronOpen : ""}`}
                 />
               </button>
 
               {openDropdown === "status" && (
-                <div className={styles.dropdownMenu} role="listbox" aria-label="Filter by Status">
+                <div className={`${styles.dropdownMenu} ${styles.dropdownLeft}`} role="listbox" aria-label="Filter by Status">
                   {STATUS_OPTIONS.map((opt) => {
                     const isSelected = statusFilter === opt.value;
                     return (
@@ -359,15 +359,15 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
                 aria-haspopup="listbox"
                 aria-expanded={openDropdown === "tier"}
               >
-                <span>Plan Tier: {tierFilter}</span>
+                <span className={styles.filterChipText}>Plan Tier: {tierFilter}</span>
                 <ChevronDown
-                  size={14}
+                  size={13}
                   className={`${styles.chevronIcon} ${openDropdown === "tier" ? styles.chevronOpen : ""}`}
                 />
               </button>
 
               {openDropdown === "tier" && (
-                <div className={styles.dropdownMenu} role="listbox" aria-label="Filter by Plan Tier">
+                <div className={`${styles.dropdownMenu} ${styles.dropdownCenter}`} role="listbox" aria-label="Filter by Plan Tier">
                   {tierOptions.map((opt) => {
                     const isSelected = tierFilter === opt.value;
                     return (
@@ -400,9 +400,9 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
                 aria-haspopup="listbox"
                 aria-expanded={openDropdown === "sort"}
               >
-                <span>Sort: {sortBy}</span>
+                <span className={styles.filterChipText}>Sort: {sortBy}</span>
                 <ChevronDown
-                  size={14}
+                  size={13}
                   className={`${styles.chevronIcon} ${openDropdown === "sort" ? styles.chevronOpen : ""}`}
                 />
               </button>

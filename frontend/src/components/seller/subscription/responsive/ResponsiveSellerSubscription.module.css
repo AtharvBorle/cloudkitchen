@@ -298,29 +298,34 @@
   transform: scale(0.98);
 }
 
-/* Filter Row: Status / Plan Tier / Sort */
+/* Filter Row: Status / Plan Tier / Sort in one horizontal line */
 .filterRow {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   overflow: visible;
   position: relative;
   z-index: 20;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  width: 100%;
 }
 
 .dropdownWrapper {
   position: relative;
-  display: inline-flex;
+  display: flex;
+  flex: 1;
+  min-width: 0;
 }
 
 .filterChip {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 7px 13px;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  padding: 7px 6px;
   border-radius: 9999px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   border: 1px solid #E2E8F0;
   background-color: #FFFFFF;
@@ -329,10 +334,17 @@
   white-space: nowrap;
   transition: all 0.15s ease;
   font-family: inherit;
-  flex-shrink: 0;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
+  box-sizing: border-box;
+}
+
+.filterChipText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
 }
 
 .filterChip:hover {
@@ -352,6 +364,7 @@
 
 .chevronIcon {
   color: #94A3B8;
+  flex-shrink: 0;
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), color 0.15s ease;
 }
 
@@ -373,18 +386,28 @@
 .dropdownMenu {
   position: absolute;
   top: calc(100% + 6px);
-  left: 0;
   background-color: #FFFFFF;
   border: 1px solid #E2E8F0;
   border-radius: 14px;
   box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.14), 0 8px 10px -6px rgba(15, 23, 42, 0.08);
-  min-width: 170px;
+  min-width: 160px;
   z-index: 50;
   padding: 6px;
   display: flex;
   flex-direction: column;
   gap: 2px;
   animation: dropdownFadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.dropdownLeft {
+  left: 0;
+  right: auto;
+}
+
+.dropdownCenter {
+  left: 50%;
+  transform: translateX(-50%);
+  right: auto;
 }
 
 .dropdownRight {
@@ -395,11 +418,11 @@
 @keyframes dropdownFadeIn {
   from {
     opacity: 0;
-    transform: translateY(-5px) scale(0.96);
+    margin-top: -5px;
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    margin-top: 0;
   }
 }
 
