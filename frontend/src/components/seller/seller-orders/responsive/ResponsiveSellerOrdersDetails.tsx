@@ -97,6 +97,7 @@ export const ResponsiveSellerOrdersDetails: React.FC<
   const isPendingOrder = initialStatus === "Order Placed" && currentStatus === "Order Placed";
   const isExpired = isPendingOrder && remainingSec <= 0;
   const isCancelled = currentStatus === "Cancelled" || (isPendingOrder && isExpired);
+  const pinThemeColor = isCancelled ? "#DC2626" : "#10B981";
 
   useEffect(() => {
     if (isExpired && isPendingOrder) {
@@ -262,9 +263,21 @@ export const ResponsiveSellerOrdersDetails: React.FC<
 
         {/* Scrollable Content */}
         <main className={styles.contentArea}>
-          {/* 1. Map Illustration View Card */}
+          {/* 1. Map Illustration View Card & Live Tracking */}
           <section className={styles.mapCard}>
             <div className={styles.mapGraphicWrapper}>
+              {/* Floating Live Tracking Status Pill */}
+              <div className={`${styles.liveTrackingPill} ${isCancelled ? styles.liveTrackingPillCancelled : ""}`}>
+                <span className={`${styles.liveIndicatorDot} ${isCancelled ? styles.liveIndicatorDotCancelled : ""}`} />
+                <span>
+                  {isCancelled
+                    ? "Order Cancelled"
+                    : currentStatus === "Delivered"
+                    ? "Delivered Location"
+                    : "Live Tracking"}
+                </span>
+              </div>
+
               <svg
                 width="100%"
                 height="100%"
@@ -273,6 +286,20 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                 xmlns="http://www.w3.org/2000/svg"
                 className={styles.mapSvg}
               >
+                <defs>
+                  {/* Linear gradient for radar scanner sweep */}
+                  <linearGradient id="radarSweepGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor={pinThemeColor} stopOpacity="0.4" />
+                    <stop offset="50%" stopColor={pinThemeColor} stopOpacity="0.12" />
+                    <stop offset="100%" stopColor={pinThemeColor} stopOpacity="0" />
+                  </linearGradient>
+
+                  {/* Filter for smooth pin glow */}
+                  <filter id="pinGlowFilter" x="-40%" y="-40%" width="180%" height="180%">
+                    <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor={pinThemeColor} floodOpacity="0.45" />
+                  </filter>
+                </defs>
+
                 {/* Background Map Land */}
                 <rect width="380" height="180" rx="16" fill="#EEF2F6" />
 
@@ -289,6 +316,7 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                   fill="#DCFCE7"
                   stroke="#86EFAC"
                   strokeWidth="1.5"
+                  className={styles.parkGreenery}
                 />
 
                 {/* Primary Roads */}
@@ -308,20 +336,199 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                 />
 
                 {/* Compass Marker */}
-                <circle cx="345" cy="28" r="12" fill="#FFFFFF" opacity="0.9" />
+                <circle cx="345" cy="28" r="12" fill="#FFFFFF" opacity="0.95" />
                 <path d="M345 19 L348 28 L345 25 L342 28 Z" fill="#EF4444" />
                 <path d="M345 37 L348 28 L345 31 L342 28 Z" fill="#64748B" />
 
-                {/* Delivery Pin Ripple Pulse */}
-                <circle cx="190" cy="85" r="22" fill={currentStatus === "Cancelled" ? "#DC2626" : currentStatus === "Delivered" ? "#10B981" : "#F97316"} fillOpacity="0.15" />
-                <circle cx="190" cy="85" r="16" fill={currentStatus === "Cancelled" ? "#DC2626" : currentStatus === "Delivered" ? "#10B981" : "#F97316"} fillOpacity="0.25" />
+                {/* ── Active Live Tracking Radar & Running Round at Pin (190, 85) ── */}
+                <g className={styles.pinRadarContainer}>
+                  {/* Ambient Pulsing Radar Halo */}
+                  <circle
+                    cx="190"
+                    cy="85"
+                    r="38"
+                    fill={pinThemeColor}
+                    fillOpacity="0.08"
+                    className={!isCancelled ? styles.ambientHalo : undefined}
+                  />
 
-                {/* Delivery Pin Circle & Icon */}
-                <circle cx="190" cy="85" r="14" fill="#FFFFFF" stroke={currentStatus === "Cancelled" ? "#DC2626" : currentStatus === "Delivered" ? "#10B981" : "#F97316"} strokeWidth="2.5" />
-                <path
-                  d="M190 78 C186.7 78 184 80.7 184 84 C184 88.5 190 94 190 94 C190 94 196 88.5 196 84 C196 80.7 193.3 78 190 78 Z M190 86 C188.9 86 188 85.1 188 84 C188 82.9 188.9 82 190 82 C191.1 82 192 82.9 192 84 C192 85.1 191.1 86 190 86 Z"
-                  fill={currentStatus === "Cancelled" ? "#DC2626" : currentStatus === "Delivered" ? "#10B981" : "#EA580C"}
-                />
+                  {!isCancelled && (
+                    <>
+                      {/* Concentric Sonar Pulse Wave 1 */}
+                      <circle
+                        cx="190"
+                        cy="85"
+                        r="14"
+                        fill={pinThemeColor}
+                        fillOpacity="0.22"
+                        stroke={pinThemeColor}
+                        strokeWidth="1.5"
+                      >
+                        <animate
+                          attributeName="r"
+                          values="14; 44"
+                          dur="2.4s"
+                          repeatCount="indefinite"
+                        />
+                        <animate
+                          attributeName="opacity"
+                          values="0.85; 0"
+                          dur="2.4s"
+                          repeatCount="indefinite"
+                        />
+                      </circle>
+
+                      {/* Concentric Sonar Pulse Wave 2 (Staggered 0.8s) */}
+                      <circle
+                        cx="190"
+                        cy="85"
+                        r="14"
+                        fill={pinThemeColor}
+                        fillOpacity="0.16"
+                        stroke={pinThemeColor}
+                        strokeWidth="1.2"
+                      >
+                        <animate
+                          attributeName="r"
+                          values="14; 44"
+                          dur="2.4s"
+                          begin="0.8s"
+                          repeatCount="indefinite"
+                        />
+                        <animate
+                          attributeName="opacity"
+                          values="0.85; 0"
+                          dur="2.4s"
+                          begin="0.8s"
+                          repeatCount="indefinite"
+                        />
+                      </circle>
+
+                      {/* Concentric Sonar Pulse Wave 3 (Staggered 1.6s) */}
+                      <circle
+                        cx="190"
+                        cy="85"
+                        r="14"
+                        fill={pinThemeColor}
+                        fillOpacity="0.1"
+                        stroke={pinThemeColor}
+                        strokeWidth="1"
+                      >
+                        <animate
+                          attributeName="r"
+                          values="14; 50"
+                          dur="2.4s"
+                          begin="1.6s"
+                          repeatCount="indefinite"
+                        />
+                        <animate
+                          attributeName="opacity"
+                          values="0.65; 0"
+                          dur="2.4s"
+                          begin="1.6s"
+                          repeatCount="indefinite"
+                        />
+                      </circle>
+
+                      {/* Rotating Radar Scanner Beam Sweep */}
+                      <g>
+                        <animateTransform
+                          attributeName="transform"
+                          type="rotate"
+                          from="0 190 85"
+                          to="360 190 85"
+                          dur="3.2s"
+                          repeatCount="indefinite"
+                        />
+                        <path
+                          d="M190 85 L222 85 A32 32 0 0 1 190 117 Z"
+                          fill="url(#radarSweepGrad)"
+                          opacity="0.45"
+                        />
+                      </g>
+
+                      {/* Primary Running Dashed Radar Round (Dashes continuously running around the pin) */}
+                      <circle
+                        cx="190"
+                        cy="85"
+                        r="27"
+                        stroke={pinThemeColor}
+                        strokeWidth="2.2"
+                        strokeDasharray="6 4"
+                        fill="transparent"
+                        className={styles.runningDashedCircle}
+                      />
+
+                      {/* Outer Thin Dashed Round Running in Opposite Direction */}
+                      <circle
+                        cx="190"
+                        cy="85"
+                        r="34"
+                        stroke={pinThemeColor}
+                        strokeWidth="1.2"
+                        strokeDasharray="3 5"
+                        fill="transparent"
+                        opacity="0.55"
+                        className={styles.counterRunningCircle}
+                      />
+
+                      {/* Orbiting Satellite / Tracking Blip Dot running along the circle */}
+                      <g>
+                        <animateTransform
+                          attributeName="transform"
+                          type="rotate"
+                          from="0 190 85"
+                          to="360 190 85"
+                          dur="2.8s"
+                          repeatCount="indefinite"
+                        />
+                        {/* Outer Glow of blip */}
+                        <circle
+                          cx="217"
+                          cy="85"
+                          r="5"
+                          fill={pinThemeColor}
+                          fillOpacity="0.3"
+                        />
+                        {/* Core blip dot */}
+                        <circle
+                          cx="217"
+                          cy="85"
+                          r="3"
+                          fill="#FFFFFF"
+                          stroke={pinThemeColor}
+                          strokeWidth="2"
+                        />
+                      </g>
+                    </>
+                  )}
+
+                  {/* Center Location Pin Marker (with interactive bobbing and hover scale) */}
+                  <g className={!isCancelled ? styles.pinFloatingMarker : undefined}>
+                    {/* White Base Circle */}
+                    <circle
+                      cx="190"
+                      cy="85"
+                      r="14"
+                      fill="#FFFFFF"
+                      stroke={pinThemeColor}
+                      strokeWidth="2.6"
+                      filter="url(#pinGlowFilter)"
+                    />
+                    {/* Location Pin Icon */}
+                    <path
+                      d="M190 78 C186.7 78 184 80.7 184 84 C184 88.5 190 94 190 94 C190 94 196 88.5 196 84 C196 80.7 193.3 78 190 78 Z M190 86 C188.9 86 188 85.1 188 84 C188 82.9 188.9 82 190 82 C191.1 82 192 82.9 192 84 C192 85.1 191.1 86 190 86 Z"
+                      fill={pinThemeColor}
+                    />
+                    {/* Central white beacon point */}
+                    <circle
+                      cx="190"
+                      cy="84"
+                      r="2"
+                      fill="#FFFFFF"
+                    />
+                  </g>
+                </g>
               </svg>
             </div>
           </section>
