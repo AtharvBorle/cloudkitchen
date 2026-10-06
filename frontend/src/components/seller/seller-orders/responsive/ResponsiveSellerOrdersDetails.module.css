@@ -192,6 +192,43 @@
   }
 }
 
+/* Classic Teardrop Map Pin */
+.classicMapPin {
+  transform-origin: 190px 85px;
+  animation: pinBob 2.4s ease-in-out infinite alternate;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.classicMapPin:hover {
+  transform: translateY(-4px) scale(1.08);
+}
+
+@keyframes pinBob {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-3px);
+  }
+}
+
+.pinGroundShadow {
+  transform-origin: 190px 87px;
+  animation: shadowPulse 2.4s ease-in-out infinite alternate;
+}
+
+@keyframes shadowPulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.24;
+  }
+  100% {
+    transform: scale(0.85);
+    opacity: 0.15;
+  }
+}
+
 /* 2. Stepper Card */
 .stepperCard {
   background-color: #FFFFFF;

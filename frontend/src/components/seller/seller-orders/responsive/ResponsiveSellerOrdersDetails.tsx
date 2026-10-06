@@ -97,6 +97,7 @@ export const ResponsiveSellerOrdersDetails: React.FC<
   const isPendingOrder = initialStatus === "Order Placed" && currentStatus === "Order Placed";
   const isExpired = isPendingOrder && remainingSec <= 0;
   const isCancelled = currentStatus === "Cancelled" || (isPendingOrder && isExpired);
+  const pinColor = currentStatus === "Cancelled" ? "#DC2626" : currentStatus === "Delivered" ? "#10B981" : "#EA4335";
 
   useEffect(() => {
     if (isExpired && isPendingOrder) {
@@ -321,35 +322,43 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                 <path d="M345 19 L348 28 L345 25 L342 28 Z" fill="#EF4444" />
                 <path d="M345 37 L348 28 L345 31 L342 28 Z" fill="#64748B" />
 
-                {/* Delivery Pin Ripple Pulse */}
-                <circle
+                {/* Ground Contact Shadow */}
+                <ellipse
                   cx="190"
-                  cy="85"
-                  r="22"
-                  fill={currentStatus === "Cancelled" ? "#DC2626" : currentStatus === "Delivered" ? "#10B981" : "#F97316"}
-                  fillOpacity="0.15"
-                />
-                <circle
-                  cx="190"
-                  cy="85"
-                  r="16"
-                  fill={currentStatus === "Cancelled" ? "#DC2626" : currentStatus === "Delivered" ? "#10B981" : "#F97316"}
-                  fillOpacity="0.25"
+                  cy="86.5"
+                  rx="6.5"
+                  ry="2.4"
+                  fill="#000000"
+                  className={styles.pinGroundShadow}
                 />
 
-                {/* Delivery Pin Circle & Icon */}
+                {/* Ground Destination Ripple Pulse */}
                 <circle
                   cx="190"
                   cy="85"
                   r="14"
-                  fill="#FFFFFF"
-                  stroke={currentStatus === "Cancelled" ? "#DC2626" : currentStatus === "Delivered" ? "#10B981" : "#F97316"}
-                  strokeWidth="2.5"
+                  fill={pinColor}
+                  fillOpacity="0.18"
                 />
-                <path
-                  d="M190 78 C186.7 78 184 80.7 184 84 C184 88.5 190 94 190 94 C190 94 196 88.5 196 84 C196 80.7 193.3 78 190 78 Z M190 86 C188.9 86 188 85.1 188 84 C188 82.9 188.9 82 190 82 C191.1 82 192 82.9 192 84 C192 85.1 191.1 86 190 86 Z"
-                  fill={currentStatus === "Cancelled" ? "#DC2626" : currentStatus === "Delivered" ? "#10B981" : "#EA580C"}
-                />
+
+                {/* Classic Teardrop Location Marker (Replica of uploaded reference image) */}
+                <g className={styles.classicMapPin}>
+                  {/* Pin Body */}
+                  <path
+                    d="M 190 85 L 179.33 67.51 A 12.5 12.5 0 1 1 200.67 67.51 Z"
+                    fill={pinColor}
+                    stroke="#FFFFFF"
+                    strokeWidth="1.2"
+                    filter="drop-shadow(0 2.5px 4px rgba(0, 0, 0, 0.25))"
+                  />
+                  {/* Center White Circular Hole */}
+                  <circle
+                    cx="190"
+                    cy="61"
+                    r="5.2"
+                    fill="#FFFFFF"
+                  />
+                </g>
               </svg>
             </div>
           </section>
