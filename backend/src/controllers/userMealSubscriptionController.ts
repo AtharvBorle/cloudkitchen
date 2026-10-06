@@ -33,14 +33,14 @@ export const getUserMealSubscriptions = async () => {
     return subscriptions.map((sub) => {
         let features: string[] = [];
         try {
-            features = typeof sub.plan.features === "string" ? JSON.parse(sub.plan.features) : sub.plan.features;
+            features = typeof sub.plan?.features === "string" ? JSON.parse(sub.plan.features) : (sub.plan?.features || []);
         } catch {
             features = [];
         }
 
         let mealTimings: string[] = [];
         try {
-            mealTimings = typeof sub.plan.mealTimings === "string" ? JSON.parse(sub.plan.mealTimings) : sub.plan.mealTimings;
+            mealTimings = typeof sub.plan?.mealTimings === "string" ? JSON.parse(sub.plan.mealTimings) : (sub.plan?.mealTimings || []);
         } catch {
             mealTimings = [];
         }
@@ -61,7 +61,7 @@ export const getUserMealSubscriptions = async () => {
             contactPhone: sub.contactPhone || "",
             createdAt: sub.createdAt.toISOString(),
             updatedAt: sub.updatedAt.toISOString(),
-            plan: {
+            plan: sub.plan ? {
                 id: sub.plan.id,
                 name: sub.plan.name,
                 tier: sub.plan.tier,
@@ -76,14 +76,17 @@ export const getUserMealSubscriptions = async () => {
                 status: sub.plan.status,
                 allowCancel: sub.plan.allowCancel,
                 pauseBillingPeriod: sub.plan.pauseBillingPeriod,
-            },
-            seller: {
+            } : null,
+            seller: sub.seller ? {
                 id: sub.seller.id,
                 businessName: sub.seller.businessName || "Kitchen Partner",
                 trackingId: sub.seller.trackingId,
                 addressLocality: sub.seller.addressLocality,
                 foodType: sub.seller.foodType,
                 bannerImageUrl: sub.seller.bannerImageUrl,
+            } : {
+                id: sub.sellerId,
+                businessName: "Kitchen Partner",
             }
         };
     });
