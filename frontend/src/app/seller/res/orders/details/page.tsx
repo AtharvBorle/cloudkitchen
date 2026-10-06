@@ -61,9 +61,16 @@ function DetailsContent() {
           const ordersData = await res.json();
           const list = ordersData.data?.orders || ordersData.orders || ordersData.data || [];
           if (Array.isArray(list)) {
-            const found = list.find(
-              (o: any) => o.id === cleanId || o.id === rawId || `#${o.id.slice(0, 6)}` === rawId
-            );
+            const target = cleanId.toLowerCase();
+            const found = list.find((o: any) => {
+              const oId = (o.id || "").toLowerCase();
+              return (
+                oId === target ||
+                oId.startsWith(target) ||
+                `#${oId.slice(0, 6)}` === rawId.toLowerCase() ||
+                oId.slice(0, 6) === target
+              );
+            });
             if (found) {
               setOrder(found);
             }
@@ -101,15 +108,25 @@ function DetailsContent() {
     : undefined;
 
   const mapStatusToStep = (st: string) => {
-    switch (st) {
+    const s = (st || "").toUpperCase();
+    switch (s) {
       case "OUT_FOR_DELIVERY":
+      case "ON_THE_WAY":
+      case "DISPATCHED":
         return "On the way" as const;
       case "DELIVERED":
+      case "COMPLETED":
         return "Delivered" as const;
       case "PREPARING":
+      case "CONFIRMED":
+      case "ACCEPTED":
         return "Preparing" as const;
       case "CANCELLED":
+      case "REJECTED":
         return "Cancelled" as const;
+      case "PENDING":
+      case "PLACED":
+      case "NEW":
       default:
         return "Order Placed" as const;
     }
@@ -123,7 +140,15 @@ function DetailsContent() {
   const subtotalNum = calculatedSubtotal > 0 ? calculatedSubtotal : totalNum;
   const discountNum = Math.max(0, subtotalNum - totalNum);
 
-  if (!loading && !order) {
+  if (loading) {
+    return (
+      <div style={{ minHeight: "100vh", backgroundColor: "#F8FAFC", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#64748B", fontSize: "0.92rem", fontWeight: 500 }}>
+        Loading Order Details...
+      </div>
+    );
+  }
+
+  if (!order) {
     return (
       <div style={{ minHeight: "100vh", backgroundColor: "#F8FAFC", padding: "40px 16px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
         <h2 style={{ fontSize: "1.2rem", fontWeight: 700, color: "#1E293B", margin: "0 0 8px 0" }}>Order Not Found</h2>

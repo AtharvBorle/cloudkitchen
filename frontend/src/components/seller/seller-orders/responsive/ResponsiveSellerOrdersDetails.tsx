@@ -81,15 +81,22 @@ export const ResponsiveSellerOrdersDetails: React.FC<
     return () => clearInterval(timer);
   }, []);
 
+  // Synchronize status whenever initialStatus prop updates
+  useEffect(() => {
+    setCurrentStatus(initialStatus);
+  }, [initialStatus]);
+
   const remainingSec = createdAt ? getRemainingSeconds(createdAt, now) : 300;
-  const isExpired = currentStatus === "Order Placed" && remainingSec <= 0;
-  const isCancelled = currentStatus === "Cancelled" || isExpired;
+  // Expiry is STRICTLY for unaccepted pending orders ("Order Placed")
+  const isPendingOrder = initialStatus === "Order Placed" && currentStatus === "Order Placed";
+  const isExpired = isPendingOrder && remainingSec <= 0;
+  const isCancelled = currentStatus === "Cancelled" || (isPendingOrder && isExpired);
 
   useEffect(() => {
-    if (isExpired && currentStatus === "Order Placed") {
+    if (isExpired && isPendingOrder) {
       setCurrentStatus("Cancelled");
     }
-  }, [isExpired, currentStatus]);
+  }, [isExpired, isPendingOrder]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -238,14 +245,14 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                 <path d="M345 37 L348 28 L345 31 L342 28 Z" fill="#64748B" />
 
                 {/* Delivery Pin Ripple Pulse */}
-                <circle cx="190" cy="85" r="22" fill={currentStatus === "Cancelled" ? "#DC2626" : "#F97316"} fillOpacity="0.15" />
-                <circle cx="190" cy="85" r="16" fill={currentStatus === "Cancelled" ? "#DC2626" : "#F97316"} fillOpacity="0.25" />
+                <circle cx="190" cy="85" r="22" fill={currentStatus === "Cancelled" ? "#DC2626" : currentStatus === "Delivered" ? "#10B981" : "#F97316"} fillOpacity="0.15" />
+                <circle cx="190" cy="85" r="16" fill={currentStatus === "Cancelled" ? "#DC2626" : currentStatus === "Delivered" ? "#10B981" : "#F97316"} fillOpacity="0.25" />
 
                 {/* Delivery Pin Circle & Icon */}
-                <circle cx="190" cy="85" r="14" fill="#FFFFFF" stroke={currentStatus === "Cancelled" ? "#DC2626" : "#F97316"} strokeWidth="2.5" />
+                <circle cx="190" cy="85" r="14" fill="#FFFFFF" stroke={currentStatus === "Cancelled" ? "#DC2626" : currentStatus === "Delivered" ? "#10B981" : "#F97316"} strokeWidth="2.5" />
                 <path
                   d="M190 78 C186.7 78 184 80.7 184 84 C184 88.5 190 94 190 94 C190 94 196 88.5 196 84 C196 80.7 193.3 78 190 78 Z M190 86 C188.9 86 188 85.1 188 84 C188 82.9 188.9 82 190 82 C191.1 82 192 82.9 192 84 C192 85.1 191.1 86 190 86 Z"
-                  fill={currentStatus === "Cancelled" ? "#DC2626" : "#EA580C"}
+                  fill={currentStatus === "Cancelled" ? "#DC2626" : currentStatus === "Delivered" ? "#10B981" : "#EA580C"}
                 />
               </svg>
             </div>
@@ -524,16 +531,22 @@ export const ResponsiveSellerOrdersDetails: React.FC<
 
             <button
               type="button"
-              className={`${styles.assignRiderButton} ${isCancelled ? styles.assignRiderButtonDisabled : ""}`}
-              disabled={isCancelled}
+              className={`${styles.assignRiderButton} ${isCancelled || currentStatus === "Delivered" ? styles.assignRiderButtonDisabled : ""}`}
+              disabled={isCancelled || currentStatus === "Delivered"}
               onClick={() => {
-                if (!isCancelled) {
+                if (!isCancelled && currentStatus !== "Delivered") {
                   router.push(`/seller/orders/assign-rider?orderId=${encodeURIComponent(orderId)}`);
                 }
               }}
-              title={isCancelled ? "Order cancelled - rider assignment disabled" : undefined}
+              title={
+                isCancelled
+                  ? "Order cancelled - rider assignment disabled"
+                  : currentStatus === "Delivered"
+                  ? "Order completed and delivered"
+                  : undefined
+              }
             >
-              Assign / Reassign Rider →
+              {currentStatus === "Delivered" ? "Order Delivered ✓" : "Assign / Reassign Rider →"}
             </button>
           </div>
         </main>
