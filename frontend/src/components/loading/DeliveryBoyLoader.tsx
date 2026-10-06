@@ -8,12 +8,14 @@ import { Sparkles, CheckCircle2, Volume2, Flame } from "lucide-react";
 export type LoaderTheme = "day" | "sunset" | "night";
 export type LoaderSpeed = "normal" | "fast" | "nitro";
 export type LoaderMode = "traverse" | "progress" | "runner";
+export type LoaderDirection = "rtl" | "ltr"; // rtl = right-to-left (front leads), ltr = left-to-right (flipped front leads)
 
 export interface DeliveryBoyLoaderProps {
   progress?: number;
   mode?: LoaderMode;
   speed?: LoaderSpeed;
   theme?: LoaderTheme;
+  direction?: LoaderDirection;
   statusText?: string;
   fullscreen?: boolean;
   onComplete?: () => void;
@@ -33,6 +35,7 @@ export const DeliveryBoyLoader: React.FC<DeliveryBoyLoaderProps> = ({
   mode = "traverse",
   speed = "normal",
   theme = "day",
+  direction = "rtl",
   statusText,
   fullscreen = false,
   onComplete,
@@ -50,7 +53,6 @@ export const DeliveryBoyLoader: React.FC<DeliveryBoyLoaderProps> = ({
       if (!AudioCtx) return;
       const ctx = new AudioCtx();
       
-      // Dual-tone harmonic horn beep
       const createTone = (freq: number, startTime: number, duration: number) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
@@ -64,7 +66,6 @@ export const DeliveryBoyLoader: React.FC<DeliveryBoyLoaderProps> = ({
         osc.stop(ctx.currentTime + startTime + duration);
       };
 
-      // Double chirp "beep-beep!"
       createTone(440, 0, 0.1);
       createTone(554.37, 0, 0.1);
       createTone(440, 0.14, 0.1);
@@ -117,7 +118,6 @@ export const DeliveryBoyLoader: React.FC<DeliveryBoyLoaderProps> = ({
       ? styles.speedFast
       : "";
 
-  // Progress message default
   const defaultStatus =
     progress < 25
       ? "Cooking hot & fresh in kitchen... 🍳"
@@ -130,8 +130,13 @@ export const DeliveryBoyLoader: React.FC<DeliveryBoyLoaderProps> = ({
   const displayStatus = statusText || defaultStatus;
 
   // Compute rider position for progress mode
-  // Clamped between 2% and 82% to remain nicely inside the road container
-  const progressLeft = Math.min(Math.max(progress * 0.8, 2), 82);
+  // Clamped between 2% and 80% to remain nicely on the road
+  const isRTL = direction === "rtl";
+  // In RTL: 0% is at right (78%), 100% is at left (2%)
+  // In LTR: 0% is at left (2%), 100% is at right (78%)
+  const clampedProgress = Math.min(Math.max(progress, 0), 100);
+  const progressRight = isRTL ? `${2 + (100 - clampedProgress) * 0.76}%` : undefined;
+  const progressLeft = !isRTL ? `${2 + clampedProgress * 0.76}%` : undefined;
 
   return (
     <div
@@ -139,7 +144,7 @@ export const DeliveryBoyLoader: React.FC<DeliveryBoyLoaderProps> = ({
         fullscreen ? styles.fullscreenWrapper : ""
       }`}
     >
-      {/* UNIFIED SCENE STAGE (Sky, Sidewalk, Road, and Rider) */}
+      {/* UNIFIED SCENE STAGE (Sky, Sidewalk, Stationary Road, and Rider) */}
       <div className={styles.sceneStage}>
         {/* Sun / Moon */}
         <div
@@ -159,33 +164,29 @@ export const DeliveryBoyLoader: React.FC<DeliveryBoyLoaderProps> = ({
           <div className={`${styles.cloudItem} ${styles.cloud3}`} />
         </div>
 
-        {/* City Skyline (directly above the road) */}
+        {/* City Skyline (Stationary scenery) */}
         <div
-          className={`${styles.citySkyline} ${styles.citySkylineParallax}`}
+          className={styles.citySkyline}
           style={{
             backgroundImage: `radial-gradient(circle at 10px 10px, transparent 15px, rgba(15, 23, 42, 0.25) 15px),
               linear-gradient(to top, rgba(15, 23, 42, 0.4) 0%, transparent 100%)`,
           }}
         />
 
-        {/* Sidewalk with Curb at the top edge of the road */}
+        {/* Sidewalk with Fixed Curb at top of road (Stationary) */}
         <div className={styles.sidewalk}>
           <div className={styles.curbStrip} />
         </div>
 
-        {/* The Road Surface */}
+        {/* The Stationary Road Surface (NO running conveyor belt) */}
         <div className={styles.roadSurface}>
-          {/* Scrolling white lane dashes */}
-          <div
-            className={`${styles.roadDashes} ${
-              mode !== "progress" || progress < 100 ? styles.roadDashesActive : ""
-            }`}
-          />
+          {/* Fixed center lane dashed lines */}
+          <div className={styles.roadDashes} />
         </div>
 
-        {/* Target Destination Doorstep / House on the roadside (Visible in Progress mode) */}
+        {/* Destination Doorstep House Checkpoint on roadside */}
         {mode === "progress" && (
-          <div className={styles.destinationPin}>
+          <div className={isRTL ? styles.destinationPinLeft : styles.destinationPinRight}>
             <div className={styles.destinationHouse}>
               {progress >= 100 ? "🎉" : "🏠"}
             </div>
@@ -193,41 +194,57 @@ export const DeliveryBoyLoader: React.FC<DeliveryBoyLoaderProps> = ({
           </div>
         )}
 
-        {/* RIDER VEHICLE CONTAINER (Positioned directly onto the road surface) */}
+        {/* RIDER VEHICLE CONTAINER (Driving on the road, front first!) */}
         <div
           className={`${styles.riderAnchor} ${
-            mode === "traverse" ? `${styles.riderMovingAcross} ${speedClass}` : ""
+            mode === "traverse"
+              ? isRTL
+                ? `${styles.riderMovingAcrossRTL} ${speedClass}`
+                : `${styles.riderMovingAcrossLTR} ${speedClass}`
+              : ""
           }`}
           style={
             mode === "progress"
-              ? { left: `${progressLeft}%`, transition: "left 0.4s ease-out" }
+              ? isRTL
+                ? { right: progressRight, left: "auto", transition: "right 0.4s ease-out" }
+                : { left: progressLeft, right: "auto", transition: "left 0.4s ease-out" }
               : mode === "runner"
-              ? { left: "30%" }
+              ? isRTL
+                ? { right: "45%", left: "auto" }
+                : { left: "45%", right: "auto" }
               : undefined
           }
           onClick={handleRiderClick}
           title="Click to honk & pop a jump!"
         >
-          {/* Bobbing Engine vibration wrapper */}
+          {/* Bobbing Engine vibration wrapper (Front wheel is in front) */}
           <div
             className={`${styles.riderBobbing} ${
-              isWheelie ? styles.wheelieJump : ""
+              isWheelie ? (isRTL ? styles.wheelieJumpRTL : styles.wheelieJumpLTR) : ""
             }`}
+            style={!isRTL ? { transform: "scaleX(-1)" } : undefined}
           >
             {/* Interactive Speech Bubble */}
             {speechText && (
-              <div className={styles.speechBubble}>{speechText}</div>
+              <div
+                className={styles.speechBubble}
+                style={!isRTL ? { transform: "scaleX(-1)" } : undefined}
+              >
+                {speechText}
+              </div>
             )}
 
-            {/* Scooter Headlight Beam */}
-            <div className={styles.headlightBeam} />
+            {/* Scooter Headlight Beam (shines forward in front of bike) */}
+            <div className={isRTL ? styles.headlightBeamRTL : styles.headlightBeamLTR} />
 
-            {/* Exhaust Smoke Particles */}
-            <div className={styles.exhaustSmokeContainer}>
+            {/* Exhaust Smoke Particles (trailing behind the rear wheel) */}
+            <div className={isRTL ? styles.exhaustSmokeContainerRTL : styles.exhaustSmokeContainerLTR}>
               <span className={`${styles.smokeParticle} ${styles.smoke1}`} />
               <span className={`${styles.smokeParticle} ${styles.smoke2}`} />
               <span className={`${styles.smokeParticle} ${styles.smoke3}`} />
-              {speed === "nitro" && <span className={styles.nitroFire} />}
+              {speed === "nitro" && (
+                <span className={isRTL ? styles.nitroFireRTL : styles.nitroFireLTR} />
+              )}
             </div>
 
             {/* Food Box Aroma Steam */}

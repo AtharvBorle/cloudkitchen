@@ -87,7 +87,7 @@
   box-shadow: 0 0 25px rgba(248, 250, 252, 0.6), 0 0 50px rgba(148, 163, 184, 0.3);
 }
 
-/* Floating Clouds (Parallax drifting) */
+/* Floating Clouds (Gentle atmospheric drifting) */
 .cloudLayer {
   position: absolute;
   inset: 0;
@@ -101,7 +101,6 @@
   background: rgba(255, 255, 255, 0.75);
   backdrop-filter: blur(2px);
   border-radius: 40px;
-  animation: floatClouds linear infinite;
 }
 
 .themeNight .cloudItem {
@@ -116,43 +115,29 @@
   width: 110px;
   height: 28px;
   top: 30px;
-  left: -120px;
-  animation-duration: 22s;
+  left: 8%;
 }
 
 .cloud2 {
   width: 150px;
   height: 34px;
   top: 65px;
-  left: -160px;
-  animation-duration: 32s;
-  animation-delay: 7s;
+  left: 45%;
 }
 
 .cloud3 {
   width: 90px;
   height: 24px;
   top: 95px;
-  left: -100px;
-  animation-duration: 26s;
-  animation-delay: 14s;
+  left: 78%;
 }
 
-@keyframes floatClouds {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(calc(100vw + 250px));
-  }
-}
-
-/* Distant Skyline / Cityscape Silhouette (Sits directly above the road) */
+/* Distant Skyline / Cityscape Silhouette (Stationary background scenery) */
 .citySkyline {
   position: absolute;
   bottom: 95px;
   left: 0;
-  width: 200%;
+  width: 100%;
   height: 80px;
   background-repeat: repeat-x;
   background-position: bottom left;
@@ -173,21 +158,8 @@
   opacity: 0.6;
 }
 
-.citySkylineParallax {
-  animation: scrollSkyline 14s linear infinite;
-}
-
-@keyframes scrollSkyline {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
-}
-
 /* ==========================================================================
-   ROADWAY & ASPHALT (Directly at the bottom of the scene)
+   STATIONARY ROADWAY & ASPHALT (NO CONVEYOR BELT RUNNING)
    ========================================================================== */
 
 .roadSurface {
@@ -208,7 +180,7 @@
   }
 }
 
-/* Sidewalk & Curb Strip at the top of the road */
+/* Sidewalk & Fixed Curb Strip at the top of the road */
 .sidewalk {
   position: absolute;
   bottom: 95px;
@@ -231,6 +203,7 @@
   border-top-color: #475569;
 }
 
+/* Fixed Curb Strip - Road is NOT running */
 .curbStrip {
   position: absolute;
   bottom: 0;
@@ -244,15 +217,15 @@
     #0F172A 28px,
     #0F172A 56px
   );
-  animation: scrollCurb 0.6s linear infinite;
+  /* Stationary: No running animation */
 }
 
-/* Dashed lane marking in road center */
+/* Fixed Dashed lane marking in road center - Road is NOT running */
 .roadDashes {
   position: absolute;
   top: 48%;
   left: 0;
-  width: 200%;
+  width: 100%;
   height: 4px;
   margin-top: -2px;
   background: repeating-linear-gradient(
@@ -263,28 +236,7 @@
     transparent 72px
   );
   opacity: 0.85;
-}
-
-.roadDashesActive {
-  animation: scrollRoad 0.7s linear infinite;
-}
-
-@keyframes scrollRoad {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(-72px);
-  }
-}
-
-@keyframes scrollCurb {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(-56px);
-  }
+  /* Stationary: No running animation */
 }
 
 /* Neon glow line for Night mode */
@@ -305,7 +257,6 @@
 
 .riderAnchor {
   position: absolute;
-  /* Placed directly on the road: tires sit onto the asphalt */
   bottom: 12px;
   z-index: 10;
   cursor: pointer;
@@ -319,38 +270,71 @@
   }
 }
 
-/* Mode 1: Moving across the screen from left to right */
-.riderMovingAcross {
-  animation: rideAcrossScreen 4.8s cubic-bezier(0.42, 0, 0.58, 1) infinite;
+/* ==========================================================================
+   BIKE PASSING ACROSS SCREEN (FORWARD DIRECTION: FRONT FIRST)
+   ========================================================================== */
+
+/* 1. Forward Right-to-Left (Original illustration faces LEFT, front leads) */
+.riderMovingAcrossRTL {
+  animation: rideAcrossRTL 4.5s cubic-bezier(0.35, 0, 0.65, 1) infinite;
 }
 
-@keyframes rideAcrossScreen {
+@keyframes rideAcrossRTL {
   0% {
-    left: -200px;
-    transform: scale(0.95);
+    right: -240px;
+    left: auto;
+    transform: scale(0.96);
   }
-  10% {
+  12% {
     transform: scale(1);
   }
-  45% {
+  50% {
     transform: scale(1.02);
   }
-  90% {
+  88% {
     transform: scale(1);
   }
   100% {
-    left: calc(100% + 150px);
+    right: calc(100% + 220px);
+    left: auto;
+    transform: scale(0.96);
+  }
+}
+
+/* 2. Forward Left-to-Right (Flipped so front of bike points right, front leads) */
+.riderMovingAcrossLTR {
+  animation: rideAcrossLTR 4.5s cubic-bezier(0.35, 0, 0.65, 1) infinite;
+}
+
+@keyframes rideAcrossLTR {
+  0% {
+    left: -240px;
+    right: auto;
+    transform: scale(0.96);
+  }
+  12% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+  88% {
+    transform: scale(1);
+  }
+  100% {
+    left: calc(100% + 220px);
+    right: auto;
     transform: scale(0.96);
   }
 }
 
 /* Speed variations */
 .speedFast {
-  animation-duration: 2.6s !important;
+  animation-duration: 2.5s !important;
 }
 
 .speedNitro {
-  animation-duration: 1.6s !important;
+  animation-duration: 1.5s !important;
 }
 
 /* Bobbing / engine suspension vibration on the bike */
@@ -372,20 +356,42 @@
   }
 }
 
-/* Fun interactive Wheelie / Jump on click */
-.wheelieJump {
-  animation: doWheelie 0.85s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards !important;
+/* Fun interactive Wheelie / Jump on click (lifts front wheel up) */
+.wheelieJumpRTL {
+  animation: doWheelieRTL 0.85s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards !important;
 }
 
-@keyframes doWheelie {
+@keyframes doWheelieRTL {
   0% {
     transform: translateY(0) rotate(0deg);
   }
   30% {
-    transform: translateY(-28px) rotate(-16deg);
+    transform: translateY(-26px) rotate(14deg);
   }
   65% {
-    transform: translateY(-8px) rotate(-8deg);
+    transform: translateY(-8px) rotate(6deg);
+  }
+  85% {
+    transform: translateY(2px) rotate(-2deg);
+  }
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+}
+
+.wheelieJumpLTR {
+  animation: doWheelieLTR 0.85s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards !important;
+}
+
+@keyframes doWheelieLTR {
+  0% {
+    transform: translateY(0) rotate(0deg);
+  }
+  30% {
+    transform: translateY(-26px) rotate(-14deg);
+  }
+  65% {
+    transform: translateY(-8px) rotate(-6deg);
   }
   85% {
     transform: translateY(2px) rotate(2deg);
@@ -435,19 +441,40 @@
 }
 
 /* ==========================================================================
-   HEADLIGHT BEAM (NIGHT & SUNSET)
+   HEADLIGHT BEAM (POINTS FORWARD IN FRONT OF BIKE)
    ========================================================================== */
 
-.headlightBeam {
+/* When bike faces Left (RTL) */
+.headlightBeamRTL {
   position: absolute;
-  top: 75px;
-  left: 140px;
-  width: 180px;
-  height: 60px;
+  top: 72px;
+  left: -130px;
+  width: 155px;
+  height: 55px;
+  background: linear-gradient(
+    270deg,
+    rgba(254, 240, 138, 0.45) 0%,
+    rgba(254, 240, 138, 0.18) 50%,
+    transparent 100%
+  );
+  clip-path: polygon(100% 40%, 0% 0%, 0% 100%, 100% 60%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: 5;
+}
+
+/* When bike faces Right (LTR) */
+.headlightBeamLTR {
+  position: absolute;
+  top: 72px;
+  right: -130px;
+  width: 155px;
+  height: 55px;
   background: linear-gradient(
     90deg,
     rgba(254, 240, 138, 0.45) 0%,
-    rgba(254, 240, 138, 0.2) 50%,
+    rgba(254, 240, 138, 0.18) 50%,
     transparent 100%
   );
   clip-path: polygon(0% 40%, 100% 0%, 100% 100%, 0% 60%);
@@ -457,28 +484,45 @@
   z-index: 5;
 }
 
-.themeNight .headlightBeam,
-.themeSunset .headlightBeam {
+.themeNight .headlightBeamRTL,
+.themeSunset .headlightBeamRTL,
+.themeNight .headlightBeamLTR,
+.themeSunset .headlightBeamLTR {
   opacity: 1;
 }
 
 @media (min-width: 768px) {
-  .headlightBeam {
-    top: 92px;
-    left: 170px;
-    width: 220px;
-    height: 75px;
+  .headlightBeamRTL {
+    top: 90px;
+    left: -160px;
+    width: 190px;
+    height: 70px;
+  }
+  .headlightBeamLTR {
+    top: 90px;
+    right: -160px;
+    width: 190px;
+    height: 70px;
   }
 }
 
 /* ==========================================================================
-   EXHAUST SMOKE & SPEED WIND PARTICLES
+   EXHAUST SMOKE & SPEED WIND PARTICLES (TRAIL BEHIND THE REAR)
    ========================================================================== */
 
-.exhaustSmokeContainer {
+/* Behind the rear wheel on the right when bike faces left */
+.exhaustSmokeContainerRTL {
   position: absolute;
-  bottom: 16px;
-  left: -20px;
+  bottom: 14px;
+  right: -14px;
+  pointer-events: none;
+}
+
+/* Behind the rear wheel on the left when bike faces right */
+.exhaustSmokeContainerLTR {
+  position: absolute;
+  bottom: 14px;
+  left: -14px;
   pointer-events: none;
 }
 
@@ -487,7 +531,7 @@
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.7);
   box-shadow: 0 0 8px rgba(255, 255, 255, 0.45);
-  animation: smokePuff 0.7s cubic-bezier(0.165, 0.84, 0.44, 1) infinite;
+  animation: smokePuffRTL 0.7s cubic-bezier(0.165, 0.84, 0.44, 1) infinite;
 }
 
 .themeNight .smokeParticle {
@@ -498,7 +542,7 @@
   width: 14px;
   height: 14px;
   bottom: 2px;
-  left: 0;
+  right: 0;
   animation-delay: 0s;
 }
 
@@ -506,7 +550,7 @@
   width: 18px;
   height: 18px;
   bottom: 8px;
-  left: -8px;
+  right: -8px;
   animation-delay: 0.22s;
 }
 
@@ -514,27 +558,40 @@
   width: 22px;
   height: 22px;
   bottom: 14px;
-  left: -16px;
+  right: -16px;
   animation-delay: 0.44s;
 }
 
-@keyframes smokePuff {
+@keyframes smokePuffRTL {
   0% {
     transform: translate(0, 0) scale(0.3);
     opacity: 0.9;
   }
   60% {
-    transform: translate(-24px, -12px) scale(1.2);
+    transform: translate(24px, -10px) scale(1.2);
     opacity: 0.5;
   }
   100% {
-    transform: translate(-42px, -22px) scale(1.6);
+    transform: translate(40px, -20px) scale(1.6);
     opacity: 0;
   }
 }
 
-/* Nitro fire trails when speed is Nitro */
-.nitroFire {
+/* Nitro fire trails */
+.nitroFireRTL {
+  position: absolute;
+  bottom: 10px;
+  right: -18px;
+  width: 28px;
+  height: 12px;
+  background: linear-gradient(90deg, #3B82F6 0%, #06B6D4 60%, transparent 100%);
+  border-radius: 20px;
+  box-shadow: 0 0 16px #06B6D4;
+  animation: nitroFlicker 0.1s infinite alternate;
+  pointer-events: none;
+}
+
+.nitroFireLTR {
   position: absolute;
   bottom: 10px;
   left: -18px;
@@ -559,13 +616,13 @@
 }
 
 /* ==========================================================================
-   DELICIOUS FOOD AROMA PARTICLES (STEAM & FOOD ICONS)
+   DELICIOUS FOOD AROMA PARTICLES
    ========================================================================== */
 
 .foodAromaContainer {
   position: absolute;
   top: 15px;
-  right: 15px;
+  right: 25px;
   pointer-events: none;
 }
 
@@ -617,7 +674,7 @@
 .speechBubble {
   position: absolute;
   top: -46px;
-  left: 25px;
+  left: 20px;
   background: #FFFFFF;
   color: #0F172A;
   font-size: 12px;
@@ -655,12 +712,23 @@
 }
 
 /* ==========================================================================
-   DESTINATION DOORSTEP / HOUSE CHECKPOINT (Placed right on the roadside curb)
+   DESTINATION DOORSTEP & START KITCHEN CHECKPOINTS (On Roadside)
    ========================================================================== */
 
-.destinationPin {
+.destinationPinLeft {
   position: absolute;
-  right: 18px;
+  left: 20px;
+  bottom: 42px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 12;
+  pointer-events: none;
+}
+
+.destinationPinRight {
+  position: absolute;
+  right: 20px;
   bottom: 42px;
   display: flex;
   flex-direction: column;
@@ -670,7 +738,8 @@
 }
 
 @media (min-width: 768px) {
-  .destinationPin {
+  .destinationPinLeft,
+  .destinationPinRight {
     bottom: 50px;
   }
 }

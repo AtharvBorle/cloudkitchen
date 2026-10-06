@@ -31,6 +31,7 @@ export default function LoadingAnimationDemoPage() {
   const [mode, setMode] = useState<LoaderMode>("traverse");
   const [speed, setSpeed] = useState<LoaderSpeed>("normal");
   const [theme, setTheme] = useState<LoaderTheme>("day");
+  const [direction, setDirection] = useState<"rtl" | "ltr">("rtl");
   const [progress, setProgress] = useState<number>(45);
   const [isAutoPlaying, setIsAutoPlaying] = useState<boolean>(false);
   const [isFullscreenModalOpen, setIsFullscreenModalOpen] = useState<boolean>(false);
@@ -160,6 +161,7 @@ export default function LoadingAnimationDemoPage() {
             mode={mode}
             speed={speed}
             theme={theme}
+            direction={direction}
             progress={progress}
             interactive={true}
             onComplete={() => setIsCompleted(true)}
@@ -253,6 +255,31 @@ export default function LoadingAnimationDemoPage() {
                 onClick={() => setMode("runner")}
               >
                 <span>🛣️ Highway Run</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Section A2: Travel Direction (Front Always Leads) */}
+          <div className={styles.controlSection}>
+            <span className={styles.sectionLabel}>
+              <ArrowRight size={14} /> Bike Direction (Front Always Leads)
+            </span>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+              <button
+                type="button"
+                className={`${styles.pillBtn} ${direction === "rtl" ? styles.pillBtnActive : ""}`}
+                onClick={() => setDirection("rtl")}
+                title="Original illustration facing left: passes forward Right to Left"
+              >
+                <span>⬅️ Right to Left (Original)</span>
+              </button>
+              <button
+                type="button"
+                className={`${styles.pillBtn} ${direction === "ltr" ? styles.pillBtnActive : ""}`}
+                onClick={() => setDirection("ltr")}
+                title="Flipped front facing right: passes forward Left to Right"
+              >
+                <span>➡️ Left to Right (Flipped)</span>
               </button>
             </div>
           </div>
@@ -423,6 +450,7 @@ export default function LoadingAnimationDemoPage() {
               mode={mode}
               speed={speed}
               theme={theme}
+              direction={direction}
               progress={progress}
               fullscreen={false}
               interactive={true}
