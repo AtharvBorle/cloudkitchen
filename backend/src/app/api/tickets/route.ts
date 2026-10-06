@@ -13,9 +13,11 @@ export async function POST(req: Request) {
     }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
     try {
-        const tickets = await listTickets();
+        const { searchParams } = new URL(req.url);
+        const search = searchParams.get("search") || searchParams.get("q") || undefined;
+        const tickets = await listTickets(search);
         return successResponse(tickets);
     } catch (error: any) {
         if (error instanceof ApiError) return errorResponse(error.message, error.statusCode);
