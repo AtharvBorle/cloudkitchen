@@ -139,8 +139,8 @@ export const DeliveryBoyLoader: React.FC<DeliveryBoyLoaderProps> = ({
         fullscreen ? styles.fullscreenWrapper : ""
       }`}
     >
-      {/* 1. SKY & PARALLAX BACKGROUND */}
-      <div className={styles.skyStage}>
+      {/* UNIFIED SCENE STAGE (Sky, Sidewalk, Road, and Rider) */}
+      <div className={styles.sceneStage}>
         {/* Sun / Moon */}
         <div
           className={`${styles.celestialBody} ${
@@ -159,7 +159,7 @@ export const DeliveryBoyLoader: React.FC<DeliveryBoyLoaderProps> = ({
           <div className={`${styles.cloudItem} ${styles.cloud3}`} />
         </div>
 
-        {/* City Skyline */}
+        {/* City Skyline (directly above the road) */}
         <div
           className={`${styles.citySkyline} ${styles.citySkylineParallax}`}
           style={{
@@ -168,7 +168,22 @@ export const DeliveryBoyLoader: React.FC<DeliveryBoyLoaderProps> = ({
           }}
         />
 
-        {/* Target Destination Doorstep / House (Visible in Progress mode) */}
+        {/* Sidewalk with Curb at the top edge of the road */}
+        <div className={styles.sidewalk}>
+          <div className={styles.curbStrip} />
+        </div>
+
+        {/* The Road Surface */}
+        <div className={styles.roadSurface}>
+          {/* Scrolling white lane dashes */}
+          <div
+            className={`${styles.roadDashes} ${
+              mode !== "progress" || progress < 100 ? styles.roadDashesActive : ""
+            }`}
+          />
+        </div>
+
+        {/* Target Destination Doorstep / House on the roadside (Visible in Progress mode) */}
         {mode === "progress" && (
           <div className={styles.destinationPin}>
             <div className={styles.destinationHouse}>
@@ -178,7 +193,7 @@ export const DeliveryBoyLoader: React.FC<DeliveryBoyLoaderProps> = ({
           </div>
         )}
 
-        {/* RIDER VEHICLE CONTAINER */}
+        {/* RIDER VEHICLE CONTAINER (Positioned directly onto the road surface) */}
         <div
           className={`${styles.riderAnchor} ${
             mode === "traverse" ? `${styles.riderMovingAcross} ${speedClass}` : ""
@@ -236,18 +251,6 @@ export const DeliveryBoyLoader: React.FC<DeliveryBoyLoaderProps> = ({
             <div className={styles.contactShadow} />
           </div>
         </div>
-      </div>
-
-      {/* 2. ROADWAY & ASPHALT */}
-      <div className={styles.roadStage}>
-        {/* Yellow-Black Curb strip */}
-        <div className={styles.curbStrip} />
-        {/* Scrolling white lane dashes */}
-        <div
-          className={`${styles.roadDashes} ${
-            mode !== "progress" || progress < 100 ? styles.roadDashesActive : ""
-          }`}
-        />
       </div>
 
       {/* 3. STATUS & PROGRESS FOOTER */}

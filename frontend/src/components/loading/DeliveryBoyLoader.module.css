@@ -30,31 +30,31 @@
    ========================================================================== */
 
 .themeDay {
-  background: linear-gradient(180deg, #7DD3FC 0%, #BAE6FD 45%, #E0F2FE 75%, #F0F9FF 100%);
+  background: linear-gradient(180deg, #7DD3FC 0%, #BAE6FD 35%, #E0F2FE 60%, #F0F9FF 75%);
 }
 
 .themeSunset {
-  background: linear-gradient(180deg, #E11D48 0%, #F97316 40%, #FBBF24 75%, #FEF08A 100%);
+  background: linear-gradient(180deg, #E11D48 0%, #F97316 35%, #FBBF24 65%, #FEF08A 78%);
 }
 
 .themeNight {
-  background: linear-gradient(180deg, #050814 0%, #0F172A 50%, #1E293B 100%);
+  background: linear-gradient(180deg, #050814 0%, #0F172A 40%, #1E293B 75%);
 }
 
 /* ==========================================================================
-   SCENIC SKY & BACKGROUND PARALLAX LAYERS
+   UNIFIED SCENE STAGE (SKY + ROAD + RIDER TOGETHER)
    ========================================================================== */
 
-.skyStage {
+.sceneStage {
   position: relative;
   width: 100%;
-  height: 240px;
+  height: 290px;
   overflow: hidden;
 }
 
 @media (min-width: 768px) {
-  .skyStage {
-    height: 300px;
+  .sceneStage {
+    height: 350px;
   }
 }
 
@@ -68,6 +68,7 @@
   border-radius: 50%;
   transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
   pointer-events: none;
+  z-index: 2;
 }
 
 .sunGlow {
@@ -92,11 +93,12 @@
   inset: 0;
   pointer-events: none;
   overflow: hidden;
+  z-index: 2;
 }
 
 .cloudItem {
   position: absolute;
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.75);
   backdrop-filter: blur(2px);
   border-radius: 40px;
   animation: floatClouds linear infinite;
@@ -113,7 +115,7 @@
 .cloud1 {
   width: 110px;
   height: 28px;
-  top: 35px;
+  top: 30px;
   left: -120px;
   animation-duration: 22s;
 }
@@ -121,7 +123,7 @@
 .cloud2 {
   width: 150px;
   height: 34px;
-  top: 75px;
+  top: 65px;
   left: -160px;
   animation-duration: 32s;
   animation-delay: 7s;
@@ -130,7 +132,7 @@
 .cloud3 {
   width: 90px;
   height: 24px;
-  top: 110px;
+  top: 95px;
   left: -100px;
   animation-duration: 26s;
   animation-delay: 14s;
@@ -145,18 +147,26 @@
   }
 }
 
-/* Distant Skyline / Cityscape Silhouette */
+/* Distant Skyline / Cityscape Silhouette (Sits directly above the road) */
 .citySkyline {
   position: absolute;
-  bottom: 0;
+  bottom: 95px;
   left: 0;
   width: 200%;
-  height: 90px;
+  height: 80px;
   background-repeat: repeat-x;
   background-position: bottom left;
   pointer-events: none;
   opacity: 0.35;
   transition: opacity 0.4s ease;
+  z-index: 3;
+}
+
+@media (min-width: 768px) {
+  .citySkyline {
+    bottom: 115px;
+    height: 95px;
+  }
 }
 
 .themeNight .citySkyline {
@@ -177,40 +187,62 @@
 }
 
 /* ==========================================================================
-   ROADWAY & ASPHALT
+   ROADWAY & ASPHALT (Directly at the bottom of the scene)
    ========================================================================== */
 
-.roadStage {
-  position: relative;
-  width: 100%;
-  height: 80px;
+.roadSurface {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 95px;
   background: #1E293B;
-  border-top: 4px solid #334155;
-  box-shadow: inset 0 8px 16px rgba(0, 0, 0, 0.35);
-  display: flex;
-  align-items: center;
+  box-shadow: inset 0 8px 16px rgba(0, 0, 0, 0.45);
   overflow: hidden;
+  z-index: 4;
 }
 
 @media (min-width: 768px) {
-  .roadStage {
-    height: 90px;
+  .roadSurface {
+    height: 115px;
   }
 }
 
-/* Curb / Sidewalk edge */
-.curbStrip {
+/* Sidewalk & Curb Strip at the top of the road */
+.sidewalk {
   position: absolute;
-  top: 0;
+  bottom: 95px;
   left: 0;
   right: 0;
-  height: 6px;
+  height: 14px;
+  background: #94A3B8;
+  border-top: 2px solid #CBD5E1;
+  z-index: 4;
+}
+
+@media (min-width: 768px) {
+  .sidewalk {
+    bottom: 115px;
+  }
+}
+
+.themeNight .sidewalk {
+  background: #334155;
+  border-top-color: #475569;
+}
+
+.curbStrip {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
   background: repeating-linear-gradient(
     90deg,
     #F59E0B 0px,
     #F59E0B 28px,
-    #1E293B 28px,
-    #1E293B 56px
+    #0F172A 28px,
+    #0F172A 56px
   );
   animation: scrollCurb 0.6s linear infinite;
 }
@@ -218,7 +250,7 @@
 /* Dashed lane marking in road center */
 .roadDashes {
   position: absolute;
-  top: 50%;
+  top: 48%;
   left: 0;
   width: 200%;
   height: 4px;
@@ -268,16 +300,23 @@
 }
 
 /* ==========================================================================
-   DELIVERY SCOOTER RIDER CONTAINER & MOTION
+   DELIVERY SCOOTER RIDER CONTAINER (PLACED FIRMLY ON THE ROAD)
    ========================================================================== */
 
 .riderAnchor {
   position: absolute;
-  bottom: 24px;
+  /* Placed directly on the road: tires sit onto the asphalt */
+  bottom: 12px;
   z-index: 10;
   cursor: pointer;
   touch-action: manipulation;
   transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@media (min-width: 768px) {
+  .riderAnchor {
+    bottom: 16px;
+  }
 }
 
 /* Mode 1: Moving across the screen from left to right */
@@ -361,7 +400,7 @@
   width: 175px;
   height: auto;
   display: block;
-  filter: drop-shadow(0 14px 10px rgba(0, 0, 0, 0.35));
+  filter: drop-shadow(0 14px 10px rgba(0, 0, 0, 0.45));
   pointer-events: auto;
 }
 
@@ -371,14 +410,14 @@
   }
 }
 
-/* Subtle contact shadow on the road surface */
+/* Asphalt Contact Shadow */
 .contactShadow {
   position: absolute;
-  bottom: 4px;
+  bottom: 2px;
   left: 20px;
   right: 25px;
   height: 12px;
-  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 75%);
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0) 75%);
   border-radius: 50%;
   pointer-events: none;
   animation: shadowPulse 0.22s ease-in-out infinite alternate;
@@ -391,7 +430,7 @@
   }
   100% {
     transform: scale(1.05);
-    opacity: 0.85;
+    opacity: 0.9;
   }
 }
 
@@ -438,7 +477,7 @@
 
 .exhaustSmokeContainer {
   position: absolute;
-  bottom: 20px;
+  bottom: 16px;
   left: -20px;
   pointer-events: none;
 }
@@ -446,13 +485,13 @@
 .smokeParticle {
   position: absolute;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.65);
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.45);
   animation: smokePuff 0.7s cubic-bezier(0.165, 0.84, 0.44, 1) infinite;
 }
 
 .themeNight .smokeParticle {
-  background: rgba(148, 163, 184, 0.45);
+  background: rgba(148, 163, 184, 0.5);
 }
 
 .smoke1 {
@@ -497,7 +536,7 @@
 /* Nitro fire trails when speed is Nitro */
 .nitroFire {
   position: absolute;
-  bottom: 12px;
+  bottom: 10px;
   left: -18px;
   width: 28px;
   height: 12px;
@@ -616,18 +655,24 @@
 }
 
 /* ==========================================================================
-   DESTINATION DOORSTEP / HOUSE CHECKPOINT (For Progress mode)
+   DESTINATION DOORSTEP / HOUSE CHECKPOINT (Placed right on the roadside curb)
    ========================================================================== */
 
 .destinationPin {
   position: absolute;
   right: 18px;
-  bottom: 24px;
+  bottom: 42px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  z-index: 8;
+  z-index: 12;
   pointer-events: none;
+}
+
+@media (min-width: 768px) {
+  .destinationPin {
+    bottom: 50px;
+  }
 }
 
 .destinationHouse {
@@ -638,8 +683,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
   font-size: 22px;
+  border: 2px solid #E2E8F0;
 }
 
 .destinationLabel {
@@ -650,7 +696,7 @@
   padding: 2px 8px;
   border-radius: 10px;
   margin-top: 4px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
   white-space: nowrap;
 }
 
@@ -665,6 +711,8 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  position: relative;
+  z-index: 15;
 }
 
 .themeNight .statusFooter {
@@ -760,28 +808,4 @@
 
 .themeNight .statusSubtext {
   color: #94A3B8;
-}
-
-/* Success Celebration Badge */
-.celebrationCard {
-  background: #ECFDF5;
-  border: 1.5px solid #A7F3D0;
-  color: #065F46;
-  padding: 12px 16px;
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  animation: celebrationPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-@keyframes celebrationPop {
-  0% {
-    transform: scale(0.92);
-    opacity: 0;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
 }
