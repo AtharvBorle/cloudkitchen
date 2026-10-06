@@ -36,7 +36,15 @@ const DEFAULT_ADDRESSES: AddressItem[] = [
   },
 ];
 
-export const SavedAddresses: React.FC = () => {
+export interface SavedAddressesProps {
+  onSetLocationMap?: (addr: AddressItem) => void;
+  onEditAddress?: (addr: AddressItem) => void;
+}
+
+export const SavedAddresses: React.FC<SavedAddressesProps> = ({
+  onSetLocationMap,
+  onEditAddress,
+}) => {
   const [addresses, setAddresses] = useState<AddressItem[]>(DEFAULT_ADDRESSES);
   const [selectedId, setSelectedId] = useState<string>("home");
 
@@ -209,6 +217,7 @@ export const SavedAddresses: React.FC = () => {
                 }`}
                 onClick={(e) => {
                   e.stopPropagation();
+                  onSetLocationMap?.(addr);
                 }}
               >
                 <svg
@@ -234,6 +243,7 @@ export const SavedAddresses: React.FC = () => {
                   className={styles.editBtn}
                   onClick={(e) => {
                     e.stopPropagation();
+                    onEditAddress?.(addr);
                   }}
                   aria-label={`Edit ${addr.tag} address`}
                 >

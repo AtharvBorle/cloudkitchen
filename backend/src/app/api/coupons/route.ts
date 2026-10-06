@@ -2,6 +2,8 @@ import { getAllCoupons, createCoupon } from "@/controllers/couponController";
 import { successResponse, errorResponse } from "@/lib/api-response";
 import { ApiError } from "@/lib/api-error";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: Request) {
     try {
         const data = await getAllCoupons();

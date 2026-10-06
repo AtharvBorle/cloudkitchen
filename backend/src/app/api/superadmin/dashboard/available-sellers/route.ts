@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { successResponse, errorResponse } from "@/lib/api-response";
 import { ApiError } from "@/lib/api-error";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
     try {
         const session = await getAuthSession();

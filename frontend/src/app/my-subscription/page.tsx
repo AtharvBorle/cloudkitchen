@@ -11,9 +11,6 @@ import { SubscriptionPlanCard } from "@/components/my-subscription/subscription-
 import { PauseSubscription } from "@/components/my-subscription/pause-subscription";
 import { DeliveryTimes, DeliverySlot } from "@/components/my-subscription/delivery-times";
 import { SubscriptionBenefits } from "@/components/my-subscription/subscription-benefits";
-import { SubscriptionActions } from "@/components/my-subscription/subscription-actions";
-import { ChangePlanModal } from "@/components/my-subscription/change-plan-modal";
-import { CancelSubscriptionModal } from "@/components/my-subscription/cancel-subscription-modal";
 import { Footer } from "@/components/explore-desktop/footer";
 import { useLocation } from "@/components/location-provider";
 import {
@@ -44,7 +41,6 @@ import {
   ArrowRight,
   Phone,
   Loader2,
-  RefreshCw,
   Award,
   Layers,
   Navigation,
@@ -140,10 +136,6 @@ function MySubscriptionContent() {
   const [selectedSubId, setSelectedSubId] = useState<string | null>(null);
   const [subscription, setSubscription] = useState<UserActiveMealSubscription | null>(null);
   const [isLoadingActive, setIsLoadingActive] = useState<boolean>(true);
-  const [isChangingPlan, setIsChangingPlan] = useState<boolean>(false);
-  const [changingSub, setChangingSub] = useState<UserActiveMealSubscription | null>(null);
-  const [isCancelling, setIsCancelling] = useState<boolean>(false);
-  const [cancellingSub, setCancellingSub] = useState<UserActiveMealSubscription | null>(null);
   const [toast, setToast] = useState<{ type: "success" | "error" | "info"; text: string } | null>(null);
 
   // All Subscription Plans Explorer State
@@ -432,69 +424,6 @@ function MySubscriptionContent() {
     } catch (err: any) {
       showToast("error", err.message || "Failed to update pause status.");
     }
-  };
-
-  const handlePlanChanged = (updatedData: any) => {
-    const targetSub = changingSub || subscription;
-    if (!targetSub) return;
-    if (updatedData.plan) {
-      setUserSubs((prev) =>
-        prev.map((s) =>
-          s.id === targetSub.id
-            ? {
-                ...s,
-                planId: updatedData.planId || updatedData.plan.id,
-                tier: updatedData.tier || updatedData.plan.tier,
-                status: updatedData.status || "ACTIVE",
-                pricePaid: updatedData.pricePaid || updatedData.plan.weeklyPrice,
-                plan: {
-                  ...s.plan,
-                  ...updatedData.plan,
-                },
-              }
-            : s
-        )
-      );
-      if (subscription?.id === targetSub.id) {
-        setSubscription((prev) =>
-          prev
-            ? {
-                ...prev,
-                planId: updatedData.planId || updatedData.plan.id,
-                tier: updatedData.tier || updatedData.plan.tier,
-                status: updatedData.status || "ACTIVE",
-                pricePaid: updatedData.pricePaid || updatedData.plan.weeklyPrice,
-                plan: {
-                  ...prev.plan,
-                  ...updatedData.plan,
-                },
-              }
-            : null
-        );
-      }
-    }
-    showToast(
-      "success",
-      `Meal plan successfully changed to ${updatedData.name || updatedData.tier || "new tier"}!`
-    );
-    setIsChangingPlan(false);
-    setChangingSub(null);
-  };
-
-  const handleCancelled = (cancelledSubId: string) => {
-    setUserSubs((prev) =>
-      prev.map((s) =>
-        s.id === cancelledSubId ? { ...s, status: "CANCELLED" } : s
-      )
-    );
-    if (subscription?.id === cancelledSubId) {
-      setSubscription((prev) =>
-        prev ? { ...prev, status: "CANCELLED" } : null
-      );
-    }
-    showToast("info", "Meal subscription has been cancelled.");
-    setIsCancelling(false);
-    setCancellingSub(null);
   };
 
   // Open Subscribe Modal
@@ -1189,71 +1118,6 @@ function MySubscriptionContent() {
                                 }
                               />
                             </div>
-
-                            {/* Action Buttons: Change Plan & Cancel */}
-                            <div
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "flex-end",
-                                gap: "10px",
-                                marginTop: "20px",
-                                paddingTop: "16px",
-                                borderTop: "1px solid #F1F5F9",
-                              }}
-                            >
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setChangingSub(subItem);
-                                  setIsChangingPlan(true);
-                                }}
-                                style={{
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  gap: "6px",
-                                  padding: "8px 16px",
-                                  borderRadius: "10px",
-                                  border: "1.5px solid #CBD5E1",
-                                  backgroundColor: "#FFFFFF",
-                                  color: "#334155",
-                                  fontWeight: 700,
-                                  fontSize: "0.82rem",
-                                  cursor: "pointer",
-                                  transition: "all 0.15s ease",
-                                }}
-                              >
-                                <RefreshCw size={14} />
-                                <span>Change Plan</span>
-                              </button>
-
-                              {subItem.status?.toUpperCase() !== "CANCELLED" && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setCancellingSub(subItem);
-                                    setIsCancelling(true);
-                                  }}
-                                  style={{
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: "6px",
-                                    padding: "8px 16px",
-                                    borderRadius: "10px",
-                                    border: "1.5px solid #FECACA",
-                                    backgroundColor: "#FEF2F2",
-                                    color: "#DC2626",
-                                    fontWeight: 700,
-                                    fontSize: "0.82rem",
-                                    cursor: "pointer",
-                                    transition: "all 0.15s ease",
-                                  }}
-                                >
-                                  <X size={14} />
-                                  <span>Cancel Subscription</span>
-                                </button>
-                              )}
-                            </div>
                           </div>
                         );
                       })}
@@ -1568,10 +1432,6 @@ function MySubscriptionContent() {
                               <PauseCircle size={12} color="#FF5500" />
                               <span>Pause: {plan.pauseBillingPeriod || "30 Days"}</span>
                             </span>
-                            <span className={styles.policyItem}>
-                              <ShieldCheck size={12} color="#059669" />
-                              <span>Cancel Anytime</span>
-                            </span>
                           </div>
 
                           {/* Subscribe CTA Button */}
@@ -1593,37 +1453,6 @@ function MySubscriptionContent() {
           </div>
         </div>
       </main>
-
-      {/* Change Plan Modal */}
-      {(changingSub || subscription) && isChangingPlan && (
-        <ChangePlanModal
-          isOpen={isChangingPlan}
-          onClose={() => {
-            setIsChangingPlan(false);
-            setChangingSub(null);
-          }}
-          subscriptionId={(changingSub || subscription)!.id}
-          sellerId={(changingSub || subscription)!.sellerId}
-          sellerName={(changingSub || subscription)!.seller?.businessName}
-          currentPlanId={(changingSub || subscription)!.planId}
-          onPlanChanged={handlePlanChanged}
-        />
-      )}
-
-      {/* Cancel Subscription Modal */}
-      {cancellingSub && isCancelling && (
-        <CancelSubscriptionModal
-          isOpen={isCancelling}
-          onClose={() => {
-            setIsCancelling(false);
-            setCancellingSub(null);
-          }}
-          subscriptionId={cancellingSub.id}
-          planName={cancellingSub.plan?.name || "Meal Plan"}
-          sellerName={cancellingSub.seller?.businessName || "Kitchen Partner"}
-          onCancelled={() => handleCancelled(cancellingSub.id)}
-        />
-      )}
 
       {/* Subscribe Confirmation Modal */}
       {selectedPlanForSub && (

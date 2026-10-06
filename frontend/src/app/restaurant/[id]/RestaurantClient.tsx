@@ -138,7 +138,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
                       ? `Served for ${Array.isArray(plan.mealTimings) ? plan.mealTimings.join(", ") : plan.mealTimings}`
                       : "Daily breakfast, lunch or dinner",
                     "Direct doorstep delivery",
-                    "Pause or cancel anytime",
+                    "Pause anytime when away",
                   ];
                 }
 
