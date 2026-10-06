@@ -40,7 +40,7 @@ export interface Ticket {
   customerInitials: string;
   time: string;
   status: "Open" | "In Progress" | "Closed" | "Resolved";
-  priority: "High" | "Medium" | "Low";
+  priority?: "High" | "Medium" | "Low" | null;
   messages: TicketMessage[];
 }
 
@@ -119,11 +119,14 @@ function mapRawMessage(m: any, ticketUser?: any): TicketMessage {
 
 function cleanTicketText(text: string | null | undefined): string {
   if (!text) return "";
-  return text.replace(/^\[Priority:\s*(High|Medium|Low)\]\s*\n?/i, "").trim();
+  return text.replace(/\[Priority:\s*(High|Medium|Low)\]\s*\n?/gi, "").trim();
 }
 
-export function resolveTicketPriority(t: any): "High" | "Medium" | "Low" {
-  if (!t) return "Medium";
+export function resolveTicketPriority(t: any): "High" | "Medium" | "Low" | null {
+  if (!t) return null;
+  const rawStatus = String(t.status || "").toUpperCase();
+  if (rawStatus === "CLOSED") return null;
+
   if (t.priority && typeof t.priority === "string") {
     const p = t.priority.trim().toUpperCase();
     if (p === "HIGH" || p === "URGENT" || p === "CRITICAL") return "High";
@@ -188,14 +191,25 @@ function mapRawTicket(t: any): Ticket {
   const name = t.user?.name || "Seller";
   const initials = getInitials(name);
 
+  const isClosed = status === "Closed";
   const rawMessages = Array.isArray(t.messages) && t.messages.length > 0 ? t.messages : [];
-  const messages: TicketMessage[] = rawMessages.map((m: any) => {
-    const mapped = mapRawMessage(m, t.user);
-    return {
-      ...mapped,
-      text: cleanTicketText(mapped.text),
-    };
-  });
+  const messages: TicketMessage[] = rawMessages
+    .filter((m: any) => {
+      if (isClosed) {
+        const msgText = String(m.message || m.text || "").trim();
+        if (/^Priority\s+(?:is\s+|updated\s+to\s+|set\s+to\s+)?(High|Medium|Low)$/i.test(msgText)) {
+          return false;
+        }
+      }
+      return true;
+    })
+    .map((m: any) => {
+      const mapped = mapRawMessage(m, t.user);
+      return {
+        ...mapped,
+        text: cleanTicketText(mapped.text),
+      };
+    });
 
   if (messages.length === 0 && t.description) {
     messages.push({
@@ -548,40 +562,42 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
               </div>
 
               {/* Mobile Chat Priority Row */}
-              <div className={styles.mobileChatPriorityBar}>
-                <span className={styles.priorityLabel}>Priority</span>
-                <select
-                  value={selectedTicket?.priority || "Medium"}
-                  onChange={(e) => {
-                    const newP = e.target.value as "High" | "Medium" | "Low";
-                    if (selectedTicket) {
-                      handleUpdatePriority(selectedTicket.id, newP);
-                    }
-                  }}
-                  className={`${styles.priorityBadge} ${getPriorityBadgeStyle(
-                    selectedTicket?.priority || "Medium"
-                  )}`}
-                  style={{
-                    cursor: "pointer",
-                    border: "none",
-                    outline: "none",
-                    appearance: "none",
-                    WebkitAppearance: "none",
-                    MozAppearance: "none",
-                    paddingRight: "18px",
-                    backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
-                    backgroundRepeat: "no-repeat",
-                    backgroundPosition: "right 5px center",
-                    backgroundSize: "9px 9px",
-                  }}
-                  aria-label="Change ticket priority"
-                  title="Click to change ticket priority"
-                >
-                  <option value="High">High</option>
-                  <option value="Medium">Medium</option>
-                  <option value="Low">Low</option>
-                </select>
-              </div>
+              {selectedTicket?.status !== "Closed" && selectedTicket?.priority && (
+                <div className={styles.mobileChatPriorityBar}>
+                  <span className={styles.priorityLabel}>Priority</span>
+                  <select
+                    value={selectedTicket.priority}
+                    onChange={(e) => {
+                      const newP = e.target.value as "High" | "Medium" | "Low";
+                      if (selectedTicket) {
+                        handleUpdatePriority(selectedTicket.id, newP);
+                      }
+                    }}
+                    className={`${styles.priorityBadge} ${getPriorityBadgeStyle(
+                      selectedTicket.priority
+                    )}`}
+                    style={{
+                      cursor: "pointer",
+                      border: "none",
+                      outline: "none",
+                      appearance: "none",
+                      WebkitAppearance: "none",
+                      MozAppearance: "none",
+                      paddingRight: "18px",
+                      backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                      backgroundRepeat: "no-repeat",
+                      backgroundPosition: "right 5px center",
+                      backgroundSize: "9px 9px",
+                    }}
+                    aria-label="Change ticket priority"
+                    title="Click to change ticket priority"
+                  >
+                    <option value="High">High</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Low">Low</option>
+                  </select>
+                </div>
+              )}
             </div>
           ) : (
             <div className={styles.mobileListNavHeader}>
@@ -680,14 +696,16 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
                       >
                         <div className={styles.ticketCardHeader}>
                           <span className={styles.ticketCategory}>{ticket.category}</span>
-                          <span
-                            className={`${styles.priorityBadge} ${getPriorityBadgeStyle(
-                              ticket.priority
-                            )}`}
-                            style={{ fontSize: "0.68rem", padding: "1px 8px" }}
-                          >
-                            {ticket.priority}
-                          </span>
+                          {ticket.status !== "Closed" && ticket.priority && (
+                            <span
+                              className={`${styles.priorityBadge} ${getPriorityBadgeStyle(
+                                ticket.priority
+                              )}`}
+                              style={{ fontSize: "0.68rem", padding: "1px 8px" }}
+                            >
+                              {ticket.priority}
+                            </span>
+                          )}
                           <span className={styles.ticketTime}>{ticket.time}</span>
                         </div>
 
@@ -759,35 +777,37 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
                   </div>
 
                   <div className={styles.chatHeaderBadges}>
-                    <select
-                      value={selectedTicket.priority}
-                      onChange={(e) => {
-                        const newP = e.target.value as "High" | "Medium" | "Low";
-                        handleUpdatePriority(selectedTicket.id, newP);
-                      }}
-                      className={`${styles.priorityBadge} ${getPriorityBadgeStyle(
-                        selectedTicket.priority
-                      )}`}
-                      style={{
-                        cursor: "pointer",
-                        border: "none",
-                        outline: "none",
-                        appearance: "none",
-                        WebkitAppearance: "none",
-                        MozAppearance: "none",
-                        paddingRight: "18px",
-                        backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
-                        backgroundRepeat: "no-repeat",
-                        backgroundPosition: "right 5px center",
-                        backgroundSize: "9px 9px",
-                      }}
-                      aria-label="Change ticket priority"
-                      title="Click to change ticket priority"
-                    >
-                      <option value="High">High</option>
-                      <option value="Medium">Medium</option>
-                      <option value="Low">Low</option>
-                    </select>
+                    {selectedTicket.status !== "Closed" && selectedTicket.priority && (
+                      <select
+                        value={selectedTicket.priority}
+                        onChange={(e) => {
+                          const newP = e.target.value as "High" | "Medium" | "Low";
+                          handleUpdatePriority(selectedTicket.id, newP);
+                        }}
+                        className={`${styles.priorityBadge} ${getPriorityBadgeStyle(
+                          selectedTicket.priority
+                        )}`}
+                        style={{
+                          cursor: "pointer",
+                          border: "none",
+                          outline: "none",
+                          appearance: "none",
+                          WebkitAppearance: "none",
+                          MozAppearance: "none",
+                          paddingRight: "18px",
+                          backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                          backgroundRepeat: "no-repeat",
+                          backgroundPosition: "right 5px center",
+                          backgroundSize: "9px 9px",
+                        }}
+                        aria-label="Change ticket priority"
+                        title="Click to change ticket priority"
+                      >
+                        <option value="High">High</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Low">Low</option>
+                      </select>
+                    )}
                     <span
                       className={`${styles.statusBadge} ${getStatusBadgeStyle(
                         selectedTicket.status
