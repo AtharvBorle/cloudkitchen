@@ -138,7 +138,7 @@
   overflow-y: auto;
 }
 
-/* 1. Map Illustration Card */
+/* 1. Map Illustration Card & Live Tracking Animations */
 .mapCard {
   background-color: #FFFFFF;
   border-radius: 16px;
@@ -165,6 +165,70 @@
   display: block;
 }
 
+/* Present Green Cloud Fixed Portion Running Animation */
+.fixedGreenCloud {
+  animation: fixedCloudBreathe 3s ease-in-out infinite alternate;
+}
+
+@keyframes fixedCloudBreathe {
+  0% {
+    fill-opacity: 0.85;
+  }
+  100% {
+    fill-opacity: 1;
+  }
+}
+
+.runningCloudBorder {
+  animation: runCloudBorder 2s linear infinite;
+}
+
+@keyframes runCloudBorder {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -70;
+  }
+}
+
+/* Classic Teardrop Map Pin */
+.classicMapPin {
+  transform-origin: 190px 85px;
+  animation: pinBob 2.4s ease-in-out infinite alternate;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.classicMapPin:hover {
+  transform: translateY(-4px) scale(1.08);
+}
+
+@keyframes pinBob {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-3px);
+  }
+}
+
+.pinGroundShadow {
+  transform-origin: 190px 87px;
+  animation: shadowPulse 2.4s ease-in-out infinite alternate;
+}
+
+@keyframes shadowPulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.24;
+  }
+  100% {
+    transform: scale(0.85);
+    opacity: 0.15;
+  }
+}
+
 /* 2. Stepper Card */
 .stepperCard {
   background-color: #FFFFFF;
@@ -173,6 +237,9 @@
   padding: 16px 14px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .stepperRow {
@@ -188,48 +255,105 @@
   align-items: center;
   gap: 6px;
   z-index: 2;
-  min-width: 60px;
+  min-width: 58px;
+}
+
+.stepBtn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+}
+
+.stepBtn:hover:not(:disabled) .stepCircle {
+  transform: scale(1.08);
+}
+
+.stepBtn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.stepBtn:disabled {
+  cursor: default;
 }
 
 .stepCircle {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
 }
 
-.stepCircleActive {
-  background-color: #F97316;
+/* 1. Completed Step (Solid Orange with check/icon) */
+.stepCircleCompleted {
+  background: linear-gradient(135deg, #EA580C, #F97316);
   color: #FFFFFF;
-  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.35);
+  box-shadow: 0 2px 8px rgba(234, 88, 12, 0.28);
 }
 
+/* 2. Active In-Progress Step (Pulsing Orange Glow Animation) */
+.stepCircleActivePulse {
+  background: linear-gradient(135deg, #FF6B00, #F97316);
+  color: #FFFFFF;
+  animation: pulseOrangeGlow 2s infinite cubic-bezier(0.45, 0, 0.55, 1);
+}
+
+/* 3. Completed Final Step (GREEN Completion Glow Animation) */
+.stepCircleDeliveredGreen {
+  background: linear-gradient(135deg, #10B981, #059669);
+  color: #FFFFFF;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
+  animation: pulseGreenGlow 2.2s infinite cubic-bezier(0.45, 0, 0.55, 1);
+}
+
+/* 4. Inactive Future Step */
+.stepCircleInactive {
+  background-color: #F8FAFC;
+  color: #94A3B8;
+  border: 1.5px solid #E2E8F0;
+}
+
+/* 5. Cancelled Step */
 .stepCircleCancelled {
   background-color: #DC2626;
   color: #FFFFFF;
   box-shadow: 0 2px 8px rgba(220, 38, 38, 0.35);
 }
 
-.stepCircleInactive {
-  background-color: #F1F5F9;
-  color: #94A3B8;
-  border: 1px solid #E2E8F0;
-}
-
+/* Step Labels */
 .stepLabel {
   font-size: 11px;
   text-align: center;
   white-space: nowrap;
   letter-spacing: -0.1px;
+  transition: color 0.2s ease, font-weight 0.2s ease;
+}
+
+.stepLabelCompleted {
+  font-weight: 600;
+  color: #1E293B;
 }
 
 .stepLabelActive {
   font-weight: 700;
-  color: #0F172A;
+  color: #EA580C;
+}
+
+.stepLabelDeliveredGreen {
+  font-weight: 700;
+  color: #059669;
 }
 
 .stepLabelCancelled {
@@ -242,16 +366,31 @@
   color: #94A3B8;
 }
 
+/* Connecting Lines */
 .dottedLine {
   flex: 1;
   height: 2px;
   margin: 0 4px;
   margin-bottom: 22px;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
 }
 
-.dottedLineActive {
-  border-top: 2px dashed #F97316;
+.dottedLineCompleted {
+  border-top: 2px dashed #EA580C;
+}
+
+.dottedLineFlowing {
+  height: 2px;
+  background: repeating-linear-gradient(90deg, #F97316 0, #F97316 5px, transparent 5px, transparent 10px);
+  background-size: 20px 2px;
+  animation: dashFlow 1.2s linear infinite;
+}
+
+.dottedLineDeliveredGreen {
+  height: 2px;
+  background: repeating-linear-gradient(90deg, #10B981 0, #10B981 5px, transparent 5px, transparent 10px);
+  background-size: 20px 2px;
+  animation: dashFlow 1.5s linear infinite;
 }
 
 .dottedLineCancelled {
@@ -260,6 +399,155 @@
 
 .dottedLineInactive {
   border-top: 2px dashed #CBD5E1;
+}
+
+/* Contextual Stepper Quick Action Bar */
+.stepperActionBox {
+  margin-top: 4px;
+  width: 100%;
+}
+
+.advanceStepBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, #FF6B00, #EA580C);
+  color: #FFFFFF;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 10px rgba(234, 88, 12, 0.25);
+}
+
+.advanceStepBtn:hover:not(:disabled) {
+  opacity: 0.95;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35);
+}
+
+.advanceStepBtn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.advanceStepBtn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.advanceStepBtnGreen {
+  background: linear-gradient(135deg, #10B981, #059669);
+  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.25);
+}
+
+.advanceStepBtnGreen:hover:not(:disabled) {
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+}
+
+/* Celebratory Delivered Banner */
+.completedNoticeBanner {
+  background: #ECFDF5;
+  border: 1px solid #A7F3D0;
+  border-radius: 12px;
+  padding: 11px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  animation: popIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.completedNoticeHeader {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #065F46;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.completedNoticeTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: #065F46;
+}
+
+.completedNoticeText {
+  margin: 0;
+  font-size: 11.5px;
+  color: #047857;
+  line-height: 1.4;
+}
+
+/* Animations */
+@keyframes pulseOrangeGlow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.55);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(249, 115, 22, 0);
+    transform: scale(1.05);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(249, 115, 22, 0);
+    transform: scale(1);
+  }
+}
+
+@keyframes pulseGreenGlow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.65);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 9px rgba(16, 185, 129, 0);
+    transform: scale(1.06);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    transform: scale(1);
+  }
+}
+
+@keyframes dashFlow {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: -20px 0;
+  }
+}
+
+@keyframes popIn {
+  0% {
+    transform: scale(0.92);
+    opacity: 0.7;
+  }
+  60% {
+    transform: scale(1.03);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .cancelledNoticeCard {

@@ -177,7 +177,7 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
     if (onOrderClick) {
       onOrderClick(order);
     } else {
-      router.push(`/seller/orders/details?orderId=${encodeURIComponent(order.id)}`);
+      router.push(`/seller/orders/details?orderId=${encodeURIComponent(order.id)}&from=orders`);
     }
   };
 

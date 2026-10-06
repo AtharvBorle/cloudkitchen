@@ -87,21 +87,6 @@
   align-items: center;
   gap: 12px;
   width: 100%;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.mobileChatPriorityBar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-top: 8px;
-}
-
-.priorityLabel {
-  font-size: 0.78rem;
-  color: #64748b;
-  font-weight: 600;
 }
 
 .mobileBackBtn {
@@ -366,29 +351,7 @@
   gap: 8px;
 }
 
-/* Priority & Status Badges */
-.priorityBadge {
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 3px 10px;
-  border-radius: 9999px;
-  text-transform: capitalize;
-}
-
-.priorityHigh {
-  background-color: #fee2e2;
-  color: #ef4444;
-}
-
-.priorityMedium {
-  background-color: #fef3c7;
-  color: #d97706;
-}
-
-.priorityLow {
-  background-color: #f1f5f9;
-  color: #64748b;
-}
+/* Status Badges */
 
 .statusBadge {
   font-size: 0.72rem;

@@ -95,6 +95,8 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
   const router = useRouter();
   const searchParams = useSearchParams();
   const rawOrderId = searchParams.get("orderId");
+  const fromParam = searchParams.get("from");
+  const backHref = fromParam === "dashboard" ? "/seller/dashboard" : "/seller/orders";
 
   const seller = useSellerProfile();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -482,7 +484,7 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
         <main className={styles.mainContent}>
           {/* Top Nav Row: Back button + Order ID Header */}
           <div className={styles.topNavRow}>
-            <Link href="/seller/orders" className={styles.backBtn} title="Back to Orders">
+            <Link href={backHref} className={styles.backBtn} title={fromParam === "dashboard" ? "Back to Dashboard" : "Back to Orders"}>
               <ArrowLeft size={18} />
             </Link>
             <div className={styles.headerGroup}>
@@ -814,7 +816,7 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
                     </p>
                     <button
                       type="button"
-                      onClick={() => router.push("/seller/orders")}
+                      onClick={() => router.push(backHref)}
                       style={{
                         marginTop: "4px",
                         padding: "8px 16px",
@@ -828,7 +830,7 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
                         transition: "all 0.2s ease"
                       }}
                     >
-                      ← Back to All Orders
+                      ← {fromParam === "dashboard" ? "Back to Dashboard" : "Back to All Orders"}
                     </button>
                   </div>
                 )}

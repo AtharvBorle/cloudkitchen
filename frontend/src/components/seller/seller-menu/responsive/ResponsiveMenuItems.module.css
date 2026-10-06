@@ -556,63 +556,6 @@
   border-color: #F97316;
 }
 
-/* 6. In Stock Section */
-.stockCard {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background-color: #FFFFFF;
-  border: 1px solid #EEF0F4;
-  border-radius: 14px;
-  padding: 12px 14px;
-  box-sizing: border-box;
-}
-
-.stockInfo {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.stockTitle {
-  font-size: 14px;
-  font-weight: 700;
-  color: #0F172A;
-  margin: 0;
-}
-
-.stockSubtitle {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: #94A3B8;
-  margin: 0;
-}
-
-.stockControls {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.stockQtyInput {
-  width: 48px;
-  height: 34px;
-  border: 1px solid #E2E8F0;
-  border-radius: 8px;
-  background-color: #FFFFFF;
-  text-align: center;
-  font-size: 14px;
-  font-weight: 700;
-  color: #0F172A;
-  outline: none;
-  font-family: inherit;
-  box-sizing: border-box;
-}
-
-.stockQtyInput:focus {
-  border-color: #F97316;
-}
-
 /* 7. Save Item Button */
 .saveButton {
   width: 100%;

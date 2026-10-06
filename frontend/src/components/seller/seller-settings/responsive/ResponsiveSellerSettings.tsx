@@ -962,7 +962,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
         onSave(formData);
       }
       setIsEditingGeneral(false);
-      setToastData({ title: "Settings updated successfully!", status: "ON" });
+      setToastData({ title: "Settings updated successfully!", status: null });
     } catch (err: any) {
       console.error("Error saving settings:", err);
       setToastData({ title: err.message || "Failed to save settings", status: "OFF" });
@@ -2601,22 +2601,25 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
 
         {/* Toast Notification */}
         {toastData && (
-          <div key={`${toastData.title}-${toastData.status}`} className={styles.toast}>
+          <div key={`${toastData.title}-${toastData.status ?? "default"}`} className={styles.toast}>
             <div style={{
               width: "7px",
               height: "7px",
               borderRadius: "50%",
-              backgroundColor: toastData.status === "ON" ? "#10B981" : "#EF4444",
-              boxShadow: toastData.status === "ON" ? "0 0 8px #10B981" : "0 0 8px #EF4444",
+              backgroundColor: toastData.status === "OFF" ? "#EF4444" : "#10B981",
+              boxShadow: toastData.status === "OFF" ? "0 0 8px #EF4444" : "0 0 8px #10B981",
+              flexShrink: 0,
             }} />
             <span style={{ color: "#F8FAFC" }}>{toastData.title}</span>
-            <span
-              className={`${styles.toastStatusBadge} ${
-                toastData.status === "ON" ? styles.toastStatusOn : styles.toastStatusOff
-              }`}
-            >
-              {toastData.status}
-            </span>
+            {toastData.status && (
+              <span
+                className={`${styles.toastStatusBadge} ${
+                  toastData.status === "ON" ? styles.toastStatusOn : styles.toastStatusOff
+                }`}
+              >
+                {toastData.status}
+              </span>
+            )}
           </div>
         )}
       </div>
