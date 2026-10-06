@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import Navbar from "@/components/navbar";
 import {
   HeroSection,
@@ -32,12 +32,96 @@ import {
   isDishHavingOffers,
 } from "@/lib/dietary-filter";
 
+function getInitialDietPreference(): "all" | "veg" | "non_veg" | "vegan" | "jain" {
+  if (typeof window !== "undefined") {
+    try {
+      const storedDiet = localStorage.getItem("cloudkitchen_diet_preference");
+      if (storedDiet) {
+        const lower = storedDiet.toLowerCase().trim();
+        if (lower === "veg") return "veg";
+        if (lower === "non_veg" || lower === "non-veg") return "non_veg";
+        if (lower === "vegan") return "vegan";
+        if (lower === "jain") return "jain";
+        if (lower === "all") return "all";
+      }
+      const storedVeg = localStorage.getItem("cloudkitchen_veg_preference");
+      if (storedVeg === "true") return "veg";
+    } catch {}
+  }
+  return "all";
+}
+
 export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState("food");
-  const [activeFilters, setActiveFilters] = useState<ActiveHomeFilters>({ dietary: "all" });
+  const [activeFilters, setActiveFilters] = useState<ActiveHomeFilters>(() => ({
+    dietary: getInitialDietPreference(),
+  }));
   const [homeSearchQuery, setHomeSearchQuery] = useState("");
   const { openLocationModal, defaultAddress, setGuestLocation } = useLocation();
   const homeData = useHomeData();
+  const isDietInitializedRef = useRef<boolean>(false);
+
+  const persistDietaryPreference = (dietVal: "all" | "veg" | "non_veg" | "vegan" | "jain") => {
+    if (typeof window === "undefined") return;
+    try {
+      const storageVal = dietVal === "non_veg" ? "non-veg" : dietVal;
+      localStorage.setItem("cloudkitchen_diet_preference", storageVal);
+      const isVeg = dietVal === "veg" || dietVal === "vegan" || dietVal === "jain";
+      localStorage.setItem("cloudkitchen_veg_preference", String(isVeg));
+      window.dispatchEvent(new CustomEvent("cloudkitchen_diet_preference_changed", { detail: storageVal }));
+      window.dispatchEvent(new CustomEvent("cloudkitchen_veg_preference_changed", { detail: isVeg }));
+    } catch {}
+  };
+
+  // Restore and sync dietary preference with localStorage and across tabs/components
+  useEffect(() => {
+    try {
+      const saved = getInitialDietPreference();
+      setActiveFilters((prev) => (prev.dietary === saved ? prev : { ...prev, dietary: saved }));
+    } catch {}
+    isDietInitializedRef.current = true;
+
+    const syncDiet = (e: any) => {
+      const d = e?.detail || getInitialDietPreference();
+      const norm =
+        d === "non-veg" || d === "non_veg"
+          ? "non_veg"
+          : d === "vegan"
+          ? "vegan"
+          : d === "jain"
+          ? "jain"
+          : d === "veg"
+          ? "veg"
+          : "all";
+      setActiveFilters((prev) => (prev.dietary === norm ? prev : { ...prev, dietary: norm }));
+    };
+
+    const syncVeg = (e: any) => {
+      if (e?.detail !== undefined) {
+        const isVeg = Boolean(e.detail);
+        setActiveFilters((prev) => {
+          if (isVeg && prev.dietary !== "veg" && prev.dietary !== "vegan" && prev.dietary !== "jain") {
+            return { ...prev, dietary: "veg" };
+          }
+          return prev;
+        });
+      }
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("cloudkitchen_diet_preference_changed", syncDiet);
+      window.addEventListener("cloudkitchen_veg_preference_changed", syncVeg);
+      window.addEventListener("storage", syncDiet);
+    }
+
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("cloudkitchen_diet_preference_changed", syncDiet);
+        window.removeEventListener("cloudkitchen_veg_preference_changed", syncVeg);
+        window.removeEventListener("storage", syncDiet);
+      }
+    };
+  }, []);
 
   const handleHomeSearch = (query: string, location?: string) => {
     const q = (query || "").trim();
@@ -518,19 +602,21 @@ export default function Home() {
             : "all"
         }
         onDietChange={(diet) => {
+          const nextDiet =
+            diet === "non-veg" || diet === "non_veg"
+              ? "non_veg"
+              : diet === "vegan"
+              ? "vegan"
+              : diet === "jain"
+              ? "jain"
+              : diet === "veg"
+              ? "veg"
+              : "all";
           setActiveFilters((prev) => ({
             ...prev,
-            dietary:
-              diet === "non-veg" || diet === "non_veg"
-                ? "non_veg"
-                : diet === "vegan"
-                ? "vegan"
-                : diet === "jain"
-                ? "jain"
-                : diet === "veg"
-                ? "veg"
-                : "all",
+            dietary: nextDiet,
           }));
+          persistDietaryPreference(nextDiet);
         }}
       />
 
@@ -623,7 +709,12 @@ export default function Home() {
         {/* 2.5 Multi-dimensional Filter Row */}
         <FilterRow
           activeFilters={activeFilters}
-          onFilterChange={(newFilters) => setActiveFilters(newFilters)}
+          onFilterChange={(newFilters) => {
+            setActiveFilters(newFilters);
+            if (newFilters.dietary) {
+              persistDietaryPreference(newFilters.dietary);
+            }
+          }}
           availableCuisines={availableCuisines}
           counts={filterCounts}
         />
