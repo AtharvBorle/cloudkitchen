@@ -101,10 +101,48 @@ export const ResponsiveSellerOrdersDetails: React.FC<
   const handleBackClick = () => {
     if (onBack) {
       onBack();
-    } else if (typeof window !== "undefined" && window.history.length > 1) {
-      router.back();
+      return;
+    }
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const fromParam = urlParams.get("from");
+      if (fromParam === "dashboard") {
+        router.push("/seller/res/dashboard");
+        return;
+      }
+      if (fromParam === "orders") {
+        router.push("/seller/res/orders");
+        return;
+      }
+      if (document.referrer) {
+        if (
+          document.referrer.includes("/seller/res/dashboard") ||
+          document.referrer.includes("/seller/dashboard")
+        ) {
+          router.push("/seller/res/dashboard");
+          return;
+        }
+        if (
+          document.referrer.includes("/seller/orders") ||
+          document.referrer.includes("/seller/res/orders")
+        ) {
+          router.push("/seller/res/orders");
+          return;
+        }
+      }
+      if (window.history.length > 1) {
+        const prevPath = window.location.pathname;
+        router.back();
+        setTimeout(() => {
+          if (window.location.pathname === prevPath) {
+            router.push("/seller/res/dashboard");
+          }
+        }, 200);
+        return;
+      }
+      router.push("/seller/res/dashboard");
     } else {
-      router.push("/seller/orders");
+      router.push("/seller/res/dashboard");
     }
   };
 

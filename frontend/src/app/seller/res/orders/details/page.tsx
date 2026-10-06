@@ -1,17 +1,57 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import ResponsiveSellerOrdersDetails from "@/components/seller/seller-orders/responsive/ResponsiveSellerOrdersDetails";
 import { fetchApi } from "@/lib/fetch-api";
 
 function DetailsContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const rawId = searchParams.get("orderId") || "#1234";
   const cleanId = rawId.replace("#", "");
+  const from = searchParams.get("from");
 
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  const handleBack = () => {
+    if (from === "dashboard") {
+      router.push("/seller/res/dashboard");
+      return;
+    }
+    if (from === "orders") {
+      router.push("/seller/res/orders");
+      return;
+    }
+    if (typeof document !== "undefined" && document.referrer) {
+      if (
+        document.referrer.includes("/seller/res/dashboard") ||
+        document.referrer.includes("/seller/dashboard")
+      ) {
+        router.push("/seller/res/dashboard");
+        return;
+      }
+      if (
+        document.referrer.includes("/seller/orders") ||
+        document.referrer.includes("/seller/res/orders")
+      ) {
+        router.push("/seller/res/orders");
+        return;
+      }
+    }
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      const prevPath = window.location.pathname;
+      router.back();
+      setTimeout(() => {
+        if (window.location.pathname === prevPath) {
+          router.push("/seller/res/dashboard");
+        }
+      }, 200);
+      return;
+    }
+    router.push("/seller/res/dashboard");
+  };
 
   useEffect(() => {
     async function loadOrder() {
@@ -90,12 +130,7 @@ function DetailsContent() {
         <p style={{ fontSize: "0.88rem", color: "#64748B", margin: "0 0 20px 0" }}>The requested order could not be located or has expired.</p>
         <button
           type="button"
-          onClick={() => {
-            if (typeof window !== "undefined") {
-              if (window.history.length > 1) window.history.back();
-              else window.location.href = "/seller/orders";
-            }
-          }}
+          onClick={handleBack}
           style={{
             padding: "10px 20px",
             backgroundColor: "#FF5500",
@@ -138,6 +173,7 @@ function DetailsContent() {
       paymentMethod={`${order?.paymentMethod || "COD"} (${order?.isPaid ? "Paid" : "Unpaid"})`}
       initialStatus={order ? mapStatusToStep(order.status) : "Order Placed"}
       createdAt={order?.createdAt}
+      onBack={handleBack}
     />
   );
 }
