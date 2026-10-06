@@ -58,7 +58,7 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
   initialFeatures = DEFAULT_FEATURES,
   initialDuration = "1 Week",
   initialMealTimings = DEFAULT_MEAL_TIMINGS,
-  initialAllowPauseBilling = false,
+  initialAllowPauseBilling = true,
   onBack,
   onDeployPlan,
   onDiscard,
@@ -152,7 +152,7 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
       features: validFeatures,
       mealTimings: mealTimings.map((m) => `${m.name}: ${m.time}`),
       allowCancel: false,
-      pauseBillingPeriod: pauseBillingPeriod || "30 Days",
+      pauseBillingPeriod: allowPauseBilling ? (pauseBillingPeriod || "30 Days") : "None",
       status: "Live" as const,
     };
 
@@ -424,54 +424,91 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
             <h2 className={styles.cardTitle}>Subscription Policies</h2>
 
             <div className={styles.policyList}>
-              {/* Allow User to Pause Billing */}
+              {/* Allow User to Pause Subscription */}
               <div className={styles.policyRow}>
                 <div className={styles.policyInfo}>
-                  <h3 className={styles.policyTitle}>Allow User to Pause Billing</h3>
-                  <p className={styles.policyDesc}>Enable temporary pause states instead of absolute subscription termination.</p>
+                  <h3 className={styles.policyTitle}>Allow User to Pause Subscription</h3>
+                  <p className={styles.policyDesc}>When enabled, users can pause their meal subscription for up to the max configured days.</p>
                 </div>
-                <div style={{ position: "relative", minWidth: "115px", flexShrink: 0 }}>
-                  <select
-                    value={pauseBillingPeriod}
-                    onChange={(e) => setPauseBillingPeriod(e.target.value)}
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={allowPauseBilling}
+                    onClick={() => setAllowPauseBilling(!allowPauseBilling)}
                     style={{
-                      width: "100%",
-                      height: "36px",
-                      backgroundColor: "#FFFFFF",
-                      border: "1px solid #CBD5E1",
-                      borderRadius: "8px",
-                      padding: "0 24px 0 10px",
-                      fontSize: "12.5px",
-                      fontWeight: 600,
-                      color: "#0F172A",
-                      outline: "none",
+                      width: "44px",
+                      height: "24px",
+                      backgroundColor: allowPauseBilling ? "#FF5500" : "#CBD5E1",
+                      borderRadius: "9999px",
+                      position: "relative",
+                      border: "none",
                       cursor: "pointer",
-                      appearance: "none",
+                      padding: 0,
+                      transition: "background-color 0.25s ease",
                     }}
+                    title={allowPauseBilling ? "Disable pause subscription" : "Enable pause subscription"}
                   >
-                    {Array.from({ length: 30 }, (_, i) => {
-                      const day = i + 1;
-                      const val = `${day} ${day === 1 ? "Day" : "Days"}`;
-                      return (
-                        <option key={val} value={val}>
-                          {val}
-                        </option>
-                      );
-                    })}
-                  </select>
-                  <span
-                    style={{
-                      position: "absolute",
-                      right: "8px",
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      fontSize: "9px",
-                      color: "#64748B",
-                      pointerEvents: "none",
-                    }}
-                  >
-                    ▼
-                  </span>
+                    <span
+                      style={{
+                        position: "absolute",
+                        top: "2px",
+                        left: "2px",
+                        width: "20px",
+                        height: "20px",
+                        backgroundColor: "#FFFFFF",
+                        borderRadius: "50%",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                        transform: allowPauseBilling ? "translateX(20px)" : "translateX(0)",
+                        transition: "transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+                      }}
+                    />
+                  </button>
+
+                  <div style={{ position: "relative", minWidth: "110px", opacity: allowPauseBilling ? 1 : 0.4, pointerEvents: allowPauseBilling ? "auto" : "none" }}>
+                    <select
+                      value={pauseBillingPeriod}
+                      disabled={!allowPauseBilling}
+                      onChange={(e) => setPauseBillingPeriod(e.target.value)}
+                      style={{
+                        width: "100%",
+                        height: "36px",
+                        backgroundColor: "#FFFFFF",
+                        border: "1px solid #CBD5E1",
+                        borderRadius: "8px",
+                        padding: "0 24px 0 10px",
+                        fontSize: "12.5px",
+                        fontWeight: 600,
+                        color: "#0F172A",
+                        outline: "none",
+                        cursor: "pointer",
+                        appearance: "none",
+                      }}
+                    >
+                      {Array.from({ length: 30 }, (_, i) => {
+                        const day = i + 1;
+                        const val = `${day} ${day === 1 ? "Day" : "Days"}`;
+                        return (
+                          <option key={val} value={val}>
+                            {val}
+                          </option>
+                        );
+                      })}
+                    </select>
+                    <span
+                      style={{
+                        position: "absolute",
+                        right: "8px",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        fontSize: "9px",
+                        color: "#64748B",
+                        pointerEvents: "none",
+                      }}
+                    >
+                      ▼
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

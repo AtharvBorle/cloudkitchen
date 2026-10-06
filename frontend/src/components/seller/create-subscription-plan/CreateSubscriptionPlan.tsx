@@ -59,6 +59,7 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
   ]);
 
   // 5. Subscription Policies
+  const [allowPauseSubscription, setAllowPauseSubscription] = useState(true);
   const [pauseBillingPeriod, setPauseBillingPeriod] = useState('30 Days');
 
   const handleRemoveMealTiming = (id: string) => {
@@ -380,31 +381,44 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
               <div className={styles.card}>
                 <h2 className={styles.cardTitle}>Subscription Policies</h2>
 
-                {/* Policy: Allow User to Pause Billing */}
+                {/* Policy: Allow User to Pause Subscription */}
                 <div className={styles.policyRow}>
                   <div className={styles.policyInfo}>
-                    <span className={styles.policyLabel}>Allow User to Pause Billing</span>
+                    <span className={styles.policyLabel}>Allow User to Pause Subscription</span>
                     <p className={styles.policyDescription}>
-                      Enable temporary pause states instead of absolute subscription termination.
+                      When enabled, users can pause their meal subscription for up to the max configured days.
                     </p>
                   </div>
-                  <div className={styles.pauseSelectWrapper}>
-                    <select
-                      className={styles.pauseSelectInput}
-                      value={pauseBillingPeriod}
-                      onChange={(e) => setPauseBillingPeriod(e.target.value)}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={allowPauseSubscription}
+                      onClick={() => setAllowPauseSubscription(!allowPauseSubscription)}
+                      className={`${styles.toggleSwitch} ${allowPauseSubscription ? styles.toggleSwitchActive : ''}`}
+                      title={allowPauseSubscription ? "Disable pause subscription" : "Enable pause subscription"}
                     >
-                      {Array.from({ length: 30 }, (_, i) => {
-                        const day = i + 1;
-                        const label = `${day} ${day === 1 ? 'Day' : 'Days'}`;
-                        return (
-                          <option key={label} value={label}>
-                            {label}
-                          </option>
-                        );
-                      })}
-                    </select>
-                    <span className={styles.selectArrow}>▼</span>
+                      <div className={`${styles.toggleThumb} ${allowPauseSubscription ? styles.toggleThumbActive : ''}`} />
+                    </button>
+                    <div className={styles.pauseSelectWrapper} style={{ opacity: allowPauseSubscription ? 1 : 0.4, pointerEvents: allowPauseSubscription ? 'auto' : 'none' }}>
+                      <select
+                        className={styles.pauseSelectInput}
+                        value={pauseBillingPeriod}
+                        disabled={!allowPauseSubscription}
+                        onChange={(e) => setPauseBillingPeriod(e.target.value)}
+                      >
+                        {Array.from({ length: 30 }, (_, i) => {
+                          const day = i + 1;
+                          const label = `${day} ${day === 1 ? 'Day' : 'Days'}`;
+                          return (
+                            <option key={label} value={label}>
+                              {label}
+                            </option>
+                          );
+                        })}
+                      </select>
+                      <span className={styles.selectArrow}>▼</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -511,7 +525,7 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
                       mealTimings: mealTimings.map((m) => `${m.name}: ${m.time}`),
                       status: 'Live',
                       allowCancel: false,
-                      pauseBillingPeriod,
+                      pauseBillingPeriod: allowPauseSubscription ? pauseBillingPeriod : "None",
                     });
 
                     setToastMessage(`Plan "${planName}" created & deployed successfully!`);
