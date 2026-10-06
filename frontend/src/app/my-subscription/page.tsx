@@ -154,6 +154,20 @@ function MySubscriptionContent() {
   const [subSuccessMsg, setSubSuccessMsg] = useState<string | null>(null);
   const [subErrorMsg, setSubErrorMsg] = useState<string | null>(null);
 
+  // Ensure isSubmittingSub is immediately reset whenever a new plan is opened
+  useEffect(() => {
+    if (selectedPlanForSub) {
+      setIsSubmittingSub(false);
+    }
+  }, [selectedPlanForSub]);
+
+  const handleCloseSubscribeModal = () => {
+    setIsSubmittingSub(false);
+    setSelectedPlanForSub(null);
+    setSubErrorMsg(null);
+    setSubSuccessMsg(null);
+  };
+
   // Address intelligence & selection states
   const [userSavedAddresses, setUserSavedAddresses] = useState<any[]>([]);
   const [selectedSavedAddressId, setSelectedSavedAddressId] = useState<string | null>(null);
@@ -432,6 +446,7 @@ function MySubscriptionContent() {
       router.push(`/login?callbackUrl=${encodeURIComponent("/my-subscriptions-desktop?tab=plans")}`);
       return;
     }
+    setIsSubmittingSub(false);
     setSelectedPlanForSub(plan);
     const initialAddr = defaultAddress?.address || defaultAddress?.label || (typeof window !== "undefined" ? localStorage.getItem("active-selected-address") || "" : "");
     setDeliveryAddressInput(initialAddr);
@@ -648,6 +663,7 @@ function MySubscriptionContent() {
             }
 
             setTimeout(() => {
+              setIsSubmittingSub(false);
               setSelectedPlanForSub(null);
               setActiveTab("active");
               showToast("success", "Welcome to your new meal subscription!");
@@ -1376,7 +1392,7 @@ function MySubscriptionContent() {
       {selectedPlanForSub && (
         <div
           className={styles.modalOverlay}
-          onClick={() => setSelectedPlanForSub(null)}
+          onClick={handleCloseSubscribeModal}
           role="dialog"
           aria-modal="true"
         >
@@ -1396,7 +1412,7 @@ function MySubscriptionContent() {
               </div>
               <button
                 type="button"
-                onClick={() => setSelectedPlanForSub(null)}
+                onClick={handleCloseSubscribeModal}
                 className={styles.modalCloseBtn}
               >
                 <X size={16} />
@@ -1743,7 +1759,7 @@ function MySubscriptionContent() {
             <div className={styles.modalFooter}>
               <button
                 type="button"
-                onClick={() => setSelectedPlanForSub(null)}
+                onClick={handleCloseSubscribeModal}
                 className={styles.modalCancelBtn}
                 disabled={isSubmittingSub}
               >
