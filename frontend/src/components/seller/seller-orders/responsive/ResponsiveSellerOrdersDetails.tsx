@@ -13,8 +13,11 @@ import {
   Bell,
   XCircle,
   Clock,
+  Check,
+  Loader2,
 } from "lucide-react";
 import { getRemainingSeconds } from "../SellerOrders";
+import { fetchApi } from "@/lib/fetch-api";
 import styles from "./ResponsiveSellerOrdersDetails.module.css";
 
 export interface ResponsiveOrderItemLine {
@@ -45,6 +48,7 @@ export interface ResponsiveSellerOrdersDetailsProps {
   createdAt?: string;
   onBack?: () => void;
   onCallRider?: () => void;
+  onStatusChange?: (newStatus: OrderTimelineStep) => Promise<void> | void;
 }
 
 const DEFAULT_ITEMS: ResponsiveOrderItemLine[] = [];
@@ -70,9 +74,11 @@ export const ResponsiveSellerOrdersDetails: React.FC<
   createdAt,
   onBack,
   onCallRider,
+  onStatusChange,
 }) => {
   const router = useRouter();
   const [currentStatus, setCurrentStatus] = useState<OrderTimelineStep>(initialStatus);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
 
@@ -102,7 +108,69 @@ export const ResponsiveSellerOrdersDetails: React.FC<
     setToastMessage(msg);
     setTimeout(() => {
       setToastMessage(null);
-    }, 2500);
+    }, 2800);
+  };
+
+  const handleUpdateStatus = async (targetStep: OrderTimelineStep) => {
+    if (updatingStatus || currentStatus === targetStep || currentStatus === "Cancelled") return;
+
+    try {
+      setUpdatingStatus(true);
+      if (onStatusChange) {
+        await onStatusChange(targetStep);
+      } else {
+        const cleanId = (orderId || "").replace("#NCR-", "").replace("#ncr-", "").replace("#", "").trim();
+        if (cleanId) {
+          let backendStatus = "PENDING";
+          if (targetStep === "Preparing") backendStatus = "PREPARING";
+          else if (targetStep === "On the way") backendStatus = "OUT_FOR_DELIVERY";
+          else if (targetStep === "Delivered") backendStatus = "DELIVERED";
+          else if (targetStep === "Cancelled") backendStatus = "CANCELLED";
+
+          const res = await fetchApi(`/api/seller/orders/${cleanId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              status: backendStatus,
+              ...(targetStep === "Delivered" ? { isPaid: true } : {}),
+            }),
+          });
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data?.message || data?.error || "Failed to update order status");
+          }
+        }
+      }
+
+      setCurrentStatus(targetStep);
+      if (targetStep === "Delivered") {
+        showToast("🎉 Order marked as Delivered successfully!");
+      } else if (targetStep === "On the way") {
+        showToast("🛵 Order marked Out for Delivery!");
+      } else if (targetStep === "Preparing") {
+        showToast("🍳 Order accepted & cooking started!");
+      } else {
+        showToast(`Order status updated to ${targetStep}`);
+      }
+    } catch (err: any) {
+      console.error("Failed to update status:", err);
+      showToast(err?.message || "Failed to update order status.");
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const getStepStatus = (stepKey: OrderTimelineStep): "completed" | "active" | "inactive" => {
+    if (currentStatus === "Cancelled") {
+      return stepKey === "Order Placed" ? "completed" : "inactive";
+    }
+    const orderProgression: OrderTimelineStep[] = ["Order Placed", "Preparing", "On the way", "Delivered"];
+    const currentIndex = orderProgression.indexOf(currentStatus);
+    const stepIndex = orderProgression.indexOf(stepKey);
+
+    if (stepIndex < currentIndex) return "completed";
+    if (stepIndex === currentIndex) return "active";
+    return "inactive";
   };
 
   const handleBackClick = () => {
@@ -294,18 +362,18 @@ export const ResponsiveSellerOrdersDetails: React.FC<
           {/* 2. Stepper Progress Bar */}
           <section className={styles.stepperCard}>
             <div className={styles.stepperRow}>
-              {/* Step 1: Order Placed */}
-              <div className={styles.stepCol}>
-                <div className={`${styles.stepCircle} ${styles.stepCircleActive}`}>
-                  <FileText size={16} />
-                </div>
-                <span className={`${styles.stepLabel} ${styles.stepLabelActive}`}>
-                  Order Placed
-                </span>
-              </div>
-
               {currentStatus === "Cancelled" ? (
                 <>
+                  {/* Step 1: Order Placed */}
+                  <div className={styles.stepCol}>
+                    <div className={`${styles.stepCircle} ${styles.stepCircleCompleted}`}>
+                      <FileText size={16} />
+                    </div>
+                    <span className={`${styles.stepLabel} ${styles.stepLabelCompleted}`}>
+                      Order Placed
+                    </span>
+                  </div>
+
                   {/* Dotted Line Cancelled */}
                   <div className={`${styles.dottedLine} ${styles.dottedLineCancelled}`} />
 
@@ -321,107 +389,252 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                 </>
               ) : (
                 <>
+                  {/* Step 1: Order Placed */}
+                  <div className={styles.stepCol}>
+                    <button
+                      type="button"
+                      className={styles.stepBtn}
+                      onClick={() => handleUpdateStatus("Order Placed")}
+                      disabled={updatingStatus || currentStatus === "Delivered"}
+                      title="Step 1: Order Placed"
+                      aria-label="Step 1: Order Placed"
+                    >
+                      <div
+                        className={`${styles.stepCircle} ${
+                          getStepStatus("Order Placed") === "active"
+                            ? styles.stepCircleActivePulse
+                            : styles.stepCircleCompleted
+                        }`}
+                      >
+                        {getStepStatus("Order Placed") === "completed" ? (
+                          <Check size={16} strokeWidth={2.8} />
+                        ) : (
+                          <FileText size={16} />
+                        )}
+                      </div>
+                      <span
+                        className={`${styles.stepLabel} ${
+                          getStepStatus("Order Placed") === "active"
+                            ? styles.stepLabelActive
+                            : styles.stepLabelCompleted
+                        }`}
+                      >
+                        Order Placed
+                      </span>
+                    </button>
+                  </div>
+
                   {/* Dotted Line 1-2 */}
                   <div
                     className={`${styles.dottedLine} ${
-                      currentStatus === "Preparing" ||
-                      currentStatus === "On the way" ||
-                      currentStatus === "Delivered"
-                        ? styles.dottedLineActive
+                      getStepStatus("Preparing") === "active"
+                        ? styles.dottedLineFlowing
+                        : getStepStatus("Preparing") === "completed"
+                        ? styles.dottedLineCompleted
                         : styles.dottedLineInactive
                     }`}
                   />
 
                   {/* Step 2: Preparing */}
                   <div className={styles.stepCol}>
-                    <div
-                      className={`${styles.stepCircle} ${
-                        currentStatus === "Preparing" ||
-                        currentStatus === "On the way" ||
-                        currentStatus === "Delivered"
-                          ? styles.stepCircleActive
-                          : styles.stepCircleInactive
-                      }`}
+                    <button
+                      type="button"
+                      className={styles.stepBtn}
+                      onClick={() => handleUpdateStatus("Preparing")}
+                      disabled={updatingStatus || currentStatus === "Delivered"}
+                      title={
+                        currentStatus === "Order Placed"
+                          ? "Tap to Accept & Start Cooking"
+                          : "Step 2: Preparing"
+                      }
+                      aria-label="Step 2: Preparing"
                     >
-                      <CookingPot size={16} />
-                    </div>
-                    <span
-                      className={`${styles.stepLabel} ${
-                        currentStatus === "Preparing" ||
-                        currentStatus === "On the way" ||
-                        currentStatus === "Delivered"
-                          ? styles.stepLabelActive
-                          : styles.stepLabelInactive
-                      }`}
-                    >
-                      Preparing
-                    </span>
+                      <div
+                        className={`${styles.stepCircle} ${
+                          getStepStatus("Preparing") === "active"
+                            ? styles.stepCircleActivePulse
+                            : getStepStatus("Preparing") === "completed"
+                            ? styles.stepCircleCompleted
+                            : styles.stepCircleInactive
+                        }`}
+                      >
+                        {getStepStatus("Preparing") === "completed" ? (
+                          <Check size={16} strokeWidth={2.8} />
+                        ) : (
+                          <CookingPot size={16} />
+                        )}
+                      </div>
+                      <span
+                        className={`${styles.stepLabel} ${
+                          getStepStatus("Preparing") === "active"
+                            ? styles.stepLabelActive
+                            : getStepStatus("Preparing") === "completed"
+                            ? styles.stepLabelCompleted
+                            : styles.stepLabelInactive
+                        }`}
+                      >
+                        Preparing
+                      </span>
+                    </button>
                   </div>
 
                   {/* Dotted Line 2-3 */}
                   <div
                     className={`${styles.dottedLine} ${
-                      currentStatus === "On the way" || currentStatus === "Delivered"
-                        ? styles.dottedLineActive
+                      getStepStatus("On the way") === "active"
+                        ? styles.dottedLineFlowing
+                        : getStepStatus("On the way") === "completed"
+                        ? styles.dottedLineCompleted
                         : styles.dottedLineInactive
                     }`}
                   />
 
                   {/* Step 3: On the way */}
                   <div className={styles.stepCol}>
-                    <div
-                      className={`${styles.stepCircle} ${
-                        currentStatus === "On the way" || currentStatus === "Delivered"
-                          ? styles.stepCircleActive
-                          : styles.stepCircleInactive
-                      }`}
+                    <button
+                      type="button"
+                      className={styles.stepBtn}
+                      onClick={() => handleUpdateStatus("On the way")}
+                      disabled={updatingStatus || currentStatus === "Delivered"}
+                      title={
+                        currentStatus === "Preparing"
+                          ? "Tap to Mark Out for Delivery"
+                          : "Step 3: On the way"
+                      }
+                      aria-label="Step 3: On the way"
                     >
-                      <Bike size={16} />
-                    </div>
-                    <span
-                      className={`${styles.stepLabel} ${
-                        currentStatus === "On the way" || currentStatus === "Delivered"
-                          ? styles.stepLabelActive
-                          : styles.stepLabelInactive
-                      }`}
-                    >
-                      On the way
-                    </span>
+                      <div
+                        className={`${styles.stepCircle} ${
+                          getStepStatus("On the way") === "active"
+                            ? styles.stepCircleActivePulse
+                            : getStepStatus("On the way") === "completed"
+                            ? styles.stepCircleCompleted
+                            : styles.stepCircleInactive
+                        }`}
+                      >
+                        {getStepStatus("On the way") === "completed" ? (
+                          <Check size={16} strokeWidth={2.8} />
+                        ) : (
+                          <Bike size={16} />
+                        )}
+                      </div>
+                      <span
+                        className={`${styles.stepLabel} ${
+                          getStepStatus("On the way") === "active"
+                            ? styles.stepLabelActive
+                            : getStepStatus("On the way") === "completed"
+                            ? styles.stepLabelCompleted
+                            : styles.stepLabelInactive
+                        }`}
+                      >
+                        On the way
+                      </span>
+                    </button>
                   </div>
 
                   {/* Dotted Line 3-4 */}
                   <div
                     className={`${styles.dottedLine} ${
                       currentStatus === "Delivered"
-                        ? styles.dottedLineActive
+                        ? styles.dottedLineDeliveredGreen
                         : styles.dottedLineInactive
                     }`}
                   />
 
-                  {/* Step 4: Delivered */}
+                  {/* Step 4: Delivered (COMPLETION SHOWS AS GREEN) */}
                   <div className={styles.stepCol}>
-                    <div
-                      className={`${styles.stepCircle} ${
-                        currentStatus === "Delivered"
-                          ? styles.stepCircleActive
-                          : styles.stepCircleInactive
-                      }`}
+                    <button
+                      type="button"
+                      className={styles.stepBtn}
+                      onClick={() => handleUpdateStatus("Delivered")}
+                      disabled={updatingStatus || currentStatus === "Delivered"}
+                      title={
+                        currentStatus === "On the way"
+                          ? "Tap to Mark as Delivered"
+                          : "Step 4: Delivered"
+                      }
+                      aria-label="Step 4: Delivered"
                     >
-                      <Package size={16} />
-                    </div>
-                    <span
-                      className={`${styles.stepLabel} ${
-                        currentStatus === "Delivered"
-                          ? styles.stepLabelActive
-                          : styles.stepLabelInactive
-                      }`}
-                    >
-                      Delivered
-                    </span>
+                      <div
+                        className={`${styles.stepCircle} ${
+                          currentStatus === "Delivered"
+                            ? styles.stepCircleDeliveredGreen
+                            : styles.stepCircleInactive
+                        }`}
+                      >
+                        {currentStatus === "Delivered" ? (
+                          <Check size={18} strokeWidth={2.8} />
+                        ) : (
+                          <Package size={16} />
+                        )}
+                      </div>
+                      <span
+                        className={`${styles.stepLabel} ${
+                          currentStatus === "Delivered"
+                            ? styles.stepLabelDeliveredGreen
+                            : styles.stepLabelInactive
+                        }`}
+                      >
+                        {currentStatus === "Delivered" ? "Delivered ✓" : "Delivered"}
+                      </span>
+                    </button>
                   </div>
                 </>
               )}
             </div>
+
+            {/* Contextual Action Bar below stepper */}
+            {currentStatus !== "Cancelled" && (
+              <div className={styles.stepperActionBox}>
+                {currentStatus === "Order Placed" && (
+                  <button
+                    type="button"
+                    className={styles.advanceStepBtn}
+                    onClick={() => handleUpdateStatus("Preparing")}
+                    disabled={updatingStatus}
+                  >
+                    {updatingStatus ? <Loader2 size={16} className={styles.spin} /> : <CookingPot size={16} />}
+                    <span>Accept &amp; Start Preparing Food</span>
+                  </button>
+                )}
+
+                {currentStatus === "Preparing" && (
+                  <button
+                    type="button"
+                    className={styles.advanceStepBtn}
+                    onClick={() => handleUpdateStatus("On the way")}
+                    disabled={updatingStatus}
+                  >
+                    {updatingStatus ? <Loader2 size={16} className={styles.spin} /> : <Bike size={16} />}
+                    <span>Mark Out for Delivery (On the way)</span>
+                  </button>
+                )}
+
+                {currentStatus === "On the way" && (
+                  <button
+                    type="button"
+                    className={`${styles.advanceStepBtn} ${styles.advanceStepBtnGreen}`}
+                    onClick={() => handleUpdateStatus("Delivered")}
+                    disabled={updatingStatus}
+                  >
+                    {updatingStatus ? <Loader2 size={16} className={styles.spin} /> : <CheckCircle2 size={16} />}
+                    <span>Mark as Delivered &amp; Complete ✓</span>
+                  </button>
+                )}
+
+                {currentStatus === "Delivered" && (
+                  <div className={styles.completedNoticeBanner}>
+                    <div className={styles.completedNoticeHeader}>
+                      <CheckCircle2 size={17} color="#059669" />
+                      <span className={styles.completedNoticeTitle}>Order Successfully Delivered</span>
+                    </div>
+                    <p className={styles.completedNoticeText}>
+                      All preparation, courier dispatch, and customer delivery stages have concluded.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </section>
 
           {/* 3. Rider Quick Status Card or Cancelled Notice */}

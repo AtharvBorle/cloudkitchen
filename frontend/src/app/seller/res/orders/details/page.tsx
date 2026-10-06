@@ -199,6 +199,36 @@ function DetailsContent() {
       initialStatus={order ? mapStatusToStep(order.status) : "Order Placed"}
       createdAt={order?.createdAt}
       onBack={handleBack}
+      onStatusChange={async (newStep) => {
+        if (!order?.id) return;
+        let backendStatus = "PENDING";
+        if (newStep === "Preparing") backendStatus = "PREPARING";
+        else if (newStep === "On the way") backendStatus = "OUT_FOR_DELIVERY";
+        else if (newStep === "Delivered") backendStatus = "DELIVERED";
+        else if (newStep === "Cancelled") backendStatus = "CANCELLED";
+
+        const res = await fetchApi(`/api/seller/orders/${order.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            status: backendStatus,
+            ...(newStep === "Delivered" ? { isPaid: true } : {}),
+          }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data?.message || data?.error || "Failed to update order status");
+        }
+        setOrder((prev: any) =>
+          prev
+            ? {
+                ...prev,
+                status: backendStatus,
+                isPaid: newStep === "Delivered" ? true : prev.isPaid,
+              }
+            : null
+        );
+      }}
     />
   );
 }
