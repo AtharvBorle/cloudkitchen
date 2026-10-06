@@ -2,10 +2,10 @@
 
 import React, { useState } from "react";
 import { useRoomModule } from "@/context/RoomModuleContext";
-import { ShieldCheck, Sparkles, BedDouble, Utensils, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
+import { ShieldCheck, Sparkles, BedDouble, Utensils, CheckCircle2, AlertCircle } from "lucide-react";
 
 export default function SuperadminSettingsPage() {
-  const { isRoomEnabled, setRoomEnabled, isLoading, refreshRoomSetting } = useRoomModule();
+  const { isRoomEnabled, setRoomEnabled, isLoading } = useRoomModule();
   const [successToast, setSuccessToast] = useState<string | null>(null);
 
   const handleToggle = async (nextState: boolean) => {
@@ -20,12 +20,6 @@ export default function SuperadminSettingsPage() {
     }
   };
 
-  const handleManualSync = async () => {
-    await refreshRoomSetting();
-    setSuccessToast("System settings synchronized across all active modules.");
-    setTimeout(() => setSuccessToast(null), 3000);
-  };
-
   return (
     <div style={{ maxWidth: "1000px", margin: "0 auto", paddingBottom: "60px" }}>
       {/* Header */}
@@ -38,28 +32,6 @@ export default function SuperadminSettingsPage() {
             Configure global platform feature flags, version rollout controls, and module availability.
           </p>
         </div>
-
-        <button
-          type="button"
-          onClick={handleManualSync}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "8px",
-            padding: "8px 16px",
-            borderRadius: "8px",
-            border: "1.5px solid var(--border)",
-            backgroundColor: "#FFFFFF",
-            fontSize: "0.85rem",
-            fontWeight: "600",
-            color: "var(--text-main)",
-            cursor: "pointer",
-            boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
-          }}
-        >
-          <RefreshCw size={15} />
-          <span>Sync Settings</span>
-        </button>
       </div>
 
       {successToast && (

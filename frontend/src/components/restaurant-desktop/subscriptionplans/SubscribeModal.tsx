@@ -105,8 +105,12 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
 
   // Initialize and load saved addresses
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      setIsSubmitting(false);
+      return;
+    }
 
+    setIsSubmitting(false);
     setIsChangingAddress(false);
     setIsEditingPhone(false);
     setShowManualAddressInput(false);
@@ -339,6 +343,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
               razorpay_signature: response.razorpay_signature,
             });
 
+            setIsSubmitting(false);
             if (onSubscribed) {
               onSubscribed(verified.subscription);
             }
@@ -375,8 +380,14 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
     }
   };
 
+  const handleModalClose = () => {
+    setIsSubmitting(false);
+    setErrorMsg(null);
+    onClose();
+  };
+
   return (
-    <div className={styles.overlay} onClick={onClose} role="dialog" aria-modal="true">
+    <div className={styles.overlay} onClick={handleModalClose} role="dialog" aria-modal="true">
       <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className={styles.modalHeader}>
@@ -389,7 +400,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
               <p className={styles.modalSubtitle}>{plan.sellerName || "Cloud Kitchen"}</p>
             </div>
           </div>
-          <button type="button" className={styles.closeBtn} onClick={onClose} aria-label="Close dialog">
+          <button type="button" className={styles.closeBtn} onClick={handleModalClose} aria-label="Close dialog">
             <X size={20} />
           </button>
         </div>
@@ -705,7 +716,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
 
         {/* Footer */}
         <div className={styles.modalFooter}>
-          <button type="button" className={styles.btnCancel} onClick={onClose} disabled={isSubmitting}>
+          <button type="button" className={styles.btnCancel} onClick={handleModalClose} disabled={isSubmitting}>
             Cancel
           </button>
           <button
