@@ -272,7 +272,6 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newCategory, setNewCategory] = useState("Operations");
-  const [newPriority, setNewPriority] = useState<"High" | "Medium" | "Low">("Medium");
   const [newDescription, setNewDescription] = useState("");
   const [isSubmittingTicket, setIsSubmittingTicket] = useState(false);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
@@ -357,30 +356,6 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
     loadTicketDetails(id);
   };
 
-  const handleUpdatePriority = async (ticketId: string, newPri: "High" | "Medium" | "Low") => {
-    if (!ticketId) return;
-    // Optimistic update
-    setTickets((prev) =>
-      prev.map((t) => (t.id === ticketId ? { ...t, priority: newPri } : t))
-    );
-    try {
-      const res = await fetchApi(`/api/tickets/${ticketId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ priority: newPri }),
-      });
-      if (res.ok) {
-        showToast(`Ticket priority updated to ${newPri}`, "success");
-        await loadTicketDetails(ticketId);
-      } else {
-        const errJson = await res.json().catch(() => ({}));
-        showToast(errJson.message || "Failed to update ticket priority", "error");
-      }
-    } catch (err: any) {
-      showToast(err.message || "Failed to update priority", "error");
-    }
-  };
-
   const handleCreateTicket = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim()) {
@@ -401,7 +376,7 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
           title: newTitle.trim(),
           category: newCategory,
           description: newDescription.trim(),
-          priority: newPriority,
+          priority: "Medium",
         }),
       });
 
@@ -412,7 +387,6 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
         setNewTitle("");
         setNewDescription("");
         setNewCategory("Operations");
-        setNewPriority("Medium");
         const createdId = data.id || data.data?.id;
         await fetchTickets(createdId);
         if (createdId) {
@@ -490,19 +464,6 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
     }
   };
 
-  const getPriorityBadgeStyle = (priority: Ticket["priority"]) => {
-    switch (priority) {
-      case "High":
-        return styles.priorityHigh;
-      case "Medium":
-        return styles.priorityMedium;
-      case "Low":
-        return styles.priorityLow;
-      default:
-        return styles.priorityMedium;
-    }
-  };
-
   return (
     <div className={styles.container}>
       {/* 1. Left Sidebar (Drawer on mobile triggered via hamburger) */}
@@ -560,44 +521,6 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
                   {selectedTicket?.status || "Open"}
                 </span>
               </div>
-
-              {/* Mobile Chat Priority Row */}
-              {selectedTicket?.status !== "Closed" && selectedTicket?.priority && (
-                <div className={styles.mobileChatPriorityBar}>
-                  <span className={styles.priorityLabel}>Priority</span>
-                  <select
-                    value={selectedTicket.priority}
-                    onChange={(e) => {
-                      const newP = e.target.value as "High" | "Medium" | "Low";
-                      if (selectedTicket) {
-                        handleUpdatePriority(selectedTicket.id, newP);
-                      }
-                    }}
-                    className={`${styles.priorityBadge} ${getPriorityBadgeStyle(
-                      selectedTicket.priority
-                    )}`}
-                    style={{
-                      cursor: "pointer",
-                      border: "none",
-                      outline: "none",
-                      appearance: "none",
-                      WebkitAppearance: "none",
-                      MozAppearance: "none",
-                      paddingRight: "18px",
-                      backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
-                      backgroundRepeat: "no-repeat",
-                      backgroundPosition: "right 5px center",
-                      backgroundSize: "9px 9px",
-                    }}
-                    aria-label="Change ticket priority"
-                    title="Click to change ticket priority"
-                  >
-                    <option value="High">High</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Low">Low</option>
-                  </select>
-                </div>
-              )}
             </div>
           ) : (
             <div className={styles.mobileListNavHeader}>
@@ -696,16 +619,6 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
                       >
                         <div className={styles.ticketCardHeader}>
                           <span className={styles.ticketCategory}>{ticket.category}</span>
-                          {ticket.status !== "Closed" && ticket.priority && (
-                            <span
-                              className={`${styles.priorityBadge} ${getPriorityBadgeStyle(
-                                ticket.priority
-                              )}`}
-                              style={{ fontSize: "0.68rem", padding: "1px 8px" }}
-                            >
-                              {ticket.priority}
-                            </span>
-                          )}
                           <span className={styles.ticketTime}>{ticket.time}</span>
                         </div>
 
@@ -777,37 +690,6 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
                   </div>
 
                   <div className={styles.chatHeaderBadges}>
-                    {selectedTicket.status !== "Closed" && selectedTicket.priority && (
-                      <select
-                        value={selectedTicket.priority}
-                        onChange={(e) => {
-                          const newP = e.target.value as "High" | "Medium" | "Low";
-                          handleUpdatePriority(selectedTicket.id, newP);
-                        }}
-                        className={`${styles.priorityBadge} ${getPriorityBadgeStyle(
-                          selectedTicket.priority
-                        )}`}
-                        style={{
-                          cursor: "pointer",
-                          border: "none",
-                          outline: "none",
-                          appearance: "none",
-                          WebkitAppearance: "none",
-                          MozAppearance: "none",
-                          paddingRight: "18px",
-                          backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
-                          backgroundRepeat: "no-repeat",
-                          backgroundPosition: "right 5px center",
-                          backgroundSize: "9px 9px",
-                        }}
-                        aria-label="Change ticket priority"
-                        title="Click to change ticket priority"
-                      >
-                        <option value="High">High</option>
-                        <option value="Medium">Medium</option>
-                        <option value="Low">Low</option>
-                      </select>
-                    )}
                     <span
                       className={`${styles.statusBadge} ${getStatusBadgeStyle(
                         selectedTicket.status
@@ -959,21 +841,6 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
                         {cat}
                       </option>
                     ))}
-                  </select>
-                </div>
-
-                <div className={styles.formGroup}>
-                  <label className={styles.formLabel}>
-                    Priority <span className={styles.formLabelRequired}>*</span>
-                  </label>
-                  <select
-                    value={newPriority}
-                    onChange={(e) => setNewPriority(e.target.value as "High" | "Medium" | "Low")}
-                    className={styles.formSelect}
-                  >
-                    <option value="High">High (Urgent Issue)</option>
-                    <option value="Medium">Medium (Standard Request)</option>
-                    <option value="Low">Low (General Query)</option>
                   </select>
                 </div>
 

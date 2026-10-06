@@ -56,7 +56,7 @@ export default function ResponsiveSellerDashboardPage() {
                 details: `Customer: ${o.user?.name || "Customer"}${customerPhone ? ` • Phone: ${customerPhone}` : ""}${address ? ` • Address: ${address}` : ""}`,
                 severity: "success",
                 actionLabel: "View Order",
-                actionHref: `/seller/orders/details?orderId=${encodeURIComponent(o.id)}`,
+                actionHref: `/seller/orders/details?orderId=${encodeURIComponent(o.id)}&from=dashboard`,
               });
             }
           });
@@ -105,7 +105,7 @@ export default function ResponsiveSellerDashboardPage() {
             details: `Customer: ${o.user?.name || "Customer"}${customerPhone ? ` • Phone: ${customerPhone}` : ""}${address ? ` • Address: ${address}` : ""}`,
             severity: "success",
             actionLabel: "View Order",
-            actionHref: `/seller/orders/details?orderId=${encodeURIComponent(orderId)}`,
+            actionHref: `/seller/orders/details?orderId=${encodeURIComponent(orderId)}&from=dashboard`,
           });
         }
       }
@@ -146,7 +146,7 @@ export default function ResponsiveSellerDashboardPage() {
         amount: `₹${o.totalAmount || 0}`,
         timeAgo: timeAgoStr,
         status: statusText,
-        href: `/seller/orders/details?orderId=${encodeURIComponent(o.id)}`,
+        href: `/seller/orders/details?orderId=${encodeURIComponent(o.id)}&from=dashboard`,
       };
     });
   }, [ordersList]);

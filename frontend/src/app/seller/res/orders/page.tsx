@@ -142,7 +142,7 @@ export default function ResponsiveSellerOrdersPage() {
       onAccept={handleAcceptOrder}
       onReject={handleRejectOrder}
       onOrderClick={(order) => {
-        router.push(`/seller/orders/details?orderId=${encodeURIComponent(order.id)}`);
+        router.push(`/seller/orders/details?orderId=${encodeURIComponent(order.id)}&from=orders`);
       }}
     />
   );
