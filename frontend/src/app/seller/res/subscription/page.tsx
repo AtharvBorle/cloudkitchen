@@ -11,18 +11,47 @@ export default function ResponsiveSellerSubscriptionPage() {
 
   const mapPlans = (stored: any[]): ResponsiveSubscriptionPlan[] => {
     return stored.map((p) => {
-      const tierLower = (p.tier || "").toLowerCase();
-      const tierVariant: "blue" | "indigo" | "orange" | "purple" = tierLower === "gold" ? "purple" : tierLower === "silver" ? "blue" : "orange";
-      const status: "Draft" | "Paused" | "Active" = p.status === "Live" ? "Active" : p.status === "Paused" ? "Paused" : "Draft";
+      const tierLower = (p.tier || "").trim().toLowerCase();
+      const tierVariant: "blue" | "indigo" | "orange" | "purple" =
+        tierLower === "gold" || tierLower === "enterprise"
+          ? "purple"
+          : tierLower === "silver" || tierLower === "professional"
+          ? "blue"
+          : "orange";
+
+      const statusLower = (p.status || "").trim().toLowerCase();
+      const status: "Draft" | "Paused" | "Active" =
+        statusLower === "live" || statusLower === "active"
+          ? "Active"
+          : statusLower === "paused"
+          ? "Paused"
+          : "Draft";
+
+      const tierFormatted =
+        tierLower === "gold" || tierLower === "enterprise"
+          ? "Gold"
+          : tierLower === "silver" || tierLower === "professional"
+          ? "Silver"
+          : "Bronze";
+
+      const rawPrice = p.weeklyPrice || p.monthlyPrice || "₹0";
+      const formattedPrice = String(rawPrice).startsWith("₹") ? rawPrice : `₹${rawPrice}`;
+
+      const formattedDate = p.deployedDate
+        ? p.deployedDate
+        : p.createdAt
+        ? new Date(p.createdAt).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" })
+        : "Recently";
+
       return {
         id: p.id,
-        title: p.name,
-        tier: p.tier,
+        title: p.name || p.title || "Meal Plan",
+        tier: tierFormatted,
         tierVariant,
-        price: p.weeklyPrice || p.monthlyPrice,
+        price: formattedPrice,
         subscribersCount: p.subscribersCount || 0,
         status,
-        createdAt: p.deployedDate,
+        createdAt: formattedDate,
         billingCycle: p.duration?.toLowerCase().includes("month") ? "Monthly" : "Weekly",
         mealsPerDay: p.mealTimings && p.mealTimings.length > 0 ? p.mealTimings.length : 1,
         mealTypes: p.mealTimings && p.mealTimings.length > 0 ? p.mealTimings.map((m: string) => m.split(":")[0].trim()) : ["Lunch"],

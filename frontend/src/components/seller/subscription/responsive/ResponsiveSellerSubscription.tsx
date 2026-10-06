@@ -187,28 +187,60 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
   };
 
   // Filter and sort plans
-  const filteredPlans = activePlans
-    .filter((plan) => {
-      const matchStatus = statusFilter === "All" || plan.status === statusFilter;
-      const matchTier = tierFilter === "All" || plan.tier === tierFilter;
-      return matchStatus && matchTier;
-    })
-    .sort((a, b) => {
-      if (sortBy === "Subscribers") {
-        return b.subscribersCount - a.subscribersCount;
-      }
-      if (sortBy === "Price: Low to High") {
-        const pA = parseInt(a.price.replace(/[^\d]/g, "")) || 0;
-        const pB = parseInt(b.price.replace(/[^\d]/g, "")) || 0;
-        return pA - pB;
-      }
-      if (sortBy === "Price: High to Low") {
-        const pA = parseInt(a.price.replace(/[^\d]/g, "")) || 0;
-        const pB = parseInt(b.price.replace(/[^\d]/g, "")) || 0;
-        return pB - pA;
-      }
-      return 0; // default order
-    });
+  const filteredPlans = useMemo(() => {
+    return activePlans
+      .filter((plan) => {
+        // Status filter matching
+        if (statusFilter !== "All") {
+          const planStatus = (plan.status || "").trim().toLowerCase();
+          const targetStatus = statusFilter.trim().toLowerCase();
+          if (targetStatus === "active") {
+            if (planStatus !== "active" && planStatus !== "live") return false;
+          } else if (planStatus !== targetStatus) {
+            return false;
+          }
+        }
+
+        // Tier filter matching
+        if (tierFilter !== "All") {
+          const planTier = (plan.tier || "").trim().toLowerCase();
+          const targetTier = tierFilter.trim().toLowerCase();
+          if (targetTier === "bronze") {
+            if (planTier !== "bronze" && planTier !== "starter") return false;
+          } else if (targetTier === "silver") {
+            if (planTier !== "silver" && planTier !== "professional") return false;
+          } else if (targetTier === "gold") {
+            if (planTier !== "gold" && planTier !== "enterprise") return false;
+          } else {
+            if (planTier !== targetTier) return false;
+          }
+        }
+
+        return true;
+      })
+      .sort((a, b) => {
+        if (sortBy === "Newest") {
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          if (dateA && dateB) return dateB - dateA;
+          return String(b.id || "").localeCompare(String(a.id || ""));
+        }
+        if (sortBy === "Subscribers") {
+          return (b.subscribersCount || 0) - (a.subscribersCount || 0);
+        }
+        if (sortBy === "Price: Low to High") {
+          const pA = parseFloat(String(a.price || "").replace(/[^\d.]/g, "")) || 0;
+          const pB = parseFloat(String(b.price || "").replace(/[^\d.]/g, "")) || 0;
+          return pA - pB;
+        }
+        if (sortBy === "Price: High to Low") {
+          const pA = parseFloat(String(a.price || "").replace(/[^\d.]/g, "")) || 0;
+          const pB = parseFloat(String(b.price || "").replace(/[^\d.]/g, "")) || 0;
+          return pB - pA;
+        }
+        return 0;
+      });
+  }, [activePlans, statusFilter, tierFilter, sortBy]);
 
   const getTierBadgeClass = (tierVariant?: string, tier?: string) => {
     const t = (tier || "").toLowerCase();
@@ -310,11 +342,17 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
           {/* 2. Filter & Sort Row (Dropdown Pills) */}
           <section className={styles.filterRow} aria-label="Subscription Filters">
             {/* Status Filter Pill & Dropdown */}
-            <div className={styles.dropdownWrapper} ref={statusRef}>
+            <div
+              className={`${styles.dropdownWrapper} ${openDropdown === "status" ? styles.dropdownWrapperActive : ""}`}
+              ref={statusRef}
+            >
               <button
                 type="button"
                 className={`${styles.filterChip} ${statusFilter !== "All" || openDropdown === "status" ? styles.filterChipActive : ""}`}
-                onClick={() => setOpenDropdown((prev) => (prev === "status" ? null : "status"))}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setOpenDropdown((prev) => (prev === "status" ? null : "status"));
+                }}
                 aria-haspopup="listbox"
                 aria-expanded={openDropdown === "status"}
               >
@@ -326,7 +364,12 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
               </button>
 
               {openDropdown === "status" && (
-                <div className={`${styles.dropdownMenu} ${styles.dropdownLeft}`} role="listbox" aria-label="Filter by Status">
+                <div
+                  className={`${styles.dropdownMenu} ${styles.dropdownLeft}`}
+                  role="listbox"
+                  aria-label="Filter by Status"
+                  onPointerDown={(e) => e.stopPropagation()}
+                >
                   {STATUS_OPTIONS.map((opt) => {
                     const isSelected = statusFilter === opt.value;
                     return (
@@ -334,7 +377,10 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
                         key={opt.value}
                         type="button"
                         className={`${styles.dropdownItem} ${isSelected ? styles.dropdownItemActive : ""}`}
-                        onClick={() => {
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
                           setStatusFilter(opt.value);
                           setOpenDropdown(null);
                         }}
@@ -351,11 +397,17 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
             </div>
 
             {/* Plan Tier Filter Pill & Dropdown */}
-            <div className={styles.dropdownWrapper} ref={tierRef}>
+            <div
+              className={`${styles.dropdownWrapper} ${openDropdown === "tier" ? styles.dropdownWrapperActive : ""}`}
+              ref={tierRef}
+            >
               <button
                 type="button"
                 className={`${styles.filterChip} ${tierFilter !== "All" || openDropdown === "tier" ? styles.filterChipActive : ""}`}
-                onClick={() => setOpenDropdown((prev) => (prev === "tier" ? null : "tier"))}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setOpenDropdown((prev) => (prev === "tier" ? null : "tier"));
+                }}
                 aria-haspopup="listbox"
                 aria-expanded={openDropdown === "tier"}
               >
@@ -367,7 +419,12 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
               </button>
 
               {openDropdown === "tier" && (
-                <div className={`${styles.dropdownMenu} ${styles.dropdownCenter}`} role="listbox" aria-label="Filter by Plan Tier">
+                <div
+                  className={`${styles.dropdownMenu} ${styles.dropdownCenter}`}
+                  role="listbox"
+                  aria-label="Filter by Plan Tier"
+                  onPointerDown={(e) => e.stopPropagation()}
+                >
                   {tierOptions.map((opt) => {
                     const isSelected = tierFilter === opt.value;
                     return (
@@ -375,7 +432,10 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
                         key={opt.value}
                         type="button"
                         className={`${styles.dropdownItem} ${isSelected ? styles.dropdownItemActive : ""}`}
-                        onClick={() => {
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
                           setTierFilter(opt.value);
                           setOpenDropdown(null);
                         }}
@@ -392,11 +452,17 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
             </div>
 
             {/* Sort Filter Pill & Dropdown */}
-            <div className={styles.dropdownWrapper} ref={sortRef}>
+            <div
+              className={`${styles.dropdownWrapper} ${openDropdown === "sort" ? styles.dropdownWrapperActive : ""}`}
+              ref={sortRef}
+            >
               <button
                 type="button"
                 className={`${styles.filterChip} ${sortBy !== "Newest" || openDropdown === "sort" ? styles.filterChipActive : ""}`}
-                onClick={() => setOpenDropdown((prev) => (prev === "sort" ? null : "sort"))}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setOpenDropdown((prev) => (prev === "sort" ? null : "sort"));
+                }}
                 aria-haspopup="listbox"
                 aria-expanded={openDropdown === "sort"}
               >
@@ -408,7 +474,12 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
               </button>
 
               {openDropdown === "sort" && (
-                <div className={`${styles.dropdownMenu} ${styles.dropdownRight}`} role="listbox" aria-label="Sort Plans">
+                <div
+                  className={`${styles.dropdownMenu} ${styles.dropdownRight}`}
+                  role="listbox"
+                  aria-label="Sort Plans"
+                  onPointerDown={(e) => e.stopPropagation()}
+                >
                   {SORT_OPTIONS.map((opt) => {
                     const isSelected = sortBy === opt.value;
                     return (
@@ -416,7 +487,10 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
                         key={opt.value}
                         type="button"
                         className={`${styles.dropdownItem} ${isSelected ? styles.dropdownItemActive : ""}`}
-                        onClick={() => {
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
                           setSortBy(opt.value);
                           setOpenDropdown(null);
                         }}

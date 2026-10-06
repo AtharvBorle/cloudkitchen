@@ -305,7 +305,7 @@
   gap: 6px;
   overflow: visible;
   position: relative;
-  z-index: 20;
+  z-index: 100;
   flex-wrap: nowrap;
   width: 100%;
 }
@@ -315,6 +315,11 @@
   display: flex;
   flex: 1;
   min-width: 0;
+  z-index: 101;
+}
+
+.dropdownWrapperActive {
+  z-index: 125;
 }
 
 .filterChip {
@@ -379,7 +384,7 @@
 .dropdownBackdrop {
   position: fixed;
   inset: 0;
-  z-index: 40;
+  z-index: 85;
   background: transparent;
 }
 
@@ -389,14 +394,15 @@
   background-color: #FFFFFF;
   border: 1px solid #E2E8F0;
   border-radius: 14px;
-  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.14), 0 8px 10px -6px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.16), 0 8px 10px -6px rgba(15, 23, 42, 0.08);
   min-width: 160px;
-  z-index: 50;
+  z-index: 130;
   padding: 6px;
   display: flex;
   flex-direction: column;
   gap: 2px;
   animation: dropdownFadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
+  pointer-events: auto;
 }
 
 .dropdownLeft {
@@ -444,6 +450,9 @@
   transition: background-color 0.12s ease, color 0.12s ease;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+  pointer-events: auto;
+  position: relative;
+  z-index: 131;
 }
 
 .dropdownItem:hover {
