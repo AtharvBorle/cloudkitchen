@@ -48,8 +48,16 @@ import {
   Navigation,
   Home,
   Briefcase,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 import styles from "./MySubscriptionPage.module.css";
+
+const START_DATE_OPTIONS = [
+  { value: "Tomorrow", label: "Starts Tomorrow (Next Delivery Slot)" },
+  { value: "Monday", label: "Starts Coming Monday" },
+  { value: "1st", label: "Starts 1st of Next Month" },
+];
 
 const PUNE_LOCALITY_SUGGESTIONS = [
   { name: "Kothrud, Pune", pincode: "411038" },
@@ -151,6 +159,10 @@ function MySubscriptionContent() {
   const [isDetectingGps, setIsDetectingGps] = useState<boolean>(false);
   const addressSuggestionsRef = useRef<HTMLDivElement>(null);
 
+  // Custom Start Date Dropdown state
+  const [isStartDateOpen, setIsStartDateOpen] = useState<boolean>(false);
+  const startDateRef = useRef<HTMLDivElement>(null);
+
   // Click outside to close suggestions
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -161,6 +173,19 @@ function MySubscriptionContent() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Click outside to close start date dropdown
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (startDateRef.current && !startDateRef.current.contains(e.target as Node)) {
+        setIsStartDateOpen(false);
+      }
+    }
+    if (isStartDateOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [isStartDateOpen]);
 
   // Sync tab with URL
   useEffect(() => {
@@ -428,6 +453,7 @@ function MySubscriptionContent() {
     setIsEditingPhone(false);
     setShowManualAddressInput(false);
     setShowAddressSuggestions(false);
+    setIsStartDateOpen(false);
 
     // Fetch user saved addresses
     fetchApi("/api/user/addresses")
@@ -1642,20 +1668,52 @@ function MySubscriptionContent() {
               </div>
 
               {/* Start Date Preference */}
-              <div className={styles.formGroup}>
+              <div className={styles.formGroup} ref={startDateRef}>
                 <label className={styles.formLabel}>
                   <Calendar size={13} color="#FF5500" />
                   <span>Subscription Start Date</span>
                 </label>
-                <select
-                  value={startDatePreference}
-                  onChange={(e) => setStartDatePreference(e.target.value)}
-                  className={styles.formInput}
-                >
-                  <option value="Tomorrow">Starts Tomorrow (Next Delivery Slot)</option>
-                  <option value="Monday">Starts Coming Monday</option>
-                  <option value="1st">Starts 1st of Next Month</option>
-                </select>
+                <div className={styles.dateDropdownContainer}>
+                  <button
+                    type="button"
+                    className={`${styles.dateDropdownTrigger} ${isStartDateOpen ? styles.dateDropdownTriggerActive : ""}`}
+                    onClick={() => setIsStartDateOpen((prev) => !prev)}
+                    aria-haspopup="listbox"
+                    aria-expanded={isStartDateOpen}
+                  >
+                    <span className={styles.dateDropdownText}>
+                      {START_DATE_OPTIONS.find((opt) => opt.value === startDatePreference)?.label || "Starts Tomorrow (Next Delivery Slot)"}
+                    </span>
+                    <ChevronDown
+                      size={18}
+                      className={`${styles.dateChevronIcon} ${isStartDateOpen ? styles.dateChevronIconOpen : ""}`}
+                    />
+                  </button>
+
+                  {isStartDateOpen && (
+                    <div className={styles.dateDropdownMenu} role="listbox">
+                      {START_DATE_OPTIONS.map((opt) => {
+                        const isSelected = startDatePreference === opt.value;
+                        return (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            role="option"
+                            aria-selected={isSelected}
+                            className={`${styles.dateDropdownOption} ${isSelected ? styles.dateDropdownOptionSelected : ""}`}
+                            onClick={() => {
+                              setStartDatePreference(opt.value);
+                              setIsStartDateOpen(false);
+                            }}
+                          >
+                            <span>{opt.label}</span>
+                            {isSelected && <Check size={16} className={styles.dateOptionCheck} />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Breakdown */}
