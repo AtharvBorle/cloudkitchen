@@ -9,6 +9,7 @@ import {
   Send,
   Menu,
   Plus,
+  PlusCircle,
   ArrowLeft,
   X,
   Loader2,
@@ -526,7 +527,7 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
                 onClick={() => setIsCreateModalOpen(true)}
                 title="Raise New Ticket"
               >
-                <Plus size={18} />
+                <PlusCircle size={22} strokeWidth={2.4} />
               </button>
             </div>
           )}
