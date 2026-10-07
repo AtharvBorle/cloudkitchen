@@ -192,32 +192,7 @@
   border-color: #F97316;
 }
 
-.liveSyncIndicator {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.78rem;
-  color: #10B981;
-  font-weight: 600;
-  padding: 6px 12px;
-  background-color: #ECFDF5;
-  border: 1px solid #A7F3D0;
-  border-radius: 8px;
-}
 
-.liveSyncDot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background-color: #10B981;
-  animation: pulse 1.8s infinite;
-}
-
-@keyframes pulse {
-  0% { transform: scale(0.95); opacity: 0.7; }
-  50% { transform: scale(1.2); opacity: 1; }
-  100% { transform: scale(0.95); opacity: 0.7; }
-}
 
 /* Action Buttons inside Table Rows */
 .actionBtnGroup {

@@ -227,7 +227,63 @@
 .filterSortGroup {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
+}
+
+.inPageSearchWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 280px;
+}
+
+.inPageSearchIcon {
+  position: absolute;
+  left: 11px;
+  color: #94A3B8;
+  pointer-events: none;
+}
+
+.inPageSearchInput {
+  width: 100%;
+  padding: 8px 32px 8px 32px;
+  border-radius: 8px;
+  border: 1px solid #E2E8F0;
+  background-color: #FFFFFF;
+  font-size: 13px;
+  color: #0F172A;
+  font-family: inherit;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.inPageSearchInput::placeholder {
+  color: #94A3B8;
+}
+
+.inPageSearchInput:focus {
+  border-color: #F97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+}
+
+.inPageClearBtn {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  padding: 3px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94A3B8;
+  border-radius: 4px;
+  transition: color 0.15s ease;
+}
+
+.inPageClearBtn:hover {
+  color: #475569;
 }
 
 .controlDropdownWrapper {
@@ -617,6 +673,23 @@
 
   .mainTitle {
     font-size: 22px;
+  }
+
+  .controlsBar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .filterSortGroup {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .inPageSearchWrapper {
+    width: 100%;
+    min-width: 0;
   }
 
   .card, .reviewCard, .breakdownCard, .recentActivityCard, .alertsCard {

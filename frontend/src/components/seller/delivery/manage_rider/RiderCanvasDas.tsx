@@ -29,7 +29,7 @@ export interface RiderCanvasDasProps {
 
 export default function RiderCanvasDas({
   topbarTitle = "Owner Operations Console",
-  searchPlaceholder = "Search order, room, booking...",
+  searchPlaceholder = "Search delivery riders by name, phone, status...",
   ownerName,
   partnerRole,
   avatarInitials,
@@ -49,6 +49,11 @@ export default function RiderCanvasDas({
 
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  const handleSearch = (q: string) => {
+    setSearchQuery(q);
+    if (onSearch) onSearch(q);
+  };
 
   return (
     <div
@@ -88,13 +93,11 @@ export default function RiderCanvasDas({
         <Topbar
           title={topbarTitle}
           searchPlaceholder={searchPlaceholder}
+          searchQuery={searchQuery}
           ownerName={effectiveOwnerName}
           partnerRole={effectivePartnerRole}
           avatarInitials={effectiveAvatarInitials}
-          onSearch={(q) => {
-            setSearchQuery(q);
-            if (onSearch) onSearch(q);
-          }}
+          onSearch={handleSearch}
           onNotificationClick={onNotificationClick}
           onMenuToggle={() => setIsMobileOpen((prev) => !prev)}
         />
@@ -104,6 +107,7 @@ export default function RiderCanvasDas({
           metrics={metrics}
           riders={riders}
           searchQuery={searchQuery}
+          onSearchChange={handleSearch}
           onViewWallet={onViewWallet}
           onAddDeliveryAgent={onAddDeliveryAgent}
           onAddDeliveryBoy={onAddDeliveryBoy}

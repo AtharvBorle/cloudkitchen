@@ -30,6 +30,7 @@ import { useCart } from "@/context/CartContext";
 export interface RestaurantMobileViewProps {
   kitchenData: KitchenData;
   isVegOnly: boolean;
+  isLoading?: boolean;
   onVegToggle: (veg: boolean) => void;
   onAddItem: (item: FoodCardItem) => void;
   onDecreaseItem?: (itemId: string) => void;
@@ -41,6 +42,7 @@ export interface RestaurantMobileViewProps {
 export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
   kitchenData,
   isVegOnly,
+  isLoading = false,
   onVegToggle,
   onAddItem,
   onDecreaseItem,
@@ -524,7 +526,62 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
         <div className={styles.foodSection}>
           <h2 className={styles.foodSectionTitle}>{getSectionTitle()}</h2>
 
-          {finalDisplayItems.length === 0 ? (
+          {isLoading ? (
+            <div className={styles.foodList}>
+              {[1, 2, 3, 4].map((i) => (
+                <div key={`mobile-dish-skeleton-${i}`} className={styles.foodCard} style={{ pointerEvents: "none" }}>
+                  <div
+                    className={styles.skeletonPulse}
+                    style={{
+                      width: "88px",
+                      height: "88px",
+                      borderRadius: "12px",
+                      flexShrink: 0,
+                    }}
+                  />
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                    <div>
+                      <div
+                        className={styles.skeletonPulse}
+                        style={{
+                          width: "65%",
+                          height: "16px",
+                          borderRadius: "4px",
+                          marginBottom: "6px",
+                        }}
+                      />
+                      <div
+                        className={styles.skeletonPulse}
+                        style={{
+                          width: "85%",
+                          height: "12px",
+                          borderRadius: "4px",
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
+                      <div
+                        className={styles.skeletonPulse}
+                        style={{
+                          width: "45px",
+                          height: "16px",
+                          borderRadius: "4px",
+                        }}
+                      />
+                      <div
+                        className={styles.skeletonPulse}
+                        style={{
+                          width: "60px",
+                          height: "28px",
+                          borderRadius: "8px",
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : finalDisplayItems.length === 0 ? (
             <div style={{ textAlign: "center", padding: "48px 16px", color: "#64748B", backgroundColor: "#FFFFFF", borderRadius: "16px", border: "1px dashed #E2E8F0", margin: "12px 0" }}>
               <Utensils size={32} color="#94A3B8" style={{ margin: "0 auto 8px", display: "block" }} />
               <div style={{ fontWeight: "700", fontSize: "1rem", color: "#1E293B", marginBottom: "4px" }}>

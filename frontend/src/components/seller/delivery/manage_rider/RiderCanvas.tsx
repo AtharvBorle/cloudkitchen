@@ -21,6 +21,7 @@ import {
   EyeOff,
   ShieldCheck,
   Check,
+  Search,
 } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
 import { validateEmail } from "@/lib/email-validation";
@@ -55,6 +56,7 @@ export interface RiderCanvasProps {
   metrics?: RiderSummaryMetric[];
   riders?: RiderWalletRecord[];
   searchQuery?: string;
+  onSearchChange?: (query: string) => void;
   onViewWallet?: (rider: RiderWalletRecord) => void;
   onAddDeliveryAgent?: () => void;
   onAddDeliveryBoy?: () => void;
@@ -91,12 +93,26 @@ export default function RiderCanvas({
   subtitle = "Audit outstanding cash collections, manage delivery riders, and assign delivery routes.",
   metrics: initialMetrics,
   riders: initialRiders,
-  searchQuery = "",
+  searchQuery: searchQueryProp = "",
+  onSearchChange,
   onViewWallet,
   onAddDeliveryAgent,
   onAddDeliveryBoy,
 }: RiderCanvasProps) {
   const router = useRouter();
+  const [localSearchQuery, setLocalSearchQuery] = useState(searchQueryProp || "");
+  const searchQuery = searchQueryProp !== undefined ? searchQueryProp : localSearchQuery;
+  const handleSearchChange = (query: string) => {
+    setLocalSearchQuery(query);
+    onSearchChange?.(query);
+  };
+
+  useEffect(() => {
+    if (searchQueryProp !== undefined) {
+      setLocalSearchQuery(searchQueryProp);
+    }
+  }, [searchQueryProp]);
+
   const [riderList, setRiderList] = useState<RiderWalletRecord[]>(initialRiders || DEFAULT_RIDERS);
   const [metricsList, setMetricsList] = useState<RiderSummaryMetric[]>(initialMetrics || DEFAULT_METRICS);
   const [isLoading, setIsLoading] = useState(false);
@@ -206,15 +222,52 @@ export default function RiderCanvas({
   const filteredRiders = useMemo(() => {
     if (!searchQuery.trim()) return riderList;
     const q = searchQuery.toLowerCase().trim();
-    return riderList.filter(
-      (r) =>
-        r.name.toLowerCase().includes(q) ||
-        r.phone.toLowerCase().includes(q) ||
-        (r.email && r.email.toLowerCase().includes(q)) ||
-        (r.vehicleNumber && r.vehicleNumber.toLowerCase().includes(q)) ||
-        r.dutyStatus.toLowerCase().includes(q) ||
-        r.codBalance.toString().toLowerCase().includes(q)
-    );
+    const tokens = q.split(/\s+/).filter(Boolean);
+
+    return riderList.filter((r) => {
+      const name = (r.name || "").toLowerCase();
+      const phone = (r.phone || "").toLowerCase();
+      const email = (r.email || "").toLowerCase();
+      const vehicleNumber = (r.vehicleNumber || "").toLowerCase();
+      const vehicleType = (r.vehicleType || "").toLowerCase();
+      const dutyStatus = (r.dutyStatus || "").toLowerCase();
+      const statusText = r.isActive ? "active online on duty" : "inactive offline off duty";
+      const id = (r.id || "").toLowerCase();
+      const balance = String(r.codBalance || "").toLowerCase();
+
+      // Direct full query match
+      if (
+        name.includes(q) ||
+        phone.includes(q) ||
+        email.includes(q) ||
+        vehicleNumber.includes(q) ||
+        vehicleType.includes(q) ||
+        dutyStatus.includes(q) ||
+        statusText.includes(q) ||
+        id.includes(q) ||
+        balance.includes(q)
+      ) {
+        return true;
+      }
+
+      // Multi-token match (all words match some attribute of the delivery person)
+      if (tokens.length > 1) {
+        return tokens.every(
+          (token) =>
+            name.includes(token) ||
+            phone.includes(token) ||
+            email.includes(token) ||
+            vehicleNumber.includes(token) ||
+            vehicleType.includes(token) ||
+            dutyStatus.includes(token) ||
+            statusText.includes(token) ||
+            id.includes(token) ||
+            balance.includes(token)
+        );
+      }
+
+      return false;
+    });
   }, [riderList, searchQuery]);
   const riders = filteredRiders;
 
@@ -743,22 +796,82 @@ export default function RiderCanvas({
           }}
           className="table-frame-3"
         >
-          {/* Card Header with count */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <h2
+          {/* Card Header with count and in-table search */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "12px",
+            }}
+          >
+            <div>
+              <h2
+                style={{
+                  fontSize: "16px",
+                  fontWeight: 700,
+                  color: "#0F172A",
+                  margin: 0,
+                  letterSpacing: "-0.2px",
+                }}
+              >
+                Delivery Squad Roster ({riders.length}{searchQuery.trim() ? ` of ${riderList.length}` : ""})
+              </h2>
+              <span style={{ fontSize: "12.5px", color: "#64748B" }}>
+                Toggle status, edit details, or audit COD cash collection
+              </span>
+            </div>
+
+            {/* In-table Search Bar */}
+            <div
               style={{
-                fontSize: "16px",
-                fontWeight: 700,
-                color: "#0F172A",
-                margin: 0,
-                letterSpacing: "-0.2px",
+                display: "flex",
+                alignItems: "center",
+                backgroundColor: "#F8FAFC",
+                border: "1px solid #E2E8F0",
+                borderRadius: "8px",
+                padding: "6px 12px",
+                width: "300px",
+                maxWidth: "100%",
+                gap: "8px",
+                transition: "border-color 0.15s ease",
               }}
             >
-              Delivery Squad Roster ({riders.length})
-            </h2>
-            <span style={{ fontSize: "12.5px", color: "#64748B" }}>
-              Toggle status, edit details, or audit COD cash collection
-            </span>
+              <Search size={16} color="#64748B" />
+              <input
+                type="text"
+                placeholder="Search delivery person by name..."
+                value={searchQuery}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                style={{
+                  border: "none",
+                  backgroundColor: "transparent",
+                  outline: "none",
+                  fontSize: "13px",
+                  color: "#1E293B",
+                  width: "100%",
+                }}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => handleSearchChange("")}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: 0,
+                    color: "#94A3B8",
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                  title="Clear search"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Table Container */}
@@ -864,49 +977,90 @@ export default function RiderCanvas({
                         fontSize: "14px",
                       }}
                     >
-                      <div
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: "8px",
-                        }}
-                      >
-                        <Truck size={36} color="#CBD5E1" />
-                        <span style={{ fontWeight: 600, color: "#1E293B", fontSize: "15px" }}>
-                          No Delivery Riders Found
-                        </span>
-                        <span style={{ fontSize: "13px", color: "#64748B", maxWidth: "360px" }}>
-                          Register your in-house delivery squad to assign orders and track live cash-on-delivery collections.
-                        </span>
-                        <button
-                          type="button"
-                          onClick={
-                            onAddDeliveryAgent ||
-                            onAddDeliveryBoy ||
-                            (() => router.push("/seller/delivery/add-agent"))
-                          }
+                      {searchQuery.trim() ? (
+                        <div
                           style={{
-                            marginTop: "8px",
-                            backgroundColor: "#F97316",
-                            color: "#FFFFFF",
-                            border: "none",
-                            borderRadius: "8px",
-                            padding: "9px 18px",
-                            fontSize: "13px",
-                            fontWeight: 600,
-                            cursor: "pointer",
-                            display: "inline-flex",
+                            display: "flex",
+                            flexDirection: "column",
                             alignItems: "center",
-                            gap: "6px",
-                            boxShadow: "0 2px 6px rgba(249, 115, 22, 0.25)",
+                            justifyContent: "center",
+                            gap: "8px",
                           }}
                         >
-                          <UserPlus size={15} />
-                          <span>Add Delivery Boy</span>
-                        </button>
-                      </div>
+                          <Search size={36} color="#CBD5E1" />
+                          <span style={{ fontWeight: 600, color: "#1E293B", fontSize: "15px" }}>
+                            No Delivery Person Found
+                          </span>
+                          <span style={{ fontSize: "13px", color: "#64748B", maxWidth: "380px" }}>
+                            No delivery riders match &quot;{searchQuery}&quot;. Try searching with a different name, phone, or vehicle number.
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleSearchChange("")}
+                            style={{
+                              marginTop: "8px",
+                              backgroundColor: "#F1F5F9",
+                              color: "#334155",
+                              border: "1px solid #CBD5E1",
+                              borderRadius: "8px",
+                              padding: "7px 16px",
+                              fontSize: "13px",
+                              fontWeight: 600,
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "6px",
+                            }}
+                          >
+                            <X size={14} />
+                            <span>Clear Search</span>
+                          </button>
+                        </div>
+                      ) : (
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "8px",
+                          }}
+                        >
+                          <Truck size={36} color="#CBD5E1" />
+                          <span style={{ fontWeight: 600, color: "#1E293B", fontSize: "15px" }}>
+                            No Delivery Riders Found
+                          </span>
+                          <span style={{ fontSize: "13px", color: "#64748B", maxWidth: "360px" }}>
+                            Register your in-house delivery squad to assign orders and track live cash-on-delivery collections.
+                          </span>
+                          <button
+                            type="button"
+                            onClick={
+                              onAddDeliveryAgent ||
+                              onAddDeliveryBoy ||
+                              (() => router.push("/seller/delivery/add-agent"))
+                            }
+                            style={{
+                              marginTop: "8px",
+                              backgroundColor: "#F97316",
+                              color: "#FFFFFF",
+                              border: "none",
+                              borderRadius: "8px",
+                              padding: "9px 18px",
+                              fontSize: "13px",
+                              fontWeight: 600,
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "6px",
+                              boxShadow: "0 2px 6px rgba(249, 115, 22, 0.25)",
+                            }}
+                          >
+                            <UserPlus size={15} />
+                            <span>Add Delivery Boy</span>
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ) : (

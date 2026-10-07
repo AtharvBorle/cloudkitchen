@@ -472,7 +472,8 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
             ownerName={effectiveOwnerName}
             partnerRole={effectivePartnerRole}
             avatarInitials={effectiveAvatarInitials}
-            onSearch={onSearch}
+            hideSearch={true}
+            showSearch={false}
             onNotificationClick={onNotificationClick}
             onMenuToggle={() => setIsMobileOpen(true)}
           />

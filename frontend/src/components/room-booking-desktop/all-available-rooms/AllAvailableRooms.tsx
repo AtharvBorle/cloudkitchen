@@ -30,6 +30,7 @@ export interface AllAvailableRoomsProps {
   activeLocation?: string;
   activeBudget?: string;
   activeRoomType?: string;
+  isLoading?: boolean;
   onReset?: () => void;
   onBookNow?: (room: any) => void;
 }
@@ -41,6 +42,7 @@ export const AllAvailableRooms: React.FC<AllAvailableRoomsProps> = ({
   activeLocation = "all",
   activeBudget = "all",
   activeRoomType = "all",
+  isLoading = false,
   onReset,
   onBookNow,
 }) => {
@@ -248,7 +250,36 @@ export const AllAvailableRooms: React.FC<AllAvailableRoomsProps> = ({
 
       <h2 className={styles.heading}>{heading}</h2>
 
-      {displayRooms.length === 0 ? (
+      {isLoading ? (
+        <div className={styles.cardsGrid} role="region" aria-label="Loading Rooms">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <article key={`room-skeleton-${i}`} className={styles.roomCard} style={{ pointerEvents: "none" }}>
+              <div className={styles.skeletonPulse} style={{ width: "100%", height: "200px" }} />
+              <div className={styles.cardBody}>
+                <div className={styles.mainInfo}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                    <div className={styles.skeletonPulse} style={{ width: "65%", height: "20px", borderRadius: "6px" }} />
+                    <div className={styles.skeletonPulse} style={{ width: "45px", height: "18px", borderRadius: "12px" }} />
+                  </div>
+                  <div className={styles.skeletonPulse} style={{ width: "50%", height: "14px", borderRadius: "4px", marginBottom: "14px" }} />
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <div className={styles.skeletonPulse} style={{ width: "60px", height: "22px", borderRadius: "12px" }} />
+                    <div className={styles.skeletonPulse} style={{ width: "75px", height: "22px", borderRadius: "12px" }} />
+                  </div>
+                </div>
+                <div className={styles.cardDivider} />
+                <div className={styles.bottomRow}>
+                  <div>
+                    <div className={styles.skeletonPulse} style={{ width: "80px", height: "10px", borderRadius: "3px", marginBottom: "6px" }} />
+                    <div className={styles.skeletonPulse} style={{ width: "100px", height: "22px", borderRadius: "6px" }} />
+                  </div>
+                  <div className={styles.skeletonPulse} style={{ width: "105px", height: "38px", borderRadius: "9999px" }} />
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : displayRooms.length === 0 ? (
         <div
           style={{
             backgroundColor: "#FFFFFF",

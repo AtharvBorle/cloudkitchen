@@ -50,6 +50,7 @@ export interface PopularFoodProps {
   defaultActiveCategory?: string;
   items?: FoodCardItem[];
   isOnline?: boolean;
+  isLoading?: boolean;
   onCategoryChange?: (category: string) => void;
   onAddItem?: (item: FoodCardItem) => void;
   onDecreaseItem?: (itemId: string) => void;
@@ -61,6 +62,7 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
   defaultActiveCategory = "Popular",
   items = [],
   isOnline = true,
+  isLoading = false,
   onCategoryChange,
   onAddItem,
   onDecreaseItem,
@@ -177,7 +179,29 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
       )}
 
       {/* 3. Food Card Grid or Empty State */}
-      {displayedList.length === 0 ? (
+      {isLoading ? (
+        <div className={styles.foodGrid} role="region" aria-label="Loading Dishes">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={`dish-skeleton-${i}`} className={styles.foodCard} style={{ pointerEvents: "none" }}>
+              <div
+                className={styles.skeletonPulse}
+                style={{ width: "100px", height: "100px", borderRadius: "10px", flexShrink: 0 }}
+              />
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between", minWidth: 0 }}>
+                <div>
+                  <div className={styles.skeletonPulse} style={{ width: "70%", height: "18px", borderRadius: "6px", marginBottom: "8px" }} />
+                  <div className={styles.skeletonPulse} style={{ width: "90%", height: "12px", borderRadius: "4px", marginBottom: "6px" }} />
+                  <div className={styles.skeletonPulse} style={{ width: "50%", height: "12px", borderRadius: "4px" }} />
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "12px" }}>
+                  <div className={styles.skeletonPulse} style={{ width: "55px", height: "18px", borderRadius: "4px" }} />
+                  <div className={styles.skeletonPulse} style={{ width: "75px", height: "32px", borderRadius: "8px" }} />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : displayedList.length === 0 ? (
         <div style={{ textAlign: "center", padding: "56px 24px", backgroundColor: "#FFFFFF", borderRadius: "18px", border: "1px dashed #E2E8F0", margin: "16px 0" }}>
           <Utensils size={40} color="#94A3B8" style={{ margin: "0 auto 12px", display: "block" }} />
           <h3 style={{ margin: "0 0 6px", fontSize: "1.15rem", color: "#1E293B", fontWeight: "700" }}>

@@ -29,7 +29,6 @@ import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import SellerNotificationChannels from "../notification-channels/SellerNotificationChannels";
 import {
   PasswordManagementCard,
-  ActiveLoginSessionsCard,
 } from "../security-settings/SellerSecuritySettings";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import { validateEmail } from "@/lib/email-validation";
@@ -2386,8 +2385,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
               </div>
               */}
 
-              {/* 3. Active Login Sessions Card (Matching Reference Image) */}
-              <ActiveLoginSessionsCard />
+
 
               {/* 4. Login & Recovery Controls Card (Disabled via comment - uncomment to re-enable) */}
               {/*

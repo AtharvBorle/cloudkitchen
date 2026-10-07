@@ -24,7 +24,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
   const { data: session } = useSession();
   const { addToCart, decreaseQuantity } = useCart();
   const isStatic = isStaticKitchen(kitchenId);
-  const [isLoaded, setIsLoaded] = useState<boolean>(() => isStatic);
+  const [isLoaded, setIsLoaded] = useState<boolean>(false);
   const [isNotFound, setIsNotFound] = useState<boolean>(false);
   const [kitchenData, setKitchenData] = useState<KitchenData>(() => getKitchenById(kitchenId));
   const [isVegOnly, setIsVegOnly] = useState<boolean>(() => {
@@ -88,12 +88,9 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
     let isMounted = true;
     const isCurrentStatic = isStaticKitchen(kitchenId);
 
-    if (!isCurrentStatic) {
-      setIsLoaded(false);
-      setIsNotFound(false);
-    } else {
-      setIsLoaded(true);
-      setIsNotFound(false);
+    setIsLoaded(false);
+    setIsNotFound(false);
+    if (isCurrentStatic) {
       setKitchenData(getKitchenById(kitchenId));
     }
 
@@ -632,6 +629,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
             defaultActiveCategory={kitchenData.defaultActiveCategory}
             items={displayedItems}
             isOnline={kitchenData.isOnline !== false}
+            isLoading={!isLoaded}
             onAddItem={handleAddItem}
             onDecreaseItem={handleDecreaseItem}
           />
@@ -644,6 +642,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
         <RestaurantMobileView
           kitchenData={kitchenData}
           isVegOnly={isVegOnly}
+          isLoading={!isLoaded}
           onVegToggle={handleVegToggle}
           onAddItem={handleAddItem}
           onDecreaseItem={handleDecreaseItem}

@@ -1269,12 +1269,13 @@ function FoodExploreContent() {
                       display: "flex",
                       flexDirection: "column",
                       gap: "12px",
+                      boxShadow: "0 4px 16px rgba(0, 0, 0, 0.03)",
                     }}
                   >
-                    <div style={{ width: "100%", height: "170px", backgroundColor: "#F1F5F9", borderRadius: "14px" }} />
-                    <div style={{ width: "70%", height: "20px", backgroundColor: "#F1F5F9", borderRadius: "6px" }} />
-                    <div style={{ width: "45%", height: "16px", backgroundColor: "#F1F5F9", borderRadius: "4px" }} />
-                    <div style={{ width: "90%", height: "36px", backgroundColor: "#F1F5F9", borderRadius: "10px", marginTop: "auto" }} />
+                    <div className="skeleton-shimmer" style={{ width: "100%", height: "170px", borderRadius: "14px" }} />
+                    <div className="skeleton-shimmer" style={{ width: "70%", height: "20px", borderRadius: "6px" }} />
+                    <div className="skeleton-shimmer" style={{ width: "45%", height: "16px", borderRadius: "4px" }} />
+                    <div className="skeleton-shimmer" style={{ width: "90%", height: "36px", borderRadius: "10px", marginTop: "auto" }} />
                   </div>
                 ))}
               </div>
@@ -1887,11 +1888,12 @@ function FoodExploreContent() {
                       display: "flex",
                       flexDirection: "column",
                       gap: "12px",
+                      boxShadow: "0 4px 16px rgba(0, 0, 0, 0.03)",
                     }}
                   >
-                    <div style={{ width: "100%", height: "170px", backgroundColor: "#F1F5F9", borderRadius: "14px" }} />
-                    <div style={{ width: "65%", height: "22px", backgroundColor: "#F1F5F9", borderRadius: "6px" }} />
-                    <div style={{ width: "40%", height: "16px", backgroundColor: "#F1F5F9", borderRadius: "4px" }} />
+                    <div className="skeleton-shimmer" style={{ width: "100%", height: "170px", borderRadius: "14px" }} />
+                    <div className="skeleton-shimmer" style={{ width: "65%", height: "22px", borderRadius: "6px" }} />
+                    <div className="skeleton-shimmer" style={{ width: "40%", height: "16px", borderRadius: "4px" }} />
                   </div>
                 ))}
               </div>
@@ -2159,6 +2161,19 @@ function FoodExploreContent() {
             padding: 20px 16px 60px 16px !important;
           }
         }
+        @keyframes shimmer {
+          0% {
+            background-position: -200% 0;
+          }
+          100% {
+            background-position: 200% 0;
+          }
+        }
+        .skeleton-shimmer {
+          background: linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%) !important;
+          background-size: 200% 100% !important;
+          animation: shimmer 1.5s infinite ease-in-out !important;
+        }
         @media (max-width: 600px) {
           .food-explore-grid {
             grid-template-columns: 1fr !important;
@@ -2176,8 +2191,13 @@ export default function FoodExplorePage() {
   return (
     <Suspense
       fallback={
-        <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ fontSize: "16px", fontWeight: "700", color: "#FF6B00" }}>Loading delicious dishes...</div>
+        <div style={{ minHeight: "100vh", backgroundColor: "#FAFAFA", padding: "40px 24px", display: "flex", flexDirection: "column", gap: "24px", maxWidth: "1280px", margin: "0 auto" }}>
+          <div style={{ width: "240px", height: "36px", borderRadius: "8px", background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite ease-in-out" }} />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "20px" }}>
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} style={{ height: "300px", borderRadius: "18px", background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite ease-in-out" }} />
+            ))}
+          </div>
         </div>
       }
     >

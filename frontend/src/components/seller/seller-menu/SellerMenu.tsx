@@ -694,24 +694,146 @@ export default function SellerMenu({
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredDishes.length === 0 ? (
+                  {loading ? (
+                    Array.from({ length: 6 }).map((_, idx) => (
+                      <tr key={`dish-skeleton-${idx}`}>
+                        <td>
+                          <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                            <div
+                              style={{
+                                width: "48px",
+                                height: "48px",
+                                borderRadius: "10px",
+                                background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)",
+                                backgroundSize: "200% 100%",
+                                animation: "shimmer 1.5s infinite ease-in-out",
+                                flexShrink: 0,
+                              }}
+                            />
+                            <div style={{ display: "flex", flexDirection: "column", gap: "6px", width: "160px" }}>
+                              <div
+                                style={{
+                                  width: "80%",
+                                  height: "16px",
+                                  borderRadius: "4px",
+                                  background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)",
+                                  backgroundSize: "200% 100%",
+                                  animation: "shimmer 1.5s infinite ease-in-out",
+                                }}
+                              />
+                              <div
+                                style={{
+                                  width: "50%",
+                                  height: "12px",
+                                  borderRadius: "4px",
+                                  background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)",
+                                  backgroundSize: "200% 100%",
+                                  animation: "shimmer 1.5s infinite ease-in-out",
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <div
+                            style={{
+                              width: "75px",
+                              height: "14px",
+                              borderRadius: "4px",
+                              background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)",
+                              backgroundSize: "200% 100%",
+                              animation: "shimmer 1.5s infinite ease-in-out",
+                            }}
+                          />
+                        </td>
+                        <td>
+                          <div
+                            style={{
+                              width: "48px",
+                              height: "16px",
+                              borderRadius: "4px",
+                              background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)",
+                              backgroundSize: "200% 100%",
+                              animation: "shimmer 1.5s infinite ease-in-out",
+                            }}
+                          />
+                        </td>
+                        <td>
+                          <div
+                            style={{
+                              width: "55px",
+                              height: "22px",
+                              borderRadius: "6px",
+                              background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)",
+                              backgroundSize: "200% 100%",
+                              animation: "shimmer 1.5s infinite ease-in-out",
+                            }}
+                          />
+                        </td>
+                        <td>
+                          <div
+                            style={{
+                              width: "32px",
+                              height: "16px",
+                              borderRadius: "4px",
+                              background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)",
+                              backgroundSize: "200% 100%",
+                              animation: "shimmer 1.5s infinite ease-in-out",
+                            }}
+                          />
+                        </td>
+                        <td>
+                          <div
+                            style={{
+                              width: "70px",
+                              height: "24px",
+                              borderRadius: "12px",
+                              background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)",
+                              backgroundSize: "200% 100%",
+                              animation: "shimmer 1.5s infinite ease-in-out",
+                            }}
+                          />
+                        </td>
+                        <td>
+                          <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+                            <div
+                              style={{
+                                width: "28px",
+                                height: "28px",
+                                borderRadius: "6px",
+                                background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)",
+                                backgroundSize: "200% 100%",
+                                animation: "shimmer 1.5s infinite ease-in-out",
+                              }}
+                            />
+                            <div
+                              style={{
+                                width: "28px",
+                                height: "28px",
+                                borderRadius: "6px",
+                                background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)",
+                                backgroundSize: "200% 100%",
+                                animation: "shimmer 1.5s infinite ease-in-out",
+                              }}
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : filteredDishes.length === 0 ? (
                     <tr>
                       <td colSpan={7} style={{ textAlign: "center", padding: "48px 16px", color: "#64748b", fontSize: "14px" }}>
-                        {loading ? (
-                          <span>Loading menu items...</span>
-                        ) : (
-                          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
-                            <div className={styles.dishPlaceholderIcon} style={{ width: 44, height: 44, borderRadius: "50%" }}>
-                              <Utensils size={20} strokeWidth={2.2} />
-                            </div>
-                            <span style={{ fontWeight: 600, color: "#1E293B", fontSize: "15px" }}>No dishes found</span>
-                            <span style={{ color: "#64748B", fontSize: "13px" }}>
-                              {searchQuery || selectedCategory !== "All Items"
-                                ? "Try adjusting your search query or category filter"
-                                : "Click '+ Add New Dish' to publish dishes to your cloud kitchen menu."}
-                            </span>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+                          <div className={styles.dishPlaceholderIcon} style={{ width: 44, height: 44, borderRadius: "50%" }}>
+                            <Utensils size={20} strokeWidth={2.2} />
                           </div>
-                        )}
+                          <span style={{ fontWeight: 600, color: "#1E293B", fontSize: "15px" }}>No dishes found</span>
+                          <span style={{ color: "#64748B", fontSize: "13px" }}>
+                            {searchQuery || selectedCategory !== "All Items"
+                              ? "Try adjusting your search query or category filter"
+                              : "Click '+ Add New Dish' to publish dishes to your cloud kitchen menu."}
+                          </span>
+                        </div>
                       </td>
                     </tr>
                   ) : (

@@ -6,7 +6,7 @@ import Topbar from "../nav/Topbar";
 import { ResponsiveNavMenu } from "../nav/ResponsiveNavMenu";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
 import { fetchApi } from "@/lib/fetch-api";
-import { Star, Utensils, ChevronDown, Check } from "lucide-react";
+import { Star, Utensils, ChevronDown, Check, Search, X } from "lucide-react";
 import { PaginationControls } from "../common/PaginationControls";
 import styles from "./SellerReviews.module.css";
 
@@ -126,9 +126,155 @@ function AnimatedStarRating({
   );
 }
 
+/**
+ * Evaluates whether a review's rating matches a user search query.
+ * Supports numbers ("5", "4", "3"), star syntax ("5 star", "4 stars", "5★"),
+ * words ("five star"), and sentiment keywords ("excellent", "good", "poor").
+ */
+export function checkRatingMatch(rating: number, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return false;
+
+  // Exact number or rating representation
+  if (q === String(rating) || q === `${rating}.0` || q === `${rating}/5` || q === `${rating} / 5`) {
+    return true;
+  }
+
+  // Star patterns
+  const starPatterns = [
+    `${rating} star`,
+    `${rating} stars`,
+    `${rating}star`,
+    `${rating}stars`,
+    `${rating}-star`,
+    `${rating}-stars`,
+    `${rating}★`,
+    `${rating} ★`,
+    `★${rating}`,
+    `rating ${rating}`,
+    `rating: ${rating}`,
+    `rating:${rating}`,
+    `rated ${rating}`,
+    `star ${rating}`,
+    `stars ${rating}`,
+    `${rating} out of 5`,
+    `${rating} of 5`,
+  ];
+  if (starPatterns.some((pattern) => q.includes(pattern))) {
+    return true;
+  }
+
+  // Word representations
+  const numberWords: Record<number, string[]> = {
+    5: ["five star", "five stars", "five-star", "5-star"],
+    4: ["four star", "four stars", "four-star", "4-star"],
+    3: ["three star", "three stars", "three-star", "3-star"],
+    2: ["two star", "two stars", "two-star", "2-star"],
+    1: ["one star", "one stars", "one-star", "1-star"],
+  };
+
+  if (numberWords[rating]?.some((w) => q.includes(w))) {
+    return true;
+  }
+
+  // Sentiment terms
+  if (q === "excellent" || q === "loved it" || q === "outstanding") {
+    return rating === 5;
+  }
+  if (q === "positive") {
+    return rating >= 4;
+  }
+  if (q === "poor" || q === "negative" || q === "bad") {
+    return rating <= 2;
+  }
+  if (q === "average") {
+    return rating === 3;
+  }
+
+  return false;
+}
+
+/**
+ * Checks if a review item satisfies the search query across customer name,
+ * rating, comment, aspects, tags, sentiment, ordered items, date, or order ID.
+ */
+export function checkReviewMatch(review: ReviewItem, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+
+  // 1. Rating match
+  if (checkRatingMatch(review.rating, q)) {
+    return true;
+  }
+
+  // 2. Customer name match
+  if (review.customerName && review.customerName.toLowerCase().includes(q)) {
+    return true;
+  }
+
+  // 3. Comment / Feedback match
+  if (review.comment && review.comment.toLowerCase().includes(q)) {
+    return true;
+  }
+
+  // 4. Feedback aspects match
+  if (Array.isArray(review.aspects) && review.aspects.some((a) => (a || "").toLowerCase().includes(q))) {
+    return true;
+  }
+
+  // 5. Feedback tags match
+  if (Array.isArray(review.tags) && review.tags.some((t) => (t || "").toLowerCase().includes(q))) {
+    return true;
+  }
+
+  // 6. Feedback sentiment match
+  if (review.sentiment && review.sentiment.toLowerCase().includes(q)) {
+    return true;
+  }
+
+  // 7. Items ordered match
+  if (Array.isArray(review.itemsOrdered) && review.itemsOrdered.some((item) => (item || "").toLowerCase().includes(q))) {
+    return true;
+  }
+
+  // 8. Date match
+  if (review.date && review.date.toLowerCase().includes(q)) {
+    return true;
+  }
+
+  // 9. Order ID match (if query is at least 2 chars, or exact match)
+  const isSingleDigitRating = /^[1-5]$/.test(q);
+  if (!isSingleDigitRating && review.orderId && review.orderId.toLowerCase().includes(q)) {
+    return true;
+  }
+  if (review.orderId && review.orderId.toLowerCase() === q) {
+    return true;
+  }
+
+  // 10. Split multi-term search (e.g., "Mitesh 5 star" or "Mitesh 5")
+  const tokens = q.split(/\s+/).filter(Boolean);
+  if (tokens.length > 1) {
+    const allTokensMatch = tokens.every((token) => {
+      if (checkRatingMatch(review.rating, token)) return true;
+      if (review.customerName && review.customerName.toLowerCase().includes(token)) return true;
+      if (review.comment && review.comment.toLowerCase().includes(token)) return true;
+      if (review.aspects?.some((a) => (a || "").toLowerCase().includes(token))) return true;
+      if (review.tags?.some((t) => (t || "").toLowerCase().includes(token))) return true;
+      if (review.sentiment && review.sentiment.toLowerCase().includes(token)) return true;
+      if (review.itemsOrdered?.some((item) => (item || "").toLowerCase().includes(token))) return true;
+      if (review.date && review.date.toLowerCase().includes(token)) return true;
+      if (review.orderId && review.orderId.toLowerCase().includes(token)) return true;
+      return false;
+    });
+    if (allTokensMatch) return true;
+  }
+
+  return false;
+}
+
 export default function SellerReviewsCanvasDas({
   topbarTitle = "Reviews & Feedback",
-  searchPlaceholder = "Search reviews, ratings, customer feedback...",
+  searchPlaceholder = "Search by customer name, rating (e.g. 5 stars), feedback...",
   activeSidebarId = "reviews",
 }: SellerReviewsCanvasDasProps) {
   const seller = useSellerProfile();
@@ -246,16 +392,9 @@ export default function SellerReviewsCanvasDas({
   const filteredAndSortedReviews = useMemo(() => {
     let list = [...reviewsList];
 
-    // Search query filter
+    // Search query filter (customer name, rating, feedback, comments, tags, aspects, items, date, order ID)
     if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      list = list.filter(
-        (r) =>
-          r.customerName.toLowerCase().includes(q) ||
-          r.orderId.toLowerCase().includes(q) ||
-          (r.comment && r.comment.toLowerCase().includes(q)) ||
-          r.itemsOrdered.some((item) => item.toLowerCase().includes(q))
-      );
+      list = list.filter((r) => checkReviewMatch(r, searchQuery));
     }
 
     // Rating filter
@@ -346,6 +485,7 @@ export default function SellerReviewsCanvasDas({
         <Topbar
           title={topbarTitle}
           searchPlaceholder={searchPlaceholder}
+          searchQuery={searchQuery}
           onMenuToggle={() => setIsMobileOpen(true)}
           onMenuClick={() => setIsMobileOpen(true)}
           ownerName={seller.ownerName}
@@ -427,6 +567,30 @@ export default function SellerReviewsCanvasDas({
                 {/* Filter and Sort Controls Bar */}
                 <div className={styles.controlsBar}>
                   <div className={styles.filterSortGroup}>
+                    {/* In-Page Search Bar */}
+                    <div className={styles.inPageSearchWrapper}>
+                      <Search size={14} className={styles.inPageSearchIcon} />
+                      <input
+                        type="text"
+                        placeholder="Search name, rating (5, 4 stars), feedback..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className={styles.inPageSearchInput}
+                        aria-label="Search reviews by customer name, rating, or feedback"
+                      />
+                      {searchQuery && (
+                        <button
+                          type="button"
+                          onClick={() => setSearchQuery("")}
+                          className={styles.inPageClearBtn}
+                          aria-label="Clear search"
+                          title="Clear search"
+                        >
+                          <X size={13} />
+                        </button>
+                      )}
+                    </div>
+
                     {/* Filter Dropdown */}
                     <div className={styles.controlDropdownWrapper} ref={filterRef}>
                       <button
@@ -497,8 +661,17 @@ export default function SellerReviewsCanvasDas({
                   </div>
 
                   <span className={styles.showingCount}>
-                    Showing {filteredAndSortedReviews.length > 0 ? `1-${filteredAndSortedReviews.length}` : "0"} of{" "}
-                    {totalReviewsCount.toLocaleString()} reviews
+                    {searchQuery.trim() ? (
+                      <>
+                        Showing {filteredAndSortedReviews.length > 0 ? `${(currentPage - 1) * (pageSize === "All" ? filteredAndSortedReviews.length : Number(pageSize)) + 1}-${pageSize === "All" ? filteredAndSortedReviews.length : Math.min(currentPage * Number(pageSize), filteredAndSortedReviews.length)}` : "0"} of{" "}
+                        {filteredAndSortedReviews.length} matching {filteredAndSortedReviews.length === 1 ? "review" : "reviews"} (filtered from {totalReviewsCount})
+                      </>
+                    ) : (
+                      <>
+                        Showing {filteredAndSortedReviews.length > 0 ? `${(currentPage - 1) * (pageSize === "All" ? filteredAndSortedReviews.length : Number(pageSize)) + 1}-${pageSize === "All" ? filteredAndSortedReviews.length : Math.min(currentPage * Number(pageSize), filteredAndSortedReviews.length)}` : "0"} of{" "}
+                        {totalReviewsCount.toLocaleString()} reviews
+                      </>
+                    )}
                   </span>
                 </div>
 
@@ -506,9 +679,23 @@ export default function SellerReviewsCanvasDas({
                 <div className={styles.reviewsList}>
                   {filteredAndSortedReviews.length === 0 ? (
                     <div className={styles.emptyReviewsState}>
-                      {reviewsList.length === 0
-                        ? "No customer reviews or ratings yet. Once customers place orders and leave feedback, their ratings and reviews will appear here."
-                        : "No reviews found matching the selected filter criteria."}
+                      {searchQuery.trim() ? (
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", padding: "12px 0" }}>
+                          <span>No customer reviews or ratings found matching &ldquo;{searchQuery}&rdquo;.</span>
+                          <button
+                            type="button"
+                            onClick={() => setSearchQuery("")}
+                            className={styles.pillButton}
+                            style={{ fontSize: "12px", padding: "6px 14px", color: "#EA580C", borderColor: "#FED7AA" }}
+                          >
+                            Clear Search
+                          </button>
+                        </div>
+                      ) : reviewsList.length === 0 ? (
+                        "No customer reviews or ratings yet. Once customers place orders and leave feedback, their ratings and reviews will appear here."
+                      ) : (
+                        "No reviews found matching the selected filter criteria."
+                      )}
                     </div>
                   ) : (
                     paginatedReviews.map((review, index) => {

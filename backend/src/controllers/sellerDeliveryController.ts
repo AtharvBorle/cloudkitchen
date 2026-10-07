@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
-import { emitOrderUpdated } from "@/lib/realtime-events";
+import { emitOrderUpdated, emitSellerDashboardRefresh } from "@/lib/realtime-events";
 import { validateEmail } from "@/lib/email-validation";
 import bcrypt from "bcryptjs";
 
@@ -464,6 +464,12 @@ export const collectDeliveryCash = async (req: Request, deliveryPersonId: string
 
         return dp;
     });
+
+    try {
+        emitSellerDashboardRefresh(sellerProfile.id);
+    } catch (e) {
+        console.error("Dashboard refresh emission error on settlement:", e);
+    }
 
     return { outstandingBalance: updated.outstandingBalance };
 };

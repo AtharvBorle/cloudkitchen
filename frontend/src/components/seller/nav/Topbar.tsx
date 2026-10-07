@@ -31,7 +31,10 @@ export interface TopbarProps {
   partnerRole?: string;
   avatarInitials?: string;
   searchPlaceholder?: string;
+  searchQuery?: string;
   unreadCount?: number;
+  showSearch?: boolean;
+  hideSearch?: boolean;
   onSearch?: (query: string) => void;
   onNotificationClick?: () => void;
   onMenuToggle?: () => void;
@@ -44,7 +47,10 @@ export default function Topbar({
   partnerRole,
   avatarInitials,
   searchPlaceholder,
+  searchQuery: propSearchQuery,
   unreadCount: unreadCountProp,
+  showSearch,
+  hideSearch,
   onSearch,
   onNotificationClick,
   onMenuToggle,
@@ -52,6 +58,10 @@ export default function Topbar({
 }: TopbarProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const isSettingsPage = pathname?.includes("/seller/settings") || pathname?.includes("/settings");
+  const isSupportPage = pathname?.includes("/seller/support") || pathname?.includes("/support");
+  const isProfilePage = pathname?.includes("/seller/profile") || pathname?.includes("/profile");
+  const shouldShowSearch = showSearch !== undefined ? showSearch : (hideSearch ? false : !isSettingsPage && !isSupportPage && !isProfilePage);
   const seller = useSellerProfile();
   const {
     notifications,
@@ -60,10 +70,17 @@ export default function Topbar({
     markAllAsRead,
   } = useSellerNotifications();
   const effectiveUnreadCount = typeof unreadCountProp === "number" ? unreadCountProp : liveUnreadCount;
-  const [searchQuery, setSearchQuery] = useState("");
+  const [localSearchQuery, setLocalSearchQuery] = useState(propSearchQuery || "");
+  const searchQuery = propSearchQuery !== undefined ? propSearchQuery : localSearchQuery;
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const handleMenu = onMenuToggle || onMenuClick;
+
+  useEffect(() => {
+    if (propSearchQuery !== undefined) {
+      setLocalSearchQuery(propSearchQuery);
+    }
+  }, [propSearchQuery]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -161,6 +178,9 @@ export default function Topbar({
     if (pathname?.startsWith("/seller/reviews") || pathname?.startsWith("/seller/res/reviews")) {
       return "Search reviews, feedback, ratings...";
     }
+    if (pathname?.startsWith("/seller/offers") || pathname?.startsWith("/seller/res/offers") || pathname?.startsWith("/dashboard/seller/offers")) {
+      return "Search offers, coupons, promo codes...";
+    }
     return "Search orders, rooms, dishes...";
   };
 
@@ -173,12 +193,12 @@ export default function Topbar({
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
+    setLocalSearchQuery(e.target.value);
     if (onSearch) onSearch(e.target.value);
   };
 
   const handleClear = () => {
-    setSearchQuery("");
+    setLocalSearchQuery("");
     if (onSearch) onSearch("");
   };
 
@@ -227,35 +247,37 @@ export default function Topbar({
       {/* Right Controls: Search + Notification + User Pill */}
       <div className={styles.rightControls}>
         {/* Search Bar */}
-        <div className={`${styles.searchWrapper} topbar-search`}>
-          <Search size={16} className={styles.searchIcon} />
-          <input
-            type="text"
-            placeholder={getDynamicPlaceholder()}
-            value={searchQuery}
-            onChange={handleSearchChange}
-            className={styles.searchInput}
-            aria-label="Search"
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={handleClear}
-              style={{
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                padding: "2px 4px",
-                display: "flex",
-                alignItems: "center",
-                color: "#94A3B8",
-              }}
-              aria-label="Clear search"
-            >
-              <X size={14} />
-            </button>
-          )}
-        </div>
+        {shouldShowSearch && (
+          <div className={`${styles.searchWrapper} topbar-search`}>
+            <Search size={16} className={styles.searchIcon} />
+            <input
+              type="text"
+              placeholder={getDynamicPlaceholder()}
+              value={searchQuery}
+              onChange={handleSearchChange}
+              className={styles.searchInput}
+              aria-label="Search"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={handleClear}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "2px 4px",
+                  display: "flex",
+                  alignItems: "center",
+                  color: "#94A3B8",
+                }}
+                aria-label="Clear search"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Store Status Toggle */}
         <button

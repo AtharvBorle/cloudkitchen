@@ -224,7 +224,8 @@ export default function Profile({
           ownerName={currentDisplayOutlet}
           partnerRole={profileData.partnerRole}
           avatarInitials={computeInitials(currentDisplayOutlet)}
-          onSearch={onSearch}
+          hideSearch={true}
+          showSearch={false}
           onMenuToggle={() => setIsMobileOpen((prev) => !prev)}
         />
 

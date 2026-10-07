@@ -349,6 +349,7 @@ export const SellerSettings: React.FC<SellerSettingsProps> = ({
           ownerName={seller.ownerName}
           partnerRole={seller.partnerRole}
           avatarInitials={seller.avatarInitials}
+          showSearch={false}
         />
 
         <main className={styles.mainCanvas}>

@@ -77,11 +77,10 @@ export default function SettingsCanvasDas({
         {/* Topbar Component */}
         <Topbar
           title={topbarTitle}
-          searchPlaceholder={searchPlaceholder}
           ownerName={ownerName}
           partnerRole={partnerRole}
           avatarInitials={avatarInitials}
-          onSearch={onSearch}
+          showSearch={false}
           onNotificationClick={onNotificationClick}
           onMenuToggle={() => setIsMobileOpen((prev) => !prev)}
         />

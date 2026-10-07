@@ -162,9 +162,10 @@ interface PropertiesProps {
     itemType?: string;
   }>;
   allKitchens?: PlaceCardData[];
+  isLoading?: boolean;
 }
 
-export default function Properties({ places, foodItems = [] }: PropertiesProps) {
+export default function Properties({ places, foodItems = [], isLoading = false }: PropertiesProps) {
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
   const [selectedDietary, setSelectedDietary] = useState<string[]>([]);
   const [maxPrice, setMaxPrice] = useState<number>(2500);
@@ -655,7 +656,7 @@ export default function Properties({ places, foodItems = [] }: PropertiesProps) 
                   border: "1px solid #FFD8C2",
                 }}
               >
-                {displayPlaces.length} {displayPlaces.length === 1 ? "Kitchen" : "Kitchens"}
+                {isLoading ? "Loading..." : `${displayPlaces.length} ${displayPlaces.length === 1 ? "Kitchen" : "Kitchens"}`}
               </span>
             </div>
           </div>
@@ -664,14 +665,60 @@ export default function Properties({ places, foodItems = [] }: PropertiesProps) 
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: displayPlaces.length > 0 ? "repeat(4, minmax(0, 1fr))" : "1fr",
+              gridTemplateColumns: (isLoading || displayPlaces.length > 0) ? "repeat(4, minmax(0, 1fr))" : "1fr",
               gap: "24px",
               width: "100%",
               boxSizing: "border-box",
             }}
             className="places-grid-layout PlacesGrid"
           >
-            {displayPlaces.length === 0 ? (
+            {isLoading ? (
+              Array.from({ length: 8 }).map((_, idx) => (
+                <div
+                  key={`kitchen-skeleton-${idx}`}
+                  style={{
+                    width: "100%",
+                    height: "250px",
+                    backgroundColor: "#FFFFFF",
+                    borderRadius: "20px",
+                    overflow: "hidden",
+                    border: "1px solid #F1F5F9",
+                    boxShadow: "0 4px 16px rgba(0, 0, 0, 0.04)",
+                    display: "flex",
+                    flexDirection: "column",
+                    boxSizing: "border-box",
+                  }}
+                  className="place-card-skeleton"
+                >
+                  <div
+                    className="skeleton-pulse"
+                    style={{
+                      width: "100%",
+                      height: "155px",
+                    }}
+                  />
+                  <div
+                    style={{
+                      padding: "12px 14px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "8px",
+                      flex: 1,
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <div>
+                      <div className="skeleton-pulse" style={{ width: "70%", height: "18px", borderRadius: "6px", marginBottom: "6px" }} />
+                      <div className="skeleton-pulse" style={{ width: "45%", height: "13px", borderRadius: "4px" }} />
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div className="skeleton-pulse" style={{ width: "52px", height: "18px", borderRadius: "10px" }} />
+                      <div className="skeleton-pulse" style={{ width: "56px", height: "18px", borderRadius: "10px" }} />
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : displayPlaces.length === 0 ? (
               <div
                 style={{
                   gridColumn: "1 / -1",
@@ -904,6 +951,19 @@ export default function Properties({ places, foodItems = [] }: PropertiesProps) 
       </div>
 
       <style jsx>{`
+        @keyframes shimmer {
+          0% {
+            background-position: -200% 0;
+          }
+          100% {
+            background-position: 200% 0;
+          }
+        }
+        .skeleton-pulse {
+          background: linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%);
+          background-size: 200% 100%;
+          animation: shimmer 1.5s infinite ease-in-out;
+        }
         .place-card:hover {
           transform: translateY(-4px);
           box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08) !important;

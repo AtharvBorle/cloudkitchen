@@ -1221,9 +1221,47 @@ export default function MyOrdersView() {
 
           {/* Cards Stack / States */}
           {loading ? (
-            <div className={styles.loaderBox}>
-              <Loader2 className="animate-spin" size={32} color="#F97316" />
-              <p>Loading your {mainCategory === "FOODS" ? "orders" : "room bookings"}...</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px", width: "100%" }}>
+              <style>{`
+                @keyframes shimmer {
+                  0% { background-position: -200% 0; }
+                  100% { background-position: 200% 0; }
+                }
+                .order-skeleton-pulse {
+                  background: linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%);
+                  background-size: 200% 100%;
+                  animation: shimmer 1.5s infinite ease-in-out;
+                }
+              `}</style>
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={`order-skel-${i}`}
+                  style={{
+                    backgroundColor: "#FFFFFF",
+                    border: "1.5px solid #E2E8F0",
+                    borderRadius: "18px",
+                    padding: "20px 24px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "16px",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                      <div className="order-skeleton-pulse" style={{ width: "64px", height: "64px", borderRadius: "14px", flexShrink: 0 }} />
+                      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                        <div className="order-skeleton-pulse" style={{ width: "160px", height: "18px", borderRadius: "6px" }} />
+                        <div className="order-skeleton-pulse" style={{ width: "110px", height: "14px", borderRadius: "4px" }} />
+                        <div className="order-skeleton-pulse" style={{ width: "80px", height: "14px", borderRadius: "4px" }} />
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "8px" }}>
+                      <div className="order-skeleton-pulse" style={{ width: "90px", height: "24px", borderRadius: "9999px" }} />
+                      <div className="order-skeleton-pulse" style={{ width: "70px", height: "20px", borderRadius: "4px" }} />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : authStatus === "unauthenticated" ? (
             <div className={styles.emptyOrdersCard}>

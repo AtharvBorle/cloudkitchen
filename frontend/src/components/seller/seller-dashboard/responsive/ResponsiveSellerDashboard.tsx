@@ -47,6 +47,9 @@ export interface ResponsiveSellerDashboardProps {
   onNotificationClick?: () => void;
   onOrderClick?: (order: ResponsiveOrderSummary) => void;
   onSyncDevices?: () => void;
+  selectedDate?: string;
+  onOpenCalendar?: () => void;
+  onResetToday?: () => void;
 }
 
 const DEFAULT_METRICS: ResponsiveDashboardMetrics = {
@@ -65,6 +68,9 @@ export const ResponsiveSellerDashboard: React.FC<ResponsiveSellerDashboardProps>
   onNotificationClick,
   onOrderClick,
   onSyncDevices,
+  selectedDate,
+  onOpenCalendar,
+  onResetToday,
 }) => {
   const router = useRouter();
   const seller = useSellerProfile();
@@ -217,8 +223,80 @@ export const ResponsiveSellerDashboard: React.FC<ResponsiveSellerDashboardProps>
         <main className={styles.contentArea}>
           {/* Greeting Section */}
           <section className={styles.greetingSection}>
-            <h2 className={styles.greetingTitle}>Hi, {effectiveOwnerName}</h2>
-            <p className={styles.greetingSubtitle}>{greetingSubtitle}</p>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "10px" }}>
+              <div>
+                <h2 className={styles.greetingTitle}>Hi, {effectiveOwnerName}</h2>
+                <p className={styles.greetingSubtitle}>
+                  {!selectedDate || selectedDate === new Date().toLocaleDateString("en-CA")
+                    ? greetingSubtitle
+                    : `Business operations summary for ${selectedDate}`}
+                </p>
+              </div>
+              {onOpenCalendar && (
+                <button
+                  type="button"
+                  onClick={onOpenCalendar}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    backgroundColor: !selectedDate || selectedDate === new Date().toLocaleDateString("en-CA") ? "#FFFFFF" : "#FFF7ED",
+                    border: `1.5px solid ${!selectedDate || selectedDate === new Date().toLocaleDateString("en-CA") ? "#FED7AA" : "#EA580C"}`,
+                    color: !selectedDate || selectedDate === new Date().toLocaleDateString("en-CA") ? "#0F172A" : "#EA580C",
+                    padding: "7px 12px",
+                    borderRadius: "10px",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
+                    flexShrink: 0,
+                  }}
+                  aria-label="Pick date filter"
+                >
+                  <Calendar size={14} color="#EA580C" />
+                  <span>
+                    {!selectedDate || selectedDate === new Date().toLocaleDateString("en-CA")
+                      ? "Calendar"
+                      : selectedDate}
+                  </span>
+                </button>
+              )}
+            </div>
+
+            {Boolean(selectedDate && selectedDate !== new Date().toLocaleDateString("en-CA")) && onResetToday && (
+              <div
+                style={{
+                  marginTop: "10px",
+                  backgroundColor: "#FFF7ED",
+                  border: "1px solid #FED7AA",
+                  borderRadius: "10px",
+                  padding: "8px 12px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  fontSize: "12px",
+                  color: "#9A3412",
+                }}
+              >
+                <span>📅 Date: <strong>{selectedDate}</strong></span>
+                <button
+                  type="button"
+                  onClick={onResetToday}
+                  style={{
+                    background: "#EA580C",
+                    color: "#FFFFFF",
+                    border: "none",
+                    borderRadius: "6px",
+                    padding: "4px 8px",
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  Reset Today
+                </button>
+              </div>
+            )}
           </section>
 
           {/* 2x2 Metric Cards Grid */}
@@ -231,7 +309,11 @@ export const ResponsiveSellerDashboard: React.FC<ResponsiveSellerDashboardProps>
               <h3 className={styles.metricValue}>
                 {metrics.todayRevenue ?? DEFAULT_METRICS.todayRevenue}
               </h3>
-              <p className={styles.metricLabel}>Today's Revenue</p>
+              <p className={styles.metricLabel}>
+                {!selectedDate || selectedDate === new Date().toLocaleDateString("en-CA")
+                  ? "Today's Revenue"
+                  : `Revenue (${selectedDate})`}
+              </p>
             </div>
 
             {/* 2. Orders Today */}
@@ -242,7 +324,11 @@ export const ResponsiveSellerDashboard: React.FC<ResponsiveSellerDashboardProps>
               <h3 className={styles.metricValue}>
                 {metrics.ordersToday ?? DEFAULT_METRICS.ordersToday}
               </h3>
-              <p className={styles.metricLabel}>Orders Today</p>
+              <p className={styles.metricLabel}>
+                {!selectedDate || selectedDate === new Date().toLocaleDateString("en-CA")
+                  ? "Orders Today"
+                  : `Orders (${selectedDate})`}
+              </p>
             </div>
 
             {/* 3. Pending Bookings */}
@@ -264,7 +350,11 @@ export const ResponsiveSellerDashboard: React.FC<ResponsiveSellerDashboardProps>
               <h3 className={styles.metricValue}>
                 {metrics.codOutstanding ?? DEFAULT_METRICS.codOutstanding}
               </h3>
-              <p className={styles.metricLabel}>COD Outstanding</p>
+              <p className={styles.metricLabel}>
+                {!selectedDate || selectedDate === new Date().toLocaleDateString("en-CA")
+                  ? "COD Outstanding"
+                  : `COD (${selectedDate})`}
+              </p>
             </div>
           </section>
 
