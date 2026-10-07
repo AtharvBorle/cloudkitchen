@@ -702,12 +702,28 @@ export const UserCart: React.FC<UserCartProps> = ({
     const isTypeChanged = appliedCoupon.discountType !== latestType;
 
     if (isPctChanged || isAmtChanged || isMaxChanged || isMinChanged || isTypeChanged) {
+      if ((latestType === "FLAT" || (!latestPct && latestAmt)) && latestAmt && latestAmt > subtotal) {
+        setAppliedCoupon(null);
+        setAppliedPromo(null);
+        setDiscountPercent(0);
+        setPromoCode("");
+        lastAutoAppliedCodeRef.current = null;
+        if (typeof window !== "undefined") {
+          try {
+            sessionStorage.removeItem("applied_cart_coupon");
+            sessionStorage.removeItem("appliedCoupon");
+            localStorage.removeItem("appliedCoupon");
+          } catch (e) {}
+        }
+        return;
+      }
+
       let recalculatedDiscount = 0;
       if (latestPct > 0) {
         recalculatedDiscount = Math.round((subtotal * latestPct) / 100);
         if (latestMax) recalculatedDiscount = Math.min(recalculatedDiscount, latestMax);
       } else if (latestAmt) {
-        recalculatedDiscount = Math.min(latestAmt, subtotal);
+        recalculatedDiscount = latestAmt;
       }
 
       const updatedCouponObj = {
@@ -790,6 +806,32 @@ export const UserCart: React.FC<UserCartProps> = ({
         const hasProduct = isCouponItemApplicable(offer, cartItems);
         if (!hasProduct) return false;
       }
+
+      // Check flat discount vs eligible cart value
+      const isPct = offer.discountType === "PERCENTAGE" || (offer.discountPercentage && !offer.discountAmount);
+      if (!isPct) {
+        const flatAmt = Number(offer.discountAmount || (offer.discountType === "FLAT" ? offer.discountValue : 0) || 0);
+        let eligibleSub = subtotal;
+        if (offer.appliesToProductId) {
+          const allowedKeys = String(offer.appliesToProductId).split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+          const isCat = offer.appliesTo === "CATEGORY";
+          const matchingItems = cartItems.filter((it) => {
+            if (isCat) {
+              const catId = String(it.categoryId || it.foodCategoryId || "").toLowerCase();
+              const catName = String(it.categoryName || (it.foodCategory as any)?.name || (it.category as any)?.name || it.category || it.foodCategory || "").toLowerCase().trim();
+              const name = String(it.name || "").toLowerCase().trim();
+              return allowedKeys.some((k) => k === catId || k === catName || (catName && catName.includes(k)) || (k && catName && k.includes(catName)) || (name && name.includes(k)));
+            }
+            const itemId = String(it.id || "").toLowerCase();
+            const foodItemId = String(it.foodItemId || "").toLowerCase();
+            const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+            const name = String(it.name || "").toLowerCase().trim();
+            return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name || (name && (name.includes(k) || k.includes(name))));
+          });
+          eligibleSub = matchingItems.reduce((acc, it) => acc + it.price * it.qty, 0);
+        }
+        if (flatAmt > eligibleSub) return false;
+      }
       return true;
     });
 
@@ -844,7 +886,9 @@ export const UserCart: React.FC<UserCartProps> = ({
         disc = Math.round((targetSub * pct) / 100);
         if (offer.maxDiscountAmount) disc = Math.min(disc, Number(offer.maxDiscountAmount));
       } else {
-        disc = Math.min(Number(offer.discountAmount || offer.discountValue || 0), targetSub);
+        const flatAmt = Number(offer.discountAmount || offer.discountValue || 0);
+        if (flatAmt > targetSub) continue;
+        disc = flatAmt;
       }
       if (disc >= maxDiscount) {
         maxDiscount = disc;
@@ -1080,6 +1124,47 @@ export const UserCart: React.FC<UserCartProps> = ({
       return;
     }
 
+    const isPercentage = appliedCoupon.discountType === "PERCENTAGE" || (appliedCoupon.discountPercentage && !appliedCoupon.discountAmount);
+    const flatAmt = Number(appliedCoupon.discountAmount || (appliedCoupon.discountType === "FLAT" ? (appliedCoupon as any).discountValue : 0) || 0);
+    if (!isPercentage && flatAmt > 0) {
+      let eligibleSub = subtotal;
+      if (appliedCoupon.appliesToProductId) {
+        const allowedKeys = String(appliedCoupon.appliesToProductId).split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+        const isCat = appliedCoupon.appliesTo === "CATEGORY";
+        const matchingItems = cartItems.filter((it) => {
+          if (isCat) {
+            const catId = String(it.categoryId || it.foodCategoryId || "").toLowerCase();
+            const catName = String(it.categoryName || (it.foodCategory as any)?.name || (it.category as any)?.name || it.category || it.foodCategory || "").toLowerCase().trim();
+            const name = String(it.name || "").toLowerCase().trim();
+            return allowedKeys.some((k) => k === catId || k === catName || (catName && catName.includes(k)) || (k && catName && k.includes(catName)) || (name && name.includes(k)));
+          }
+          const itemId = String(it.id || "").toLowerCase();
+          const foodItemId = String(it.foodItemId || "").toLowerCase();
+          const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+          const name = String(it.name || "").toLowerCase().trim();
+          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name || (name && (name.includes(k) || k.includes(name))));
+        });
+        eligibleSub = matchingItems.reduce((acc, it) => acc + it.price * it.qty, 0);
+      }
+      if (flatAmt > eligibleSub) {
+        const code = appliedCoupon.code || appliedPromo || "Applied";
+        setAppliedCoupon(null);
+        setAppliedPromo(null);
+        setDiscountPercent(0);
+        setPromoCode("");
+        lastAutoAppliedCodeRef.current = null;
+        if (typeof window !== "undefined") {
+          try {
+            sessionStorage.removeItem("applied_cart_coupon");
+            sessionStorage.removeItem("appliedCoupon");
+            localStorage.removeItem("appliedCoupon");
+          } catch (e) {}
+        }
+        showToast(`Coupon "${code}" removed as the discount (₹${flatAmt}) exceeds the eligible cart value (₹${eligibleSub}).`, "warning");
+        return;
+      }
+    }
+
     if (appliedCoupon.appliesToProductId && cartItems.length > 0) {
       const isApplicable = isCouponItemApplicable(appliedCoupon, cartItems);
       if (!isApplicable) {
@@ -1208,6 +1293,55 @@ export const UserCart: React.FC<UserCartProps> = ({
     // Auto-populate input field when clicked from offers list
     setPromoCode(targetCode);
 
+    // Pre-check for flat coupons from availableOffers if discount exceeds eligible subtotal
+    const matchingOffer = availableOffers.find(
+      (o) => (o.code && o.code.toUpperCase() === targetCode) || (o.id && o.id === targetCode)
+    );
+    if (matchingOffer) {
+      const isPct = matchingOffer.discountType === "PERCENTAGE" || (matchingOffer.discountPercentage && !matchingOffer.discountAmount);
+      if (!isPct) {
+        const flatAmt = Number(matchingOffer.discountAmount || (matchingOffer.discountType === "FLAT" ? matchingOffer.discountValue : 0) || 0);
+        let eligibleSub = currentSubtotal;
+        if (matchingOffer.appliesToProductId) {
+          const allowedKeys = String(matchingOffer.appliesToProductId).split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+          const isCat = matchingOffer.appliesTo === "CATEGORY";
+          const matchingItems = cartItems.filter((it) => {
+            if (isCat) {
+              const catId = String(it.categoryId || it.foodCategoryId || "").toLowerCase();
+              const catName = String(it.categoryName || (it.foodCategory as any)?.name || (it.category as any)?.name || it.category || it.foodCategory || "").toLowerCase().trim();
+              const name = String(it.name || "").toLowerCase().trim();
+              return allowedKeys.some((k) => k === catId || k === catName || (catName && catName.includes(k)) || (k && catName && k.includes(catName)) || (name && name.includes(k)));
+            }
+            const itemId = String(it.id || "").toLowerCase();
+            const foodItemId = String(it.foodItemId || "").toLowerCase();
+            const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+            const name = String(it.name || "").toLowerCase().trim();
+            return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name || (name && (name.includes(k) || k.includes(name))));
+          });
+          eligibleSub = matchingItems.reduce((acc, it) => acc + it.price * it.qty, 0);
+        }
+        if (flatAmt > eligibleSub) {
+          isSuppressingAutoApplyRef.current = true;
+          setAppliedCoupon(null);
+          setAppliedPromo(null);
+          setDiscountPercent(0);
+          showToast(`Coupon "${matchingOffer.code}" cannot be applied as the discount (₹${flatAmt}) exceeds the eligible item/cart value of ₹${eligibleSub}.`, "error", 4000);
+          setTimeout(() => {
+            isSuppressingAutoApplyRef.current = false;
+            if (previousCoupon && previousPromo && previousCoupon.code?.toUpperCase() !== targetCode) {
+              setAppliedCoupon(previousCoupon);
+              setAppliedPromo(previousPromo);
+              setPromoCode(previousPromo);
+              setDiscountPercent(previousPercent);
+            } else {
+              setPromoCode("");
+            }
+          }, 3000);
+          return;
+        }
+      }
+    }
+
     setIsValidatingPromo(true);
     try {
       const res = await fetchApi("/api/public/coupons/validate", {
@@ -1265,7 +1399,7 @@ export const UserCart: React.FC<UserCartProps> = ({
         // After displaying the error message for 3 seconds, restore previously valid auto-applied coupon
         setTimeout(() => {
           isSuppressingAutoApplyRef.current = false;
-          if (previousCoupon && previousPromo) {
+          if (previousCoupon && previousPromo && previousCoupon.code?.toUpperCase() !== targetCode) {
             setAppliedCoupon(previousCoupon);
             setAppliedPromo(previousPromo);
             setPromoCode(previousPromo);
@@ -1291,7 +1425,7 @@ export const UserCart: React.FC<UserCartProps> = ({
       showToast(`Failed to validate coupon "${targetCode}".`, "error", 3000);
       setTimeout(() => {
         isSuppressingAutoApplyRef.current = false;
-        if (previousCoupon && previousPromo) {
+        if (previousCoupon && previousPromo && previousCoupon.code?.toUpperCase() !== targetCode) {
           setAppliedCoupon(previousCoupon);
           setAppliedPromo(previousPromo);
           setPromoCode(previousPromo);
@@ -1412,7 +1546,8 @@ export const UserCart: React.FC<UserCartProps> = ({
       return appliedCoupon.maxDiscountAmount ? Math.min(raw, appliedCoupon.maxDiscountAmount) : raw;
     }
     const flat = appliedCoupon.discountAmount || 0;
-    return Math.min(flat, targetSubtotal);
+    if (flat > targetSubtotal) return 0;
+    return flat;
   }, [appliedCoupon, subtotal, cartItems]);
 
   const getItemDiscount = (item: UserCartItem) => {
@@ -2121,6 +2256,9 @@ export const UserCart: React.FC<UserCartProps> = ({
                           filteredOffers.map((offer) => {
                             const isCurrentApplied = (appliedCouponData?.code || appliedPromo) === offer.code;
                             const minMet = !offer.minimumCartValue || subtotal >= offer.minimumCartValue;
+                            const isFlat = offer.discountType === "FLAT" || (!offer.discountPercentage && offer.discountAmount);
+                            const flatAmt = Number(offer.discountAmount || (offer.discountType === "FLAT" ? offer.discountValue : 0) || 0);
+                            const exceedsSubtotal = isFlat && flatAmt > subtotal;
 
                             return (
                               <div
@@ -2148,6 +2286,11 @@ export const UserCart: React.FC<UserCartProps> = ({
                                   {offer.minimumCartValue > 0 && (
                                     <span className={`${styles.offerMinCart} ${!minMet ? styles.offerMinCartWarning : ""}`}>
                                       {minMet ? `Min cart ₹${offer.minimumCartValue}` : `Add ₹${offer.minimumCartValue - subtotal} more to unlock`}
+                                    </span>
+                                  )}
+                                  {exceedsSubtotal && (
+                                    <span className={`${styles.offerMinCart} ${styles.offerMinCartWarning}`}>
+                                      Cart value must exceed ₹{flatAmt}
                                     </span>
                                   )}
                                 </div>

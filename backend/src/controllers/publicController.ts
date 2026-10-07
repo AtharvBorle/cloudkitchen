@@ -741,7 +741,13 @@ export const validateCouponForCart = async (req: Request) => {
         discountLabel = `${pct}% OFF`;
     } else {
         const flatAmt = coupon.discountAmount || 0;
-        calculatedDiscount = Math.min(flatAmt, baseDiscountSubtotal);
+        if (flatAmt > baseDiscountSubtotal) {
+            throw new ApiError(
+                `Coupon "${coupon.code}" cannot be applied as the discount (₹${flatAmt}) exceeds the eligible item/cart value of ₹${baseDiscountSubtotal}.`,
+                400
+            );
+        }
+        calculatedDiscount = flatAmt;
         discountLabel = `₹${flatAmt} OFF`;
     }
 
