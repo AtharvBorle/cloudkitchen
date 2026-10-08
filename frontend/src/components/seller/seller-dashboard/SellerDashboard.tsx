@@ -17,7 +17,9 @@ import {
   Lock,
   Search,
   Clock,
+  RotateCcw,
 } from "lucide-react";
+import { SellerCalendarModal, formatDateToYMD } from "./SellerCalendarModal";
 import { fetchApi } from "@/lib/fetch-api";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
 import { useRealtimeStream } from "@/hooks/useRealtimeStream";
@@ -41,6 +43,29 @@ export interface OrderItem {
 
 const DEFAULT_FALLBACK_ORDERS: OrderItem[] = [];
 
+function formatOrderDateTime(createdAt?: string): { date: string; time: string } {
+  if (!createdAt) return { date: "—", time: "" };
+  try {
+    const d = new Date(createdAt);
+    if (isNaN(d.getTime())) return { date: "—", time: "" };
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = months[d.getMonth()];
+    const year = d.getFullYear();
+    const date = `${day} ${month} ${year}`;
+
+    let hours = d.getHours();
+    const minutes = String(d.getMinutes()).padStart(2, "0");
+    const ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const time = `${String(hours).padStart(2, "0")}:${minutes} ${ampm}`;
+    return { date, time };
+  } catch {
+    return { date: "—", time: "" };
+  }
+}
+
 export interface SellerDashboardProps {
   ownerName?: string;
   partnerRole?: string;
@@ -62,9 +87,9 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
   onSyncDevices,
   onRenewPlan,
 }) => {
-  const { isRoomEnabled } = useRoomModule();
   const router = useRouter();
   const seller = useSellerProfile();
+  const { isRoomEnabled } = useRoomModule();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [orders, setOrders] = useState<OrderItem[]>(
@@ -74,10 +99,72 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
   const [statusData, setStatusData] = useState<any>(null);
   const [now, setNow] = useState(Date.now());
 
+  const todayYMD = useMemo(() => formatDateToYMD(new Date()), []);
+  const [selectedDate, setSelectedDate] = useState<string>(todayYMD);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const isViewingToday = selectedDate === todayYMD;
+
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  const loadDashboardForDate = async (dateStr: string) => {
+    try {
+      const overviewUrl = dateStr ? `/api/seller/dashboard/overview?date=${encodeURIComponent(dateStr)}` : "/api/seller/dashboard/overview";
+      const res = await fetchApi(overviewUrl);
+      if (res.ok) {
+        const json = await res.json();
+        setOverview(json.data || json);
+      }
+    } catch (err) {
+      console.error("Failed to load dashboard for date:", err);
+    }
+  };
+
+  const handleSelectDate = (dateStr: string) => {
+    setSelectedDate(dateStr);
+    loadDashboardForDate(dateStr);
+  };
+
+  const handleResetToToday = () => {
+    setSelectedDate(todayYMD);
+    loadDashboardForDate(todayYMD);
+  };
+
+  const formattedSelectedDate = useMemo(() => {
+    if (!selectedDate || selectedDate === todayYMD) return "Today";
+    try {
+      const [y, m, d] = selectedDate.split("-").map(Number);
+      return new Date(y, m - 1, d).toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+    } catch {
+      return selectedDate;
+    }
+  }, [selectedDate, todayYMD]);
+
+  const daysAgoText = useMemo(() => {
+    if (!selectedDate || selectedDate === todayYMD) return "";
+    try {
+      const [y, m, d] = selectedDate.split("-").map(Number);
+      const target = new Date(y, m - 1, d);
+      const nowObj = new Date();
+      nowObj.setHours(0, 0, 0, 0);
+      const targetDay = new Date(target);
+      targetDay.setHours(0, 0, 0, 0);
+      const diffTime = nowObj.getTime() - targetDay.getTime();
+      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+      if (diffDays === 1) return "1 day ago";
+      if (diffDays > 1) return `${diffDays} days ago`;
+      if (diffDays < 0) return `${Math.abs(diffDays)} days ahead`;
+      return "";
+    } catch {
+      return "";
+    }
+  }, [selectedDate, todayYMD]);
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -86,12 +173,22 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
     }
   };
 
+  const dateFilteredOrders = useMemo(() => {
+    if (isViewingToday) return orders;
+    return orders.filter((o) => {
+      if (!o.createdAt) return false;
+      const orderYMD = formatDateToYMD(new Date(o.createdAt));
+      return orderYMD === selectedDate;
+    });
+  }, [orders, selectedDate, isViewingToday]);
+
   const displayedOrders = useMemo(() => {
+    const list = dateFilteredOrders;
     const q = searchQuery.toLowerCase().trim();
     if (!q) {
-      return orders.slice(0, 10);
+      return list.slice(0, 10);
     }
-    return orders.filter((order) => {
+    return list.filter((order) => {
       const customerMatch = (order.customer || "").toLowerCase().includes(q);
       const orderIdMatch =
         (order.orderId || "").toLowerCase().includes(q) ||
@@ -102,7 +199,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
 
       return customerMatch || orderIdMatch || roomMatch || itemsMatch || statusMatch;
     });
-  }, [orders, searchQuery]);
+  }, [dateFilteredOrders, searchQuery]);
 
   const ownerName = initialOwnerName || seller.ownerName;
   const partnerRole = initialPartnerRole || seller.partnerRole;
@@ -311,6 +408,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                 items: itemsSummary || "1x Food Item",
                 total: `₹${o.totalAmount || 0}`,
                 status: statusVal,
+                createdAt: o.createdAt,
               };
             });
             setOrders(mapped);
@@ -507,7 +605,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                         Account Verified — Subscription Plan Required
                       </h3>
                       <p style={{ fontSize: "12.5px", color: "#64748B", margin: 0 }}>
-                        Activate your partner subscription to unlock live order processing and menu management tools{isRoomEnabled ? ", and room booking tools" : ""}.
+                        Activate your partner subscription to unlock live order processing, menu management, and room booking tools.
                       </p>
                     </div>
                   </div>
@@ -533,41 +631,96 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                 </div>
               )}
 
-              {/* Header Row: Title & Subtitle */}
+              {/* Header Row: Title & Subtitle + Calendar Controls */}
               <div className={styles.headerRow}>
                 <div className={styles.headerGroup}>
                   <h1 className={styles.title}>Operations Dashboard</h1>
                   <p className={styles.subtitle}>
-                    {isRoomEnabled
-                      ? "Real-time tracking of Neo Cloud Room revenue and food delivery metrics."
-                      : "Real-time tracking of cloud kitchen revenue and food delivery metrics."}
+                    Real-time tracking of Neo Cloud Room revenue, order volume, and rider COD metrics.
                   </p>
+                </div>
+
+                <div className={styles.headerControls}>
+                  <button
+                    type="button"
+                    className={`${styles.calendarTriggerBtn} ${!isViewingToday ? styles.calendarTriggerBtnFiltered : ""}`}
+                    onClick={() => setIsCalendarOpen(true)}
+                    aria-label="Filter operations by date"
+                  >
+                    <span
+                      className={`${styles.calendarTriggerDot} ${!isViewingToday ? styles.calendarTriggerDotFiltered : ""}`}
+                    />
+                    <Calendar size={16} color="#EA580C" />
+                    <span>
+                      {isViewingToday ? "Today" : formattedSelectedDate}
+                      {daysAgoText ? ` (${daysAgoText})` : ""}
+                    </span>
+                  </button>
+
+                  {!isViewingToday && (
+                    <button
+                      type="button"
+                      onClick={handleResetToToday}
+                      className={styles.resetDateBtn}
+                      title="Reset to Today"
+                    >
+                      <RotateCcw size={13} />
+                      <span>Today</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
+              {/* Historical Date Active Banner */}
+              {!isViewingToday && (
+                <div className={styles.dateFilterBanner}>
+                  <div className={styles.dateFilterLeft}>
+                    <Calendar size={18} />
+                    <span>
+                      Viewing historical operations for <strong>{formattedSelectedDate}</strong>
+                      {daysAgoText ? ` (${daysAgoText})` : ""}. Revenue, orders, and rider COD reflect this day.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleResetToToday}
+                    className={styles.resetDateBtn}
+                  >
+                    <RotateCcw size={13} />
+                    <span>Back to Today</span>
+                  </button>
+                </div>
+              )}
+
               {/* 4-Stat Cards Row */}
               <div className={styles.statsGrid}>
-                {/* Card 1: Revenue Today */}
+                {/* Card 1: Revenue Today / Selected Date */}
                 <div className={styles.statCard}>
                   <div className={styles.cardHeader}>
-                    <span className={styles.cardLabel}>Revenue Today</span>
+                    <span className={styles.cardLabel}>
+                      {isViewingToday ? "Revenue Today" : `Revenue (${formattedSelectedDate})`}
+                    </span>
                     <div className={styles.iconBadge}>
                       <ShoppingBag size={18} strokeWidth={2.4} />
                     </div>
                   </div>
                   <h2 className={styles.cardValue}>
-                    {overview ? `₹${(overview.totalRevenue || 0).toLocaleString("en-IN")}` : "₹0"}
+                    {overview
+                      ? `₹${(overview.todayRevenue !== undefined ? overview.todayRevenue : overview.totalRevenue || 0).toLocaleString("en-IN")}`
+                      : "₹0"}
                   </h2>
                   <div className={styles.cardFooter}>
-                    <span className={styles.badgeOrange}>Live</span>
-                    <span className={styles.footerMuted}>total revenue</span>
+                    <span className={styles.badgeOrange}>{isViewingToday ? "Live" : "Archived"}</span>
+                    <span className={styles.footerMuted}>{isViewingToday ? "daily revenue" : "day revenue"}</span>
                   </div>
                 </div>
 
-                {/* Card 2: Orders Today */}
+                {/* Card 2: Orders Today / Selected Date */}
                 <div className={styles.statCard}>
                   <div className={styles.cardHeader}>
-                    <span className={styles.cardLabel}>Orders Today</span>
+                    <span className={styles.cardLabel}>
+                      {isViewingToday ? "Orders Today" : `Orders (${formattedSelectedDate})`}
+                    </span>
                     <div className={styles.iconBadge}>
                       <Truck size={18} strokeWidth={2.4} />
                     </div>
@@ -576,8 +729,8 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                     {overview?.todayOrdersCount !== undefined ? overview.todayOrdersCount : 0}
                   </h2>
                   <div className={styles.cardFooter}>
-                    <span className={styles.badgeOrange}>Active</span>
-                    <span className={styles.footerMuted}>orders today</span>
+                    <span className={styles.badgeOrange}>{isViewingToday ? "Active" : "Archived"}</span>
+                    <span className={styles.footerMuted}>{isViewingToday ? "orders today" : "orders on day"}</span>
                   </div>
                 </div>
 
@@ -585,7 +738,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                 {isRoomEnabled && (
                   <div className={styles.statCard}>
                     <div className={styles.cardHeader}>
-                      <span className={styles.cardLabel}>Rooms & Bookings</span>
+                      <span className={styles.cardLabel}>Rooms &amp; Bookings</span>
                       <div className={styles.iconBadge}>
                         <Calendar size={18} strokeWidth={2.4} />
                       </div>
@@ -600,20 +753,28 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                   </div>
                 )}
 
-                {/* Card 4: COD Outstanding */}
+                {/* Card 4: COD Outstanding / Selected Date COD */}
                 <div className={styles.statCard}>
                   <div className={styles.cardHeader}>
-                    <span className={styles.cardLabel}>COD Outstanding</span>
+                    <span className={styles.cardLabel}>
+                      {isViewingToday ? "COD Outstanding" : `COD (${formattedSelectedDate})`}
+                    </span>
                     <div className={styles.iconBadge}>
                       <CreditCard size={18} strokeWidth={2.4} />
                     </div>
                   </div>
                   <h2 className={styles.cardValue}>
-                    {overview?.codOutstanding !== undefined ? `₹${(overview.codOutstanding || 0).toLocaleString("en-IN")}` : "₹0"}
+                    {overview
+                      ? `₹${((overview.codOutstanding !== undefined ? overview.codOutstanding : overview.riderTotalCodOutstanding) || 0).toLocaleString("en-IN")}`
+                      : "₹0"}
                   </h2>
                   <div className={styles.cardFooter}>
-                    <span className={styles.badgeOrange}>Audit</span>
-                    <span className={styles.footerMuted}>rider cash balance</span>
+                    <span className={styles.badgeOrange}>{isViewingToday ? "Rider COD" : "Day COD"}</span>
+                    <span className={styles.footerMuted}>
+                      {overview?.riderTotalCodOutstanding && overview.riderTotalCodOutstanding > 0
+                        ? `₹${overview.riderTotalCodOutstanding.toLocaleString("en-IN")} rider cash`
+                        : "All settled (₹0)"}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -696,6 +857,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                         <th>CUSTOMER</th>
                         {isRoomEnabled && <th>ROOM NO</th>}
                         <th>ITEMS</th>
+                        <th>DATE & TIME</th>
                         <th>TOTAL</th>
                         <th>STATUS</th>
                       </tr>
@@ -703,7 +865,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                     <tbody>
                       {displayedOrders.length === 0 ? (
                         <tr>
-                          <td colSpan={isRoomEnabled ? 6 : 5} style={{ textAlign: "center", padding: "40px 16px", color: "#64748B" }}>
+                          <td colSpan={isRoomEnabled ? 7 : 6} style={{ textAlign: "center", padding: "40px 16px", color: "#64748B" }}>
                             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
                               <Search size={28} color="#94A3B8" />
                               <p style={{ margin: 0, fontWeight: 600, color: "#1E293B", fontSize: "14px" }}>
@@ -746,6 +908,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                           const mm = String(Math.floor(sec / 60)).padStart(2, "0");
                           const ss = String(sec % 60).padStart(2, "0");
                           const isUrgent = sec <= 60;
+                          const orderDate = formatOrderDateTime(order.createdAt);
 
                           return (
                             <tr key={order.id}>
@@ -753,6 +916,10 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                               <td className={styles.customerText}>{order.customer}</td>
                               {isRoomEnabled && <td className={styles.roomNoText}>{order.roomNo}</td>}
                               <td className={styles.itemsText}>{order.items}</td>
+                              <td className={styles.dateTimeCell}>
+                                <span className={styles.dateText}>{orderDate.date}</span>
+                                {orderDate.time && <span className={styles.timeText}>{orderDate.time}</span>}
+                              </td>
                               <td className={styles.totalPriceText}>{order.total}</td>
                               <td className={styles.statusCell}>
                                 {isPending ? (
@@ -795,6 +962,14 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
           )}
         </main>
       </div>
+
+      {/* Operations Calendar Modal Filter */}
+      <SellerCalendarModal
+        isOpen={isCalendarOpen}
+        onClose={() => setIsCalendarOpen(false)}
+        selectedDate={selectedDate}
+        onSelectDate={handleSelectDate}
+      />
     </div>
   );
 };

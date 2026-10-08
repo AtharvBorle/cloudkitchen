@@ -7,6 +7,7 @@ import {
   ChevronRight,
   UserPlus,
   Copy,
+  Search,
   X,
   Bell,
   Edit3,
@@ -90,19 +91,43 @@ export const ResponsiveManageRiders: React.FC<ResponsiveManageRidersProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState<number | "All">(10);
 
+  const [searchQuery, setSearchQuery] = useState("");
+
   React.useEffect(() => {
     setLocalRiders(riders);
   }, [riders]);
 
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [localRiders]);
+  }, [localRiders, searchQuery]);
+
+  const filteredRiders = React.useMemo(() => {
+    if (!searchQuery.trim()) return localRiders;
+    const q = searchQuery.toLowerCase().trim();
+    const tokens = q.split(/\s+/).filter(Boolean);
+    return localRiders.filter((r) => {
+      const name = (r.name || "").toLowerCase();
+      const phone = (r.phone || "").toLowerCase();
+      const email = (r.email || "").toLowerCase();
+      const vehicleNumber = (r.vehicleNumber || "").toLowerCase();
+      const id = (r.id || "").toLowerCase();
+      if (name.includes(q) || phone.includes(q) || email.includes(q) || vehicleNumber.includes(q) || id.includes(q)) {
+        return true;
+      }
+      if (tokens.length > 1) {
+        return tokens.every(
+          (t) => name.includes(t) || phone.includes(t) || email.includes(t) || vehicleNumber.includes(t) || id.includes(t)
+        );
+      }
+      return false;
+    });
+  }, [localRiders, searchQuery]);
 
   const paginatedRiders = React.useMemo(() => {
-    if (pageSize === "All") return localRiders;
+    if (pageSize === "All") return filteredRiders;
     const start = (currentPage - 1) * pageSize;
-    return localRiders.slice(start, start + pageSize);
-  }, [localRiders, currentPage, pageSize]);
+    return filteredRiders.slice(start, start + pageSize);
+  }, [filteredRiders, currentPage, pageSize]);
 
   const showToast = (text: string, isError: boolean = false) => {
     setToastMessage({ text, isError });
@@ -408,15 +433,88 @@ export const ResponsiveManageRiders: React.FC<ResponsiveManageRidersProps> = ({
           {/* Riders List Section */}
           <section className={styles.ridersSection}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-              <h2 className={styles.sectionLabel}>YOUR RIDERS ({localRiders.length})</h2>
+              <h2 className={styles.sectionLabel}>
+                YOUR RIDERS ({filteredRiders.length}{searchQuery.trim() ? ` / ${localRiders.length}` : ""})
+              </h2>
+            </div>
+
+            {/* Mobile Search Bar */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                backgroundColor: "#F1F5F9",
+                borderRadius: "8px",
+                padding: "8px 12px",
+                gap: "8px",
+                marginBottom: "12px",
+              }}
+            >
+              <Search size={16} color="#64748B" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search riders by name, phone..."
+                style={{
+                  border: "none",
+                  backgroundColor: "transparent",
+                  outline: "none",
+                  fontSize: "13px",
+                  color: "#1E293B",
+                  width: "100%",
+                }}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: 0,
+                    color: "#94A3B8",
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                  title="Clear search"
+                >
+                  <X size={14} />
+                </button>
+              )}
             </div>
 
             <div className={styles.ridersList}>
-              {localRiders.length === 0 ? (
-                <div style={{ padding: "32px 16px", textAlign: "center", color: "#64748B", fontSize: "14px" }}>
-                  <p style={{ margin: 0, fontWeight: 600, color: "#1E293B" }}>No delivery riders registered</p>
-                  <p style={{ margin: "4px 0 0 0", fontSize: "13px" }}>Add an agent to start managing riders.</p>
-                </div>
+              {filteredRiders.length === 0 ? (
+                searchQuery.trim() ? (
+                  <div style={{ padding: "32px 16px", textAlign: "center", color: "#64748B", fontSize: "14px" }}>
+                    <p style={{ margin: 0, fontWeight: 600, color: "#1E293B" }}>No delivery riders found</p>
+                    <p style={{ margin: "4px 0 0 0", fontSize: "13px" }}>No results matching &quot;{searchQuery}&quot;.</p>
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery("")}
+                      style={{
+                        marginTop: "10px",
+                        backgroundColor: "#F1F5F9",
+                        color: "#334155",
+                        border: "1px solid #CBD5E1",
+                        borderRadius: "8px",
+                        padding: "6px 14px",
+                        fontSize: "12.5px",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Clear Search
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ padding: "32px 16px", textAlign: "center", color: "#64748B", fontSize: "14px" }}>
+                    <p style={{ margin: 0, fontWeight: 600, color: "#1E293B" }}>No delivery riders registered</p>
+                    <p style={{ margin: "4px 0 0 0", fontSize: "13px" }}>Add an agent to start managing riders.</p>
+                  </div>
+                )
               ) : (
                 paginatedRiders.map((rider) => {
                   const isOnline =
@@ -506,11 +604,11 @@ export const ResponsiveManageRiders: React.FC<ResponsiveManageRidersProps> = ({
               )}
             </div>
 
-            {localRiders.length > 0 && (
+            {filteredRiders.length > 0 && (
               <div style={{ marginTop: "14px" }}>
                 <PaginationControls
                   currentPage={currentPage}
-                  totalItems={localRiders.length}
+                  totalItems={filteredRiders.length}
                   pageSize={pageSize}
                   onPageChange={(p) => setCurrentPage(p)}
                   onPageSizeChange={(s) => {

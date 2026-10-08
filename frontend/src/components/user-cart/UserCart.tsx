@@ -2665,7 +2665,7 @@ export const UserCart: React.FC<UserCartProps> = ({
                     }}
                   >
                     <Plus size={15} />
-                    <span>Add New Address</span>
+                    <span>Choose Location / Add Address</span>
                   </button>
                 </div>
               )}
@@ -2695,7 +2695,7 @@ export const UserCart: React.FC<UserCartProps> = ({
                   }}
                 >
                   <Plus size={15} />
-                  <span>Add Another Address</span>
+                  <span>Add Another Address / Change Location</span>
                 </button>
               )}
             </div>

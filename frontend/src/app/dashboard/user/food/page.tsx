@@ -449,7 +449,35 @@ export default function UserFoodPage() {
             )}
 
             {loading ? (
-                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>Loading menus...</div>
+                <div>
+                    <style>{`
+                        @keyframes shimmer {
+                            0% { background-position: -200% 0; }
+                            100% { background-position: 200% 0; }
+                        }
+                        .food-dash-skel {
+                            background: linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%);
+                            background-size: 200% 100%;
+                            animation: shimmer 1.5s infinite ease-in-out;
+                        }
+                    `}</style>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '25px' }}>
+                        {[1, 2, 3, 4, 5, 6].map((i) => (
+                            <div key={`food-load-skel-${i}`} style={{ backgroundColor: 'white', borderRadius: '12px', overflow: 'hidden', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column' }}>
+                                <div className="food-dash-skel" style={{ width: '100%', height: '180px' }} />
+                                <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    <div className="food-dash-skel" style={{ width: '70%', height: '22px', borderRadius: '6px' }} />
+                                    <div className="food-dash-skel" style={{ width: '50%', height: '14px', borderRadius: '4px' }} />
+                                    <div className="food-dash-skel" style={{ width: '85%', height: '12px', borderRadius: '4px' }} />
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+                                        <div className="food-dash-skel" style={{ width: '60px', height: '20px', borderRadius: '4px' }} />
+                                        <div className="food-dash-skel" style={{ width: '80px', height: '34px', borderRadius: '6px' }} />
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
             ) : filteredFood.length === 0 ? (
                 <div style={{ backgroundColor: '#F8F9F9', padding: '40px 20px', textAlign: 'center', borderRadius: '12px', color: 'var(--text-muted)' }}>
                     {searchQuery ? (

@@ -16,6 +16,8 @@ import {
   ShieldCheck,
   AlertCircle,
   Sparkles,
+  Search,
+  X,
 } from "lucide-react";
 import {
   fetchStoredMealPlans,
@@ -48,10 +50,25 @@ export function formatDeliveryAddressDisplay(rawAddress?: string, roomNo?: strin
 export type PlanItem = MealSubscriptionPlan;
 export type RecentSubscriber = MealSubscriber;
 
-export default function ManageSubscriptionCanvas() {
+export interface ManageSubscriptionCanvasProps {
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
+}
+
+export default function ManageSubscriptionCanvas({
+  searchQuery: externalSearchQuery,
+  onSearchChange,
+}: ManageSubscriptionCanvasProps = {}) {
   const [plans, setPlans] = useState<PlanItem[]>([]);
   const [subscribers, setSubscribers] = useState<RecentSubscriber[]>([]);
-  const [activeTab, setActiveTab] = useState<"all" | "active">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "active" | "draft">("all");
+  const [localSearchQuery, setLocalSearchQuery] = useState("");
+  const searchQuery = externalSearchQuery !== undefined ? externalSearchQuery : localSearchQuery;
+
+  const handleClearSearch = () => {
+    if (onSearchChange) onSearchChange("");
+    setLocalSearchQuery("");
+  };
   const [loading, setLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastType, setToastType] = useState<"success" | "error">("success");
@@ -147,8 +164,37 @@ export default function ManageSubscriptionCanvas() {
   };
 
   const filteredPlans = plans.filter((plan) => {
-    if (activeTab === "active") return plan.status === "Live";
-    return true;
+    if (activeTab === "active" && plan.status !== "Live") return false;
+    if (activeTab === "draft" && plan.status !== "Draft" && plan.status !== "Paused" && plan.status !== "Inactive") return false;
+
+    const q = (searchQuery || "").toLowerCase().trim();
+    if (!q) return true;
+
+    const nameMatch = (plan.name || "").toLowerCase().includes(q);
+    const tierMatch = (plan.tier || "").toLowerCase().includes(q);
+    const idMatch = (plan.id || "").toLowerCase().includes(q) || (plan.planId || "").toLowerCase().includes(q);
+    const durationMatch = (plan.duration || "").toLowerCase().includes(q);
+    const statusMatch = (plan.status || "").toLowerCase().includes(q);
+    const priceMatch =
+      (plan.weeklyPrice || "").toLowerCase().includes(q) ||
+      (plan.monthlyPrice || "").toLowerCase().includes(q) ||
+      (plan.quarterlyPrice || "").toLowerCase().includes(q) ||
+      (plan.yearlyPrice || "").toLowerCase().includes(q);
+    const featuresMatch = Array.isArray(plan.features) && plan.features.some((f) => (f || "").toLowerCase().includes(q));
+    const mealTimingsMatch = Array.isArray(plan.mealTimings) && plan.mealTimings.some((m) => (m || "").toLowerCase().includes(q));
+
+    return nameMatch || tierMatch || idMatch || durationMatch || statusMatch || priceMatch || featuresMatch || mealTimingsMatch;
+  });
+
+  const filteredSubscribers = subscribers.filter((sub) => {
+    const q = (searchQuery || "").toLowerCase().trim();
+    if (!q) return true;
+    const nameMatch = (sub.customerName || sub.name || "").toLowerCase().includes(q);
+    const planMatch = (sub.planName || "").toLowerCase().includes(q);
+    const addressMatch = (sub.deliveryAddress || sub.roomNo || "").toLowerCase().includes(q);
+    const statusMatch = (sub.status || "").toLowerCase().includes(q);
+    const phoneMatch = (sub.customerPhone || "").toLowerCase().includes(q);
+    return nameMatch || planMatch || addressMatch || statusMatch || phoneMatch;
   });
 
   const activePlansCount = plans.filter((p) => p.status === "Live").length;
@@ -497,11 +543,84 @@ export default function ManageSubscriptionCanvas() {
           >
             Active ({plans.filter((p) => p.status === "Live").length})
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("draft")}
+            style={{
+              padding: "8px 16px",
+              borderRadius: "6px",
+              border: "none",
+              fontSize: "13px",
+              fontWeight: activeTab === "draft" ? 700 : 500,
+              backgroundColor: activeTab === "draft" ? "#FF5500" : "transparent",
+              color: activeTab === "draft" ? "#FFFFFF" : "#64748B",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+            }}
+          >
+            Drafts ({plans.filter((p) => p.status === "Draft").length})
+          </button>
         </div>
 
-        <span style={{ fontSize: "13px", color: "#64748B", fontWeight: 500 }}>
-          Showing {filteredPlans.length} subscription packages
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          {/* In-page quick search bar */}
+          <div
+            style={{
+              position: "relative",
+              display: "flex",
+              alignItems: "center",
+              backgroundColor: "#FFFFFF",
+              borderRadius: "8px",
+              border: "1px solid #CBD5E1",
+              padding: "6px 12px",
+              gap: "8px",
+              minWidth: "260px",
+            }}
+          >
+            <Search size={15} color="#94A3B8" />
+            <input
+              type="text"
+              placeholder="Search plans by name, tier, meal..."
+              value={searchQuery}
+              onChange={(e) => {
+                const val = e.target.value;
+                setLocalSearchQuery(val);
+                if (onSearchChange) onSearchChange(val);
+              }}
+              style={{
+                border: "none",
+                outline: "none",
+                fontSize: "13px",
+                width: "100%",
+                backgroundColor: "transparent",
+                color: "#1E293B",
+              }}
+              aria-label="Search subscription plans"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={handleClearSearch}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#94A3B8",
+                  padding: "0 2px",
+                  display: "flex",
+                  alignItems: "center",
+                }}
+                aria-label="Clear search"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          <span style={{ fontSize: "13px", color: "#64748B", fontWeight: 500 }}>
+            Showing {filteredPlans.length} {filteredPlans.length === 1 ? "subscription package" : "subscription packages"}
+          </span>
+        </div>
       </div>
 
       {/* 4. Active Subscription Plan Cards */}
@@ -534,33 +653,60 @@ export default function ManageSubscriptionCanvas() {
               justifyContent: "center",
             }}
           >
-            <CreditCard size={28} />
+            {searchQuery.trim() ? <Search size={28} /> : <CreditCard size={28} />}
           </div>
           <h3 style={{ fontSize: "17px", fontWeight: 700, color: "#0F172A", margin: 0 }}>
-            No subscription plans found
+            {searchQuery.trim()
+              ? `No subscription plans matching "${searchQuery}"`
+              : "No subscription plans found"}
           </h3>
           <p style={{ fontSize: "13.5px", color: "#64748B", margin: 0, maxWidth: "440px" }}>
-            Create custom Bronze, Silver, or Gold meal packages (breakfast, lunch, or dinner) to start offering subscription dining.
+            {searchQuery.trim()
+              ? "Try searching by plan name, tier (Bronze, Silver, Gold), meal timing, or price."
+              : "Create custom Bronze, Silver, or Gold meal packages (breakfast, lunch, or dinner) to start offering subscription dining."}
           </p>
-          <Link
-            href="/seller/subscription/add"
-            style={{
-              marginTop: "8px",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "8px",
-              backgroundColor: "#FF5500",
-              color: "#FFFFFF",
-              padding: "10px 20px",
-              borderRadius: "8px",
-              fontSize: "13.5px",
-              fontWeight: 700,
-              textDecoration: "none",
-            }}
-          >
-            <Plus size={16} strokeWidth={2.8} />
-            <span>Create First Plan</span>
-          </Link>
+          {searchQuery.trim() ? (
+            <button
+              type="button"
+              onClick={handleClearSearch}
+              style={{
+                marginTop: "8px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                backgroundColor: "#FFF1E8",
+                color: "#FF5500",
+                border: "1px solid #FED7AA",
+                padding: "9px 18px",
+                borderRadius: "8px",
+                fontSize: "13px",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              Clear Search
+            </button>
+          ) : (
+            <Link
+              href="/seller/subscription/add"
+              style={{
+                marginTop: "8px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                backgroundColor: "#FF5500",
+                color: "#FFFFFF",
+                padding: "10px 20px",
+                borderRadius: "8px",
+                fontSize: "13.5px",
+                fontWeight: 700,
+                textDecoration: "none",
+              }}
+            >
+              <Plus size={16} strokeWidth={2.8} />
+              <span>Create First Plan</span>
+            </Link>
+          )}
         </div>
       ) : (
         <div
@@ -671,6 +817,20 @@ export default function ManageSubscriptionCanvas() {
                     {plan.duration === "1 Week" ? "/ week" : plan.duration === "2 Weeks" ? "/ 2 weeks" : plan.duration === "1 Month" ? "/ month" : `/${plan.duration || "cycle"}`}
                   </span>
                 </div>
+                {Boolean(plan.duration && !plan.duration.toLowerCase().includes("week") && plan.quarterlyPrice && plan.yearlyPrice) && (
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      marginTop: "6px",
+                      fontSize: "11.5px",
+                      color: "#64748B",
+                    }}
+                  >
+                    <span>Quarterly: {plan.quarterlyPrice}</span>
+                    <span>Yearly: {plan.yearlyPrice}</span>
+                  </div>
+                )}
               </div>
 
               {/* Inclusions List */}
@@ -778,6 +938,12 @@ export default function ManageSubscriptionCanvas() {
                     {plan.subscribersCount} Users
                   </div>
                   <div style={{ fontSize: "11.5px", color: "#64748B" }}>Active Subscribers</div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: "14px", fontWeight: 700, color: "#16A34A" }}>
+                    {plan.monthlyRevenue}
+                  </div>
+                  <div style={{ fontSize: "11.5px", color: "#64748B" }}>Monthly Rev.</div>
                 </div>
               </div>
 
@@ -949,7 +1115,7 @@ export default function ManageSubscriptionCanvas() {
               </tr>
             </thead>
             <tbody>
-              {subscribers.length === 0 ? (
+              {filteredSubscribers.length === 0 ? (
                 <tr>
                   <td
                     colSpan={7}
@@ -960,11 +1126,13 @@ export default function ManageSubscriptionCanvas() {
                       fontSize: "13.5px",
                     }}
                   >
-                    No active subscribers yet. Once customers subscribe to your meal plans, their details will appear here.
+                    {searchQuery.trim()
+                      ? `No subscribers found matching "${searchQuery}".`
+                      : "No active subscribers yet. Once customers subscribe to your meal plans, their details will appear here."}
                   </td>
                 </tr>
               ) : (
-                subscribers.map((sub) => (
+                filteredSubscribers.map((sub) => (
                   <tr
                     key={sub.id}
                     style={{

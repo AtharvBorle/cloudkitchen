@@ -636,19 +636,11 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
         {/* Main Orders Content */}
         <main className={styles.mainContent}>
           {/* Header Title & Subtitle */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
-            <div className={styles.headerGroup}>
-              <h1 className={styles.title}>Food & Service Orders</h1>
-              <p className={styles.subtitle}>
-                Manage active incoming, preparation, and delivery cycles in real-time.
-              </p>
-            </div>
-
-            {/* Live Sync Status Pill */}
-            <div className={styles.liveSyncIndicator} title="Orders are synchronized live with the backend">
-              <span className={styles.liveSyncDot} />
-              <span>Live Real-Time Sync</span>
-            </div>
+          <div className={styles.headerGroup}>
+            <h1 className={styles.title}>Food & Service Orders</h1>
+            <p className={styles.subtitle}>
+              Manage active incoming, preparation, and delivery cycles in real-time.
+            </p>
           </div>
 
           {/* Control Bar: Status Filter Tabs + Right Filter/Sort Buttons */}
@@ -731,15 +723,41 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredOrders.length === 0 ? (
+                  {loading ? (
+                    Array.from({ length: 6 }).map((_, idx) => (
+                      <tr key={`order-skeleton-${idx}`}>
+                        <td style={{ padding: "16px" }}>
+                          <div style={{ width: "90px", height: "18px", borderRadius: "6px", background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite ease-in-out" }} />
+                        </td>
+                        <td style={{ padding: "16px" }}>
+                          <div style={{ width: "120px", height: "18px", borderRadius: "6px", background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite ease-in-out" }} />
+                        </td>
+                        <td style={{ padding: "16px" }}>
+                          <div style={{ width: "140px", height: "18px", borderRadius: "6px", background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite ease-in-out" }} />
+                        </td>
+                        <td style={{ padding: "16px" }}>
+                          <div style={{ width: "70px", height: "18px", borderRadius: "6px", background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite ease-in-out" }} />
+                        </td>
+                        <td style={{ padding: "16px" }}>
+                          <div style={{ width: "60px", height: "18px", borderRadius: "6px", background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite ease-in-out" }} />
+                        </td>
+                        <td style={{ padding: "16px" }}>
+                          <div style={{ width: "80px", height: "24px", borderRadius: "12px", background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite ease-in-out" }} />
+                        </td>
+                        <td style={{ padding: "16px" }}>
+                          <div style={{ width: "80px", height: "24px", borderRadius: "12px", background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite ease-in-out" }} />
+                        </td>
+                        <td style={{ padding: "16px", textAlign: "right" }}>
+                          <div style={{ width: "80px", height: "30px", borderRadius: "6px", background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite ease-in-out", marginLeft: "auto" }} />
+                        </td>
+                      </tr>
+                    ))
+                  ) : filteredOrders.length === 0 ? (
                     <tr>
                       <td colSpan={8} style={{ textAlign: "center", padding: "48px 16px", color: "#64748b", fontSize: "14px" }}>
-                        {loading ? (
-                          "Loading orders..."
-                        ) : (
-                          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
-                            <span>
-                              No {activeFilter !== "All" ? activeFilter.toLowerCase() : ""} orders found
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+                          <span>
+                            No {activeFilter !== "All" ? activeFilter.toLowerCase() : ""} orders found
                               {dateFilter !== "ALL" ? ` for ${dateFilter.toLowerCase().replace("_", " ")}` : ""}
                               {searchQuery ? ` matching "${searchQuery}"` : ""}.
                             </span>
@@ -762,7 +780,6 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
                               </button>
                             )}
                           </div>
-                        )}
                       </td>
                     </tr>
                   ) : (

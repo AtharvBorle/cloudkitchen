@@ -793,6 +793,7 @@ export default function Home() {
           places={dynamicPlaces}
           foodItems={homeSearchQuery ? homeData.allFoodItems : homeData.foodItems}
           allKitchens={homeData.allKitchens}
+          isLoading={homeData.isLoading}
         />
 
         {/* 6. Popular Orders / Today's Special Offers */}

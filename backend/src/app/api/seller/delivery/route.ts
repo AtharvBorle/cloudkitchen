@@ -2,9 +2,11 @@ import { getSellerDeliveryPersons, createSellerDeliveryPerson } from "@/controll
 import { successResponse, errorResponse } from "@/lib/api-response";
 import { ApiError } from "@/lib/api-error";
 
-export async function GET() {
+export const dynamic = "force-dynamic";
+
+export async function GET(req: Request) {
     try {
-        const data = await getSellerDeliveryPersons();
+        const data = await getSellerDeliveryPersons(req);
         return successResponse(data);
     } catch (error: any) {
         if (error instanceof ApiError) return errorResponse(error.message, error.statusCode);

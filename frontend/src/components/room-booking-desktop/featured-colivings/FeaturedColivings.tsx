@@ -23,6 +23,7 @@ export interface FeaturedColivingsProps {
   heading?: string;
   cards?: ColivingCardItem[];
   rooms?: any[];
+  isLoading?: boolean;
   onBookRoom?: (card: ColivingCardItem) => void;
 }
 
@@ -30,6 +31,7 @@ export const FeaturedColivings: React.FC<FeaturedColivingsProps> = ({
   heading = "Featured Premium co-livings",
   cards: propCards,
   rooms: propRooms,
+  isLoading = false,
   onBookRoom,
 }) => {
   const router = useRouter();
@@ -130,6 +132,36 @@ export const FeaturedColivings: React.FC<FeaturedColivingsProps> = ({
   }, [propRooms]);
 
   const displayCards = propCards || dynamicCards;
+
+  if (isLoading) {
+    return (
+      <section className={styles.sectionContainer} aria-label={heading}>
+        <h2 className={styles.heading}>{heading}</h2>
+        <div className={styles.cardsGrid} role="region" aria-label="Loading Featured Rooms">
+          {[1, 2, 3, 4].map((i) => (
+            <article key={`featured-skeleton-${i}`} className={styles.card} style={{ pointerEvents: "none" }}>
+              <div className={styles.skeletonPulse} style={{ width: "100%", height: "250px" }} />
+              <div className={styles.cardBody}>
+                <div className={styles.mainInfo}>
+                  <div className={styles.skeletonPulse} style={{ width: "70%", height: "22px", borderRadius: "6px", marginBottom: "8px" }} />
+                  <div className={styles.skeletonPulse} style={{ width: "45%", height: "14px", borderRadius: "4px", marginBottom: "14px" }} />
+                  <div style={{ marginBottom: "12px" }}>
+                    <div className={styles.skeletonPulse} style={{ width: "80px", height: "10px", borderRadius: "3px", marginBottom: "6px" }} />
+                    <div className={styles.skeletonPulse} style={{ width: "110px", height: "24px", borderRadius: "6px" }} />
+                  </div>
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <div className={styles.skeletonPulse} style={{ width: "65px", height: "22px", borderRadius: "12px" }} />
+                    <div className={styles.skeletonPulse} style={{ width: "85px", height: "22px", borderRadius: "12px" }} />
+                  </div>
+                </div>
+                <div className={styles.skeletonPulse} style={{ width: "100px", height: "40px", borderRadius: "8px", alignSelf: "flex-end" }} />
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    );
+  }
 
   if (!displayCards || displayCards.length === 0) {
     return null;

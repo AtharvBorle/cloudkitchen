@@ -935,7 +935,17 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
               <h2 className={styles.summaryTitle}>Order Summary</h2>
 
               {/* Delivery Address Section */}
-              <div className={styles.deliveryBlock}>
+              <div
+                className={styles.deliveryBlock}
+                onClick={() => {
+                  if (savedAddresses && savedAddresses.length > 0) {
+                    setIsAddressModalOpen(true);
+                  } else {
+                    openLocationModal();
+                  }
+                }}
+                style={{ cursor: "pointer" }}
+              >
                 <div className={styles.addressHeaderRow}>
                   <div className={styles.addressPinBox}>
                     <MapPin size={20} />
@@ -949,7 +959,14 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
                 <button
                   type="button"
                   className={styles.changeAddressBtn}
-                  onClick={() => setIsAddressModalOpen(true)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (savedAddresses && savedAddresses.length > 0) {
+                      setIsAddressModalOpen(true);
+                    } else {
+                      openLocationModal();
+                    }
+                  }}
                 >
                   <span>Change</span>
                   <span aria-hidden="true">&gt;</span>
@@ -1101,7 +1118,7 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
                     }}
                   >
                     <Plus size={15} />
-                    <span>Add New Address</span>
+                    <span>Choose Location / Add Address</span>
                   </button>
                 </div>
               )}
@@ -1131,7 +1148,7 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
                   }}
                 >
                   <Plus size={15} />
-                  <span>Add Another Address</span>
+                  <span>Add Another Address / Change Location</span>
                 </button>
               )}
             </div>
@@ -1141,9 +1158,11 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
 
       {/* Toast Feedback */}
       {toastMessage && (
-        <div className={styles.toastMessage}>
-          <CheckCircle2 size={18} color="#10B981" />
-          <span>{toastMessage}</span>
+        <div className={styles.toastMessage} style={{ pointerEvents: "none", zIndex: 99999 }}>
+          <CheckCircle2 size={18} color="#10B981" style={{ flexShrink: 0 }} />
+          <span style={{ fontWeight: 600, fontSize: "0.85rem", lineHeight: 1.35, wordBreak: "normal", overflowWrap: "break-word" }}>
+            {toastMessage}
+          </span>
         </div>
       )}
     </div>

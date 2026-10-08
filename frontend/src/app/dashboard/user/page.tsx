@@ -261,8 +261,93 @@ export default function UserDashboard() {
 
     if (loading) {
         return (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
-                <div style={{ padding: '20px', fontSize: '1.2rem', color: 'var(--text-muted)' }}>Loading amazing options nearby...</div>
+            <div>
+                <style>{`
+                    @keyframes shimmer {
+                        0% { background-position: -200% 0; }
+                        100% { background-position: 200% 0; }
+                    }
+                    .dash-skeleton {
+                        background: linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%);
+                        background-size: 200% 100%;
+                        animation: shimmer 1.5s infinite ease-in-out;
+                    }
+                `}</style>
+                {/* Banner Skeleton */}
+                <div
+                    className="dash-skeleton"
+                    style={{
+                        height: "180px",
+                        borderRadius: "16px",
+                        marginBottom: "32px",
+                    }}
+                />
+
+                {/* Popular Bites Near You Section */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                    <div className="dash-skeleton" style={{ width: "220px", height: "28px", borderRadius: "8px" }} />
+                    <div className="dash-skeleton" style={{ width: "80px", height: "18px", borderRadius: "6px" }} />
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "24px", marginBottom: "40px" }}>
+                    {[1, 2, 3, 4].map((i) => (
+                        <div
+                            key={`food-skel-${i}`}
+                            style={{
+                                backgroundColor: "white",
+                                borderRadius: "12px",
+                                overflow: "hidden",
+                                border: "1px solid #E2E8F0",
+                                display: "flex",
+                                flexDirection: "column",
+                            }}
+                        >
+                            <div className="dash-skeleton" style={{ width: "100%", height: "180px" }} />
+                            <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                                <div className="dash-skeleton" style={{ width: "70%", height: "20px", borderRadius: "6px" }} />
+                                <div className="dash-skeleton" style={{ width: "50%", height: "14px", borderRadius: "4px" }} />
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
+                                    <div className="dash-skeleton" style={{ width: "60px", height: "18px", borderRadius: "4px" }} />
+                                    <div className="dash-skeleton" style={{ width: "70px", height: "30px", borderRadius: "6px" }} />
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Rooms Section */}
+                {isRoomEnabled && (
+                    <>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                            <div className="dash-skeleton" style={{ width: "220px", height: "28px", borderRadius: "8px" }} />
+                            <div className="dash-skeleton" style={{ width: "80px", height: "18px", borderRadius: "6px" }} />
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "24px" }}>
+                            {[1, 2, 3].map((i) => (
+                                <div
+                                    key={`room-skel-${i}`}
+                                    style={{
+                                        backgroundColor: "white",
+                                        borderRadius: "12px",
+                                        overflow: "hidden",
+                                        border: "1px solid #E2E8F0",
+                                        display: "flex",
+                                        flexDirection: "column",
+                                    }}
+                                >
+                                    <div className="dash-skeleton" style={{ width: "100%", height: "200px" }} />
+                                    <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                                        <div className="dash-skeleton" style={{ width: "65%", height: "20px", borderRadius: "6px" }} />
+                                        <div className="dash-skeleton" style={{ width: "45%", height: "14px", borderRadius: "4px" }} />
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
+                                            <div className="dash-skeleton" style={{ width: "80px", height: "20px", borderRadius: "4px" }} />
+                                            <div className="dash-skeleton" style={{ width: "90px", height: "32px", borderRadius: "6px" }} />
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </>
+                )}
             </div>
         );
     }

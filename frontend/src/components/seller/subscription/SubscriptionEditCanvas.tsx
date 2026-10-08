@@ -154,8 +154,20 @@ export default function SubscriptionEditCanvas({
             };
           }),
           allowCancelSubscription: false,
-          allowPauseBilling: found.pauseBillingPeriod !== "None",
-          pauseBillingPeriod: found.pauseBillingPeriod || "30 Days",
+          allowPauseBilling: Boolean(
+            found.pauseBillingPeriod &&
+            found.pauseBillingPeriod.toLowerCase() !== "none" &&
+            found.pauseBillingPeriod.toLowerCase() !== "disabled" &&
+            found.pauseBillingPeriod.toLowerCase() !== "false" &&
+            (found as any).allowPause !== false &&
+            (found as any).allowPauseBilling !== false
+          ),
+          pauseBillingPeriod: (
+            found.pauseBillingPeriod &&
+            found.pauseBillingPeriod.toLowerCase() !== "none" &&
+            found.pauseBillingPeriod.toLowerCase() !== "disabled" &&
+            found.pauseBillingPeriod.toLowerCase() !== "false"
+          ) ? found.pauseBillingPeriod : "30 Days",
           metrics: {
             subscribers: found.subscribersCount,
             monthlyRevenue: found.monthlyRevenue,
@@ -311,6 +323,28 @@ export default function SubscriptionEditCanvas({
       onDiscard();
     } else {
       router.push("/seller/subscription");
+    }
+  };
+
+  const handleArchive = async () => {
+    if (targetPlanId) {
+      const res = await deleteMealPlan(targetPlanId);
+      if (!res.success) {
+        setSaveStatus(res.message || "Cannot delete plan with active subscribers. Please inactivate it instead.");
+        setTimeout(() => {
+          setSaveStatus(null);
+        }, 5000);
+        return;
+      }
+    }
+    if (onArchive) {
+      onArchive();
+    } else {
+      setSaveStatus("Plan deleted successfully");
+      setTimeout(() => {
+        setSaveStatus(null);
+        router.push("/seller/subscription");
+      }, 900);
     }
   };
 
@@ -1265,44 +1299,47 @@ export default function SubscriptionEditCanvas({
                 </span>
               </div>
 
-              {/* Toggle switch + Days dropdown */}
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", flexShrink: 0 }}>
+                {/* Toggle switch */}
                 <button
                   type="button"
                   role="switch"
                   aria-checked={formData.allowPauseBilling}
-                  onClick={() => handleInputChange("allowPauseBilling", !formData.allowPauseBilling)}
+                  onClick={() => handleToggle("allowPauseBilling")}
                   style={{
                     width: "44px",
                     height: "24px",
-                    backgroundColor: formData.allowPauseBilling ? "#FF5500" : "#CBD5E1",
                     borderRadius: "9999px",
+                    backgroundColor: formData.allowPauseBilling ? "#FF5500" : "#CBD5E1",
                     position: "relative",
                     border: "none",
                     cursor: "pointer",
                     padding: 0,
-                    transition: "background-color 0.25s ease",
+                    transition: "background-color 0.2s ease",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    flexShrink: 0,
+                    outline: "none",
                   }}
-                  title={formData.allowPauseBilling ? "Disable pause subscription" : "Enable pause subscription"}
+                  aria-label="Allow User to Pause Subscription Toggle"
                 >
                   <span
                     style={{
-                      position: "absolute",
-                      top: "2px",
-                      left: "2px",
-                      width: "20px",
-                      height: "20px",
-                      backgroundColor: "#FFFFFF",
+                      width: "18px",
+                      height: "18px",
                       borderRadius: "50%",
-                      boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                      backgroundColor: "#FFFFFF",
+                      position: "absolute",
+                      left: "3px",
                       transform: formData.allowPauseBilling ? "translateX(20px)" : "translateX(0)",
-                      transition: "transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+                      transition: "transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
                     }}
                   />
                 </button>
 
                 {/* Days Dropdown (1-30 Days) */}
-                <div style={{ position: "relative", minWidth: "120px", opacity: formData.allowPauseBilling ? 1 : 0.4, pointerEvents: formData.allowPauseBilling ? "auto" : "none" }}>
+                <div style={{ position: "relative", minWidth: "120px" }}>
                   <select
                     value={formData.pauseBillingPeriod || "30 Days"}
                     disabled={!formData.allowPauseBilling}
@@ -1310,15 +1347,15 @@ export default function SubscriptionEditCanvas({
                     style={{
                       width: "100%",
                       height: "38px",
-                      backgroundColor: "#FFFFFF",
+                      backgroundColor: formData.allowPauseBilling ? "#FFFFFF" : "#F8FAFC",
                       border: "1px solid #E2E8F0",
                       borderRadius: "8px",
                       padding: "0 28px 0 12px",
                       fontSize: "13px",
                       fontWeight: 600,
-                      color: "#0F172A",
+                      color: formData.allowPauseBilling ? "#0F172A" : "#94A3B8",
                       outline: "none",
-                      cursor: "pointer",
+                      cursor: formData.allowPauseBilling ? "pointer" : "not-allowed",
                       appearance: "none",
                       boxSizing: "border-box",
                     }}
@@ -1349,6 +1386,66 @@ export default function SubscriptionEditCanvas({
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Card 6: Danger Zone */}
+          <div
+            style={{
+              backgroundColor: "#FFF5F5",
+              borderRadius: "12px",
+              border: "1px solid #FCA5A5",
+              padding: "24px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "12px",
+              boxSizing: "border-box",
+            }}
+          >
+            <h2
+              style={{
+                fontSize: "15px",
+                fontWeight: 700,
+                color: "#EF4444",
+                margin: 0,
+              }}
+            >
+              Danger Zone
+            </h2>
+
+            <p
+              style={{
+                fontSize: "12.5px",
+                color: "#64748B",
+                lineHeight: 1.5,
+                margin: 0,
+              }}
+            >
+              Archiving this plan will prevent new subscribers from purchasing it. Existing
+              active subscriptions will continue until their billing cycle finishes.
+            </p>
+
+            <button
+              type="button"
+              onClick={handleArchive}
+              style={{
+                backgroundColor: "#EF4444",
+                color: "#FFFFFF",
+                fontSize: "13px",
+                fontWeight: 700,
+                borderRadius: "6px",
+                padding: "10px 18px",
+                border: "none",
+                cursor: "pointer",
+                width: "fit-content",
+                marginTop: "4px",
+                fontFamily: "inherit",
+                transition: "opacity 0.15s ease",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+            >
+              Archive Plan Tier
+            </button>
           </div>
         </div>
 
@@ -1524,6 +1621,26 @@ export default function SubscriptionEditCanvas({
                   {formData.metadata.deployedDate}
                 </span>
               </div>
+
+              {/* Tax Code */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <span style={{ fontSize: "12.5px", color: "#64748B" }}>Tax Code</span>
+                <span
+                  style={{
+                    fontSize: "12.5px",
+                    fontWeight: 700,
+                    color: "#0F172A",
+                  }}
+                >
+                  {formData.metadata.taxCode}
+                </span>
+              </div>
             </div>
 
             {/* Action Buttons */}
@@ -1560,6 +1677,32 @@ export default function SubscriptionEditCanvas({
                 onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
               >
                 Save Changes
+              </button>
+
+              {/* Discard Modifications button */}
+              <button
+                type="button"
+                onClick={handleDiscard}
+                style={{
+                  width: "100%",
+                  height: "42px",
+                  backgroundColor: "#FFFFFF",
+                  color: "#475569",
+                  borderRadius: "8px",
+                  border: "1px solid #E2E8F0",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontFamily: "inherit",
+                  transition: "background-color 0.15s ease",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#F8FAFC")}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#FFFFFF")}
+              >
+                Discard Modifications
               </button>
             </div>
           </div>

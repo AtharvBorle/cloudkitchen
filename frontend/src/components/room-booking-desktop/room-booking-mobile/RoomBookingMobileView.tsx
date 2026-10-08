@@ -72,10 +72,12 @@ const CATEGORIES = [
 
 export interface RoomBookingMobileViewProps {
   rooms?: any[];
+  isLoading?: boolean;
 }
 
 export const RoomBookingMobileView: React.FC<RoomBookingMobileViewProps> = ({
   rooms: propRooms,
+  isLoading = false,
 }) => {
   const router = useRouter();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -376,7 +378,33 @@ export const RoomBookingMobileView: React.FC<RoomBookingMobileViewProps> = ({
 
       {/* 6. Vertical Feed of Accommodation Cards */}
       <div className={styles.cardsList}>
-        {filteredRooms.length === 0 ? (
+        {isLoading ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px", width: "100%" }} role="region" aria-label="Loading Accommodation">
+            {[1, 2, 3, 4].map((i) => (
+              <article key={`mobile-skeleton-${i}`} className={styles.roomCard} style={{ pointerEvents: "none" }}>
+                <div className={styles.skeletonPulse} style={{ width: "100%", height: "190px" }} />
+                <div className={styles.cardBody}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                    <div className={styles.skeletonPulse} style={{ width: "60%", height: "18px", borderRadius: "5px" }} />
+                    <div className={styles.skeletonPulse} style={{ width: "40px", height: "18px", borderRadius: "10px" }} />
+                  </div>
+                  <div className={styles.skeletonPulse} style={{ width: "45%", height: "13px", borderRadius: "4px", marginBottom: "10px" }} />
+                  <div style={{ display: "flex", gap: "6px", marginBottom: "14px" }}>
+                    <div className={styles.skeletonPulse} style={{ width: "55px", height: "20px", borderRadius: "10px" }} />
+                    <div className={styles.skeletonPulse} style={{ width: "65px", height: "20px", borderRadius: "10px" }} />
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "4px" }}>
+                    <div>
+                      <div className={styles.skeletonPulse} style={{ width: "65px", height: "9px", borderRadius: "3px", marginBottom: "4px" }} />
+                      <div className={styles.skeletonPulse} style={{ width: "80px", height: "18px", borderRadius: "5px" }} />
+                    </div>
+                    <div className={styles.skeletonPulse} style={{ width: "95px", height: "34px", borderRadius: "10px" }} />
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : filteredRooms.length === 0 ? (
           <div
             style={{
               padding: "48px 24px",

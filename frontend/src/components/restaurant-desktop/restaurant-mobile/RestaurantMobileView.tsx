@@ -30,29 +30,49 @@ import { useCart } from "@/context/CartContext";
 export interface RestaurantMobileViewProps {
   kitchenData: KitchenData;
   isVegOnly: boolean;
+  isLoading?: boolean;
   onVegToggle: (veg: boolean) => void;
   onAddItem: (item: FoodCardItem) => void;
   onDecreaseItem?: (itemId: string) => void;
   onRemoveItem?: (itemId: string) => void;
   subscriptionPlans?: PlanItem[];
   onSelectPlan?: (plan: PlanItem) => void;
+  priceFilterText?: string;
+  onClearPriceFilter?: () => void;
 }
 
 export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
   kitchenData,
   isVegOnly,
+  isLoading = false,
   onVegToggle,
   onAddItem,
   onDecreaseItem,
   onRemoveItem,
   subscriptionPlans,
   onSelectPlan,
+  priceFilterText,
+  onClearPriceFilter,
 }) => {
   const router = useRouter();
   const { cartItems, decreaseQuantity, removeFromCart, cartTotal } = useCart();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>("All");
+  const [isLikedAnimating, setIsLikedAnimating] = useState(false);
+  const [animKey, setAnimKey] = useState(0);
+
+  const handleToggleFavorite = () => {
+    setIsFavorite((prev) => {
+      const next = !prev;
+      if (next) {
+        setIsLikedAnimating(true);
+        setAnimKey((k) => k + 1);
+        setTimeout(() => setIsLikedAnimating(false), 850);
+      }
+      return next;
+    });
+  };
   const [couponCopied, setCouponCopied] = useState<boolean>(false);
 
   const getItemQuantity = (itemId: string) => {
@@ -222,14 +242,32 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
             <button
               type="button"
               className={styles.iconCircleBtn}
-              onClick={() => setIsFavorite((prev) => !prev)}
+              onClick={handleToggleFavorite}
               aria-label="Favorite"
             >
+              {isLikedAnimating && (
+                <>
+                  <span className={styles.heartRippleRing} key={`ring-${animKey}`} />
+                  <span className={`${styles.miniHeartParticle} ${styles.miniHeart1}`} key={`mh1-${animKey}`}>
+                    <Heart size={10} fill="#EF4444" color="#EF4444" />
+                  </span>
+                  <span className={`${styles.miniHeartParticle} ${styles.miniHeart2}`} key={`mh2-${animKey}`}>
+                    <Heart size={12} fill="#F43F5E" color="#F43F5E" />
+                  </span>
+                  <span className={`${styles.miniHeartParticle} ${styles.miniHeart3}`} key={`mh3-${animKey}`}>
+                    <Heart size={9} fill="#FB7185" color="#FB7185" />
+                  </span>
+                  <span className={`${styles.miniHeartParticle} ${styles.miniHeart4}`} key={`mh4-${animKey}`}>
+                    <Heart size={8} fill="#FDA4AF" color="#FDA4AF" />
+                  </span>
+                </>
+              )}
               <Heart
                 size={18}
                 strokeWidth={2.2}
                 fill={isFavorite ? "#EF4444" : "none"}
                 color={isFavorite ? "#EF4444" : "#0F172A"}
+                className={isLikedAnimating ? styles.heartIconBalloon : ""}
               />
             </button>
           </div>
@@ -469,6 +507,47 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
           </div>
         )}
 
+        {/* Price Filter Notification Banner */}
+        {priceFilterText && (
+          <div
+            style={{
+              margin: "12px 16px 4px 16px",
+              padding: "9px 14px",
+              backgroundColor: "#FFF7ED",
+              border: "1px solid #FFEDD5",
+              borderRadius: "12px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "8px",
+              boxShadow: "0 2px 6px rgba(255, 107, 0, 0.05)",
+            }}
+          >
+            <span style={{ fontSize: "12.5px", fontWeight: "600", color: "#C2410C" }}>
+              🏷️ Price Filter: <strong style={{ color: "#9A3412" }}>{priceFilterText}</strong> ({itemsToDisplay.length} item{itemsToDisplay.length === 1 ? "" : "s"})
+            </span>
+            {onClearPriceFilter && (
+              <button
+                type="button"
+                onClick={onClearPriceFilter}
+                style={{
+                  background: "#FFFFFF",
+                  border: "1px solid #FDBA74",
+                  color: "#EA580C",
+                  fontWeight: "700",
+                  fontSize: "11px",
+                  borderRadius: "6px",
+                  padding: "3px 8px",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Clear ✕
+              </button>
+            )}
+          </div>
+        )}
+
         {/* 3. Category Filter Chips (Horizontal Scroll) */}
         {dynamicCategories.length > 1 && (
           <div className={styles.categoriesBar}>
@@ -492,7 +571,62 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
         <div className={styles.foodSection}>
           <h2 className={styles.foodSectionTitle}>{getSectionTitle()}</h2>
 
-          {finalDisplayItems.length === 0 ? (
+          {isLoading ? (
+            <div className={styles.foodList}>
+              {[1, 2, 3, 4].map((i) => (
+                <div key={`mobile-dish-skeleton-${i}`} className={styles.foodCard} style={{ pointerEvents: "none" }}>
+                  <div
+                    className={styles.skeletonPulse}
+                    style={{
+                      width: "88px",
+                      height: "88px",
+                      borderRadius: "12px",
+                      flexShrink: 0,
+                    }}
+                  />
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                    <div>
+                      <div
+                        className={styles.skeletonPulse}
+                        style={{
+                          width: "65%",
+                          height: "16px",
+                          borderRadius: "4px",
+                          marginBottom: "6px",
+                        }}
+                      />
+                      <div
+                        className={styles.skeletonPulse}
+                        style={{
+                          width: "85%",
+                          height: "12px",
+                          borderRadius: "4px",
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
+                      <div
+                        className={styles.skeletonPulse}
+                        style={{
+                          width: "45px",
+                          height: "16px",
+                          borderRadius: "4px",
+                        }}
+                      />
+                      <div
+                        className={styles.skeletonPulse}
+                        style={{
+                          width: "60px",
+                          height: "28px",
+                          borderRadius: "8px",
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : finalDisplayItems.length === 0 ? (
             <div style={{ textAlign: "center", padding: "48px 16px", color: "#64748B", backgroundColor: "#FFFFFF", borderRadius: "16px", border: "1px dashed #E2E8F0", margin: "12px 0" }}>
               <Utensils size={32} color="#94A3B8" style={{ margin: "0 auto 8px", display: "block" }} />
               <div style={{ fontWeight: "700", fontSize: "1rem", color: "#1E293B", marginBottom: "4px" }}>

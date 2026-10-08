@@ -243,7 +243,35 @@ export default function UserRoomsPage() {
             </div>
 
             {loading ? (
-                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>Loading rooms...</div>
+                <div>
+                    <style>{`
+                        @keyframes shimmer {
+                            0% { background-position: -200% 0; }
+                            100% { background-position: 200% 0; }
+                        }
+                        .room-dash-skel {
+                            background: linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%);
+                            background-size: 200% 100%;
+                            animation: shimmer 1.5s infinite ease-in-out;
+                        }
+                    `}</style>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '30px' }}>
+                        {[1, 2, 3, 4, 5, 6].map((i) => (
+                            <div key={`room-load-skel-${i}`} style={{ backgroundColor: 'white', borderRadius: '12px', overflow: 'hidden', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column' }}>
+                                <div className="room-dash-skel" style={{ width: '100%', height: '200px' }} />
+                                <div style={{ padding: '25px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    <div className="room-dash-skel" style={{ width: '70%', height: '22px', borderRadius: '6px' }} />
+                                    <div className="room-dash-skel" style={{ width: '45%', height: '14px', borderRadius: '4px' }} />
+                                    <div className="room-dash-skel" style={{ width: '85%', height: '14px', borderRadius: '4px' }} />
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
+                                        <div className="room-dash-skel" style={{ width: '90px', height: '22px', borderRadius: '4px' }} />
+                                        <div className="room-dash-skel" style={{ width: '110px', height: '38px', borderRadius: '8px' }} />
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
             ) : filteredRooms.length === 0 ? (
                 <div style={{ backgroundColor: '#F8F9F9', padding: '40px 20px', textAlign: 'center', borderRadius: '12px', color: 'var(--text-muted)' }}>
                     {searchQuery ? (

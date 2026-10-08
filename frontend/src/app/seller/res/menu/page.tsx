@@ -5,6 +5,7 @@ import ResponsiveMenu, {
   ResponsiveDishItem,
 } from "@/components/seller/seller-menu/responsive/ResponsiveMenu";
 import { fetchApi } from "@/lib/fetch-api";
+import { broadcastStockAlert } from "@/hooks/useSellerNotifications";
 
 export default function ResponsiveMenuPage() {
   const [menuItems, setMenuItems] = useState<any[]>([]);
@@ -118,6 +119,13 @@ export default function ResponsiveMenuPage() {
             : item
         )
       );
+
+      const target = menuItems.find((i) => i.id === dishId);
+      broadcastStockAlert({
+        itemId: dishId,
+        itemName: target?.name || "Dish",
+        currentStock: newStock,
+      });
     } catch (err) {
       console.error("Failed to update item stock:", err);
     }

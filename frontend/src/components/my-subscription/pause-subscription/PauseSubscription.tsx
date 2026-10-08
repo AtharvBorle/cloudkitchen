@@ -51,6 +51,10 @@ export const PauseSubscription: React.FC<PauseSubscriptionProps> = ({
     }
   };
 
+  if (allowPause === false) {
+    return null;
+  }
+
   return (
     <div className={`${styles.container} ${isSwitchDisabled ? styles.disabledContainer : ""}`}>
       <div className={styles.left}>

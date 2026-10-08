@@ -19,20 +19,26 @@ export interface ManageSubscriptionCanvasDasProps {
 
 export default function ManageSubscriptionCanvasDas({
   topbarTitle = "Owner Operations Console",
-  searchPlaceholder = "Search order, room, dish...",
+  searchPlaceholder = "Search subscription plans by title, tier, price...",
   ownerName: initialOwnerName,
   partnerRole: initialPartnerRole,
   avatarInitials: initialAvatarInitials,
   activeSidebarId = "subscription",
-  onSearch,
+  onSearch: externalOnSearch,
   onNotificationClick,
 }: ManageSubscriptionCanvasDasProps) {
   const seller = useSellerProfile();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const ownerName = initialOwnerName || seller.ownerName;
   const partnerRole = initialPartnerRole || seller.partnerRole;
   const avatarInitials = initialAvatarInitials || seller.avatarInitials;
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    if (externalOnSearch) externalOnSearch(query);
+  };
 
   return (
     <div
@@ -75,14 +81,14 @@ export default function ManageSubscriptionCanvasDas({
           ownerName={ownerName}
           partnerRole={partnerRole}
           avatarInitials={avatarInitials}
-          onSearch={onSearch}
+          onSearch={handleSearch}
           onNotificationClick={onNotificationClick}
           onMenuToggle={() => setIsMobileOpen((prev) => !prev)}
         />
 
         {/* ManageSubscriptionCanvas Main Body */}
         <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
-          <ManageSubscriptionCanvas />
+          <ManageSubscriptionCanvas searchQuery={searchQuery} onSearchChange={setSearchQuery} />
         </div>
       </div>
     </div>

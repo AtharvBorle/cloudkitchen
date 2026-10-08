@@ -54,6 +54,7 @@ export interface ResSellerSubEditProps {
   onBack?: () => void;
   onSaveChanges?: (planData: any) => void;
   onDiscard?: () => void;
+  onArchivePlan?: () => void;
 }
 
 const DEFAULT_METRICS: PlanMetricsData = {
@@ -95,6 +96,7 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
   onBack,
   onSaveChanges,
   onDiscard,
+  onArchivePlan,
 }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -152,8 +154,15 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
             };
           })
         );
-          setAllowPauseBilling(found.pauseBillingPeriod !== "None");
-        setPauseBillingPeriod(found.pauseBillingPeriod || "30 Days");
+        const pausePeriodRaw = (found.pauseBillingPeriod || "").trim().toLowerCase();
+        const isPauseDisabled = !found.pauseBillingPeriod ||
+          pausePeriodRaw === "none" ||
+          pausePeriodRaw === "disabled" ||
+          pausePeriodRaw === "false" ||
+          (found as any).allowPause === false ||
+          (found as any).allowPauseBilling === false;
+        setAllowPauseBilling(!isPauseDisabled);
+        setPauseBillingPeriod(isPauseDisabled ? "30 Days" : (found.pauseBillingPeriod || "30 Days"));
         setMetrics({
           subscribers: found.subscribersCount || 0,
           monthlyRevenue: found.monthlyRevenue || "₹0",
@@ -249,7 +258,6 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
       mealTimings,
       allowCancellation: false,
       allowPauseBilling,
-      pauseBillingPeriod: allowPauseBilling ? (pauseBillingPeriod || "30 Days") : "None",
       metadata,
     };
 
@@ -268,6 +276,20 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
       onDiscard();
     } else {
       router.push("/seller/subscription");
+    }
+  };
+
+  const handleArchive = async () => {
+    if (targetPlanId) {
+      await deleteMealPlan(targetPlanId);
+    }
+    if (onArchivePlan) {
+      onArchivePlan();
+    } else {
+      setToastMessage("Plan Archived Successfully");
+      setTimeout(() => {
+        router.push("/seller/subscription");
+      }, 900);
     }
   };
 
@@ -550,42 +572,44 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
                   <h3 className={styles.policyTitle}>Allow User to Pause Subscription</h3>
                   <p className={styles.policyDesc}>When enabled, users can pause their meal subscription for up to the max configured days.</p>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
                   <button
                     type="button"
                     role="switch"
                     aria-checked={allowPauseBilling}
-                    onClick={() => setAllowPauseBilling(!allowPauseBilling)}
+                    onClick={() => setAllowPauseBilling((prev) => !prev)}
                     style={{
                       width: "44px",
                       height: "24px",
-                      backgroundColor: allowPauseBilling ? "#FF5500" : "#CBD5E1",
                       borderRadius: "9999px",
+                      backgroundColor: allowPauseBilling ? "#FF5500" : "#CBD5E1",
                       position: "relative",
                       border: "none",
                       cursor: "pointer",
                       padding: 0,
-                      transition: "background-color 0.25s ease",
+                      transition: "background-color 0.2s ease",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      flexShrink: 0,
+                      outline: "none",
                     }}
-                    title={allowPauseBilling ? "Disable pause subscription" : "Enable pause subscription"}
+                    aria-label="Allow User to Pause Subscription Toggle"
                   >
                     <span
                       style={{
-                        position: "absolute",
-                        top: "2px",
-                        left: "2px",
-                        width: "20px",
-                        height: "20px",
-                        backgroundColor: "#FFFFFF",
+                        width: "18px",
+                        height: "18px",
                         borderRadius: "50%",
-                        boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                        backgroundColor: "#FFFFFF",
+                        position: "absolute",
+                        left: "3px",
                         transform: allowPauseBilling ? "translateX(20px)" : "translateX(0)",
-                        transition: "transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+                        transition: "transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
                       }}
                     />
                   </button>
-
-                  <div style={{ position: "relative", minWidth: "110px", opacity: allowPauseBilling ? 1 : 0.4, pointerEvents: allowPauseBilling ? "auto" : "none" }}>
+                  <div style={{ position: "relative", minWidth: "115px", flexShrink: 0 }}>
                     <select
                       value={pauseBillingPeriod}
                       disabled={!allowPauseBilling}
@@ -593,15 +617,15 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
                       style={{
                         width: "100%",
                         height: "36px",
-                        backgroundColor: "#FFFFFF",
+                        backgroundColor: allowPauseBilling ? "#FFFFFF" : "#F8FAFC",
                         border: "1px solid #CBD5E1",
                         borderRadius: "8px",
                         padding: "0 24px 0 10px",
                         fontSize: "12.5px",
                         fontWeight: 600,
-                        color: "#0F172A",
+                        color: allowPauseBilling ? "#0F172A" : "#94A3B8",
                         outline: "none",
-                        cursor: "pointer",
+                        cursor: allowPauseBilling ? "pointer" : "not-allowed",
                         appearance: "none",
                       }}
                     >
@@ -647,10 +671,14 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
                 <span className={styles.metadataKey}>Deployed Date</span>
                 <span className={styles.metadataVal}>{metadata.deployedDate}</span>
               </div>
+              <div className={styles.metadataRow}>
+                <span className={styles.metadataKey}>Tax Code</span>
+                <span className={styles.metadataVal}>{metadata.taxCode}</span>
+              </div>
             </div>
           </section>
 
-          {/* Buttons: Save Changes */}
+          {/* Buttons: Save Changes & Discard Modifications */}
           <div className={styles.actionButtonGroup}>
             <button
               type="button"
@@ -659,7 +687,31 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
             >
               Save Changes
             </button>
+
+            <button
+              type="button"
+              className={styles.discardButton}
+              onClick={handleDiscard}
+            >
+              Discard Modifications
+            </button>
           </div>
+
+          {/* Section 8: Danger Zone */}
+          <section className={styles.dangerCard}>
+            <h3 className={styles.dangerTitle}>Danger Zone</h3>
+            <p className={styles.dangerDesc}>
+              Archiving this plan will prevent new subscribers from purchasing it. Existing active
+              subscriptions will continue until their billing cycle finishes.
+            </p>
+            <button
+              type="button"
+              className={styles.archiveButton}
+              onClick={handleArchive}
+            >
+              Archive Plan
+            </button>
+          </section>
 
           <div className={styles.homeIndicator} aria-hidden="true" />
         </main>

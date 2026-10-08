@@ -9,7 +9,6 @@ import ConsoleSidebar from '../sidebar/Sidebar';
 import Topbar from '../nav/Topbar';
 import { fetchApi } from '@/lib/fetch-api';
 import { useSellerProfile } from '@/hooks/useSellerProfile';
-import { useRoomModule } from '@/context/RoomModuleContext';
 import PaginationControls from '../common/PaginationControls';
 import styles from './SellerRooms.module.css';
 
@@ -47,14 +46,6 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
   onToggleAvailability,
 }) => {
   const router = useRouter();
-  const { isRoomEnabled } = useRoomModule();
-
-  useEffect(() => {
-    if (!isRoomEnabled) {
-      router.replace("/seller/dashboard");
-    }
-  }, [isRoomEnabled, router]);
-
   const seller = useSellerProfile();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -278,8 +269,6 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
     }
   };
 
-  if (!isRoomEnabled) return null;
-
   return (
     <div className={styles.roomsContainer}>
       {/* 1. Left Sidebar with active Rooms tab */}
@@ -430,9 +419,81 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
 
           {/* Rooms Grid Cards */}
           <div className={styles.roomsGrid}>
-            {filteredRooms.length === 0 ? (
+            {loading ? (
+              Array.from({ length: 4 }).map((_, idx) => (
+                <div key={`seller-room-skel-${idx}`} className={styles.roomCard} style={{ pointerEvents: "none" }}>
+                  <div
+                    style={{
+                      width: "100%",
+                      height: "190px",
+                      background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)",
+                      backgroundSize: "200% 100%",
+                      animation: "shimmer 1.5s infinite ease-in-out",
+                    }}
+                  />
+                  <div className={styles.cardBody}>
+                    <div
+                      style={{
+                        width: "70%",
+                        height: "22px",
+                        borderRadius: "6px",
+                        background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)",
+                        backgroundSize: "200% 100%",
+                        animation: "shimmer 1.5s infinite ease-in-out",
+                        marginBottom: "10px",
+                      }}
+                    />
+                    <div style={{ display: "flex", gap: "8px", alignItems: "center", marginBottom: "12px" }}>
+                      <div
+                        style={{
+                          width: "80px",
+                          height: "14px",
+                          borderRadius: "4px",
+                          background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)",
+                          backgroundSize: "200% 100%",
+                          animation: "shimmer 1.5s infinite ease-in-out",
+                        }}
+                      />
+                      <div
+                        style={{
+                          width: "60px",
+                          height: "14px",
+                          borderRadius: "4px",
+                          background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)",
+                          backgroundSize: "200% 100%",
+                          animation: "shimmer 1.5s infinite ease-in-out",
+                        }}
+                      />
+                    </div>
+                    <div className={styles.cardDivider} />
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "12px" }}>
+                      <div
+                        style={{
+                          width: "90px",
+                          height: "24px",
+                          borderRadius: "4px",
+                          background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)",
+                          backgroundSize: "200% 100%",
+                          animation: "shimmer 1.5s infinite ease-in-out",
+                        }}
+                      />
+                      <div
+                        style={{
+                          width: "80px",
+                          height: "24px",
+                          borderRadius: "12px",
+                          background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)",
+                          backgroundSize: "200% 100%",
+                          animation: "shimmer 1.5s infinite ease-in-out",
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : filteredRooms.length === 0 ? (
               <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "48px 16px", backgroundColor: "#FFFFFF", borderRadius: "12px", border: "1px solid #E2E8F0", color: "#64748b" }}>
-                {loading ? "Loading configured rooms..." : searchQuery.trim() ? `No rooms matching "${searchQuery}" found.` : "No rooms configured yet. Click '+ Add Room' to create your first listing."}
+                {searchQuery.trim() ? `No rooms matching "${searchQuery}" found.` : "No rooms configured yet. Click '+ Add Room' to create your first listing."}
               </div>
             ) : (
               paginatedRooms.map((room) => (

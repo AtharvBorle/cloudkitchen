@@ -131,7 +131,51 @@ export default function UserBookingsPage() {
     };
 
     if (status === "loading" || loading) {
-        return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>Loading bookings...</div>;
+        return (
+            <div>
+                <style>{`
+                    @keyframes shimmer {
+                        0% { background-position: -200% 0; }
+                        100% { background-position: 200% 0; }
+                    }
+                    .booking-skel {
+                        background: linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%);
+                        background-size: 200% 100%;
+                        animation: shimmer 1.5s infinite ease-in-out;
+                    }
+                `}</style>
+                <div className="booking-skel" style={{ width: "240px", height: "36px", borderRadius: "8px", marginBottom: "30px" }} />
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))", gap: "25px" }}>
+                    {[1, 2, 3].map((i) => (
+                        <div
+                            key={`booking-skel-${i}`}
+                            style={{
+                                backgroundColor: "white",
+                                borderRadius: "16px",
+                                overflow: "hidden",
+                                border: "1px solid #E2E8F0",
+                                display: "flex",
+                                flexDirection: "column",
+                            }}
+                        >
+                            <div className="booking-skel" style={{ width: "100%", height: "200px" }} />
+                            <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "12px" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                    <div className="booking-skel" style={{ width: "65%", height: "22px", borderRadius: "6px" }} />
+                                    <div className="booking-skel" style={{ width: "80px", height: "22px", borderRadius: "12px" }} />
+                                </div>
+                                <div className="booking-skel" style={{ width: "50%", height: "14px", borderRadius: "4px" }} />
+                                <div style={{ display: "flex", gap: "10px" }}>
+                                    <div className="booking-skel" style={{ flex: 1, height: "60px", borderRadius: "8px" }} />
+                                    <div className="booking-skel" style={{ flex: 1, height: "60px", borderRadius: "8px" }} />
+                                </div>
+                                <div className="booking-skel" style={{ width: "100%", height: "80px", borderRadius: "8px" }} />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
     }
 
     const filteredBookings = bookings.filter((booking: any) => {

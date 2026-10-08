@@ -543,9 +543,10 @@ export const togglePauseUserMealSubscription = async (subscriptionId: string, is
 
     if (isPaused) {
         // Dynamic seller policy enforcement: check if pause is allowed by kitchen partner
-        const pausePeriod = (subscription.plan?.pauseBillingPeriod || "").toLowerCase();
+        const pausePeriod = (subscription.plan?.pauseBillingPeriod || "").trim().toLowerCase();
         const allowPause = (subscription.plan as any)?.allowPause;
-        if (pausePeriod === "disabled" || pausePeriod === "none" || allowPause === false) {
+        const allowPauseBilling = (subscription.plan as any)?.allowPauseBilling;
+        if (pausePeriod === "disabled" || pausePeriod === "none" || pausePeriod === "false" || allowPause === false || allowPauseBilling === false) {
             throw new ApiError("Pausing is not allowed for this meal plan by the kitchen partner.", 400);
         }
     }

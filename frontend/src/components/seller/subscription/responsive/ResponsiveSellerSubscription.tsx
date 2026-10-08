@@ -16,6 +16,7 @@ import {
   AlertCircle,
   Bell,
   Check,
+  Search,
 } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
@@ -45,6 +46,8 @@ export interface ResponsiveSubscriptionPlan {
 export interface ResponsiveSellerSubscriptionProps {
   ownerName?: string;
   plans?: ResponsiveSubscriptionPlan[];
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
   onCreatePlan?: () => void;
   onEditPlan?: (plan: ResponsiveSubscriptionPlan) => void;
   onPreviewPlan?: (plan: ResponsiveSubscriptionPlan) => void;
@@ -78,6 +81,8 @@ const SORT_OPTIONS: { label: string; value: SortOption }[] = [
 export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscriptionProps> = ({
   ownerName,
   plans,
+  searchQuery: propSearchQuery,
+  onSearchChange: propOnSearchChange,
   onCreatePlan,
   onEditPlan,
   onPreviewPlan,
@@ -96,6 +101,12 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
       ? ownerName
       : seller.ownerName;
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
+  const [localSearchQuery, setLocalSearchQuery] = useState("");
+  const searchQuery = propSearchQuery !== undefined ? propSearchQuery : localSearchQuery;
+  const handleSearchChange = (query: string) => {
+    setLocalSearchQuery(query);
+    propOnSearchChange?.(query);
+  };
   const [statusFilter, setStatusFilter] = useState<PlanStatus>("All");
   const [tierFilter, setTierFilter] = useState<PlanTier>("All");
   const [sortBy, setSortBy] = useState<SortOption>("Newest");
@@ -190,6 +201,29 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
   const filteredPlans = useMemo(() => {
     return activePlans
       .filter((plan) => {
+        // Search query filter matching
+        if (searchQuery.trim()) {
+          const query = searchQuery.toLowerCase().trim();
+          const title = (plan.title || "").toLowerCase();
+          const tier = (plan.tier || "").toLowerCase();
+          const id = (plan.id || "").toLowerCase();
+          const price = (plan.price || "").toLowerCase();
+          const desc = (plan.description || "").toLowerCase();
+          const billing = (plan.billingCycle || "").toLowerCase();
+          const mealTypes = Array.isArray(plan.mealTypes) ? plan.mealTypes.join(" ").toLowerCase() : "";
+
+          const matches =
+            title.includes(query) ||
+            tier.includes(query) ||
+            id.includes(query) ||
+            price.includes(query) ||
+            desc.includes(query) ||
+            billing.includes(query) ||
+            mealTypes.includes(query);
+
+          if (!matches) return false;
+        }
+
         // Status filter matching
         if (statusFilter !== "All") {
           const planStatus = (plan.status || "").trim().toLowerCase();
@@ -240,7 +274,7 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
         }
         return 0;
       });
-  }, [activePlans, statusFilter, tierFilter, sortBy]);
+  }, [activePlans, searchQuery, statusFilter, tierFilter, sortBy]);
 
   const getTierBadgeClass = (tierVariant?: string, tier?: string) => {
     const t = (tier || "").toLowerCase();
@@ -338,6 +372,61 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
             <Plus size={20} strokeWidth={2.8} />
             <span>Create New Plan</span>
           </button>
+
+          {/* Search Bar */}
+          <div style={{ position: "relative", marginBottom: "12px", width: "100%" }}>
+            <Search
+              size={16}
+              style={{
+                position: "absolute",
+                left: "12px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "#94a3b8",
+                pointerEvents: "none",
+              }}
+            />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              placeholder="Search plans by title, tier, price..."
+              style={{
+                width: "100%",
+                padding: "10px 36px 10px 36px",
+                borderRadius: "10px",
+                border: "1px solid #e2e8f0",
+                fontSize: "13px",
+                outline: "none",
+                background: "#ffffff",
+                boxSizing: "border-box",
+                color: "#1e293b",
+              }}
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => handleSearchChange("")}
+                style={{
+                  position: "absolute",
+                  right: "10px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  border: "none",
+                  background: "transparent",
+                  color: "#94a3b8",
+                  cursor: "pointer",
+                  padding: "4px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+                aria-label="Clear search"
+              >
+                <X size={15} />
+              </button>
+            )}
+          </div>
 
           {/* 2. Filter & Sort Row (Dropdown Pills) */}
           <section className={styles.filterRow} aria-label="Subscription Filters">
@@ -592,12 +681,15 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
               <div className={styles.emptyState}>
                 <AlertCircle size={32} color="#F97316" />
                 <p className={styles.emptyText}>
-                  No subscription plans match your selected filters.
+                  {searchQuery.trim()
+                    ? `No subscription plans matching "${searchQuery}".`
+                    : "No subscription plans match your selected filters."}
                 </p>
                 <button
                   type="button"
                   className={styles.filterChip}
                   onClick={() => {
+                    handleSearchChange("");
                     setStatusFilter("All");
                     setTierFilter("All");
                     setSortBy("Newest");

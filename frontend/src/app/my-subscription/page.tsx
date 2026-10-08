@@ -1039,8 +1039,14 @@ function MySubscriptionContent() {
                     <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
                       {displayedSubs.map((subItem) => {
                         const isPauseAllowed = (() => {
-                          const pausePeriod = (subItem.plan?.pauseBillingPeriod || "").toLowerCase();
-                          return !(pausePeriod === "disabled" || pausePeriod === "none" || (subItem.plan as any)?.allowPause === false);
+                          const pausePeriod = (subItem.plan?.pauseBillingPeriod || "").trim().toLowerCase();
+                          return !(
+                            pausePeriod === "disabled" ||
+                            pausePeriod === "none" ||
+                            pausePeriod === "false" ||
+                            (subItem.plan as any)?.allowPause === false ||
+                            (subItem.plan as any)?.allowPauseBilling === false
+                          );
                         })();
 
                         return (

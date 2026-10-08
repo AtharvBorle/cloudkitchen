@@ -5,6 +5,7 @@ import ResponsiveSellerDashboard, {
   ResponsiveDashboardMetrics,
   ResponsiveOrderSummary,
 } from "@/components/seller/seller-dashboard/responsive/ResponsiveSellerDashboard";
+import { SellerCalendarModal, formatDateToYMD } from "@/components/seller/seller-dashboard/SellerCalendarModal";
 import { fetchApi } from "@/lib/fetch-api";
 import { useRealtimeStream } from "@/hooks/useRealtimeStream";
 import { addSellerNotification } from "@/hooks/useSellerNotifications";
@@ -15,10 +16,20 @@ export default function ResponsiveSellerDashboardPage() {
   const [ordersList, setOrdersList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadDashboard = async () => {
+  const todayYMD = useMemo(() => formatDateToYMD(new Date()), []);
+  const [selectedDate, setSelectedDate] = useState<string>(todayYMD);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const isViewingToday = selectedDate === todayYMD;
+
+  const loadDashboard = async (customDate?: string) => {
     try {
+      const activeDate = customDate !== undefined ? customDate : selectedDate;
+      const overviewUrl = activeDate
+        ? `/api/seller/dashboard/overview?date=${encodeURIComponent(activeDate)}`
+        : "/api/seller/dashboard/overview";
+
       const [overviewRes, ordersRes] = await Promise.allSettled([
-        fetchApi("/api/seller/dashboard/overview"),
+        fetchApi(overviewUrl),
         fetchApi("/api/seller/orders"),
       ]);
 
@@ -115,19 +126,29 @@ export default function ResponsiveSellerDashboardPage() {
 
   const dynamicMetrics: ResponsiveDashboardMetrics | undefined = useMemo(() => {
     if (!overviewData) return undefined;
+    const revenueVal = overviewData.todayRevenue !== undefined ? overviewData.todayRevenue : overviewData.totalRevenue || 0;
+    const codVal = (overviewData.codOutstanding !== undefined ? overviewData.codOutstanding : overviewData.riderTotalCodOutstanding) || 0;
     return {
-      todayRevenue: `₹${(overviewData.totalRevenue || 0).toLocaleString("en-IN")}`,
+      todayRevenue: `₹${revenueVal.toLocaleString("en-IN")}`,
       ordersToday: overviewData.todayOrdersCount ?? 0,
       pendingBookings: overviewData.roomsCount ?? 0,
-      codOutstanding: "₹0",
+      codOutstanding: `₹${codVal.toLocaleString("en-IN")}`,
     };
   }, [overviewData]);
 
+  const dateFilteredOrders = useMemo(() => {
+    if (isViewingToday) return ordersList;
+    return ordersList.filter((o: any) => {
+      if (!o.createdAt) return false;
+      return formatDateToYMD(new Date(o.createdAt)) === selectedDate;
+    });
+  }, [ordersList, selectedDate, isViewingToday]);
+
   const dynamicRecentOrders: ResponsiveOrderSummary[] = useMemo(() => {
-    if (!ordersList || ordersList.length === 0) {
+    if (!dateFilteredOrders || dateFilteredOrders.length === 0) {
       return [];
     }
-    return ordersList.map((o: any) => {
+    return dateFilteredOrders.map((o: any) => {
       let statusText: "New" | "Preparing" | "Delivered" | "Cancelled" | string = "New";
       const s = (o.status || "").toUpperCase();
       if (s === "PREPARING") statusText = "Preparing";
@@ -149,17 +170,35 @@ export default function ResponsiveSellerDashboardPage() {
         href: `/seller/orders/details?orderId=${encodeURIComponent(o.id)}&from=dashboard`,
       };
     });
-  }, [ordersList]);
+  }, [dateFilteredOrders]);
 
   const ownerDisplayName = overviewData?.sellerProfile?.businessName || overviewData?.sellerProfile?.user?.name || "Rahul";
 
   return (
-    <ResponsiveSellerDashboard
-      ownerName={ownerDisplayName}
-      greetingSubtitle="Here is your business summary today"
-      metrics={dynamicMetrics}
-      recentOrders={dynamicRecentOrders}
-    />
+    <>
+      <ResponsiveSellerDashboard
+        ownerName={ownerDisplayName}
+        greetingSubtitle="Here is your business summary today"
+        metrics={dynamicMetrics}
+        recentOrders={dynamicRecentOrders}
+        selectedDate={selectedDate}
+        onOpenCalendar={() => setIsCalendarOpen(true)}
+        onResetToday={() => {
+          setSelectedDate(todayYMD);
+          loadDashboard(todayYMD);
+        }}
+      />
+
+      <SellerCalendarModal
+        isOpen={isCalendarOpen}
+        onClose={() => setIsCalendarOpen(false)}
+        selectedDate={selectedDate}
+        onSelectDate={(newDate) => {
+          setSelectedDate(newDate);
+          loadDashboard(newDate);
+        }}
+      />
+    </>
   );
 }
 
