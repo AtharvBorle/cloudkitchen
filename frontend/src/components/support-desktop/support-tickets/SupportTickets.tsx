@@ -315,12 +315,26 @@ export const SupportTickets: React.FC = () => {
   };
 
   const filteredTickets = tickets.filter((t) => {
-    const q = searchQuery.toLowerCase().trim();
+    const normalizedQuery = searchQuery.toLowerCase().trim().replace(/\s+/g, " ");
+    const queryWords = normalizedQuery.split(" ").filter(Boolean);
+
+    const targetName = ((t as any).user?.name || (t as any).userName || (t as any).customerName || "").toLowerCase().trim();
+    const targetEmail = ((t as any).user?.email || (t as any).userEmail || (t as any).customerEmail || (t as any).email || "").toLowerCase().trim();
+    const targetPhone = ((t as any).user?.phone || (t as any).userPhone || (t as any).phone || "").toLowerCase().trim();
+    const targetRole = ((t as any).user?.role || "").toLowerCase().trim();
+    const targetTitle = (t.title || "").toLowerCase().trim();
+    const targetCategory = (t.category || "").toLowerCase().trim();
+    const targetDesc = (t.description || "").toLowerCase().trim();
+    const targetId = (t.id || "").toLowerCase().trim();
+
+    const fullSearchable = `${targetName} ${targetEmail} ${targetPhone} ${targetRole} ${targetTitle} ${targetCategory} ${targetDesc} ${targetId}`;
+
     const matchesSearch =
-      !q ||
-      t.title.toLowerCase().includes(q) ||
-      t.description.toLowerCase().includes(q) ||
-      t.id.toLowerCase().includes(q);
+      !normalizedQuery ||
+      fullSearchable.includes(normalizedQuery) ||
+      targetName.includes(normalizedQuery) ||
+      targetEmail.includes(normalizedQuery) ||
+      (queryWords.length > 1 && queryWords.every((word) => fullSearchable.includes(word)));
 
     const matchesStatus = statusFilter === "ALL" || t.status === statusFilter;
     const matchesCategory = categoryFilter === "ALL" || t.category === categoryFilter;
@@ -473,7 +487,7 @@ export const SupportTickets: React.FC = () => {
               <Search size={15} color="#94A3B8" />
               <input
                 type="text"
-                placeholder="Search tickets by title or ID..."
+                placeholder="Search by title, user, email or ID..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className={styles.searchInput}

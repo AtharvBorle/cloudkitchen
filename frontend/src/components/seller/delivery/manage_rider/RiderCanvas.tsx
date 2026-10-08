@@ -22,10 +22,14 @@ import {
   ShieldCheck,
   Check,
   Search,
+  Calendar,
+  RotateCcw,
 } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
 import { validateEmail } from "@/lib/email-validation";
 import PaginationControls from "@/components/seller/common/PaginationControls";
+import { SellerCalendarModal, formatDateToYMD } from "@/components/seller/seller-dashboard/SellerCalendarModal";
+import { useRealtimeStream } from "@/hooks/useRealtimeStream";
 
 export interface RiderSummaryMetric {
   id: string;
@@ -113,6 +117,12 @@ export default function RiderCanvas({
     }
   }, [searchQueryProp]);
 
+  // Date and Calendar states (Defaults to Today)
+  const todayYMD = useMemo(() => formatDateToYMD(new Date()), []);
+  const [selectedDate, setSelectedDate] = useState<string>(todayYMD);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const isViewingToday = selectedDate === todayYMD;
+
   const [riderList, setRiderList] = useState<RiderWalletRecord[]>(initialRiders || DEFAULT_RIDERS);
   const [metricsList, setMetricsList] = useState<RiderSummaryMetric[]>(initialMetrics || DEFAULT_METRICS);
   const [isLoading, setIsLoading] = useState(false);
@@ -147,13 +157,53 @@ export default function RiderCanvas({
     }, 3500);
   };
 
-  const loadRiders = async () => {
+  const formattedSelectedDate = useMemo(() => {
+    if (!selectedDate || selectedDate === todayYMD) return "Today";
+    try {
+      const [y, m, d] = selectedDate.split("-").map(Number);
+      return new Date(y, m - 1, d).toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+    } catch {
+      return selectedDate;
+    }
+  }, [selectedDate, todayYMD]);
+
+  const daysAgoText = useMemo(() => {
+    if (!selectedDate || selectedDate === todayYMD) return "";
+    try {
+      const [y, m, d] = selectedDate.split("-").map(Number);
+      const target = new Date(y, m - 1, d);
+      const nowObj = new Date();
+      nowObj.setHours(0, 0, 0, 0);
+      const targetDay = new Date(target);
+      targetDay.setHours(0, 0, 0, 0);
+      const diffTime = nowObj.getTime() - targetDay.getTime();
+      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+      if (diffDays === 1) return "1 day ago";
+      if (diffDays > 1) return `${diffDays} days ago`;
+      if (diffDays < 0) return `${Math.abs(diffDays)} days ahead`;
+      return "";
+    } catch {
+      return "";
+    }
+  }, [selectedDate, todayYMD]);
+
+  const loadRiders = async (dateStr?: string) => {
     try {
       setIsLoading(true);
-      const res = await fetchApi("/api/seller/delivery");
+      const targetDate = dateStr !== undefined ? dateStr : selectedDate;
+      const url = targetDate
+        ? `/api/seller/delivery?date=${encodeURIComponent(targetDate)}`
+        : "/api/seller/delivery";
+      const res = await fetchApi(url);
       if (res.ok) {
         const data = await res.json();
         const list = data.data?.deliveryPersons || data.deliveryPersons || data.data || [];
+        const metricsData = data.data?.metrics || data.metrics || {};
+
         if (Array.isArray(list)) {
           const mapped: RiderWalletRecord[] = list.map((dp: any) => {
             const rawBal = Number(dp.outstandingBalance) || 0;
@@ -175,22 +225,51 @@ export default function RiderCanvas({
           });
           setRiderList(mapped);
 
-          const totalCod = list.reduce((sum: number, dp: any) => sum + (Number(dp.outstandingBalance) || 0), 0);
-          const activeCount = list.filter((dp: any) => dp.isActive).length;
+          // 1. Total COD Outstanding (Total cash held in rider wallets)
+          const totalCod = metricsData.totalCodOutstanding !== undefined
+            ? Number(metricsData.totalCodOutstanding)
+            : list.reduce((sum: number, dp: any) => sum + (Number(dp.outstandingBalance) || 0), 0);
+
+          // 2. Cash Collected on target date (Total COD collected from customers by riders)
+          const cashCollected = Number(metricsData.cashCollectedToday) || 0;
+
+          // 3. Active Delivery Squad
+          const activeCount = metricsData.activeSquadCount !== undefined
+            ? Number(metricsData.activeSquadCount)
+            : list.filter((dp: any) => dp.isActive).length;
+
+          const isTargetToday = !targetDate || targetDate === todayYMD;
+
+          let dateLabel = "Cash Collection Today";
+          if (!isTargetToday) {
+            try {
+              const [y, m, d] = targetDate.split("-").map(Number);
+              const formattedDate = new Date(y, m - 1, d).toLocaleDateString("en-IN", {
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              });
+              dateLabel = `Cash Collected (${formattedDate})`;
+            } catch {
+              dateLabel = `Cash Collected (${targetDate})`;
+            }
+          }
 
           setMetricsList([
             {
               id: "total_cod",
               label: "Total COD Outstanding",
               value: `₹${totalCod.toLocaleString("en-IN")}`,
-              description: "Cumulative cash held by active delivery riders",
+              description: "Cumulative cash held in active rider wallets",
               iconType: "card",
             },
             {
               id: "cash_collected",
-              label: "Cash Collected Today",
-              value: "₹0",
-              description: "Deposited safely to partner cash drawers",
+              label: dateLabel,
+              value: `₹${cashCollected.toLocaleString("en-IN")}`,
+              description: isTargetToday
+                ? "Total COD collected by all riders today"
+                : `Total COD collected by all riders on ${formattedSelectedDate}`,
               iconType: "check",
             },
             {
@@ -209,6 +288,40 @@ export default function RiderCanvas({
       setIsLoading(false);
     }
   };
+
+  const handleSelectDate = (dateStr: string) => {
+    setSelectedDate(dateStr);
+    loadRiders(dateStr);
+  };
+
+  const handleResetToToday = () => {
+    setSelectedDate(todayYMD);
+    loadRiders(todayYMD);
+  };
+
+  // Midnight 12:00 AM auto-reset: if today rolls over to a new date, automatically reset today view to ₹0
+  useEffect(() => {
+    const checkMidnight = () => {
+      const currentToday = formatDateToYMD(new Date());
+      if (isViewingToday && selectedDate !== currentToday) {
+        setSelectedDate(currentToday);
+        loadRiders(currentToday);
+      }
+    };
+    const interval = setInterval(checkMidnight, 10000);
+    return () => clearInterval(interval);
+  }, [isViewingToday, selectedDate]);
+
+  // Real-time synchronization for order delivery & settlement events
+  useRealtimeStream({
+    url: "/api/seller/orders/stream",
+    onConnected: () => {
+      loadRiders();
+    },
+    onOrder: () => {
+      loadRiders();
+    },
+  });
 
   useEffect(() => {
     if (initialRiders !== undefined) {
@@ -664,8 +777,77 @@ export default function RiderCanvas({
             </p>
           </div>
 
-          {/* Add Delivery Boy Action Button */}
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          {/* Header Action Controls: Calendar Button + Add Delivery Boy */}
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+            {/* Calendar Trigger Button */}
+            <button
+              type="button"
+              onClick={() => setIsCalendarOpen(true)}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                backgroundColor: isViewingToday ? "#FFFFFF" : "#FFF7ED",
+                border: isViewingToday ? "1px solid #E2E8F0" : "1.5px solid #FDBA74",
+                borderRadius: "9px",
+                padding: "8px 14px",
+                fontSize: "13px",
+                fontWeight: 600,
+                color: isViewingToday ? "#1E293B" : "#C2410C",
+                cursor: "pointer",
+                boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
+                transition: "all 0.15s ease",
+                whiteSpace: "nowrap",
+                fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+              }}
+              title="Filter COD cash collection by date"
+              aria-label="Filter COD cash collection by date"
+            >
+              <span
+                style={{
+                  width: "7px",
+                  height: "7px",
+                  borderRadius: "50%",
+                  backgroundColor: isViewingToday ? "#10B981" : "#EA580C",
+                  display: "inline-block",
+                }}
+              />
+              <Calendar size={15} color="#EA580C" />
+              <span>
+                {isViewingToday ? "Today" : formattedSelectedDate}
+                {daysAgoText ? ` (${daysAgoText})` : ""}
+              </span>
+            </button>
+
+            {/* Reset to Today Button */}
+            {!isViewingToday && (
+              <button
+                type="button"
+                onClick={handleResetToToday}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "5px",
+                  backgroundColor: "#FFFFFF",
+                  border: "1px solid #E2E8F0",
+                  borderRadius: "8px",
+                  padding: "8px 12px",
+                  fontSize: "12.5px",
+                  fontWeight: 600,
+                  color: "#475569",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                  whiteSpace: "nowrap",
+                  fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+                }}
+                title="Reset to Today"
+              >
+                <RotateCcw size={13} />
+                <span>Today</span>
+              </button>
+            )}
+
+            {/* Add Delivery Boy Action Button */}
             <button
               type="button"
               onClick={
@@ -679,8 +861,8 @@ export default function RiderCanvas({
                 color: "#FFFFFF",
                 border: "none",
                 borderRadius: "8px",
-                padding: "10px 20px",
-                fontSize: "13.5px",
+                padding: "9px 18px",
+                fontSize: "13px",
                 fontWeight: 700,
                 cursor: "pointer",
                 boxShadow: "0 2px 8px rgba(249, 115, 22, 0.28)",
@@ -698,6 +880,56 @@ export default function RiderCanvas({
             </button>
           </div>
         </div>
+
+        {/* Historical Date Active Banner */}
+        {!isViewingToday && (
+          <div
+            style={{
+              width: "100%",
+              backgroundColor: "#FFF7ED",
+              border: "1px solid #FED7AA",
+              borderRadius: "10px",
+              padding: "12px 18px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: "10px",
+              boxSizing: "border-box",
+              color: "#9A3412",
+              fontSize: "13px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <Calendar size={18} color="#EA580C" />
+              <span>
+                Viewing historical COD cash collection for <strong>{formattedSelectedDate}</strong>
+                {daysAgoText ? ` (${daysAgoText})` : ""}. Cash collected and delivery metrics reflect this date.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleResetToToday}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                backgroundColor: "#FFFFFF",
+                border: "1px solid #FDBA74",
+                borderRadius: "6px",
+                padding: "5px 12px",
+                fontSize: "12px",
+                fontWeight: 600,
+                color: "#C2410C",
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <RotateCcw size={13} />
+              <span>Reset to Today</span>
+            </button>
+          </div>
+        )}
 
         {/* Frame 2: 3 Cards Row */}
         <div
@@ -1877,6 +2109,14 @@ export default function RiderCanvas({
           </div>
         </div>
       )}
+
+      {/* Historical Operations Calendar Modal */}
+      <SellerCalendarModal
+        isOpen={isCalendarOpen}
+        onClose={() => setIsCalendarOpen(false)}
+        selectedDate={selectedDate}
+        onSelectDate={handleSelectDate}
+      />
 
       <style jsx>{`
         .view-wallet-btn:hover {

@@ -560,7 +560,7 @@ export default function SellerReviewsCanvasDas({
               </div>
             </div>
 
-            {/* Main Content Split: Left Review List & Right Breakdown/Activity/Alerts */}
+            {/* Main Content Split: Left Review List & Right Rating Breakdown */}
             <div className={styles.contentRow}>
               {/* Left Column: Reviews List */}
               <div className={styles.reviewsListCol}>
@@ -817,7 +817,7 @@ export default function SellerReviewsCanvasDas({
                 </div>
               </div>
 
-              {/* Right Column: Rating Breakdown, Recent Activity & Alerts */}
+              {/* Right Column: Rating Breakdown */}
               <div className={styles.sidebarCol}>
                 {/* Rating Breakdown Card */}
                 <div className={styles.breakdownCard}>
@@ -851,18 +851,6 @@ export default function SellerReviewsCanvasDas({
                       ? "Distribution across all customer reviews and order ratings."
                       : "No customer rating distributions recorded yet."}
                   </p>
-                </div>
-
-                {/* Recent Activity Card */}
-                <div className={styles.recentActivityCard}>
-                  <h2 className={styles.recentActivityHeader}>Recent Activity</h2>
-                  <p className={styles.recentActivityEmpty}>No new customer feedback in the last 24 hours.</p>
-                </div>
-
-                {/* Alerts Card */}
-                <div className={styles.alertsCard}>
-                  <h2 className={styles.alertsHeader}>Alerts</h2>
-                  <p className={styles.alertsText}>No critical alerts at this time.</p>
                 </div>
               </div>
             </div>

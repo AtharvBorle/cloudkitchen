@@ -1429,7 +1429,7 @@ function FoodExploreContent() {
                             {dish.name}
                           </h3>
                           <Link
-                            href={dish.sellerTrackingId ? `/shop/${dish.sellerTrackingId}` : "#"}
+                            href={dish.sellerTrackingId ? `/shop/${dish.sellerTrackingId}${selectedPrice && selectedPrice !== "all" ? `?price=${selectedPrice}` : ""}` : "#"}
                             style={{
                               fontSize: "0.82rem",
                               color: "#64748B",
@@ -1912,7 +1912,7 @@ function FoodExploreContent() {
                   return (
                     <Link
                       key={kitchen.id}
-                      href={`/shop/${kitchen.trackingId || kitchen.id}`}
+                      href={`/shop/${kitchen.trackingId || kitchen.id}${selectedPrice && selectedPrice !== "all" ? `?price=${selectedPrice}` : ""}`}
                       style={{ textDecoration: "none", height: "100%", display: "flex", flexDirection: "column" }}
                     >
                       <div

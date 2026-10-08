@@ -1787,41 +1787,25 @@ export default function SupportTicketsPage() {
 
 
 
-        const searchLower = searchQuery.toLowerCase().trim();
+        const normalizedQuery = searchQuery.toLowerCase().trim().replace(/\s+/g, " ");
+        const queryWords = normalizedQuery.split(" ").filter(Boolean);
 
+        const targetName = (t.user?.name || (t as any).userName || (t as any).customerName || "").toLowerCase().trim();
+        const targetEmail = (t.user?.email || (t as any).userEmail || (t as any).customerEmail || (t as any).email || "").toLowerCase().trim();
+        const targetPhone = (t.user?.phone || (t as any).userPhone || (t as any).phone || "").toLowerCase().trim();
+        const targetRole = (t.user?.role || "").toLowerCase().trim();
+        const targetTitle = (t.title || "").toLowerCase().trim();
+        const targetCategory = (t.category || "").toLowerCase().trim();
+        const targetDesc = (t.description || "").toLowerCase().trim();
+        const targetId = (t.id || "").toLowerCase().trim();
 
+        const fullSearchable = `${targetName} ${targetEmail} ${targetPhone} ${targetRole} ${targetTitle} ${targetCategory} ${targetDesc} ${targetId}`;
 
-        const matchesSearch = !searchLower || 
-
-
-
-            (t.title && t.title.toLowerCase().includes(searchLower)) ||
-
-
-
-            (t.category && t.category.toLowerCase().includes(searchLower)) ||
-
-
-
-            (t.description && t.description.toLowerCase().includes(searchLower)) ||
-
-
-
-            (t.user?.name && t.user.name.toLowerCase().includes(searchLower)) ||
-
-
-
-            (t.user?.email && t.user.email.toLowerCase().includes(searchLower)) ||
-
-
-
-            (t.id && t.id.toLowerCase().includes(searchLower));
-
-
-
-
-
-
+        const matchesSearch = !normalizedQuery ||
+            fullSearchable.includes(normalizedQuery) ||
+            targetName.includes(normalizedQuery) ||
+            targetEmail.includes(normalizedQuery) ||
+            (queryWords.length > 1 && queryWords.every(word => fullSearchable.includes(word)));
 
         return matchesStatus && matchesCategory && matchesSearch;
 

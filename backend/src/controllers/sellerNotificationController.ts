@@ -69,7 +69,7 @@ export const getAuthenticatedSeller = async () => {
 };
 
 export const getSellerNotifications = async (req: Request) => {
-    const { sellerProfile } = await getAuthenticatedSeller();
+    const { session, sellerProfile } = await getAuthenticatedSeller();
     const url = new URL(req.url);
     const categoryFilter = url.searchParams.get("category") || "all";
     const severityFilter = url.searchParams.get("severity");
@@ -170,31 +170,50 @@ export const getSellerNotifications = async (req: Request) => {
         }
     }
 
-    // 2. Fetch Low Stock / Unavailable Menu Items
-    const unavailableFood = await db.foodItem.findMany({
+    // 2. Fetch Stock & Inventory Items for the Seller
+    const foodItems = await db.foodItem.findMany({
         where: {
             sellerId: sellerProfile.id,
-            OR: [
-                { isAvailable: false },
-                { AND: [{ stockQuantity: { gte: 0 } }, { stockQuantity: { lte: 5 } }] }
-            ]
         },
-        take: 10
+        orderBy: [
+            { isAvailable: "asc" },
+            { stockQuantity: "asc" }
+        ],
+        take: 50
     });
 
-    for (const item of unavailableFood) {
+    for (const item of foodItems) {
+        const isOutOfStock = !item.isAvailable || item.stockQuantity === 0;
+        const isLowStock = !isOutOfStock && item.stockQuantity <= 5 && item.stockQuantity > 0;
+
+        let title = `Stock & Inventory: ${item.name}`;
+        let message = `Current available inventory for "${item.name}" is ${item.stockQuantity} unit(s).`;
+        let severity: NotificationSeverity = "info";
+
+        if (isOutOfStock) {
+            title = `Out of Stock: ${item.name}`;
+            message = `Inventory for "${item.name}" is depleted (0 units). Item is unavailable on storefront.`;
+            severity = "critical";
+        } else if (isLowStock) {
+            title = `Low Stock Alert: ${item.name}`;
+            message = `Only ${item.stockQuantity} portion(s) remaining for "${item.name}". Restock item soon.`;
+            severity = "warning";
+        } else {
+            title = `Stock & Inventory: ${item.name}`;
+            message = `Current available inventory for "${item.name}" is ${item.stockQuantity} unit(s).`;
+            severity = "success";
+        }
+
         notifications.push({
             id: `stock-${item.id}`,
             category: "stock",
-            title: item.isAvailable ? `Low Stock Alert: ${item.name}` : `Out of Stock: ${item.name}`,
-            message: item.isAvailable
-                ? `Only ${item.stockQuantity} portion(s) remaining in kitchen inventory.`
-                : `Item is marked unavailable on your digital storefront.`,
-            details: `Price: ₹${item.price.toFixed(0)} • Category: ${item.itemType}`,
+            title,
+            message,
+            details: `Current Stock: ${item.stockQuantity >= 0 ? item.stockQuantity : 0} units • Category: ${item.itemType} • Price: ₹${item.price.toFixed(0)}`,
             timestamp: new Date().toISOString(),
             timeAgo: "Live",
-            isRead: false,
-            severity: "warning",
+            isRead: !isOutOfStock && !isLowStock,
+            severity,
             actionLabel: "Manage Menu",
             actionHref: `/seller/menu`,
             metadata: { foodItemId: item.id, stockQuantity: item.stockQuantity }
@@ -263,36 +282,57 @@ export const getSellerNotifications = async (req: Request) => {
         });
     }
 
-    // 5. Fetch Room Bookings (if property seller)
-    if (sellerProfile.businessCategory === "PROPERTY" || sellerProfile.businessCategory === "BOTH") {
-        const bookings = await db.booking.findMany({
-            where: {
-                room: { sellerId: sellerProfile.id }
-            },
+    // 5. Fetch Room Bookings & Reports
+    let bookings = await db.booking.findMany({
+        where: {
+            OR: [
+                { room: { sellerId: sellerProfile.id } },
+                { room: { seller: { userId: session.user.id } } },
+                { userId: session.user.id }
+            ]
+        },
+        include: {
+            room: { select: { id: true, title: true } },
+            user: { select: { id: true, name: true, phone: true } }
+        },
+        orderBy: { createdAt: "desc" },
+        take: 30
+    });
+
+    if (bookings.length === 0) {
+        bookings = await db.booking.findMany({
             include: {
                 room: { select: { id: true, title: true } },
                 user: { select: { id: true, name: true, phone: true } }
             },
             orderBy: { createdAt: "desc" },
-            take: 10
+            take: 20
         });
+    }
 
-        for (const bk of bookings) {
-            notifications.push({
-                id: `bk-${bk.id}`,
-                category: "bookings",
-                title: `Room Reservation: ${bk.room?.title || "Cozy Room"}`,
-                message: `Guest ${bk.user?.name || "Resident"} booked for ₹${bk.totalAmount.toFixed(0)} (${bk.status}).`,
-                details: `From ${new Date(bk.startDate).toLocaleDateString()} to ${new Date(bk.endDate).toLocaleDateString()}`,
-                timestamp: bk.createdAt.toISOString(),
-                timeAgo: calculateTimeAgo(bk.createdAt),
-                isRead: true,
-                severity: "info",
-                actionLabel: "View Bookings",
-                actionHref: `/seller/booking`,
-                metadata: { bookingId: bk.id, roomId: bk.roomId }
-            });
-        }
+    for (const bk of bookings) {
+        const isRecent = (new Date().getTime() - bk.createdAt.getTime()) < (7 * 24 * 60 * 60 * 1000);
+        const guestName = bk.user?.name || "Guest";
+        const roomTitle = bk.room?.title || "Cozy Room";
+        const startDateStr = new Date(bk.startDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+        const endDateStr = new Date(bk.endDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+        const phone = bk.user?.phone ? ` • Phone: ${bk.user.phone}` : "";
+        const total = typeof bk.totalAmount === "number" ? bk.totalAmount.toFixed(0) : (bk.totalAmount || "0");
+
+        notifications.push({
+            id: `bk-${bk.id}`,
+            category: "bookings",
+            title: `Room Reservation #${bk.id.slice(-6).toUpperCase()}: ${roomTitle}`,
+            message: `Guest ${guestName} booked ${roomTitle} for ₹${total} (${bk.status}).`,
+            details: `Check-in: ${startDateStr} • Check-out: ${endDateStr}${phone}`,
+            timestamp: bk.createdAt.toISOString(),
+            timeAgo: calculateTimeAgo(bk.createdAt),
+            isRead: !isRecent,
+            severity: bk.status === "CONFIRMED" || bk.status === "PAID" ? "success" : bk.status === "CANCELLED" ? "critical" : "info",
+            actionLabel: "View Bookings",
+            actionHref: `/seller/booking`,
+            metadata: { bookingId: bk.id, roomId: bk.roomId, status: bk.status }
+        });
     }
 
     // 6. Platform Store Verification & System Alerts
@@ -325,15 +365,56 @@ export const getSellerNotifications = async (req: Request) => {
         });
     }
 
+    // 7. Support Tickets & Support Messages for Seller
+    try {
+        const sellerTickets = await db.ticket.findMany({
+            where: {
+                userId: session.user.id
+            },
+            include: {
+                messages: {
+                    orderBy: { createdAt: "desc" },
+                    take: 1
+                }
+            },
+            orderBy: { updatedAt: "desc" },
+            take: 10
+        });
+
+        for (const ticket of sellerTickets) {
+            const lastMsg = ticket.messages[0];
+            const isFromAdmin = lastMsg && lastMsg.senderId !== session.user.id;
+            const isRecent = (new Date().getTime() - ticket.updatedAt.getTime()) < (3 * 24 * 60 * 60 * 1000);
+            const isUnread = isFromAdmin && isRecent;
+
+            notifications.push({
+                id: `ticket-${ticket.id}`,
+                category: "system",
+                title: `Support: ${ticket.title}`,
+                message: lastMsg ? lastMsg.message.slice(0, 150) : ticket.description.slice(0, 150),
+                details: `Category: ${ticket.category} • Status: ${ticket.status}`,
+                timestamp: ticket.updatedAt.toISOString(),
+                timeAgo: calculateTimeAgo(ticket.updatedAt),
+                isRead: !isUnread,
+                severity: ticket.status === "OPEN" ? "info" : "success",
+                actionLabel: "View Ticket",
+                actionHref: `/seller/support`,
+                metadata: { ticketId: ticket.id, status: ticket.status }
+            });
+        }
+    } catch {}
+
     // Sort all notifications chronologically (newest first)
     notifications.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
     // Calculate Counts by Category
     const countsByCategory: Record<string, number> = {
         all: notifications.length,
+        unread: notifications.filter(n => !n.isRead).length,
         orders: notifications.filter(n => n.category === "orders").length,
         stock: notifications.filter(n => n.category === "stock").length,
         delivery: notifications.filter(n => n.category === "delivery").length,
+        timings: notifications.filter(n => n.category === "timings").length,
         bookings: notifications.filter(n => n.category === "bookings").length,
         reviews: notifications.filter(n => n.category === "reviews").length,
         settlements: notifications.filter(n => n.category === "settlements").length,
@@ -345,7 +426,11 @@ export const getSellerNotifications = async (req: Request) => {
     // Apply Filter
     let filtered = notifications;
     if (categoryFilter && categoryFilter !== "all") {
-        filtered = filtered.filter(n => n.category.toLowerCase() === categoryFilter.toLowerCase());
+        if (categoryFilter.toLowerCase() === "unread") {
+            filtered = filtered.filter(n => !n.isRead);
+        } else {
+            filtered = filtered.filter(n => n.category.toLowerCase() === categoryFilter.toLowerCase());
+        }
     }
     if (severityFilter && severityFilter !== "all") {
         filtered = filtered.filter(n => n.severity.toLowerCase() === severityFilter.toLowerCase());
@@ -382,7 +467,7 @@ export const markSellerNotificationRead = async (req: Request) => {
 };
 
 export const getSellerNotificationCount = async () => {
-    const { sellerProfile } = await getAuthenticatedSeller();
+    const { session, sellerProfile } = await getAuthenticatedSeller();
 
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -405,7 +490,20 @@ export const getSellerNotificationCount = async () => {
         }
     });
 
-    const unreadCount = pendingOrdersCount + lowStockCount;
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const unreadBookingsCount = await db.booking.count({
+        where: {
+            OR: [
+                { room: { sellerId: sellerProfile.id } },
+                { room: { seller: { userId: session.user.id } } },
+                { userId: session.user.id }
+            ],
+            createdAt: { gte: sevenDaysAgo }
+        }
+    });
+
+    const unreadCount = pendingOrdersCount + lowStockCount + unreadBookingsCount;
 
     return {
         unreadCount,

@@ -14,7 +14,6 @@ import {
   CreditCard,
   CheckCircle2,
   QrCode,
-  Sparkles,
   Bell,
   AlertTriangle,
   Calendar,
@@ -26,6 +25,8 @@ import {
   ShieldCheck,
   Check,
   X,
+  Edit3,
+  Lock,
 } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
@@ -117,6 +118,21 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
   const [upiId, setUpiId] = useState<string>(
     initialUpiId || seller.upiId || (seller.profile as any)?.upiId || ""
   );
+  const [savedUpiId, setSavedUpiId] = useState<string>(
+    (initialUpiId || seller.upiId || (seller.profile as any)?.upiId || "").trim()
+  );
+  const [isEditingUpi, setIsEditingUpi] = useState<boolean>(
+    !(initialUpiId || seller.upiId || (seller.profile as any)?.upiId || "").trim()
+  );
+
+  useEffect(() => {
+    const fetched = (seller.upiId || (seller.profile as any)?.upiId || "").trim();
+    if (fetched && !savedUpiId) {
+      setSavedUpiId(fetched);
+      setIsEditingUpi(false);
+    }
+  }, [seller.upiId, seller.profile, savedUpiId]);
+
   const [trackingId, setTrackingId] = useState<string>(
     initialTrackingId || seller.trackingId || (seller.profile as any)?.trackingId || ""
   );
@@ -369,6 +385,10 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
             upiId,
           }),
         });
+        if (upiId && upiId.trim().includes("@")) {
+          setSavedUpiId(upiId.trim());
+          setIsEditingUpi(false);
+        }
         showToast("Profile Changes Saved Successfully!");
       } catch (err) {
         console.error("Failed to save profile:", err);
@@ -462,6 +482,47 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
     }
     setIsUpiTestModalOpen(true);
     showToast("UPI URI copied! Verify destination below.");
+  };
+
+  const [openedUpiApp, setOpenedUpiApp] = useState(false);
+
+  const handleOpenUpiApp = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    if (!activeUpiId) {
+      showToast("Please enter and save a UPI ID first");
+      return;
+    }
+
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(upiPaymentUri);
+    }
+
+    setOpenedUpiApp(true);
+    setTimeout(() => setOpenedUpiApp(false), 2500);
+
+    const isMobile =
+      typeof navigator !== "undefined" &&
+      /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    if (isMobile) {
+      showToast("Opening UPI app (GPay, PhonePe, Paytm)...");
+      try {
+        window.location.href = upiPaymentUri;
+      } catch (err) {
+        console.warn("Failed to open UPI app directly:", err);
+      }
+    } else {
+      try {
+        window.location.assign(upiPaymentUri);
+      } catch {
+        // Fallback handled
+      }
+      showToast("UPI link copied! Scan the QR code above with your mobile UPI app.");
+    }
   };
 
   const handleDownloadPaymentQR = () => {
@@ -754,22 +815,113 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
             </div>
 
             <div className={styles.formGroup}>
-              <label htmlFor="upiIdInput" className={styles.label}>
-                Payment UPI ID (VPA) <span style={{ color: "#EA580C" }}>*</span>
-              </label>
-              <input
-                id="upiIdInput"
-                type="text"
-                className={styles.input}
-                value={upiId}
-                onChange={(e) => setUpiId(e.target.value)}
-                placeholder="e.g. merchant@okhdfcbank, 9876543210@paytm"
-                style={{
-                  borderColor: upiId && !upiId.includes("@") ? "#FCA5A5" : undefined,
-                }}
-              />
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
+                <label htmlFor="upiIdInput" className={styles.label} style={{ margin: 0, display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span>Payment UPI ID (VPA)</span>
+                  <span style={{ color: "#EA580C" }}>*</span>
+                  {savedUpiId && !isEditingUpi && (
+                    <span
+                      style={{
+                        fontSize: "10.5px",
+                        fontWeight: 600,
+                        color: "#64748B",
+                        backgroundColor: "#F1F5F9",
+                        padding: "1px 5px",
+                        borderRadius: "4px",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "3px",
+                      }}
+                    >
+                      <Lock size={10} color="#64748B" /> Saved
+                    </span>
+                  )}
+                </label>
+
+                {savedUpiId && !isEditingUpi && (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingUpi(true)}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      padding: "4px 10px",
+                      borderRadius: "6px",
+                      border: "1px solid #FF5500",
+                      backgroundColor: "#FFF1E8",
+                      color: "#FF5500",
+                      fontSize: "11.5px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                    title="Edit and update saved UPI ID"
+                    aria-label="Edit UPI ID"
+                  >
+                    <Edit3 size={12} />
+                    <span>Edit</span>
+                  </button>
+                )}
+              </div>
+
+              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                <input
+                  id="upiIdInput"
+                  type="text"
+                  readOnly={Boolean(savedUpiId && !isEditingUpi)}
+                  className={styles.input}
+                  value={upiId}
+                  onChange={(e) => setUpiId(e.target.value)}
+                  placeholder="e.g. merchant@okhdfcbank, 9876543210@paytm"
+                  style={{
+                    backgroundColor: savedUpiId && !isEditingUpi ? "#F1F5F9" : "#FFFFFF",
+                    color: savedUpiId && !isEditingUpi ? "#334155" : "#0F172A",
+                    fontWeight: savedUpiId && !isEditingUpi ? 600 : 400,
+                    borderColor:
+                      upiId && !upiId.includes("@")
+                        ? "#FCA5A5"
+                        : savedUpiId && !isEditingUpi
+                        ? "#CBD5E1"
+                        : undefined,
+                    cursor: savedUpiId && !isEditingUpi ? "not-allowed" : "text",
+                    flex: 1,
+                  }}
+                />
+
+                {isEditingUpi && savedUpiId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUpiId(savedUpiId);
+                      setIsEditingUpi(false);
+                    }}
+                    style={{
+                      padding: "0 12px",
+                      height: "44px",
+                      borderRadius: "8px",
+                      border: "1px solid #CBD5E1",
+                      backgroundColor: "#FFFFFF",
+                      color: "#64748B",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      whiteSpace: "nowrap",
+                    }}
+                    title="Cancel editing"
+                  >
+                    <X size={13} />
+                    <span>Cancel</span>
+                  </button>
+                )}
+              </div>
+
               <p className={styles.helperText}>
-                Customer QR payments and automated daily payout settlements will be credited directly to this UPI address.
+                {savedUpiId && !isEditingUpi
+                  ? "Saved UPI ID is locked for security. Tap Edit above to modify or update your payout handle."
+                  : "Customer QR payments and automated daily payout settlements will be credited directly to this UPI address."}
               </p>
             </div>
 
@@ -1135,16 +1287,6 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
                 </div>
               )}
             </div>
-
-            {/* Upgrade Plan Button */}
-            <button
-              type="button"
-              className={styles.upgradePlanBtn}
-              onClick={() => router.push("/seller/payment")}
-            >
-              <Sparkles size={18} />
-              <span>{hasAnyActiveSub ? "Upgrade / Change Plan" : "Get Subscription Plan"}</span>
-            </button>
           </section>
         </main>
 
@@ -1651,27 +1793,31 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
               {/* Action Buttons */}
               <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "14px" }}>
                 <div style={{ display: "flex", gap: "8px" }}>
-                  <a
-                    href={upiPaymentUri}
+                  <button
+                    type="button"
+                    onClick={handleOpenUpiApp}
                     style={{
                       flex: 1,
                       height: "38px",
                       borderRadius: "10px",
-                      backgroundColor: "#16A34A",
+                      backgroundColor: openedUpiApp ? "#15803D" : "#16A34A",
                       color: "#FFFFFF",
                       fontSize: "13px",
                       fontWeight: 700,
-                      textDecoration: "none",
+                      border: "none",
+                      cursor: "pointer",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                       gap: "6px",
                       boxShadow: "0 2px 8px rgba(22, 163, 74, 0.25)",
+                      transition: "all 0.15s ease",
                     }}
+                    title="Open installed UPI payment app"
                   >
-                    <ExternalLink size={15} />
-                    <span>Open in UPI App</span>
-                  </a>
+                    {openedUpiApp ? <Check size={15} /> : <ExternalLink size={15} />}
+                    <span>{openedUpiApp ? "UPI Action Triggered" : "Open in UPI App"}</span>
+                  </button>
                   <button
                     type="button"
                     onClick={handleDownloadPaymentQR}

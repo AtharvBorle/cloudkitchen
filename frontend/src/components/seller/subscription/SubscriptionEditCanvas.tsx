@@ -154,8 +154,20 @@ export default function SubscriptionEditCanvas({
             };
           }),
           allowCancelSubscription: false,
-          allowPauseBilling: found.pauseBillingPeriod !== "None",
-          pauseBillingPeriod: found.pauseBillingPeriod || "30 Days",
+          allowPauseBilling: Boolean(
+            found.pauseBillingPeriod &&
+            found.pauseBillingPeriod.toLowerCase() !== "none" &&
+            found.pauseBillingPeriod.toLowerCase() !== "disabled" &&
+            found.pauseBillingPeriod.toLowerCase() !== "false" &&
+            (found as any).allowPause !== false &&
+            (found as any).allowPauseBilling !== false
+          ),
+          pauseBillingPeriod: (
+            found.pauseBillingPeriod &&
+            found.pauseBillingPeriod.toLowerCase() !== "none" &&
+            found.pauseBillingPeriod.toLowerCase() !== "disabled" &&
+            found.pauseBillingPeriod.toLowerCase() !== "false"
+          ) ? found.pauseBillingPeriod : "30 Days",
           metrics: {
             subscribers: found.subscribersCount,
             monthlyRevenue: found.monthlyRevenue,
@@ -292,7 +304,7 @@ export default function SubscriptionEditCanvas({
         features: formData.includedFeatures.filter((f) => f.checked !== false).map((f) => f.label),
         mealTimings: formData.mealTimings.map((m) => `${m.mealName}: ${m.timing}`),
         allowCancel: false,
-        pauseBillingPeriod: formData.pauseBillingPeriod || (formData.allowPauseBilling ? "30 Days" : "None"),
+        pauseBillingPeriod: formData.allowPauseBilling ? (formData.pauseBillingPeriod || "30 Days") : "None",
       });
     }
 
@@ -1257,7 +1269,7 @@ export default function SubscriptionEditCanvas({
               Subscription Policies
             </h2>
 
-            {/* Policy: Allow User to Pause Billing */}
+            {/* Policy: Allow User to Pause Subscription */}
             <div
               style={{
                 display: "flex",
@@ -1274,7 +1286,7 @@ export default function SubscriptionEditCanvas({
                     color: "#0F172A",
                   }}
                 >
-                  Allow User to Pause Billing
+                  Allow User to Pause Subscription
                 </span>
                 <span
                   style={{
@@ -1283,54 +1295,95 @@ export default function SubscriptionEditCanvas({
                     fontWeight: 400,
                   }}
                 >
-                  Enable temporary pause states instead of absolute subscription termination.
+                  When enabled, users can pause their meal subscription for up to the max configured days.
                 </span>
               </div>
 
-              {/* Days Dropdown (1-30 Days) */}
-              <div style={{ position: "relative", minWidth: "130px", flexShrink: 0 }}>
-                <select
-                  value={formData.pauseBillingPeriod || "30 Days"}
-                  onChange={(e) => handleInputChange("pauseBillingPeriod", e.target.value)}
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", flexShrink: 0 }}>
+                {/* Toggle switch */}
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={formData.allowPauseBilling}
+                  onClick={() => handleToggle("allowPauseBilling")}
                   style={{
-                    width: "100%",
-                    height: "38px",
-                    backgroundColor: "#FFFFFF",
-                    border: "1px solid #E2E8F0",
-                    borderRadius: "8px",
-                    padding: "0 28px 0 12px",
-                    fontSize: "13px",
-                    fontWeight: 600,
-                    color: "#0F172A",
-                    outline: "none",
+                    width: "44px",
+                    height: "24px",
+                    borderRadius: "9999px",
+                    backgroundColor: formData.allowPauseBilling ? "#FF5500" : "#CBD5E1",
+                    position: "relative",
+                    border: "none",
                     cursor: "pointer",
-                    appearance: "none",
-                    boxSizing: "border-box",
+                    padding: 0,
+                    transition: "background-color 0.2s ease",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    flexShrink: 0,
+                    outline: "none",
                   }}
+                  aria-label="Allow User to Pause Subscription Toggle"
                 >
-                  {Array.from({ length: 30 }, (_, i) => {
-                    const day = i + 1;
-                    const val = `${day} ${day === 1 ? "Day" : "Days"}`;
-                    return (
-                      <option key={val} value={val}>
-                        {val}
-                      </option>
-                    );
-                  })}
-                </select>
-                <span
-                  style={{
-                    position: "absolute",
-                    right: "10px",
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    fontSize: "10px",
-                    color: "#64748B",
-                    pointerEvents: "none",
-                  }}
-                >
-                  ▼
-                </span>
+                  <span
+                    style={{
+                      width: "18px",
+                      height: "18px",
+                      borderRadius: "50%",
+                      backgroundColor: "#FFFFFF",
+                      position: "absolute",
+                      left: "3px",
+                      transform: formData.allowPauseBilling ? "translateX(20px)" : "translateX(0)",
+                      transition: "transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                    }}
+                  />
+                </button>
+
+                {/* Days Dropdown (1-30 Days) */}
+                <div style={{ position: "relative", minWidth: "120px" }}>
+                  <select
+                    value={formData.pauseBillingPeriod || "30 Days"}
+                    disabled={!formData.allowPauseBilling}
+                    onChange={(e) => handleInputChange("pauseBillingPeriod", e.target.value)}
+                    style={{
+                      width: "100%",
+                      height: "38px",
+                      backgroundColor: formData.allowPauseBilling ? "#FFFFFF" : "#F8FAFC",
+                      border: "1px solid #E2E8F0",
+                      borderRadius: "8px",
+                      padding: "0 28px 0 12px",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      color: formData.allowPauseBilling ? "#0F172A" : "#94A3B8",
+                      outline: "none",
+                      cursor: formData.allowPauseBilling ? "pointer" : "not-allowed",
+                      appearance: "none",
+                      boxSizing: "border-box",
+                    }}
+                  >
+                    {Array.from({ length: 30 }, (_, i) => {
+                      const day = i + 1;
+                      const val = `${day} ${day === 1 ? "Day" : "Days"}`;
+                      return (
+                        <option key={val} value={val}>
+                          {val}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  <span
+                    style={{
+                      position: "absolute",
+                      right: "10px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      fontSize: "10px",
+                      color: "#64748B",
+                      pointerEvents: "none",
+                    }}
+                  >
+                    ▼
+                  </span>
+                </div>
               </div>
             </div>
           </div>

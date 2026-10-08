@@ -59,6 +59,7 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
   ]);
 
   // 5. Subscription Policies
+  const [allowPauseBilling, setAllowPauseBilling] = useState(true);
   const [pauseBillingPeriod, setPauseBillingPeriod] = useState('30 Days');
 
   const handleRemoveMealTiming = (id: string) => {
@@ -380,31 +381,75 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
               <div className={styles.card}>
                 <h2 className={styles.cardTitle}>Subscription Policies</h2>
 
-                {/* Policy: Allow User to Pause Billing */}
+                {/* Policy: Allow User to Pause Subscription */}
                 <div className={styles.policyRow}>
                   <div className={styles.policyInfo}>
-                    <span className={styles.policyLabel}>Allow User to Pause Billing</span>
+                    <span className={styles.policyLabel}>Allow User to Pause Subscription</span>
                     <p className={styles.policyDescription}>
-                      Enable temporary pause states instead of absolute subscription termination.
+                      When enabled, users can pause their meal subscription for up to the max configured days.
                     </p>
                   </div>
-                  <div className={styles.pauseSelectWrapper}>
-                    <select
-                      className={styles.pauseSelectInput}
-                      value={pauseBillingPeriod}
-                      onChange={(e) => setPauseBillingPeriod(e.target.value)}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={allowPauseBilling}
+                      onClick={() => setAllowPauseBilling((prev) => !prev)}
+                      style={{
+                        width: '44px',
+                        height: '24px',
+                        borderRadius: '9999px',
+                        backgroundColor: allowPauseBilling ? '#FF5500' : '#CBD5E1',
+                        position: 'relative',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: 0,
+                        transition: 'background-color 0.2s ease',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        flexShrink: 0,
+                        outline: 'none',
+                      }}
+                      aria-label="Allow User to Pause Subscription Toggle"
                     >
-                      {Array.from({ length: 30 }, (_, i) => {
-                        const day = i + 1;
-                        const label = `${day} ${day === 1 ? 'Day' : 'Days'}`;
-                        return (
-                          <option key={label} value={label}>
-                            {label}
-                          </option>
-                        );
-                      })}
-                    </select>
-                    <span className={styles.selectArrow}>▼</span>
+                      <span
+                        style={{
+                          width: '18px',
+                          height: '18px',
+                          borderRadius: '50%',
+                          backgroundColor: '#FFFFFF',
+                          position: 'absolute',
+                          left: '3px',
+                          transform: allowPauseBilling ? 'translateX(20px)' : 'translateX(0)',
+                          transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                        }}
+                      />
+                    </button>
+                    <div className={styles.pauseSelectWrapper}>
+                      <select
+                        className={styles.pauseSelectInput}
+                        value={pauseBillingPeriod}
+                        disabled={!allowPauseBilling}
+                        onChange={(e) => setPauseBillingPeriod(e.target.value)}
+                        style={{
+                          backgroundColor: allowPauseBilling ? '#FFFFFF' : '#F8FAFC',
+                          color: allowPauseBilling ? '#0F172A' : '#94A3B8',
+                          cursor: allowPauseBilling ? 'pointer' : 'not-allowed',
+                        }}
+                      >
+                        {Array.from({ length: 30 }, (_, i) => {
+                          const day = i + 1;
+                          const label = `${day} ${day === 1 ? 'Day' : 'Days'}`;
+                          return (
+                            <option key={label} value={label}>
+                              {label}
+                            </option>
+                          );
+                        })}
+                      </select>
+                      <span className={styles.selectArrow}>▼</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -515,7 +560,7 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
                       mealTimings: mealTimings.map((m) => `${m.name}: ${m.time}`),
                       status: 'Live',
                       allowCancel: false,
-                      pauseBillingPeriod,
+                      pauseBillingPeriod: allowPauseBilling ? (pauseBillingPeriod || '30 Days') : 'None',
                     });
 
                     setToastMessage(`Plan "${planName}" created & deployed successfully!`);

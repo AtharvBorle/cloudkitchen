@@ -2,6 +2,12 @@ import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 
+export function isSuperAdminRole(role?: string): boolean {
+    if (!role) return false;
+    const r = role.toUpperCase().replace(/[\s_-]/g, "");
+    return r === "SUPERADMIN" || r === "ADMIN" || r === "SUPPORT";
+}
+
 export function resolveTicketPriority(ticket: any): "High" | "Medium" | "Low" {
     if (!ticket) return "Medium";
     if (ticket.priority && typeof ticket.priority === "string") {
@@ -68,7 +74,7 @@ export const createTicket = async (req: Request) => {
         throw new ApiError("Missing required fields", 400);
     }
 
-    const isSuperAdmin = session.user.role === "SUPERADMIN" || session.user.role === "ADMIN" || session.user.role === "SUPPORT";
+    const isSuperAdmin = isSuperAdminRole(session.user.role);
     const ticketUserId = (isSuperAdmin && userId) ? userId : session.user.id;
 
     // Validate that regular customers must have placed at least one order before raising a support ticket
@@ -119,15 +125,17 @@ export const listTickets = async () => {
         throw new ApiError("Please log in first to view your support tickets.", 401);
     }
 
-    const isSuperAdmin = session.user.role === "SUPERADMIN" || session.user.role === "ADMIN" || session.user.role === "SUPPORT";
+    const isSuperAdmin = isSuperAdminRole(session.user.role);
 
     const tickets = await db.ticket.findMany({
         where: isSuperAdmin ? {} : { userId: session.user.id },
         include: {
             user: {
                 select: {
+                    id: true,
                     name: true,
                     email: true,
+                    phone: true,
                     role: true
                 }
             }
@@ -180,7 +188,7 @@ export const getTicketDetails = async (id: string) => {
         throw new ApiError("Ticket not found", 404);
     }
 
-    const isSuperAdmin = session.user.role === "SUPERADMIN" || session.user.role === "ADMIN" || session.user.role === "SUPPORT";
+    const isSuperAdmin = isSuperAdminRole(session.user.role);
     if (!isSuperAdmin && ticket.userId !== session.user.id) {
         throw new ApiError("Access denied. You do not have permission to view this ticket.", 403);
     }
@@ -212,7 +220,7 @@ export const updateTicketStatus = async (id: string, req: Request) => {
         throw new ApiError("Ticket not found", 404);
     }
 
-    const isAdmin = session.user.role === "SUPERADMIN" || session.user.role === "ADMIN" || session.user.role === "SUPPORT";
+    const isAdmin = isSuperAdminRole(session.user.role);
     const isOwner = ticket.userId === session.user.id;
 
     if (!isAdmin && !isOwner) {
@@ -279,7 +287,7 @@ export const sendTicketMessage = async (id: string, req: Request) => {
         throw new ApiError("Cannot reply to a closed ticket", 400);
     }
 
-    const isSuperAdmin = session.user.role === "SUPERADMIN" || session.user.role === "ADMIN" || session.user.role === "SUPPORT";
+    const isSuperAdmin = isSuperAdminRole(session.user.role);
     if (!isSuperAdmin && ticket.userId !== session.user.id) {
         throw new ApiError("Access denied. You do not have permission to reply to this ticket.", 403);
     }

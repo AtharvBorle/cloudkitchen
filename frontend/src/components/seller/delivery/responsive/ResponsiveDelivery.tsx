@@ -21,6 +21,7 @@ export interface ResponsiveRiderItem {
 export interface ResponsiveDeliveryProps {
   ownerName?: string;
   totalOutstanding?: string;
+  cashCollectedToday?: string;
   riders?: ResponsiveRiderItem[];
   onSelectRider?: (rider: ResponsiveRiderItem) => void;
   onSyncDevices?: () => void;
@@ -29,6 +30,7 @@ export interface ResponsiveDeliveryProps {
 export const ResponsiveDelivery: React.FC<ResponsiveDeliveryProps> = ({
   ownerName,
   totalOutstanding = "₹0",
+  cashCollectedToday = "₹0",
   riders = [],
   onSelectRider,
   onSyncDevices,
@@ -140,20 +142,35 @@ export const ResponsiveDelivery: React.FC<ResponsiveDeliveryProps> = ({
 
         {/* Content Area */}
         <main className={styles.contentArea}>
-          {/* Total Outstanding Card */}
-          <section
-            className={styles.totalCard}
-            onClick={() => router.push("/seller/delivery/riders")}
-            role="button"
-            tabIndex={0}
-            style={{ cursor: "pointer" }}
-          >
-            <div className={styles.totalCardHeader}>
-              <span className={styles.totalLabel}>Total Outstanding</span>
-              <span className={styles.viewRidersLink}>Manage Riders →</span>
-            </div>
-            <span className={styles.totalAmount}>{totalOutstanding}</span>
-          </section>
+          {/* Delivery & COD Metrics Grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            {/* Total Outstanding Card */}
+            <section
+              className={styles.totalCard}
+              onClick={() => router.push("/seller/delivery/riders")}
+              role="button"
+              tabIndex={0}
+              style={{ cursor: "pointer", padding: "14px 16px" }}
+            >
+              <div className={styles.totalCardHeader}>
+                <span className={styles.totalLabel} style={{ fontSize: "11px", fontWeight: 700 }}>COD Outstanding</span>
+              </div>
+              <span className={styles.totalAmount} style={{ fontSize: "20px" }}>{totalOutstanding}</span>
+            </section>
+
+            {/* Cash Collected Today Card */}
+            <section
+              className={styles.totalCard}
+              style={{ padding: "14px 16px" }}
+            >
+              <div className={styles.totalCardHeader}>
+                <span className={styles.totalLabel} style={{ fontSize: "11px", fontWeight: 700 }}>Cash Collected</span>
+              </div>
+              <span className={styles.totalAmount} style={{ fontSize: "20px", color: "#16A34A" }}>
+                {cashCollectedToday}
+              </span>
+            </section>
+          </div>
 
           {/* Riders List Section */}
           <section className={styles.ridersSection}>

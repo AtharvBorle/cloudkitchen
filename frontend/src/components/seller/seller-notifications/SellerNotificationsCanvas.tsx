@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import {
   Bell,
@@ -17,6 +17,7 @@ import {
   Trash2,
   ChevronRight,
   SlidersHorizontal,
+  Search,
   X,
 } from "lucide-react";
 import {
@@ -31,10 +32,14 @@ export type FilterTab = "all" | "unread" | "orders" | "stock" | "delivery" | "ti
 
 export interface SellerNotificationsCanvasProps {
   initialNotifications?: SellerNotificationItem[];
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
   onNotificationAction?: (notification: SellerNotificationItem) => void;
 }
 
 export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps> = ({
+  searchQuery: searchQueryProp = "",
+  onSearchChange,
   onNotificationAction,
 }) => {
   const {
@@ -45,11 +50,43 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
     deleteNotification,
     markAllAsRead,
     clearAllNotifications,
+    syncNotifications,
   } = useSellerNotifications();
 
   const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showBanner, setShowBanner] = useState(true);
+
+  const [localSearchQuery, setLocalSearchQuery] = useState(searchQueryProp || "");
+  const searchQuery = searchQueryProp !== undefined ? searchQueryProp : localSearchQuery;
+
+  useEffect(() => {
+    if (searchQueryProp !== undefined) {
+      setLocalSearchQuery(searchQueryProp);
+    }
+  }, [searchQueryProp]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = (params.get("tab") || params.get("filter") || "").toLowerCase();
+      if (
+        tabParam === "unread" ||
+        tabParam === "orders" ||
+        tabParam === "stock" ||
+        tabParam === "delivery" ||
+        tabParam === "timings" ||
+        tabParam === "bookings"
+      ) {
+        setActiveFilter(tabParam as FilterTab);
+      }
+    }
+  }, []);
+
+  const handleSearchChange = (q: string) => {
+    setLocalSearchQuery(q);
+    if (onSearchChange) onSearchChange(q);
+  };
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -81,17 +118,69 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
     showToast("All notifications cleared");
   };
 
-  // Filtered Notifications
-  const filteredNotifications = notifications.filter((n) => {
-    if (activeFilter === "all") return true;
-    if (activeFilter === "unread") return !n.isRead;
-    if (activeFilter === "orders") return n.category === "orders";
-    if (activeFilter === "stock") return n.category === "stock";
-    if (activeFilter === "delivery") return n.category === "delivery";
-    if (activeFilter === "timings") return n.category === "timings";
-    if (activeFilter === "bookings") return n.category === "bookings" || n.category === "reviews" || n.category === "settlements";
-    return true;
-  });
+  // Filtered Notifications with Tab & Search Filter
+  const filteredNotifications = useMemo(() => {
+    return notifications.filter((n) => {
+      // 1. Tab filter
+      if (activeFilter === "unread" && n.isRead) return false;
+      if (activeFilter === "orders" && n.category !== "orders") return false;
+      if (activeFilter === "stock" && n.category !== "stock") return false;
+      if (activeFilter === "delivery" && n.category !== "delivery") return false;
+      if (activeFilter === "timings" && n.category !== "timings") return false;
+      if (
+        activeFilter === "bookings" &&
+        !(n.category === "bookings" || n.category === "reviews" || n.category === "settlements")
+      ) {
+        return false;
+      }
+
+      // 2. Search query filter
+      if (!searchQuery.trim()) return true;
+
+      const q = searchQuery.toLowerCase().trim();
+      const tokens = q.split(/\s+/).filter(Boolean);
+
+      const title = (n.title || "").toLowerCase();
+      const message = (n.message || "").toLowerCase();
+      const details = (n.details || "").toLowerCase();
+      const category = (n.category || "").toLowerCase();
+      const severity = (n.severity || "").toLowerCase();
+      const actionLabel = (n.actionLabel || "").toLowerCase();
+      const timeAgo = (n.timeAgo || "").toLowerCase();
+      const readStatus = n.isRead ? "read" : "unread";
+
+      // Direct full match
+      if (
+        title.includes(q) ||
+        message.includes(q) ||
+        details.includes(q) ||
+        category.includes(q) ||
+        severity.includes(q) ||
+        actionLabel.includes(q) ||
+        timeAgo.includes(q) ||
+        readStatus.includes(q)
+      ) {
+        return true;
+      }
+
+      // Multi-token match (all words match some attribute)
+      if (tokens.length > 1) {
+        return tokens.every(
+          (token) =>
+            title.includes(token) ||
+            message.includes(token) ||
+            details.includes(token) ||
+            category.includes(token) ||
+            severity.includes(token) ||
+            actionLabel.includes(token) ||
+            timeAgo.includes(token) ||
+            readStatus.includes(token)
+        );
+      }
+
+      return false;
+    });
+  }, [notifications, activeFilter, searchQuery]);
 
   const getCategoryIcon = (category: NotificationCategory) => {
     switch (category) {
@@ -151,13 +240,58 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
   };
 
   const getCountByFilter = (filter: FilterTab) => {
-    if (filter === "all") return notifications.length;
-    if (filter === "unread") return unreadCount;
-    if (filter === "orders") return notifications.filter((n) => n.category === "orders").length;
-    if (filter === "stock") return notifications.filter((n) => n.category === "stock").length;
-    if (filter === "delivery") return notifications.filter((n) => n.category === "delivery").length;
-    if (filter === "timings") return notifications.filter((n) => n.category === "timings").length;
-    if (filter === "bookings") return notifications.filter((n) => n.category === "bookings" || n.category === "reviews" || n.category === "settlements").length;
+    const list = searchQuery.trim()
+      ? notifications.filter((n) => {
+          const q = searchQuery.toLowerCase().trim();
+          const tokens = q.split(/\s+/).filter(Boolean);
+          const title = (n.title || "").toLowerCase();
+          const message = (n.message || "").toLowerCase();
+          const details = (n.details || "").toLowerCase();
+          const category = (n.category || "").toLowerCase();
+          const severity = (n.severity || "").toLowerCase();
+          const actionLabel = (n.actionLabel || "").toLowerCase();
+          const timeAgo = (n.timeAgo || "").toLowerCase();
+          const readStatus = n.isRead ? "read" : "unread";
+          if (
+            title.includes(q) ||
+            message.includes(q) ||
+            details.includes(q) ||
+            category.includes(q) ||
+            severity.includes(q) ||
+            actionLabel.includes(q) ||
+            timeAgo.includes(q) ||
+            readStatus.includes(q)
+          ) {
+            return true;
+          }
+          if (tokens.length > 1) {
+            return tokens.every(
+              (t) =>
+                title.includes(t) ||
+                message.includes(t) ||
+                details.includes(t) ||
+                category.includes(t) ||
+                severity.includes(t) ||
+                actionLabel.includes(t) ||
+                timeAgo.includes(t) ||
+                readStatus.includes(t)
+            );
+          }
+          return false;
+        })
+      : notifications;
+
+    if (filter === "all") return list.length;
+    if (filter === "unread") return list.filter((n) => !n.isRead).length;
+    if (filter === "orders") return list.filter((n) => n.category === "orders").length;
+    if (filter === "stock") return list.filter((n) => n.category === "stock").length;
+    if (filter === "delivery") return list.filter((n) => n.category === "delivery").length;
+    if (filter === "timings") return list.filter((n) => n.category === "timings").length;
+    if (filter === "bookings") {
+      return list.filter(
+        (n) => n.category === "bookings" || n.category === "reviews" || n.category === "settlements"
+      ).length;
+    }
     return 0;
   };
 
@@ -246,6 +380,55 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
         </div>
       )}
 
+      {/* In-page Search Bar */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          backgroundColor: "#FFFFFF",
+          border: "1px solid #E2E8F0",
+          borderRadius: "10px",
+          padding: "8px 14px",
+          marginBottom: "16px",
+          gap: "10px",
+          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.02)",
+        }}
+      >
+        <Search size={16} color="#64748B" />
+        <input
+          type="text"
+          placeholder="Search notifications by title, message, or keyword..."
+          value={searchQuery}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          style={{
+            border: "none",
+            backgroundColor: "transparent",
+            outline: "none",
+            fontSize: "13px",
+            color: "#1E293B",
+            width: "100%",
+          }}
+        />
+        {searchQuery && (
+          <button
+            type="button"
+            onClick={() => handleSearchChange("")}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: 0,
+              color: "#94A3B8",
+              display: "flex",
+              alignItems: "center",
+            }}
+            title="Clear search"
+          >
+            <X size={15} />
+          </button>
+        )}
+      </div>
+
       {/* 3. Filter Tabs */}
       <div className={styles.tabsContainer} role="tablist">
         {(
@@ -269,7 +452,12 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
               role="tab"
               aria-selected={active}
               className={`${styles.tabBtn} ${active ? styles.activeTab : ""}`}
-              onClick={() => setActiveFilter(tab.id)}
+              onClick={() => {
+                setActiveFilter(tab.id);
+                if (syncNotifications) {
+                  syncNotifications();
+                }
+              }}
             >
               <span>{tab.label}</span>
               <span className={styles.tabBadge}>{count}</span>
@@ -282,24 +470,44 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
       {filteredNotifications.length === 0 ? (
         <div className={styles.emptyState}>
           <div className={styles.emptyIconWrapper}>
-            <Bell size={26} />
+            {searchQuery.trim() ? <Search size={26} color="#64748B" /> : <Bell size={26} />}
           </div>
           <h3 className={styles.emptyTitle}>
-            {notifications.length === 0 ? "No Notifications Yet" : "No Notifications in this Category"}
+            {searchQuery.trim()
+              ? `No Notifications Matching "${searchQuery}"`
+              : activeFilter === "unread"
+              ? "All Caught Up"
+              : notifications.length === 0
+              ? "No Notifications Yet"
+              : "No Notifications in this Category"}
           </h3>
           <p className={styles.emptyDesc}>
-            {notifications.length === 0
+            {searchQuery.trim()
+              ? "We couldn't find any received notifications matching your keyword. Try checking for typos or searching a different term."
+              : activeFilter === "unread"
+              ? "You're all caught up! No unread notifications at the moment."
+              : notifications.length === 0
               ? "You're all caught up! New orders, inventory updates, and delivery alerts will appear here in real-time."
               : "No notifications match this filter. Check other categories or view all alerts."}
           </p>
-          {notifications.length > 0 && activeFilter !== "all" && (
+          {searchQuery.trim() ? (
             <button
               type="button"
               className={`${styles.actionBtn} ${styles.actionBtnPrimary}`}
-              onClick={() => setActiveFilter("all")}
+              onClick={() => handleSearchChange("")}
             >
-              Show All Notifications
+              Clear Search
             </button>
+          ) : (
+            notifications.length > 0 && activeFilter !== "all" && (
+              <button
+                type="button"
+                className={`${styles.actionBtn} ${styles.actionBtnPrimary}`}
+                onClick={() => setActiveFilter("all")}
+              >
+                Show All Notifications
+              </button>
+            )
           )}
         </div>
       ) : (
@@ -309,7 +517,11 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
               <div
                 key={item.id}
                 className={`${styles.notificationCard} ${!item.isRead ? styles.unreadCard : ""}`}
-                onClick={() => handleMarkAsRead(item.id)}
+                onClick={() => {
+                  if (activeFilter !== "unread") {
+                    handleMarkAsRead(item.id);
+                  }
+                }}
               >
                 {/* Category Icon */}
                 <div className={`${styles.iconWrapper} ${getIconClass(item.category)}`}>

@@ -1014,8 +1014,16 @@ function MySubscriptionContent() {
 
                     {/* Pause Subscription Section */}
                     {(() => {
-                      const pausePeriod = (subscription.plan?.pauseBillingPeriod || "").toLowerCase();
-                      const isPauseAllowed = !(pausePeriod === "disabled" || pausePeriod === "none" || (subscription.plan as any)?.allowPause === false);
+                      const pausePeriod = (subscription.plan?.pauseBillingPeriod || "").trim().toLowerCase();
+                      const isPauseAllowed = Boolean(
+                        pausePeriod &&
+                        pausePeriod !== "none" &&
+                        pausePeriod !== "disabled" &&
+                        pausePeriod !== "false" &&
+                        (subscription.plan as any)?.allowPause !== false &&
+                        (subscription.plan as any)?.allowPauseBilling !== false
+                      );
+                      if (!isPauseAllowed) return null;
                       return (
                         <PauseSubscription
                           isPaused={subscription.isPaused}

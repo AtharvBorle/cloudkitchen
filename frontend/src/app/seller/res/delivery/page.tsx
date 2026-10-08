@@ -10,6 +10,7 @@ import { fetchApi } from "@/lib/fetch-api";
 export default function ResponsiveDeliveryPage() {
   const router = useRouter();
   const [deliveryData, setDeliveryData] = useState<any[]>([]);
+  const [metrics, setMetrics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -21,8 +22,12 @@ export default function ResponsiveDeliveryPage() {
         if (res.ok) {
           const data = await res.json();
           const list = data.data?.deliveryPersons || data.deliveryPersons || data.data || [];
+          const metricsData = data.data?.metrics || data.metrics || null;
           if (Array.isArray(list) && isMounted) {
             setDeliveryData(list);
+          }
+          if (metricsData && isMounted) {
+            setMetrics(metricsData);
           }
         }
       } catch (err) {
@@ -40,10 +45,20 @@ export default function ResponsiveDeliveryPage() {
   }, []);
 
   const totalOutstandingStr = useMemo(() => {
+    if (metrics?.totalCodOutstanding !== undefined) {
+      return `₹${Number(metrics.totalCodOutstanding).toLocaleString("en-IN")}`;
+    }
     if (!deliveryData || deliveryData.length === 0) return undefined;
     const total = deliveryData.reduce((acc, dp) => acc + (dp.outstandingBalance || 0), 0);
     return `₹${total.toLocaleString("en-IN")}`;
-  }, [deliveryData]);
+  }, [deliveryData, metrics]);
+
+  const cashCollectedTodayStr = useMemo(() => {
+    if (metrics?.cashCollectedToday !== undefined) {
+      return `₹${Number(metrics.cashCollectedToday).toLocaleString("en-IN")}`;
+    }
+    return "₹0";
+  }, [metrics]);
 
   const mappedRiders: ResponsiveRiderItem[] | undefined = useMemo(() => {
     if (!deliveryData || deliveryData.length === 0) return undefined;
@@ -68,6 +83,7 @@ export default function ResponsiveDeliveryPage() {
   return (
     <ResponsiveDelivery
       totalOutstanding={totalOutstandingStr}
+      cashCollectedToday={cashCollectedTodayStr}
       riders={mappedRiders}
       onSelectRider={(rider) => router.push(`/seller/delivery/handover?riderId=${rider.id}`)}
     />

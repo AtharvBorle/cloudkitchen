@@ -12,6 +12,7 @@ import { useSellerProfile } from "@/hooks/useSellerProfile";
 export interface SellerNotificationsCanvasDasProps {
   topbarTitle?: string;
   searchPlaceholder?: string;
+  searchQuery?: string;
   ownerName?: string;
   partnerRole?: string;
   avatarInitials?: string;
@@ -24,6 +25,7 @@ export interface SellerNotificationsCanvasDasProps {
 export default function SellerNotificationsCanvasDas({
   topbarTitle = "Owner Operations Console",
   searchPlaceholder = "Search notifications, orders, alerts...",
+  searchQuery: searchQueryProp,
   ownerName: initialOwnerName,
   partnerRole: initialPartnerRole,
   avatarInitials: initialAvatarInitials,
@@ -34,6 +36,18 @@ export default function SellerNotificationsCanvasDas({
 }: SellerNotificationsCanvasDasProps) {
   const seller = useSellerProfile();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState(searchQueryProp || "");
+
+  React.useEffect(() => {
+    if (searchQueryProp !== undefined) {
+      setSearchQuery(searchQueryProp);
+    }
+  }, [searchQueryProp]);
+
+  const handleSearch = (q: string) => {
+    setSearchQuery(q);
+    if (onSearch) onSearch(q);
+  };
 
   const ownerName = initialOwnerName || seller.ownerName;
   const partnerRole = initialPartnerRole || seller.partnerRole;
@@ -77,10 +91,11 @@ export default function SellerNotificationsCanvasDas({
         <Topbar
           title={topbarTitle}
           searchPlaceholder={searchPlaceholder}
+          searchQuery={searchQuery}
           ownerName={ownerName}
           partnerRole={partnerRole}
           avatarInitials={avatarInitials}
-          onSearch={onSearch}
+          onSearch={handleSearch}
           onMenuToggle={() => setIsMobileOpen((prev) => !prev)}
         />
 
@@ -98,6 +113,8 @@ export default function SellerNotificationsCanvasDas({
         >
           <SellerNotificationsCanvas
             initialNotifications={initialNotifications}
+            searchQuery={searchQuery}
+            onSearchChange={handleSearch}
             onNotificationAction={onNotificationAction}
           />
         </main>

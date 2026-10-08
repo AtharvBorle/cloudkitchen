@@ -181,6 +181,9 @@ export default function Topbar({
     if (pathname?.startsWith("/seller/offers") || pathname?.startsWith("/seller/res/offers") || pathname?.startsWith("/dashboard/seller/offers")) {
       return "Search offers, coupons, promo codes...";
     }
+    if (pathname?.startsWith("/seller/notifications") || pathname?.startsWith("/seller/res/notifications") || pathname?.startsWith("/dashboard/seller/notifications")) {
+      return "Search notifications, alerts, orders...";
+    }
     return "Search orders, rooms, dishes...";
   };
 
@@ -217,6 +220,9 @@ export default function Topbar({
     }
     if (pathname?.startsWith("/seller/offers") || pathname?.startsWith("/seller/res/offers") || pathname?.startsWith("/dashboard/seller/offers")) {
       return "Offers & Coupons";
+    }
+    if (pathname?.startsWith("/seller/notifications") || pathname?.startsWith("/seller/res/notifications") || pathname?.startsWith("/dashboard/seller/notifications")) {
+      return "Notifications";
     }
     return title || "Owner Operations Console";
   };

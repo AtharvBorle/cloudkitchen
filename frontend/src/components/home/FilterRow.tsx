@@ -141,6 +141,24 @@ export default function FilterRow({
   const handleSelectPrice = (tier: "all" | "under-150" | "150-300" | "300-plus") => {
     updateFilters({ priceTier: tier === "all" ? null : tier });
     setOpenPopover(null);
+    if (typeof window !== "undefined") {
+      try {
+        if (tier && tier !== "all") {
+          let min: number | undefined;
+          let max: number | undefined;
+          if (tier === "under-150") max = 150;
+          else if (tier === "150-300") { min = 150; max = 300; }
+          else if (tier === "300-plus") min = 300;
+
+          const payload = { preset: tier, minPrice: min, maxPrice: max };
+          localStorage.setItem("cloudkitchen_price_filter", JSON.stringify(payload));
+          window.dispatchEvent(new CustomEvent("cloudkitchen_price_filter_changed", { detail: payload }));
+        } else {
+          localStorage.removeItem("cloudkitchen_price_filter");
+          window.dispatchEvent(new CustomEvent("cloudkitchen_price_filter_changed", { detail: null }));
+        }
+      } catch {}
+    }
   };
 
   const handleToggleCuisine = (cuisineName: string) => {

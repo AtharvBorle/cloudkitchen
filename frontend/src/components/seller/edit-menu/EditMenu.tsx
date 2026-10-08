@@ -8,6 +8,7 @@ import ConsoleSidebar from '../sidebar/Sidebar';
 import Topbar from '../nav/Topbar';
 import { fetchApi } from '@/lib/fetch-api';
 import { useSellerProfile } from '@/hooks/useSellerProfile';
+import { broadcastStockAlert } from '@/hooks/useSellerNotifications';
 import styles from './EditMenu.module.css';
 
 export interface VariantItem {
@@ -368,6 +369,20 @@ function EditMenuInner({
         alert(errorData.message || 'Failed to save menu item');
         setLoading(false);
         return;
+      }
+
+      const resData = await res.json().catch(() => ({}));
+      const savedItem = resData.data?.item || resData.item || {};
+      const targetId = savedItem.id || itemId;
+
+      try {
+        broadcastStockAlert({
+          itemId: targetId,
+          itemName: itemName.trim(),
+          currentStock: cleanStock,
+        });
+      } catch (e) {
+        console.error('Failed to broadcast stock alert:', e);
       }
 
       setSavedDishName(itemName);

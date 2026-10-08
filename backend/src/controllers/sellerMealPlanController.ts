@@ -274,7 +274,7 @@ export const createSellerMealPlan = async (req: Request) => {
             mealTimings: JSON.stringify(Array.isArray(mealTimings) ? mealTimings : []),
             status: status || "Live",
             allowCancel: allowCancel !== undefined ? Boolean(allowCancel) : false,
-            pauseBillingPeriod: pauseBillingPeriod || "Monthly",
+            pauseBillingPeriod: (body.allowPause === false || body.allowPauseBilling === false) ? "None" : (pauseBillingPeriod || "Monthly"),
         }
     });
 
@@ -371,6 +371,8 @@ export const updateSellerMealPlan = async (req: Request) => {
     }
     if (body.pauseBillingPeriod !== undefined) {
         updateData.pauseBillingPeriod = body.pauseBillingPeriod;
+    } else if (body.allowPause === false || body.allowPauseBilling === false) {
+        updateData.pauseBillingPeriod = "None";
     }
 
     const updated = await db.sellerMealPlan.update({

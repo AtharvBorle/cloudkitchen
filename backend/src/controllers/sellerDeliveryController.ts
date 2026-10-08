@@ -5,7 +5,7 @@ import { emitOrderUpdated, emitSellerDashboardRefresh } from "@/lib/realtime-eve
 import { validateEmail } from "@/lib/email-validation";
 import bcrypt from "bcryptjs";
 
-export const getSellerDeliveryPersons = async () => {
+export const getSellerDeliveryPersons = async (req?: Request) => {
     const session = await getAuthSession();
     if (!session?.user) {
         throw new ApiError("Please log in first to manage delivery personnel.", 401);
@@ -22,6 +22,62 @@ export const getSellerDeliveryPersons = async () => {
         throw new ApiError("Seller profile not found. Please complete seller registration.", 404);
     }
 
+    // Support date query param: ?date=YYYY-MM-DD or ?from=ISO&to=ISO
+    let startDate: Date;
+    let endDate: Date;
+    let isToday = false;
+    let dateStr = "";
+
+    if (req) {
+        try {
+            const { searchParams } = new URL(req.url);
+            const dateQuery = searchParams.get("date");
+            const fromQuery = searchParams.get("from");
+            const toQuery = searchParams.get("to");
+
+            if (fromQuery && toQuery) {
+                startDate = new Date(fromQuery);
+                endDate = new Date(toQuery);
+                const now = new Date();
+                isToday = (
+                    startDate.getFullYear() === now.getFullYear() &&
+                    startDate.getMonth() === now.getMonth() &&
+                    startDate.getDate() === now.getDate()
+                );
+                dateStr = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, "0")}-${String(startDate.getDate()).padStart(2, "0")}`;
+            } else if (dateQuery && /^\d{4}-\d{2}-\d{2}$/.test(dateQuery)) {
+                const [y, m, d] = dateQuery.split("-").map(Number);
+                startDate = new Date(y, m - 1, d, 0, 0, 0, 0);
+                endDate = new Date(y, m - 1, d, 23, 59, 59, 999);
+                const now = new Date();
+                isToday = (
+                    now.getFullYear() === y &&
+                    now.getMonth() === m - 1 &&
+                    now.getDate() === d
+                );
+                dateStr = dateQuery;
+            } else {
+                const now = new Date();
+                startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+                endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+                isToday = true;
+                dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+            }
+        } catch {
+            const now = new Date();
+            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+            endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+            isToday = true;
+            dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+        }
+    } else {
+        const now = new Date();
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        isToday = true;
+        dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    }
+
     const deliveryPersons = await db.deliveryPerson.findMany({
         where: { sellerId: sellerProfile.id },
         include: {
@@ -35,6 +91,66 @@ export const getSellerDeliveryPersons = async () => {
         },
         orderBy: { createdAt: 'desc' }
     });
+
+    const dpIds = deliveryPersons.map(dp => dp.id);
+
+    // 1. Total COD Outstanding currently in active rider wallets
+    const totalCodOutstanding = deliveryPersons.reduce((sum, dp) => sum + (dp.outstandingBalance || 0), 0);
+
+    // 2. Total COD Cash collected by delivery persons on the selected date
+    const codTransactions = await db.deliveryTransaction.findMany({
+        where: {
+            deliveryPersonId: { in: dpIds },
+            type: "COD_COLLECTION",
+            status: "COMPLETED",
+            createdAt: {
+                gte: startDate,
+                lte: endDate
+            }
+        }
+    });
+    const txCodCollected = codTransactions.reduce((sum, tx) => sum + (tx.amount || 0), 0);
+
+    // Also check delivered COD orders for this seller within the selected date range
+    const deliveredCodOrders = await db.order.findMany({
+        where: {
+            sellerId: sellerProfile.id,
+            paymentMethod: "COD",
+            status: { in: ["DELIVERED", "COMPLETED"] },
+            OR: [
+                {
+                    updatedAt: {
+                        gte: startDate,
+                        lte: endDate
+                    }
+                },
+                {
+                    createdAt: {
+                        gte: startDate,
+                        lte: endDate
+                    }
+                }
+            ]
+        }
+    });
+    const orderCodCollected = deliveredCodOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+    const cashCollectedToday = Math.max(txCodCollected, orderCodCollected);
+
+    // 3. Cash settlements collected by kitchen owner from delivery riders on that date
+    const daySettlements = await db.deliveryTransaction.findMany({
+        where: {
+            deliveryPersonId: { in: dpIds },
+            type: "SETTLEMENT",
+            status: "COMPLETED",
+            createdAt: {
+                gte: startDate,
+                lte: endDate
+            }
+        }
+    });
+    const cashSettledToday = daySettlements.reduce((sum, tx) => sum + (tx.amount || 0), 0);
+
+    const activeSquadCount = deliveryPersons.filter(dp => dp.isActive).length;
 
     const formatted = deliveryPersons.map(dp => ({
         id: dp.id,
@@ -51,7 +167,17 @@ export const getSellerDeliveryPersons = async () => {
         updatedAt: dp.updatedAt
     }));
 
-    return { deliveryPersons: formatted };
+    return {
+        deliveryPersons: formatted,
+        metrics: {
+            totalCodOutstanding,
+            cashCollectedToday,
+            cashSettledToday,
+            activeSquadCount,
+            selectedDate: dateStr,
+            isToday
+        }
+    };
 };
 
 export const createSellerDeliveryPerson = async (req: Request) => {

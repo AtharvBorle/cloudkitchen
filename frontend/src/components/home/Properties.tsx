@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { Star, Check } from "lucide-react";
 import Link from "next/link";
@@ -262,6 +262,82 @@ export default function Properties({ places, foodItems = [], isLoading = false }
     setSelectedDietary([]);
     setMaxPrice(2500);
     setActivePricePreset("all");
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.removeItem("cloudkitchen_price_filter");
+        window.dispatchEvent(
+          new CustomEvent("cloudkitchen_price_filter_changed", { detail: null })
+        );
+      } catch {}
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      if (activePricePreset !== "all" || maxPrice < 2500) {
+        let min: number | undefined;
+        let max: number | undefined;
+        if (activePricePreset === "under-150") {
+          max = 150;
+        } else if (activePricePreset === "150-300") {
+          min = 150;
+          max = 300;
+        } else if (activePricePreset === "150-400") {
+          min = 150;
+          max = 400;
+        } else if (activePricePreset === "300-plus") {
+          min = 300;
+        } else if (activePricePreset === "400-plus") {
+          min = 400;
+        } else if (maxPrice < 2500) {
+          max = maxPrice;
+        }
+
+        const filterPayload = {
+          preset: activePricePreset,
+          minPrice: min,
+          maxPrice: max,
+        };
+        localStorage.setItem("cloudkitchen_price_filter", JSON.stringify(filterPayload));
+        window.dispatchEvent(
+          new CustomEvent("cloudkitchen_price_filter_changed", { detail: filterPayload })
+        );
+      } else {
+        localStorage.removeItem("cloudkitchen_price_filter");
+        window.dispatchEvent(
+          new CustomEvent("cloudkitchen_price_filter_changed", { detail: null })
+        );
+      }
+    } catch {}
+  }, [activePricePreset, maxPrice]);
+
+  const getKitchenHref = (place: PlaceCardData) => {
+    const base = place.trackingId ? `/shop/${place.trackingId}` : `/restaurant/${place.kitchenId || "7-12-kitchen"}`;
+    const params = new URLSearchParams();
+
+    if (activePricePreset && activePricePreset !== "all") {
+      params.set("price", activePricePreset);
+      if (activePricePreset === "under-150") {
+        params.set("maxPrice", "150");
+      } else if (activePricePreset === "150-300") {
+        params.set("minPrice", "150");
+        params.set("maxPrice", "300");
+      } else if (activePricePreset === "150-400") {
+        params.set("minPrice", "150");
+        params.set("maxPrice", "400");
+      } else if (activePricePreset === "300-plus") {
+        params.set("minPrice", "300");
+      } else if (activePricePreset === "400-plus") {
+        params.set("minPrice", "400");
+      }
+    } else if (maxPrice < 2500) {
+      params.set("maxPrice", String(maxPrice));
+      params.set("price", "custom");
+    }
+
+    const qs = params.toString();
+    return qs ? `${base}?${qs}` : base;
   };
 
   return (
@@ -531,8 +607,12 @@ export default function Properties({ places, foodItems = [], isLoading = false }
               >
                 {activePricePreset === "under-150"
                   ? "Under ₹150"
+                  : activePricePreset === "150-300"
+                  ? "₹150 – ₹300"
                   : activePricePreset === "150-400"
                   ? "₹150 – ₹400"
+                  : activePricePreset === "300-plus"
+                  ? "₹300+"
                   : activePricePreset === "400-plus"
                   ? "₹400+"
                   : maxPrice >= 2500
@@ -548,7 +628,7 @@ export default function Properties({ places, foodItems = [], isLoading = false }
                 min="0"
                 max="2500"
                 step="25"
-                value={activePricePreset !== "all" && activePricePreset !== "custom" ? (activePricePreset === "under-150" ? 150 : activePricePreset === "150-400" ? 400 : 2500) : maxPrice}
+                value={activePricePreset !== "all" && activePricePreset !== "custom" ? (activePricePreset === "under-150" ? 150 : activePricePreset === "150-300" ? 300 : activePricePreset === "150-400" ? 400 : 2500) : maxPrice}
                 onChange={(e) => {
                   setMaxPrice(Number(e.target.value));
                   setActivePricePreset("custom");
@@ -778,7 +858,7 @@ export default function Properties({ places, foodItems = [], isLoading = false }
                 const isClosed = place.isOnline === false;
                 return (
                 <Link
-                  href={place.trackingId ? `/shop/${place.trackingId}` : `/restaurant/${place.kitchenId || "7-12-kitchen"}`}
+                  href={getKitchenHref(place)}
                   key={place.id}
                   style={{
                     width: "100%",

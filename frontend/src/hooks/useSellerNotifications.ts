@@ -8,6 +8,7 @@ import {
   createSampleAlert,
   formatNotificationTime,
 } from "@/components/seller/seller-notifications/notificationData";
+import { fetchApi } from "@/lib/fetch-api";
 
 const STORAGE_KEY = "seller_notifications_store_v4";
 
@@ -132,11 +133,6 @@ export function addSellerNotification(
   const current = getGlobalSellerNotifications();
   const newItemId = item.id || `notif-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-  // Deduplicate if already present
-  if (current.some((n) => n.id === newItemId)) {
-    return current.find((n) => n.id === newItemId)!;
-  }
-
   const rawTimestamp = item.timestamp || new Date().toISOString();
   const newItem: SellerNotificationItem = {
     id: newItemId,
@@ -152,6 +148,28 @@ export function addSellerNotification(
     actionLabel: item.actionLabel,
     actionHref: item.actionHref,
   };
+
+  // If already present, update in-place with latest info
+  const existingIndex = current.findIndex(
+    (n) =>
+      n.id === newItemId ||
+      (newItemId.startsWith("stock-") && n.id === `notif-${newItemId}`) ||
+      (newItemId.startsWith("stock-") && n.id === `notif-stock-${newItemId.replace("stock-", "")}`) ||
+      (newItemId.startsWith("bk-") && (n.id === `notif-book-${newItemId.replace("bk-", "")}` || n.id === newItemId)) ||
+      (newItemId.startsWith("notif-book-") && (n.id === `bk-${newItemId.replace("notif-book-", "")}` || n.id === newItemId))
+  );
+
+  if (existingIndex !== -1) {
+    const updated = [...current];
+    updated[existingIndex] = {
+      ...updated[existingIndex],
+      ...newItem,
+      isRead: item.isRead !== undefined ? item.isRead : false,
+    };
+    persistNotifications(updated);
+    return updated[existingIndex];
+  }
+
   persistNotifications([newItem, ...current]);
   return newItem;
 }
@@ -220,19 +238,40 @@ export function broadcastStockAlert(payload: {
   currentStock: number;
   threshold?: number;
 }) {
+  const cleanId = payload.itemId || `item-${Date.now()}`;
+  const notifId = `stock-${cleanId}`;
+  const isOutOfStock = payload.currentStock === 0;
+  const isLowStock = !isOutOfStock && payload.currentStock <= 5;
+
+  let title = `Stock & Inventory: ${payload.itemName}`;
+  let message = `Current available inventory for "${payload.itemName}" is ${payload.currentStock} units in stock.`;
+  let severity: SellerNotificationItem["severity"] = "success";
+
+  if (isOutOfStock) {
+    title = `Out of Stock: ${payload.itemName}`;
+    message = `Inventory for "${payload.itemName}" is completely depleted (0 units). Item paused.`;
+    severity = "critical";
+  } else if (isLowStock) {
+    title = `Low Stock Alert: ${payload.itemName}`;
+    message = `Only ${payload.currentStock} units remaining for "${payload.itemName}". Restock item soon.`;
+    severity = "warning";
+  } else {
+    title = `Stock & Inventory: ${payload.itemName}`;
+    message = `Current available inventory for "${payload.itemName}" is ${payload.currentStock} units in stock.`;
+    severity = "success";
+  }
+
   const notifItem: SellerNotificationItem = {
-    id: `notif-stock-${payload.itemId || Date.now()}`,
+    id: notifId,
     category: "stock",
     settingKey: "lowStockAlert",
-    title: payload.currentStock === 0 ? `Out of Stock: ${payload.itemName}` : `Low Inventory Alert: ${payload.itemName}`,
-    message: payload.currentStock === 0
-      ? `Inventory for "${payload.itemName}" is completely depleted (0 units). Item paused.`
-      : `Only ${payload.currentStock} units remaining for "${payload.itemName}". Restock item soon.`,
-    details: `Inventory limit triggered at ${payload.currentStock} units remaining.`,
+    title,
+    message,
+    details: `Current Stock: ${payload.currentStock} units available.`,
     timestamp: new Date().toISOString(),
     timeAgo: "Just now",
     isRead: false,
-    severity: payload.currentStock === 0 ? "critical" : "warning",
+    severity,
     actionLabel: "Manage Stock",
     actionHref: "/seller/menu",
   };
@@ -341,19 +380,33 @@ export function broadcastBookingAlert(payload: {
   nightsCount?: number;
   totalAmount: number | string;
   checkInDate?: string;
+  checkOutDate?: string;
+  status?: string;
 }) {
   const bId = payload.bookingId || `BK-${Math.floor(1000 + Math.random() * 9000)}`;
+  const cleanId = bId.startsWith("bk-") ? bId.replace("bk-", "") : bId;
+  const notifId = `bk-${cleanId}`;
+  const totalStr = typeof payload.totalAmount === "number" ? `₹${payload.totalAmount.toLocaleString("en-IN")}` : `₹${payload.totalAmount}`;
+  const stayText = payload.nightsCount ? ` (${payload.nightsCount} night${payload.nightsCount > 1 ? "s" : ""})` : "";
+  const datesText = payload.checkInDate
+    ? ` • Check-in: ${payload.checkInDate}${payload.checkOutDate ? ` to ${payload.checkOutDate}` : ""}`
+    : "";
+  const phoneText = payload.guestPhone ? ` • Phone: ${payload.guestPhone}` : "";
+  const statusUpper = (payload.status || "CONFIRMED").toUpperCase();
+  const severity: SellerNotificationItem["severity"] =
+    statusUpper === "CANCELLED" ? "critical" : (statusUpper === "CONFIRMED" || statusUpper === "PAID") ? "success" : "info";
+
   const notifItem: SellerNotificationItem = {
-    id: `notif-book-${bId}`,
+    id: notifId,
     category: "bookings",
     settingKey: "bookingRequestAlert",
-    title: `New Room Reservation #${bId}`,
-    message: `${payload.roomName} confirmed for ${payload.guestName} (${payload.nightsCount || 1} nights). Total: ₹${payload.totalAmount}.`,
-    details: `Guest: ${payload.guestName}${payload.guestPhone ? ` • Phone: ${payload.guestPhone}` : ""}${payload.checkInDate ? ` • Check-in: ${payload.checkInDate}` : ""}`,
+    title: `Room Reservation #${cleanId.slice(-6).toUpperCase()}: ${payload.roomName}`,
+    message: `${payload.roomName} reserved for ${payload.guestName}${stayText}. Total: ${totalStr} [${statusUpper}].`,
+    details: `Guest: ${payload.guestName}${phoneText}${datesText}`,
     timestamp: new Date().toISOString(),
     timeAgo: "Just now",
     isRead: false,
-    severity: "info",
+    severity,
     actionLabel: "View Bookings",
     actionHref: "/seller/booking",
   };
@@ -512,6 +565,58 @@ function setupGlobalNotificationListeners() {
   });
 }
 
+export async function syncNotificationsFromBackend() {
+  if (typeof window === "undefined") return;
+  try {
+    const res = await fetchApi("/api/seller/notifications");
+    if (!res.ok) return;
+    const json = await res.json();
+    const serverNotifications: SellerNotificationItem[] =
+      json.data?.notifications || json.notifications || [];
+    if (!Array.isArray(serverNotifications) || serverNotifications.length === 0) return;
+
+    const current = getGlobalSellerNotifications();
+    const updated = [...current];
+
+    serverNotifications.forEach((serverItem) => {
+      const matchIndex = updated.findIndex(
+        (n) =>
+          n.id === serverItem.id ||
+          (serverItem.id.startsWith("stock-") && (n.id === `notif-${serverItem.id}` || n.id === `notif-stock-${serverItem.id.replace("stock-", "")}`)) ||
+          (serverItem.id.startsWith("bk-") && (n.id === `notif-book-${serverItem.id.replace("bk-", "")}` || n.id === serverItem.id)) ||
+          (serverItem.id.startsWith("notif-book-") && (n.id === `bk-${serverItem.id.replace("notif-book-", "")}` || n.id === serverItem.id)) ||
+          (serverItem.id.startsWith("ord-") && (n.id === `notif-order-${serverItem.id.replace(/^ord-[a-z]+-/, "")}` || n.id === serverItem.id)) ||
+          (serverItem.id.startsWith("notif-order-") && (n.id === `ord-new-${serverItem.id.replace("notif-order-", "")}` || n.id === serverItem.id))
+      );
+
+      if (matchIndex !== -1) {
+        const existingIsRead = updated[matchIndex].isRead;
+        updated[matchIndex] = {
+          ...serverItem,
+          ...updated[matchIndex],
+          id: serverItem.id,
+          title: serverItem.title,
+          message: serverItem.message,
+          details: serverItem.details,
+          severity: serverItem.severity,
+          actionLabel: serverItem.actionLabel,
+          actionHref: serverItem.actionHref,
+          timestamp: serverItem.timestamp || updated[matchIndex].timestamp,
+          timeAgo: serverItem.timeAgo || updated[matchIndex].timeAgo,
+          isRead: existingIsRead !== undefined ? existingIsRead : serverItem.isRead,
+        };
+      } else {
+        updated.push(serverItem);
+      }
+    });
+
+    updated.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    persistNotifications(updated, false);
+  } catch (err) {
+    console.error("Failed to sync seller notifications from backend:", err);
+  }
+}
+
 export function useSellerNotifications() {
   const [isMounted, setIsMounted] = useState(false);
   const [notifications, setNotifications] = useState<SellerNotificationItem[]>([]);
@@ -522,6 +627,9 @@ export function useSellerNotifications() {
 
     // Sync initial mount in client
     setNotifications(getGlobalSellerNotifications());
+
+    // Fetch and sync live notifications from backend API
+    syncNotificationsFromBackend();
 
     const handleChange = () => {
       setNotifications(getGlobalSellerNotifications());
@@ -554,6 +662,7 @@ export function useSellerNotifications() {
     broadcastReview: broadcastReviewAlert,
     generateSampleAlert: generateSampleSellerAlert,
     resetToDefaults: resetSellerNotificationsToDefaults,
+    syncNotifications: syncNotificationsFromBackend,
   };
 }
 

@@ -37,6 +37,8 @@ export interface RestaurantMobileViewProps {
   onRemoveItem?: (itemId: string) => void;
   subscriptionPlans?: PlanItem[];
   onSelectPlan?: (plan: PlanItem) => void;
+  priceFilterText?: string;
+  onClearPriceFilter?: () => void;
 }
 
 export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
@@ -49,6 +51,8 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
   onRemoveItem,
   subscriptionPlans,
   onSelectPlan,
+  priceFilterText,
+  onClearPriceFilter,
 }) => {
   const router = useRouter();
   const { cartItems, decreaseQuantity, removeFromCart, cartTotal } = useCart();
@@ -500,6 +504,47 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
               plans={subscriptionPlans}
               onSelectPlan={onSelectPlan}
             />
+          </div>
+        )}
+
+        {/* Price Filter Notification Banner */}
+        {priceFilterText && (
+          <div
+            style={{
+              margin: "12px 16px 4px 16px",
+              padding: "9px 14px",
+              backgroundColor: "#FFF7ED",
+              border: "1px solid #FFEDD5",
+              borderRadius: "12px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "8px",
+              boxShadow: "0 2px 6px rgba(255, 107, 0, 0.05)",
+            }}
+          >
+            <span style={{ fontSize: "12.5px", fontWeight: "600", color: "#C2410C" }}>
+              🏷️ Price Filter: <strong style={{ color: "#9A3412" }}>{priceFilterText}</strong> ({itemsToDisplay.length} item{itemsToDisplay.length === 1 ? "" : "s"})
+            </span>
+            {onClearPriceFilter && (
+              <button
+                type="button"
+                onClick={onClearPriceFilter}
+                style={{
+                  background: "#FFFFFF",
+                  border: "1px solid #FDBA74",
+                  color: "#EA580C",
+                  fontWeight: "700",
+                  fontSize: "11px",
+                  borderRadius: "6px",
+                  padding: "3px 8px",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Clear ✕
+              </button>
+            )}
           </div>
         )}
 

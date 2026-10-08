@@ -7,7 +7,7 @@ import ConsoleSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
 import { fetchApi } from "@/lib/fetch-api";
 import { useSellerProfile, toggleSellerOnlineStatus } from "@/hooks/useSellerProfile";
-import { broadcastShopTimingAlert } from "@/hooks/useSellerNotifications";
+import { broadcastShopTimingAlert, broadcastStockAlert } from "@/hooks/useSellerNotifications";
 import PaginationControls from "../common/PaginationControls";
 import styles from "./SellerMenu.module.css";
 
@@ -419,8 +419,45 @@ export default function SellerMenu({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isAvailable: nextInStock, stockQuantity: nextQty }),
       });
+      broadcastStockAlert({
+        itemId: id,
+        itemName: targetDish.name,
+        currentStock: nextQty,
+      });
     } catch (err) {
       console.error("Failed to toggle dish stock in DB:", err);
+    }
+  };
+
+  const handleStockQtyChange = async (id: string, delta: number) => {
+    const targetDish = dishList.find((d) => d.id === id);
+    if (!targetDish) return;
+    const nextQty = Math.max(0, targetDish.stockQty + delta);
+    const nextInStock = nextQty > 0;
+
+    setDishList((prev) =>
+      prev.map((dish) =>
+        dish.id === id ? { ...dish, inStock: nextInStock, stockQty: nextQty } : dish
+      )
+    );
+
+    if (onStockQtyChange) {
+      onStockQtyChange(id, delta);
+    }
+
+    try {
+      await fetchApi(`/api/seller/menu/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isAvailable: nextInStock, stockQuantity: nextQty }),
+      });
+      broadcastStockAlert({
+        itemId: id,
+        itemName: targetDish.name,
+        currentStock: nextQty,
+      });
+    } catch (err) {
+      console.error("Failed to update dish stock in DB:", err);
     }
   };
 
@@ -917,15 +954,66 @@ export default function SellerMenu({
 
                       {/* Stock Qty */}
                       <td>
-                        <span
-                          className={
-                            dish.stockQty <= 5 && dish.stockQty > 0
-                              ? styles.stockQtyLow
-                              : styles.stockQtyText
-                          }
-                        >
-                          {dish.stockQty}
-                        </span>
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                          <button
+                            type="button"
+                            onClick={() => handleStockQtyChange(dish.id, -1)}
+                            disabled={dish.stockQty <= 0}
+                            style={{
+                              width: "22px",
+                              height: "22px",
+                              borderRadius: "4px",
+                              border: "1px solid #CBD5E1",
+                              backgroundColor: "#FFFFFF",
+                              cursor: dish.stockQty <= 0 ? "not-allowed" : "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: "13px",
+                              fontWeight: "bold",
+                              color: "#475569",
+                              opacity: dish.stockQty <= 0 ? 0.4 : 1,
+                              padding: 0,
+                            }}
+                            title="Decrease stock"
+                            aria-label={`Decrease stock for ${dish.name}`}
+                          >
+                            -
+                          </button>
+                          <span
+                            className={
+                              dish.stockQty <= 5 && dish.stockQty > 0
+                                ? styles.stockQtyLow
+                                : styles.stockQtyText
+                            }
+                            style={{ minWidth: "24px", textAlign: "center" }}
+                          >
+                            {dish.stockQty}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleStockQtyChange(dish.id, 1)}
+                            style={{
+                              width: "22px",
+                              height: "22px",
+                              borderRadius: "4px",
+                              border: "1px solid #CBD5E1",
+                              backgroundColor: "#FFFFFF",
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: "13px",
+                              fontWeight: "bold",
+                              color: "#475569",
+                              padding: 0,
+                            }}
+                            title="Increase stock"
+                            aria-label={`Increase stock for ${dish.name}`}
+                          >
+                            +
+                          </button>
+                        </div>
                       </td>
 
                       {/* In-Stock Status with interactive toggle */}
