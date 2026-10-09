@@ -146,29 +146,11 @@ function isPlacePureVeg(
   kitchen: PlaceCardData,
   foodItems: Array<any> = []
 ): boolean {
-  const rawFoodType = String(kitchen.foodType || "").toUpperCase().replace(/[\s-]/g, "_").trim();
-  if (
-    rawFoodType === "PURE_VEG" ||
-    rawFoodType === "VEG" ||
-    rawFoodType === "VEG_ONLY" ||
-    rawFoodType === "PUREVEG"
-  ) {
-    return true;
-  }
-  const kText = `${kitchen.name || ""} ${kitchen.category || ""}`.toLowerCase();
-  if (kText.includes("pure veg") || kText.includes("pure-veg") || kText.includes("100% veg") || kText.includes("pureveg")) {
-    const hasNonVegKeywords = /\b(chicken|mutton|fish|meat|biryani|egg|eggs|non[\s-_]?veg|kebab|shawarma|seafood|prawns?)\b/i.test(kText);
-    if (!hasNonVegKeywords) return true;
-  }
-  if (rawFoodType === "BOTH" || rawFoodType === "NON_VEG" || rawFoodType === "VEG_NON_VEG" || rawFoodType === "VEG_AND_NON_VEG") {
-    return false;
-  }
-  const dishes = getKitchenDishes(kitchen, foodItems);
-  if (dishes.length > 0) {
-    const hasNonVegDish = dishes.some((d) => isNonVegDish(d));
-    return !hasNonVegDish;
-  }
-  return false;
+  return isKitchenMatchingDiet(
+    { foodType: kitchen.foodType, category: kitchen.category, name: kitchen.name, id: kitchen.id, trackingId: kitchen.trackingId, locality: kitchen.locality },
+    "pure_veg",
+    foodItems
+  );
 }
 
 function isPlaceVegAndNonVeg(
@@ -214,13 +196,62 @@ interface PropertiesProps {
   }>;
   allKitchens?: PlaceCardData[];
   isLoading?: boolean;
+  selectedDietary?: string[];
+  onDietaryChange?: (dietary: string[]) => void;
 }
 
-export default function Properties({ places, foodItems = [], allKitchens = [], isLoading = false }: PropertiesProps) {
+export default function Properties({
+  places,
+  foodItems = [],
+  allKitchens = [],
+  isLoading = false,
+  selectedDietary: controlledDietary,
+  onDietaryChange,
+}: PropertiesProps) {
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
-  const [selectedDietary, setSelectedDietary] = useState<string[]>([]);
+  const [internalSelectedDietary, setInternalSelectedDietary] = useState<string[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("cloudkitchen_diet_preference");
+        if (saved === "veg" || saved === "pure_veg" || saved === "pureveg") return ["pure_veg"];
+        if (saved === "non-veg" || saved === "non_veg") return ["non-veg"];
+        if (saved === "vegan") return ["vegan"];
+        if (saved === "jain") return ["jain"];
+      } catch {}
+    }
+    return [];
+  });
   const [maxPrice, setMaxPrice] = useState<number>(2500);
   const [activePricePreset, setActivePricePreset] = useState<string>("all");
+
+  const selectedDietary = controlledDietary !== undefined ? controlledDietary : internalSelectedDietary;
+
+  // Sync external events / localStorage changes
+  useEffect(() => {
+    const handleDietEvent = (e: any) => {
+      const d = e?.detail;
+      if (!d) return;
+      if (d === "veg" || d === "pure_veg" || d === "pureveg") {
+        setInternalSelectedDietary(["pure_veg"]);
+      } else if (d === "non-veg" || d === "non_veg") {
+        setInternalSelectedDietary(["non-veg"]);
+      } else if (d === "vegan") {
+        setInternalSelectedDietary(["vegan"]);
+      } else if (d === "jain") {
+        setInternalSelectedDietary(["jain"]);
+      } else if (d === "all") {
+        setInternalSelectedDietary([]);
+      }
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("cloudkitchen_diet_preference_changed", handleDietEvent);
+      window.addEventListener("storage", handleDietEvent);
+      return () => {
+        window.removeEventListener("cloudkitchen_diet_preference_changed", handleDietEvent);
+        window.removeEventListener("storage", handleDietEvent);
+      };
+    }
+  }, []);
 
   const basePlaces = (places && places.length > 0) ? places : (allKitchens && allKitchens.length > 0 ? allKitchens : []);
 
@@ -239,8 +270,9 @@ export default function Properties({ places, foodItems = [], allKitchens = [], i
 
   // Compute dynamic dietary counts
   const dynamicDietary = React.useMemo(() => {
+    const countSource = (allKitchens && allKitchens.length > 0) ? allKitchens : basePlaces;
     return DIETARY.map((d) => {
-      const matchCount = basePlaces.filter((p) =>
+      const matchCount = countSource.filter((p) =>
         isKitchenMatchingDiet(
           { foodType: p.foodType, category: p.category, name: p.name, id: p.id, trackingId: p.trackingId },
           d.id,
@@ -252,7 +284,7 @@ export default function Properties({ places, foodItems = [], allKitchens = [], i
         count: matchCount,
       };
     });
-  }, [basePlaces, foodItems]);
+  }, [basePlaces, allKitchens, foodItems]);
 
   // Dynamically filter places
   const filteredPlaces = React.useMemo(() => {
@@ -293,28 +325,70 @@ export default function Properties({ places, foodItems = [], allKitchens = [], i
   };
 
   const toggleDietary = (id: string) => {
-    setSelectedDietary((prev) => {
-      const isSelected = prev.includes(id);
-      if (isSelected) {
-        return prev.filter((item) => item !== id);
+    const isPureVegId = id === "pure_veg" || id === "veg";
+    const isNonVegId = id === "non-veg" || id === "non_veg";
+
+    const isCurrentlyChecked = isPureVegId
+      ? selectedDietary.includes("pure_veg") || selectedDietary.includes("veg")
+      : isNonVegId
+      ? selectedDietary.includes("non-veg") || selectedDietary.includes("non_veg")
+      : selectedDietary.includes(id);
+
+    let next: string[];
+    if (isCurrentlyChecked) {
+      if (isPureVegId) {
+        next = selectedDietary.filter((item) => item !== "pure_veg" && item !== "veg");
+      } else if (isNonVegId) {
+        next = selectedDietary.filter((item) => item !== "non-veg" && item !== "non_veg");
       } else {
-        if (id === "non-veg" || id === "Non-Veg") {
-          return [id];
-        } else {
-          const withoutNonVeg = prev.filter((item) => item !== "non-veg" && item !== "Non-Veg");
-          return [...withoutNonVeg, id];
-        }
+        next = selectedDietary.filter((item) => item !== id);
       }
-    });
+    } else {
+      if (isNonVegId) {
+        next = ["non-veg"];
+      } else if (isPureVegId) {
+        const withoutNonVeg = selectedDietary.filter((item) => item !== "non-veg" && item !== "non_veg");
+        next = [...withoutNonVeg, "pure_veg"];
+      } else {
+        const withoutNonVeg = selectedDietary.filter((item) => item !== "non-veg" && item !== "non_veg");
+        next = [...withoutNonVeg, id];
+      }
+    }
+
+    setInternalSelectedDietary(next);
+    onDietaryChange?.(next);
+
+    if (typeof window !== "undefined") {
+      try {
+        const dietVal = next.includes("pure_veg") || next.includes("veg")
+          ? "pure_veg"
+          : next.includes("non-veg") || next.includes("non_veg")
+          ? "non-veg"
+          : next.includes("vegan")
+          ? "vegan"
+          : next.includes("jain")
+          ? "jain"
+          : "all";
+        localStorage.setItem("cloudkitchen_diet_preference", dietVal);
+        localStorage.setItem("cloudkitchen_veg_preference", String(dietVal === "pure_veg" || dietVal === "vegan" || dietVal === "jain"));
+        window.dispatchEvent(new CustomEvent("cloudkitchen_diet_preference_changed", { detail: dietVal }));
+        window.dispatchEvent(new CustomEvent("cloudkitchen_veg_preference_changed", { detail: dietVal === "pure_veg" || dietVal === "vegan" || dietVal === "jain" }));
+      } catch {}
+    }
   };
 
   const handleClearAll = () => {
     setSelectedCuisines([]);
-    setSelectedDietary([]);
+    setInternalSelectedDietary([]);
+    onDietaryChange?.([]);
     setMaxPrice(2500);
     setActivePricePreset("all");
     if (typeof window !== "undefined") {
       try {
+        localStorage.setItem("cloudkitchen_diet_preference", "all");
+        localStorage.setItem("cloudkitchen_veg_preference", "false");
+        window.dispatchEvent(new CustomEvent("cloudkitchen_diet_preference_changed", { detail: "all" }));
+        window.dispatchEvent(new CustomEvent("cloudkitchen_veg_preference_changed", { detail: false }));
         localStorage.removeItem("cloudkitchen_price_filter");
         window.dispatchEvent(
           new CustomEvent("cloudkitchen_price_filter_changed", { detail: null })
@@ -577,7 +651,12 @@ export default function Properties({ places, foodItems = [], allKitchens = [], i
             </h4>
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               {dynamicDietary.map((item) => {
-                const isChecked = selectedDietary.includes(item.id);
+                const isChecked =
+                  item.id === "pure_veg"
+                    ? selectedDietary.includes("pure_veg") || selectedDietary.includes("veg")
+                    : item.id === "non-veg"
+                    ? selectedDietary.includes("non-veg") || selectedDietary.includes("non_veg")
+                    : selectedDietary.includes(item.id);
                 return (
                   <div
                     key={item.id}

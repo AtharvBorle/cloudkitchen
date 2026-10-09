@@ -194,8 +194,8 @@ export default function FilterRow({
     (internalFilters.priceTier ? 1 : 0) +
     (internalFilters.cuisines && internalFilters.cuisines.length > 0 ? 1 : 0);
 
-  const isDietaryActive = internalFilters.dietary && internalFilters.dietary !== "all";
-  const isNonVeg = internalFilters.dietary === "non_veg";
+  const isDietaryActive = Boolean(internalFilters.dietary && internalFilters.dietary !== "all");
+  const isNonVeg = internalFilters.dietary === "non_veg" || internalFilters.dietary === "non-veg";
   const isPriceActive = Boolean(internalFilters.priceTier && internalFilters.priceTier !== "all");
   const isCuisinesActive = Boolean(internalFilters.cuisines && internalFilters.cuisines.length > 0);
 
@@ -426,9 +426,9 @@ export default function FilterRow({
               )}
             </span>
             <span>
-              {internalFilters.dietary === "veg"
+              {internalFilters.dietary === "veg" || internalFilters.dietary === "pure_veg"
                 ? "Pure Veg 🥦"
-                : internalFilters.dietary === "non_veg"
+                : internalFilters.dietary === "non_veg" || internalFilters.dietary === "non-veg"
                 ? "Non-Veg 🍗"
                 : internalFilters.dietary === "vegan"
                 ? "Vegan 🌱"
@@ -478,8 +478,15 @@ export default function FilterRow({
                 { id: "vegan", label: "Vegan 🌱", count: counts?.vegan },
                 { id: "jain", label: "Jain 🌿", count: counts?.jain },
               ].map((opt) => {
-                const isSelected = (internalFilters.dietary || "all") === opt.id;
-                const isItemNonVeg = opt.id === "non_veg";
+                const isSelected =
+                  opt.id === "all"
+                    ? !internalFilters.dietary || internalFilters.dietary === "all"
+                    : opt.id === "veg" || opt.id === "pure_veg"
+                    ? internalFilters.dietary === "veg" || internalFilters.dietary === "pure_veg"
+                    : opt.id === "non_veg" || opt.id === "non-veg"
+                    ? internalFilters.dietary === "non_veg" || internalFilters.dietary === "non-veg"
+                    : internalFilters.dietary === opt.id;
+                const isItemNonVeg = opt.id === "non_veg" || opt.id === "non-veg";
                 const activeBg = isItemNonVeg ? "#FEF2F2" : "#ECFDF5";
                 const activeColor = isItemNonVeg ? "#DC2626" : "#047857";
 
@@ -487,7 +494,10 @@ export default function FilterRow({
                   <button
                     key={opt.id}
                     type="button"
-                    onClick={() => handleSelectDietary(opt.id as any)}
+                    onClick={() => {
+                      const nextVal = isSelected ? (opt.id === "all" ? "all" : "all") : (opt.id as any);
+                      handleSelectDietary(nextVal);
+                    }}
                     className={`filter-popover-item ${isItemNonVeg ? "item-nonveg" : ""} ${isSelected ? "is-selected" : ""}`}
                     style={{
                       display: "flex",

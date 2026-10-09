@@ -38,7 +38,7 @@ function getInitialDietPreference(): "all" | "veg" | "non_veg" | "vegan" | "jain
       const storedDiet = localStorage.getItem("cloudkitchen_diet_preference");
       if (storedDiet) {
         const lower = storedDiet.toLowerCase().trim();
-        if (lower === "veg") return "veg";
+        if (lower === "veg" || lower === "pure_veg" || lower === "pureveg") return "veg";
         if (lower === "non_veg" || lower === "non-veg") return "non_veg";
         if (lower === "vegan") return "vegan";
         if (lower === "jain") return "jain";
@@ -61,16 +61,22 @@ export default function Home() {
   const homeData = useHomeData();
   const isDietInitializedRef = useRef<boolean>(false);
 
-  const persistDietaryPreference = (dietVal: "all" | "veg" | "non_veg" | "vegan" | "jain") => {
-    if (typeof window === "undefined") return;
-    try {
-      const storageVal = dietVal === "non_veg" ? "non-veg" : dietVal;
-      localStorage.setItem("cloudkitchen_diet_preference", storageVal);
-      const isVeg = dietVal === "veg" || dietVal === "vegan" || dietVal === "jain";
-      localStorage.setItem("cloudkitchen_veg_preference", String(isVeg));
-      window.dispatchEvent(new CustomEvent("cloudkitchen_diet_preference_changed", { detail: storageVal }));
-      window.dispatchEvent(new CustomEvent("cloudkitchen_veg_preference_changed", { detail: isVeg }));
-    } catch {}
+  const persistDietaryPreference = (dietVal: "all" | "veg" | "pure_veg" | "non_veg" | "non-veg" | "vegan" | "jain") => {
+    if (typeof window !== "undefined") {
+      try {
+        const storageVal =
+          dietVal === "non_veg" || dietVal === "non-veg"
+            ? "non-veg"
+            : dietVal === "veg" || dietVal === "pure_veg"
+            ? "pure_veg"
+            : dietVal;
+        localStorage.setItem("cloudkitchen_diet_preference", storageVal);
+        const isVeg = storageVal === "pure_veg" || storageVal === "vegan" || storageVal === "jain";
+        localStorage.setItem("cloudkitchen_veg_preference", String(isVeg));
+        window.dispatchEvent(new CustomEvent("cloudkitchen_diet_preference_changed", { detail: storageVal }));
+        window.dispatchEvent(new CustomEvent("cloudkitchen_veg_preference_changed", { detail: isVeg }));
+      } catch {}
+    }
   };
 
   // Restore and sync dietary preference with localStorage and across tabs/components
@@ -90,7 +96,7 @@ export default function Home() {
           ? "vegan"
           : d === "jain"
           ? "jain"
-          : d === "veg"
+          : d === "veg" || d === "pure_veg" || d === "pureveg"
           ? "veg"
           : "all";
       setActiveFilters((prev) => (prev.dietary === norm ? prev : { ...prev, dietary: norm }));
@@ -711,9 +717,8 @@ export default function Home() {
           activeFilters={activeFilters}
           onFilterChange={(newFilters) => {
             setActiveFilters(newFilters);
-            if (newFilters.dietary) {
-              persistDietaryPreference(newFilters.dietary);
-            }
+            const dietVal = newFilters.dietary || "all";
+            persistDietaryPreference(dietVal);
           }}
           availableCuisines={availableCuisines}
           counts={filterCounts}
@@ -794,6 +799,35 @@ export default function Home() {
           foodItems={(homeData.allFoodItems && homeData.allFoodItems.length > 0) ? homeData.allFoodItems : homeData.foodItems}
           allKitchens={homeData.allKitchens}
           isLoading={homeData.isLoading}
+          selectedDietary={
+            activeFilters.dietary === "veg" || activeFilters.dietary === "pure_veg"
+              ? ["pure_veg"]
+              : activeFilters.dietary === "non_veg" || activeFilters.dietary === "non-veg"
+              ? ["non-veg"]
+              : activeFilters.dietary === "vegan"
+              ? ["vegan"]
+              : activeFilters.dietary === "jain"
+              ? ["jain"]
+              : []
+          }
+          onDietaryChange={(newDietary) => {
+            const nextDiet: "all" | "veg" | "non_veg" | "vegan" | "jain" =
+              newDietary.includes("pure_veg") || newDietary.includes("veg")
+                ? "veg"
+                : newDietary.includes("non-veg") || newDietary.includes("non_veg")
+                ? "non_veg"
+                : newDietary.includes("vegan")
+                ? "vegan"
+                : newDietary.includes("jain")
+                ? "jain"
+                : "all";
+
+            setActiveFilters((prev) => ({
+              ...prev,
+              dietary: nextDiet,
+            }));
+            persistDietaryPreference(nextDiet);
+          }}
         />
 
         {/* 6. Popular Orders / Today's Special Offers */}
