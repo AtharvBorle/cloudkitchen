@@ -53,9 +53,9 @@ function getInitialDietPreference(): "all" | "veg" | "non_veg" | "vegan" | "jain
 
 export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState("food");
-  const [activeFilters, setActiveFilters] = useState<ActiveHomeFilters>(() => ({
-    dietary: getInitialDietPreference(),
-  }));
+  const [activeFilters, setActiveFilters] = useState<ActiveHomeFilters>({
+    dietary: "all",
+  });
   const [homeSearchQuery, setHomeSearchQuery] = useState("");
   const { openLocationModal, defaultAddress, setGuestLocation } = useLocation();
   const homeData = useHomeData();
@@ -166,28 +166,42 @@ export default function Home() {
     return Array.from(set);
   }, [homeData.categories, homeData.foodItems]);
 
-  // Compute dynamic filter counts from available items
+  // Compute dynamic filter counts from available kitchens & items
   const filterCounts = useMemo(() => {
-    const items = homeSearchQuery ? homeData.allFoodItems : homeData.foodItems;
-    if (!items || items.length === 0) return undefined;
+    const kitchens = (homeData.allKitchens && homeData.allKitchens.length > 0) ? homeData.allKitchens : homeData.kitchens;
+    const items = (homeData.allFoodItems && homeData.allFoodItems.length > 0) ? homeData.allFoodItems : homeData.foodItems;
+    if (!kitchens || kitchens.length === 0) return undefined;
+
+    let baseKitchens = kitchens;
+    let baseItems = items || [];
+
+    if (homeSearchQuery) {
+      baseKitchens = baseKitchens.filter((k) => matchesKitchenOrDishSearch(homeSearchQuery, k, baseItems));
+      baseItems = baseItems.filter((f) => matchesDishSearch(homeSearchQuery, f));
+    }
+
+    if (selectedCategory && selectedCategory !== "food" && selectedCategory !== "rooms") {
+      baseKitchens = baseKitchens.filter((k) => matchesKitchenCategoryFilter(selectedCategory, k, baseItems));
+      baseItems = baseItems.filter((f) => matchesDishCategory(selectedCategory, f));
+    }
 
     const cuisineCounts: Record<string, number> = {};
     availableCuisines.forEach((c) => {
-      cuisineCounts[c] = items.filter((f) => isDishMatchingCuisine(c, f)).length;
+      cuisineCounts[c] = baseKitchens.filter((k) => isKitchenServingCuisine(c, k, baseItems)).length;
     });
 
     return {
-      all: items.length,
-      veg: items.filter((f) => isDishMatchingDiet(f, "veg")).length,
-      non_veg: items.filter((f) => isDishMatchingDiet(f, "non_veg")).length,
-      vegan: items.filter((f) => isDishMatchingDiet(f, "vegan")).length,
-      jain: items.filter((f) => isDishMatchingDiet(f, "jain")).length,
-      under150: items.filter((f) => f.price <= 150).length,
-      price150to300: items.filter((f) => f.price > 150 && f.price <= 300).length,
-      price300plus: items.filter((f) => f.price > 300).length,
+      all: baseKitchens.length,
+      veg: baseKitchens.filter((k) => isKitchenMatchingDiet(k, "veg", baseItems)).length,
+      non_veg: baseKitchens.filter((k) => isKitchenMatchingDiet(k, "non_veg", baseItems)).length,
+      vegan: baseKitchens.filter((k) => isKitchenMatchingDiet(k, "vegan", baseItems)).length,
+      jain: baseKitchens.filter((k) => isKitchenMatchingDiet(k, "jain", baseItems)).length,
+      under150: baseItems.filter((f) => f.price <= 150).length,
+      price150to300: baseItems.filter((f) => f.price > 150 && f.price <= 300).length,
+      price300plus: baseItems.filter((f) => f.price > 300).length,
       cuisineCounts,
     };
-  }, [homeData.foodItems, homeData.allFoodItems, availableCuisines, homeSearchQuery]);
+  }, [homeData.kitchens, homeData.allKitchens, homeData.foodItems, homeData.allFoodItems, availableCuisines, homeSearchQuery, selectedCategory]);
 
   // Dynamic Kitchens / Places (and multi-dimensional filtering)
   const dynamicPlaces = useMemo(() => {
@@ -800,9 +814,9 @@ export default function Home() {
           allKitchens={homeData.allKitchens}
           isLoading={homeData.isLoading}
           selectedDietary={
-            activeFilters.dietary === "veg" || activeFilters.dietary === "pure_veg"
+            activeFilters.dietary === "veg" || (activeFilters.dietary as string) === "pure_veg"
               ? ["pure_veg"]
-              : activeFilters.dietary === "non_veg" || activeFilters.dietary === "non-veg"
+              : activeFilters.dietary === "non_veg" || (activeFilters.dietary as string) === "non-veg"
               ? ["non-veg"]
               : activeFilters.dietary === "vegan"
               ? ["vegan"]

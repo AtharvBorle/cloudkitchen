@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -370,6 +370,23 @@ function parseBookingFromDb(b: any): RoomBookingData {
   };
 }
 
+function findMatchingOrder(orderList: OrderItemData[], idToMatch: string): OrderItemData | undefined {
+  if (!idToMatch || !orderList || orderList.length === 0) return undefined;
+  const norm = idToMatch.toLowerCase().trim();
+  return orderList.find((o) => {
+    const oId = (o.id || "").toLowerCase();
+    const oOrderId = (o.orderId || "").toLowerCase();
+    return (
+      oId === norm ||
+      oOrderId === norm ||
+      oId.endsWith(norm) ||
+      oId.startsWith(norm) ||
+      oOrderId.endsWith(norm) ||
+      oOrderId.startsWith(norm)
+    );
+  });
+}
+
 export default function MyOrdersView() {
   const { isRoomEnabled } = useRoomModule();
   const router = useRouter();
@@ -378,6 +395,7 @@ export default function MyOrdersView() {
 
   const { data: session, status: authStatus } = useSession();
   const { cartItems, addToCart, addMultipleToCart } = useCart();
+  const hasTriggeredReorderRef = useRef<string | null>(null);
 
   const [modalState, setModalState] = useState<{
     isOpen: boolean;
@@ -451,6 +469,11 @@ export default function MyOrdersView() {
           const mapped = list.map(parseOrderFromDb);
           setOrders(mapped);
           setSelectedOrder((prev) => {
+            const queryOrderId = searchParams?.get("orderId");
+            if (queryOrderId) {
+              const matchedFromQuery = findMatchingOrder(mapped, queryOrderId);
+              if (matchedFromQuery) return matchedFromQuery;
+            }
             if (!prev && mapped.length > 0) {
               const ongoing = mapped.find((m) => m.status === "ONGOING");
               return ongoing || mapped[0];
@@ -853,6 +876,55 @@ export default function MyOrdersView() {
     setModalState((prev) => ({ ...prev, isOpen: false }));
     router.push("/explore-desktop");
   };
+
+  // Handle direct navigation to a specific order from notifications or query params
+  useEffect(() => {
+    const queryOrderId = searchParams?.get("orderId");
+    if (!queryOrderId || orders.length === 0) return;
+
+    const matched = findMatchingOrder(orders, queryOrderId);
+
+    if (matched) {
+      setMainCategory("FOODS");
+      setSelectedOrder(matched);
+      setIsSidebarOpen(true);
+
+      // Adjust food filter if current filter hides the selected order
+      if (foodFilter !== "ALL") {
+        if (
+          (foodFilter === "ONGOING" && matched.status !== "ONGOING") ||
+          (foodFilter === "COMPLETED" && matched.status !== "DELIVERED") ||
+          (foodFilter === "CANCELLED" && matched.status !== "CANCELLED")
+        ) {
+          setFoodFilter("ALL");
+        }
+      }
+
+      // Ensure the pagination page containing this order is active
+      const idx = orders.findIndex((o) => o.id === matched.id);
+      if (idx !== -1) {
+        const targetPage = Math.floor(idx / PAGE_SIZE) + 1;
+        setOrderPage(targetPage);
+      }
+
+      // Smooth scroll to the order card in the list
+      if (typeof window !== "undefined") {
+        setTimeout(() => {
+          const cardEl = document.getElementById(`order-card-${matched.id}`);
+          if (cardEl) {
+            cardEl.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+        }, 150);
+      }
+
+      // Auto-trigger reorder validation when initiated from a notification with action=reorder
+      const queryAction = searchParams?.get("action");
+      if (queryAction === "reorder" && hasTriggeredReorderRef.current !== matched.id) {
+        hasTriggeredReorderRef.current = matched.id;
+        handleReorder(matched);
+      }
+    }
+  }, [searchParams, orders, foodFilter]);
 
   // Rating / Review Modal State
   const [ratingModalOrder, setRatingModalOrder] = useState<OrderItemData | null>(null);
@@ -1321,6 +1393,7 @@ export default function MyOrdersView() {
                     return (
                       <article
                         key={order.id}
+                        id={`order-card-${order.id}`}
                         className={`${styles.activeOrderCard} ${isSelected ? styles.orderCardSelected : ""}`}
                         onClick={() => handleSelectOrder(order)}
                       >
@@ -1340,7 +1413,12 @@ export default function MyOrdersView() {
                               />
                             </div>
                             <div className={styles.cardMetaInfo}>
-                              <h3 className={styles.vendorTitle}>{order.vendorName}</h3>
+                              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "3px" }}>
+                                <h3 className={styles.vendorTitle}>{order.vendorName}</h3>
+                                <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#475569", background: "#F1F5F9", padding: "2px 6px", borderRadius: "4px", border: "1px solid #E2E8F0" }}>
+                                  #{order.orderId}
+                                </span>
+                              </div>
                               <p className={styles.itemSummaryText}>{order.dishName || order.itemSummary}</p>
                               <span className={styles.itemCountText}>{order.itemCountText}</span>
                               <span className={styles.priceHighlight}>₹{order.price}</span>
@@ -1524,6 +1602,7 @@ export default function MyOrdersView() {
                   return (
                     <article
                       key={order.id}
+                      id={`order-card-${order.id}`}
                       className={`${styles.pastOrderCard} ${isSelected ? styles.orderCardSelected : ""}`}
                       onClick={() => handleSelectOrder(order)}
                     >
@@ -1541,7 +1620,12 @@ export default function MyOrdersView() {
                           />
                         </div>
                         <div className={styles.cardMetaInfo}>
-                          <h3 className={styles.vendorTitle}>{order.vendorName}</h3>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "3px" }}>
+                            <h3 className={styles.vendorTitle}>{order.vendorName}</h3>
+                            <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#475569", background: "#F1F5F9", padding: "2px 6px", borderRadius: "4px", border: "1px solid #E2E8F0" }}>
+                              #{order.orderId}
+                            </span>
+                          </div>
                           <p className={styles.itemSummaryText}>{order.dishName || order.itemSummary}</p>
                           <span className={styles.itemCountText}>{order.itemCountText}</span>
                           <span className={styles.priceSingleLine}>₹{order.price}</span>
@@ -1816,37 +1900,44 @@ export default function MyOrdersView() {
 
                 {/* Header with status pill & close */}
                 <div className={styles.sidebarHeaderRow}>
-                  <span
-                    className={
-                      selectedOrder.status === "CANCELLED"
-                        ? styles.statusPillRed
-                        : selectedOrder.rawStatus === "PENDING" || selectedOrder.rawStatus === "PLACED"
-                        ? styles.statusPillYellow || styles.statusPillGray
-                        : styles.statusPillGreen
-                    }
-                    style={
-                      selectedOrder.rawStatus === "PENDING" || selectedOrder.rawStatus === "PLACED"
-                        ? { background: "#FEF3C7", color: "#D97706", border: "1px solid #FDE68A" }
-                        : {}
-                    }
-                  >
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
                     <span
-                      style={{
-                        display: "inline-block",
-                        width: "6px",
-                        height: "6px",
-                        borderRadius: "50%",
-                        backgroundColor:
-                          selectedOrder.status === "CANCELLED"
-                            ? "#EF4444"
-                            : selectedOrder.status === "DELIVERED"
-                            ? "#10B981"
-                            : "#D97706",
-                        flexShrink: 0,
-                      }}
-                    />
-                    <span>{selectedOrder.statusDisplay}</span>
-                  </span>
+                      className={
+                        selectedOrder.status === "CANCELLED"
+                          ? styles.statusPillRed
+                          : selectedOrder.rawStatus === "PENDING" || selectedOrder.rawStatus === "PLACED"
+                          ? styles.statusPillYellow || styles.statusPillGray
+                          : styles.statusPillGreen
+                      }
+                      style={
+                        selectedOrder.rawStatus === "PENDING" || selectedOrder.rawStatus === "PLACED"
+                          ? { background: "#FEF3C7", color: "#D97706", border: "1px solid #FDE68A" }
+                          : {}
+                      }
+                    >
+                      <span
+                        style={{
+                          display: "inline-block",
+                          width: "6px",
+                          height: "6px",
+                          borderRadius: "50%",
+                          backgroundColor:
+                            selectedOrder.status === "CANCELLED"
+                              ? "#EF4444"
+                              : selectedOrder.status === "DELIVERED"
+                              ? "#10B981"
+                              : "#D97706",
+                          flexShrink: 0,
+                        }}
+                      />
+                      <span>{selectedOrder.statusDisplay}</span>
+                    </span>
+
+                    <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#1E293B" }}>
+                      Order #{selectedOrder.orderId}
+                    </span>
+                  </div>
+
                   <button
                     type="button"
                     className={styles.closeSidebarBtn}
@@ -2459,6 +2550,7 @@ export default function MyOrdersView() {
         type={modalState.type}
         onClose={() => setModalState((prev) => ({ ...prev, isOpen: false }))}
         sellerName={modalState.sellerName}
+        orderNumber={pendingOrderForReorder?.orderId}
         sellerId={modalState.sellerId}
         currentCartSellerName={modalState.currentCartSellerName}
         availableItems={modalState.availableItems}

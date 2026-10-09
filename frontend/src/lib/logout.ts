@@ -83,13 +83,7 @@ export async function discardExistingSession(): Promise<void> {
     console.warn("Server cookie clear failed:", err);
   }
 
-  try {
-    await signOut({ redirect: false });
-  } catch (err) {
-    console.warn("NextAuth signOut during session discard warning:", err);
-  }
-
-  // Double check storage after signOut
+  // Double check storage after cookie clear
   clearAllAuthData();
 }
 

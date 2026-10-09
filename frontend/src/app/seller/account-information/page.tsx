@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   SellerLayout,
   AccountInformation,
@@ -12,7 +13,14 @@ import { getSellerDraft, saveSellerDraft } from "@/lib/seller-registration-store
 function AccountInfoContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { data: session, status: authStatus } = useSession();
   const isFromReview = searchParams?.get("from") === "review";
+
+  useEffect(() => {
+    if (authStatus === "authenticated" && session?.user?.role === "SELLER") {
+      router.replace("/seller/dashboard");
+    }
+  }, [authStatus, session, router]);
 
   const [accountData, setAccountData] = useState<AccountInformationData>({
     ownerName: "",

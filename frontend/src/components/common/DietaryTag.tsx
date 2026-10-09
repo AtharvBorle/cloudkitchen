@@ -23,18 +23,19 @@ export const DietaryTag: React.FC<DietaryTagProps> = ({
   let isVegan = false;
   let isJain = false;
 
-  if (typeof isVeg === "boolean") {
-    isNonVeg = !isVeg;
-  } else if (itemType) {
+  if (itemType) {
     const raw = String(itemType).split(",").map((s) => s.trim().toUpperCase());
     isNonVeg = raw.includes("NON_VEG") || raw.includes("NON-VEG") || raw.includes("NON VEG");
     isVegan = raw.includes("VEGAN");
     isJain = raw.includes("JAIN");
+  } else if (typeof isVeg === "boolean") {
+    isNonVeg = !isVeg;
   }
 
-  const dotSize = size === "xs" ? "6px" : size === "sm" ? "7.5px" : "9px";
-  const fontSize = size === "xs" ? "0.65rem" : size === "sm" ? "0.72rem" : "0.8rem";
-  const padding = size === "xs" ? "1.5px 5px" : size === "sm" ? "2.5px 7px" : "3.5px 9px";
+  const dotSize = size === "xs" ? "6px" : size === "sm" ? "7px" : "8px";
+  const fontSize = size === "xs" ? "0.68rem" : size === "sm" ? "0.74rem" : "0.82rem";
+  const padding = size === "xs" ? "2px 7px" : size === "sm" ? "3px 8px" : "4px 10px";
+  const borderRadius = "6px";
 
   if (isNonVeg) {
     return (
@@ -44,14 +45,12 @@ export const DietaryTag: React.FC<DietaryTagProps> = ({
           display: "inline-flex",
           alignItems: "center",
           gap: "4.5px",
-          backgroundColor: "#FFF5F5",
-          color: "#E11D48",
-          border: "1.2px solid #FDA4AF",
-          borderRadius: "6px",
+          backgroundColor: "#FEECEB",
+          color: "#991B1B",
+          borderRadius: borderRadius,
           padding: padding,
           fontSize: fontSize,
           fontWeight: "700",
-          boxShadow: "0 1px 4px rgba(225, 29, 72, 0.08)",
           lineHeight: 1.15,
           whiteSpace: "nowrap",
           userSelect: "none",
@@ -64,7 +63,7 @@ export const DietaryTag: React.FC<DietaryTagProps> = ({
             width: dotSize,
             height: dotSize,
             borderRadius: "50%",
-            backgroundColor: "#E11D48",
+            backgroundColor: "#B91C1C",
             display: "inline-block",
             flexShrink: 0,
           }}
@@ -80,7 +79,7 @@ export const DietaryTag: React.FC<DietaryTagProps> = ({
       style={{
         display: "inline-flex",
         alignItems: "center",
-        gap: "4px",
+        gap: "6px",
         flexWrap: "nowrap",
         ...style,
       }}
@@ -90,14 +89,12 @@ export const DietaryTag: React.FC<DietaryTagProps> = ({
           display: "inline-flex",
           alignItems: "center",
           gap: "4.5px",
-          backgroundColor: "#F0FDF4",
-          color: "#16A34A",
-          border: "1.2px solid #86EFAC",
-          borderRadius: "6px",
+          backgroundColor: "#EAF7EE",
+          color: "#1E5E3A",
+          borderRadius: borderRadius,
           padding: padding,
           fontSize: fontSize,
           fontWeight: "700",
-          boxShadow: "0 1px 4px rgba(22, 163, 74, 0.08)",
           lineHeight: 1.15,
           whiteSpace: "nowrap",
           userSelect: "none",
@@ -109,7 +106,7 @@ export const DietaryTag: React.FC<DietaryTagProps> = ({
             width: dotSize,
             height: dotSize,
             borderRadius: "50%",
-            backgroundColor: "#16A34A",
+            backgroundColor: "#1E5E3A",
             display: "inline-block",
             flexShrink: 0,
           }}
@@ -122,19 +119,19 @@ export const DietaryTag: React.FC<DietaryTagProps> = ({
           style={{
             display: "inline-flex",
             alignItems: "center",
-            backgroundColor: "#ECFDF5",
-            color: "#059669",
-            border: "1.2px solid #A7F3D0",
-            borderRadius: "6px",
+            backgroundColor: "#EAF7EE",
+            color: "#1E5E3A",
+            borderRadius: borderRadius,
             padding: padding,
             fontSize: fontSize,
             fontWeight: "700",
+            lineHeight: 1.15,
             whiteSpace: "nowrap",
             userSelect: "none",
           }}
           title="Vegan"
         >
-          Vegan 🌿
+          Vegan
         </span>
       )}
 
@@ -143,19 +140,19 @@ export const DietaryTag: React.FC<DietaryTagProps> = ({
           style={{
             display: "inline-flex",
             alignItems: "center",
-            backgroundColor: "#F0FDF4",
-            color: "#16A34A",
-            border: "1.2px solid #86EFAC",
-            borderRadius: "6px",
+            backgroundColor: "#EAF7EE",
+            color: "#1E5E3A",
+            borderRadius: borderRadius,
             padding: padding,
             fontSize: fontSize,
             fontWeight: "700",
+            lineHeight: 1.15,
             whiteSpace: "nowrap",
             userSelect: "none",
           }}
           title="Jain"
         >
-          Jain 🙏
+          Jain
         </span>
       )}
     </div>

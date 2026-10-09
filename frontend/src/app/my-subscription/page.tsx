@@ -1100,7 +1100,6 @@ function MySubscriptionContent() {
                               renewalDate={formatSubRenewalDate(subItem)}
                               planPrice={formatSubPrice(subItem)}
                             />
->>>>>>> origin/atharv_dev
 
                             {/* Delivery Address & Contact Bar */}
                             <div

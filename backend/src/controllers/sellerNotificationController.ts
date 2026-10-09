@@ -118,7 +118,7 @@ export const getSellerNotifications = async (req: Request) => {
                 isRead: !isRecent,
                 severity: "success",
                 actionLabel: "View Order",
-                actionHref: `/seller/orders?id=${ord.id}`,
+                actionHref: `/seller/orders/details?orderId=${encodeURIComponent(ord.id)}`,
                 metadata: { orderId: ord.id, totalAmount: ord.totalAmount, status: ord.status }
             });
         } else if (ord.status === "OUT_FOR_DELIVERY" || ord.status === "PICKED_UP") {
@@ -135,7 +135,7 @@ export const getSellerNotifications = async (req: Request) => {
                 isRead: true,
                 severity: "info",
                 actionLabel: "Track Delivery",
-                actionHref: `/seller/delivery?id=${ord.id}`,
+                actionHref: `/seller/orders/details?orderId=${encodeURIComponent(ord.id)}`,
                 metadata: { orderId: ord.id, deliveryPersonId: ord.deliveryPersonId }
             });
         } else if (ord.status === "CANCELLED" || ord.status === "REJECTED") {
@@ -150,7 +150,7 @@ export const getSellerNotifications = async (req: Request) => {
                 isRead: true,
                 severity: "critical",
                 actionLabel: "View Order",
-                actionHref: `/seller/orders?id=${ord.id}`,
+                actionHref: `/seller/orders/details?orderId=${encodeURIComponent(ord.id)}`,
                 metadata: { orderId: ord.id }
             });
         } else if (ord.status === "DELIVERED" || ord.status === "COMPLETED") {
@@ -164,7 +164,7 @@ export const getSellerNotifications = async (req: Request) => {
                 isRead: true,
                 severity: "success",
                 actionLabel: "View Order",
-                actionHref: `/seller/orders?id=${ord.id}`,
+                actionHref: `/seller/orders/details?orderId=${encodeURIComponent(ord.id)}`,
                 metadata: { orderId: ord.id }
             });
         }

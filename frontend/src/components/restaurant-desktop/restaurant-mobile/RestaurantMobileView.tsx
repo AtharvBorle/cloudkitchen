@@ -699,7 +699,7 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
                     {/* Left Food Image */}
                     <div className={styles.foodImageWrapper}>
                       <div style={{ position: "absolute", top: "4px", left: "4px", zIndex: 2 }}>
-                        <DietaryTag isVeg={item.isVeg !== false} size="xs" />
+                        <DietaryTag isVeg={item.isVeg !== false} itemType={(item as any).itemType} size="xs" />
                       </div>
                       <Image
                         src={item.image || "/images/places/place-pizza.png"}

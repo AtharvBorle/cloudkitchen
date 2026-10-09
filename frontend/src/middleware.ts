@@ -6,13 +6,13 @@ import { decode } from "@auth/core/jwt";
 // Helper: Decrypt the NextAuth v5 JWE session token to extract user role
 // ──────────────────────────────────────────────
 async function getSessionRole(request: NextRequest): Promise<string | null> {
-  const sessionToken =
-    request.cookies.get("next-auth.session-token")?.value ||
-    request.cookies.get("__Secure-next-auth.session-token")?.value ||
-    request.cookies.get("authjs.session-token")?.value ||
-    request.cookies.get("__Secure-authjs.session-token")?.value;
+  const cookieEntry =
+    request.cookies.get("next-auth.session-token") ||
+    request.cookies.get("__Secure-next-auth.session-token") ||
+    request.cookies.get("authjs.session-token") ||
+    request.cookies.get("__Secure-authjs.session-token");
 
-  if (!sessionToken || sessionToken.trim() === "") return null;
+  if (!cookieEntry?.value || cookieEntry.value.trim() === "") return null;
 
   try {
     const secret =
@@ -20,23 +20,32 @@ async function getSessionRole(request: NextRequest): Promise<string | null> {
       process.env.NEXTAUTH_SECRET ||
       "super_secret_for_local_testing_dev_only";
 
-    const cookieEntry =
-      request.cookies.get("__Secure-authjs.session-token") ||
-      request.cookies.get("authjs.session-token") ||
-      request.cookies.get("__Secure-next-auth.session-token") ||
-      request.cookies.get("next-auth.session-token");
-
-    const decoded = await decode({
-      token: sessionToken,
+    let decoded = await decode({
+      token: cookieEntry.value,
       secret,
-      salt: cookieEntry?.name || "next-auth.session-token",
-    });
+      salt: cookieEntry.name,
+    }).catch(() => null);
+
+    if (!decoded?.role) {
+      decoded = await decode({
+        token: cookieEntry.value,
+        secret,
+        salt: "next-auth.session-token",
+      }).catch(() => null);
+    }
+
+    if (!decoded?.role) {
+      decoded = await decode({
+        token: cookieEntry.value,
+        secret,
+        salt: "authjs.session-token",
+      }).catch(() => null);
+    }
 
     if (decoded && typeof decoded.role === "string") {
       return decoded.role;
     }
   } catch (err) {
-    // Token is invalid or expired — treat as unauthenticated
     console.warn("Middleware JWT decode failed:", err);
   }
 
@@ -175,7 +184,12 @@ export async function middleware(request: NextRequest) {
     if (role === "DELIVERY" && isDeliveryLoginPage) {
       return NextResponse.redirect(new URL("/dashboard/delivery", request.url));
     }
-    if (role === "SELLER" && isSellerLoginPage) {
+    const isSellerOnboardingPage =
+      pathname === "/seller/registration" ||
+      pathname.startsWith("/seller/registration") ||
+      pathname.startsWith("/seller/account-information");
+
+    if (role === "SELLER" && (isSellerLoginPage || isSellerOnboardingPage)) {
       return NextResponse.redirect(new URL("/seller/dashboard", request.url));
     }
   }
@@ -328,9 +342,12 @@ export async function middleware(request: NextRequest) {
       }
     }
 
-    // User accessing non-user protected routes → redirect to home
+    // User accessing non-user protected routes → redirect to respective login/home
     if (role === "USER") {
-      if (isSellerRoute || isAdminRoute || isDeliveryRoute) {
+      if (isSellerRoute) {
+        return NextResponse.redirect(new URL("/seller/login", request.url));
+      }
+      if (isAdminRoute || isDeliveryRoute) {
         return NextResponse.redirect(new URL("/", request.url));
       }
     }

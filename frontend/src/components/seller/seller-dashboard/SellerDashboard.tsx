@@ -205,16 +205,6 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
   const partnerRole = initialPartnerRole || seller.partnerRole;
   const avatarInitials = initialAvatarInitials || seller.avatarInitials;
 
-  // Verification status routing protection:
-  // If seller is PENDING, REVISION, or REJECTED, redirect them to the verification status page.
-  useEffect(() => {
-    if (seller.authStatus === "authenticated") {
-      const vStatus = seller.profile?.verificationStatus;
-      if (vStatus === "PENDING" || vStatus === "REVISION" || vStatus === "REJECTED") {
-        router.replace("/seller/verification-status");
-      }
-    }
-  }, [seller.authStatus, seller.profile?.verificationStatus, router]);
 
   // Lock browser back-button at root dashboard so seller stays on dashboard until explicit logout
   useEffect(() => {

@@ -146,20 +146,25 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [internalActiveItem, setInternalActiveItem] = useState<string>(initialActiveItem);
-  const [internalVegOnly, setInternalVegOnly] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const stored = localStorage.getItem("cloudkitchen_veg_preference");
-        if (stored !== null) {
-          return stored === "true";
-        }
-      } catch {}
-    }
-    return false;
-  });
+  const [internalVegOnly, setInternalVegOnly] = useState<boolean>(false);
 
   // Sync veg & diet filter preference with localStorage and across tabs/components
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const storedVeg = localStorage.getItem("cloudkitchen_veg_preference");
+        if (storedVeg !== null) {
+          setInternalVegOnly(storedVeg === "true");
+        }
+        if (controlledDiet === undefined) {
+          const storedDiet = localStorage.getItem("cloudkitchen_diet_preference");
+          if (storedDiet) {
+            setSelectedDiet(storedDiet);
+          }
+        }
+      } catch {}
+    }
+
     const syncVeg = (e: any) => {
       if (e?.detail !== undefined) {
         setInternalVegOnly(Boolean(e.detail));
@@ -201,18 +206,11 @@ export const Navbar: React.FC<NavbarProps> = ({
         window.removeEventListener("storage", syncDiet);
       }
     };
-  }, []);
+  }, [controlledDiet]);
 
-  const [selectedDiet, setSelectedDiet] = useState<string>(() => {
-    if (controlledDiet !== undefined) return controlledDiet;
-    if (typeof window !== "undefined") {
-      try {
-        const stored = localStorage.getItem("cloudkitchen_diet_preference");
-        if (stored) return stored;
-      } catch {}
-    }
-    return "all";
-  });
+  const [selectedDiet, setSelectedDiet] = useState<string>(
+    controlledDiet !== undefined ? controlledDiet : "all"
+  );
   const [isDietDropdownOpen, setIsDietDropdownOpen] = useState<boolean>(false);
   const [selectedLang, setSelectedLang] = useState<string>("en");
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState<boolean>(false);
@@ -734,6 +732,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div className={styles.desktopVegWrapper}>
                 <button
                   type="button"
+                  suppressHydrationWarning
                   className={`${styles.dietPillBtn} ${
                     selectedDiet !== "all" ? styles.dietPillBtnActive : ""
                   }`}
@@ -742,10 +741,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                   aria-expanded={isDietDropdownOpen}
                 >
                   <span
+                    suppressHydrationWarning
                     className={styles.dietPillDot}
                     style={{ backgroundColor: getDietPillDotColor() }}
                   />
-                  <span className={styles.dietPillText}>{getDietPillLabel()}</span>
+                  <span suppressHydrationWarning className={styles.dietPillText}>{getDietPillLabel()}</span>
                   <ChevronDown
                     size={15}
                     color="#18181B"
@@ -1304,6 +1304,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div ref={mobileVegRef} className={styles.vegWrapper}>
                 <button
                   type="button"
+                  suppressHydrationWarning
                   className={`${styles.dietPillBtn} ${
                     selectedDiet !== "all" ? styles.dietPillBtnActive : ""
                   }`}
@@ -1312,10 +1313,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                   aria-expanded={isDietDropdownOpen}
                 >
                   <span
+                    suppressHydrationWarning
                     className={styles.dietPillDot}
                     style={{ backgroundColor: getDietPillDotColor() }}
                   />
-                  <span className={styles.dietPillText}>{getDietPillLabel()}</span>
+                  <span suppressHydrationWarning className={styles.dietPillText}>{getDietPillLabel()}</span>
                   <ChevronDown
                     size={15}
                     color="#18181B"

@@ -87,16 +87,6 @@ export const ResponsiveSellerDashboard: React.FC<ResponsiveSellerDashboardProps>
       : seller.ownerName;
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
 
-  // Verification status routing protection:
-  // If seller is PENDING, REVISION, or REJECTED, redirect them to the verification status page.
-  useEffect(() => {
-    if (seller.authStatus === "authenticated") {
-      const vStatus = seller.profile?.verificationStatus;
-      if (vStatus === "PENDING" || vStatus === "REVISION" || vStatus === "REJECTED") {
-        router.replace("/seller/verification-status");
-      }
-    }
-  }, [seller.authStatus, seller.profile?.verificationStatus, router]);
 
   // Lock browser back-button at root dashboard so seller stays on dashboard until explicit logout
   useEffect(() => {

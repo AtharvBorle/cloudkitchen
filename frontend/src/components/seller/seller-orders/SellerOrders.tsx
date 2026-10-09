@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Search, RotateCw, Bike, AlertTriangle, CheckCircle2, Loader2, X, Clock } from "lucide-react";
 import ConsoleSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
@@ -109,6 +109,15 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
   onNotificationClick,
 }) => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const targetOrderId = searchParams?.get("orderId") || searchParams?.get("id");
+    if (targetOrderId) {
+      router.replace(`/seller/orders/details?orderId=${encodeURIComponent(targetOrderId)}`);
+    }
+  }, [searchParams, router]);
+
   const seller = useSellerProfile();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<OrderStatusFilter>("All");

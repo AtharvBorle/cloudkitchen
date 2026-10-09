@@ -274,7 +274,7 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
               {/* Square Food Image */}
               <div className={styles.imageWrapper}>
                 <div style={{ position: "absolute", top: "6px", left: "6px", zIndex: 2 }}>
-                  <DietaryTag isVeg={item.isVeg !== false} size="xs" />
+                  <DietaryTag isVeg={item.isVeg !== false} itemType={(item as any).itemType} size="xs" />
                 </div>
                 <Image
                   src={item.image}

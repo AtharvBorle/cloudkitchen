@@ -195,7 +195,7 @@ export default function FilterRow({
     (internalFilters.cuisines && internalFilters.cuisines.length > 0 ? 1 : 0);
 
   const isDietaryActive = Boolean(internalFilters.dietary && internalFilters.dietary !== "all");
-  const isNonVeg = internalFilters.dietary === "non_veg" || internalFilters.dietary === "non-veg";
+  const isNonVeg = internalFilters.dietary === "non_veg" || (internalFilters.dietary as string) === "non-veg";
   const isPriceActive = Boolean(internalFilters.priceTier && internalFilters.priceTier !== "all");
   const isCuisinesActive = Boolean(internalFilters.cuisines && internalFilters.cuisines.length > 0);
 
@@ -426,9 +426,9 @@ export default function FilterRow({
               )}
             </span>
             <span>
-              {internalFilters.dietary === "veg" || internalFilters.dietary === "pure_veg"
+              {internalFilters.dietary === "veg" || (internalFilters.dietary as string) === "pure_veg"
                 ? "Pure Veg 🥦"
-                : internalFilters.dietary === "non_veg" || internalFilters.dietary === "non-veg"
+                : internalFilters.dietary === "non_veg" || (internalFilters.dietary as string) === "non-veg"
                 ? "Non-Veg 🍗"
                 : internalFilters.dietary === "vegan"
                 ? "Vegan 🌱"
@@ -472,19 +472,19 @@ export default function FilterRow({
               }}
             >
               {[
-                { id: "all", label: "All Items", count: counts?.all },
+                { id: "all", label: "All Kitchens", count: counts?.all },
                 { id: "veg", label: "Pure Veg 🥦", count: counts?.veg },
                 { id: "non_veg", label: "Non-Veg 🍗", count: counts?.non_veg },
                 { id: "vegan", label: "Vegan 🌱", count: counts?.vegan },
-                { id: "jain", label: "Jain 🌿", count: counts?.jain },
+                { id: "jain", label: "Jain 🌾", count: counts?.jain },
               ].map((opt) => {
                 const isSelected =
                   opt.id === "all"
                     ? !internalFilters.dietary || internalFilters.dietary === "all"
-                    : opt.id === "veg" || opt.id === "pure_veg"
-                    ? internalFilters.dietary === "veg" || internalFilters.dietary === "pure_veg"
-                    : opt.id === "non_veg" || opt.id === "non-veg"
-                    ? internalFilters.dietary === "non_veg" || internalFilters.dietary === "non-veg"
+                    : opt.id === "veg" || (opt.id as string) === "pure_veg"
+                    ? internalFilters.dietary === "veg" || (internalFilters.dietary as string) === "pure_veg"
+                    : opt.id === "non_veg" || (opt.id as string) === "non-veg"
+                    ? internalFilters.dietary === "non_veg" || (internalFilters.dietary as string) === "non-veg"
                     : internalFilters.dietary === opt.id;
                 const isItemNonVeg = opt.id === "non_veg" || opt.id === "non-veg";
                 const activeBg = isItemNonVeg ? "#FEF2F2" : "#ECFDF5";

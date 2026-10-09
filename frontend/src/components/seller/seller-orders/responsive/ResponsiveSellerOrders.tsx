@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Menu,
   Bell,
@@ -65,6 +65,15 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
   onSyncDevices,
 }) => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const targetOrderId = searchParams?.get("orderId") || searchParams?.get("id");
+    if (targetOrderId) {
+      router.replace(`/seller/orders/details?orderId=${encodeURIComponent(targetOrderId)}`);
+    }
+  }, [searchParams, router]);
+
   const seller = useSellerProfile();
   const { unreadCount } = useSellerNotifications();
   const isNotificationActive =

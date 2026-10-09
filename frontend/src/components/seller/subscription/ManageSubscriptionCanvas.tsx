@@ -28,6 +28,7 @@ import {
   toggleMealPlanStatus,
   MealSubscriptionPlan,
   MealSubscriber,
+  MealPlanMetrics,
 } from "@/lib/meal-subscriptions";
 import { Trash2, Power, Eye, EyeOff } from "lucide-react";
 
@@ -61,7 +62,8 @@ export default function ManageSubscriptionCanvas({
 }: ManageSubscriptionCanvasProps = {}) {
   const [plans, setPlans] = useState<PlanItem[]>([]);
   const [subscribers, setSubscribers] = useState<RecentSubscriber[]>([]);
-  const [activeTab, setActiveTab] = useState<"all" | "active" | "draft">("all");
+  const [serverMetrics, setServerMetrics] = useState<MealPlanMetrics | null>(null);
+  const [activeTab, setActiveTab] = useState<"all" | "active">("all");
   const [localSearchQuery, setLocalSearchQuery] = useState("");
   const searchQuery = externalSearchQuery !== undefined ? externalSearchQuery : localSearchQuery;
 
@@ -95,6 +97,9 @@ export default function ManageSubscriptionCanvas({
       if (data) {
         setPlans(data.plans);
         setSubscribers(data.subscribers);
+        if (data.metrics) {
+          setServerMetrics(data.metrics);
+        }
       }
     } finally {
       setLoading(false);
@@ -138,9 +143,17 @@ export default function ManageSubscriptionCanvas({
     const target = plans.find((p) => p.id === id || p.planId === id);
     if (!target) return;
 
-    if (target.subscribersCount > 0) {
+    const matchingActiveCount = subscribers.filter((s) => {
+      const match = (s.planId && (s.planId === target.id || s.planId === target.planId)) ||
+                    (s.planName && target.name && s.planName.trim().toLowerCase() === target.name.trim().toLowerCase());
+      const isActive = (s.status || "").toUpperCase() === "ACTIVE" || (s.status || "").toUpperCase() === "LIVE";
+      return match && isActive && !s.isPaused;
+    }).length;
+    const effectiveCount = Math.max(target.subscribersCount || 0, matchingActiveCount);
+
+    if (effectiveCount > 0) {
       showToast(
-        `Cannot delete plan '${target.name}': It currently has ${target.subscribersCount} active subscriber(s). Please inactivate the plan instead so no new customers can subscribe. Once all subscriber periods finish, you can delete it.`,
+        `Cannot delete plan '${target.name}': It currently has ${effectiveCount} active subscriber(s). Please inactivate the plan instead so no new customers can subscribe. Once all subscriber periods finish, you can delete it.`,
         "error"
       );
       return;
@@ -165,7 +178,6 @@ export default function ManageSubscriptionCanvas({
 
   const filteredPlans = plans.filter((plan) => {
     if (activeTab === "active" && plan.status !== "Live") return false;
-    if (activeTab === "draft" && plan.status !== "Draft" && plan.status !== "Paused" && plan.status !== "Inactive") return false;
 
     const q = (searchQuery || "").toLowerCase().trim();
     if (!q) return true;
@@ -198,14 +210,37 @@ export default function ManageSubscriptionCanvas({
   });
 
   const activePlansCount = plans.filter((p) => p.status === "Live").length;
-  // Calculate active subscribers accurately without double counting
-  const totalSubscribers = subscribers.length > 0
-    ? subscribers.filter((s) => s.status === "Active" || s.status === "ACTIVE").length
-    : plans.reduce((sum, p) => sum + (p.subscribersCount || 0), 0);
+
+  // Helper to determine if a subscriber record represents a currently active subscription
+  const now = new Date();
+  const isSubscriberActive = (s: RecentSubscriber) => {
+    const statusStr = String(s.status || "").toUpperCase().trim();
+    const isStatusActive = statusStr === "ACTIVE" || statusStr === "LIVE";
+    const notPaused = !s.isPaused;
+    const notExpired = !s.endDate || new Date(s.endDate) >= now;
+    return isStatusActive && notPaused && notExpired;
+  };
+
+  // Accurately calculate total unique users who currently have an active subscription
+  const activeUserKeys = new Set<string>();
+  subscribers.forEach((s) => {
+    if (isSubscriberActive(s)) {
+      const userKey = s.userId || s.customerEmail || s.customerPhone || s.customerName || s.name || s.id;
+      if (userKey) {
+        activeUserKeys.add(String(userKey).toLowerCase().trim());
+      }
+    }
+  });
+
+  const totalSubscribers = activeUserKeys.size > 0
+    ? activeUserKeys.size
+    : (serverMetrics?.activeSubscribers !== undefined
+        ? serverMetrics.activeSubscribers
+        : plans.reduce((sum, p) => sum + (p.subscribersCount || 0), 0));
 
   const totalMonthlyRevNum = subscribers.length > 0
     ? subscribers
-        .filter((s) => s.status === "Active" || s.status === "ACTIVE")
+        .filter(isSubscriberActive)
         .reduce((sum, s) => {
           const price = s.pricePaid || parseFloat((s.amount || "").replace(/[^\d.]/g, "")) || 0;
           const cycle = (s.cycle || "1 Week").toLowerCase();
@@ -216,7 +251,9 @@ export default function ManageSubscriptionCanvas({
           if (cycle.includes("year") || cycle === "yearly") return sum + Math.round(price / 12);
           return sum + price;
         }, 0)
-    : plans.reduce((sum, p) => sum + ((p.rawWeeklyPrice || parseFloat((p.weeklyPrice || "").replace(/[^\d.]/g, "")) || 0) * 4 * (p.subscribersCount || 0)), 0);
+    : (serverMetrics?.rawMRR !== undefined
+        ? serverMetrics.rawMRR
+        : plans.reduce((sum, p) => sum + ((p.rawWeeklyPrice || parseFloat((p.weeklyPrice || "").replace(/[^\d.]/g, "")) || 0) * 4 * (p.subscribersCount || 0)), 0));
 
   const totalMonthlyRev = totalMonthlyRevNum > 0 ? `₹${totalMonthlyRevNum.toLocaleString("en-IN")}` : "₹0";
 
@@ -543,23 +580,6 @@ export default function ManageSubscriptionCanvas({
           >
             Active ({plans.filter((p) => p.status === "Live").length})
           </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("draft")}
-            style={{
-              padding: "8px 16px",
-              borderRadius: "6px",
-              border: "none",
-              fontSize: "13px",
-              fontWeight: activeTab === "draft" ? 700 : 500,
-              backgroundColor: activeTab === "draft" ? "#FF5500" : "transparent",
-              color: activeTab === "draft" ? "#FFFFFF" : "#64748B",
-              cursor: "pointer",
-              transition: "all 0.15s ease",
-            }}
-          >
-            Drafts ({plans.filter((p) => p.status === "Draft").length})
-          </button>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
@@ -719,7 +739,31 @@ export default function ManageSubscriptionCanvas({
           }}
           className="plans-grid"
         >
-          {filteredPlans.map((plan) => (
+          {filteredPlans.map((plan) => {
+            const now = new Date();
+            const planActiveUserKeys = new Set<string>();
+            subscribers.forEach((s) => {
+              const statusUpper = String(s.status || "").toUpperCase();
+              const isActive = (statusUpper === "ACTIVE" || statusUpper === "LIVE") && !s.isPaused && (!s.endDate || new Date(s.endDate) >= now);
+              if (!isActive) return;
+              const matchId = (s.planId && (s.planId === plan.id || s.planId === plan.planId));
+              const matchName = (s.planName && plan.name && s.planName.trim().toLowerCase() === plan.name.trim().toLowerCase());
+              if (matchId || matchName) {
+                const key = s.userId || s.customerEmail || s.customerPhone || s.customerName || s.name || s.id;
+                if (key) planActiveUserKeys.add(String(key).toLowerCase().trim());
+              }
+            });
+
+            const currentActiveSubscribers = planActiveUserKeys.size > 0 
+              ? Math.max(planActiveUserKeys.size, plan.subscribersCount || 0)
+              : (plan.subscribersCount || 0);
+
+            const weeklyNum = plan.rawWeeklyPrice || parseFloat(String(plan.weeklyPrice || "0").replace(/[^\d.]/g, "")) || 0;
+            const calculatedMonthlyRev = currentActiveSubscribers > 0 && weeklyNum > 0
+              ? `₹${(weeklyNum * 4 * currentActiveSubscribers).toLocaleString("en-IN")}`
+              : (plan.monthlyRevenue || "₹0");
+
+            return (
           <div
             key={plan.id}
             style={{
@@ -935,13 +979,13 @@ export default function ManageSubscriptionCanvas({
               >
                 <div>
                   <div style={{ fontSize: "14px", fontWeight: 700, color: "#0F172A" }}>
-                    {plan.subscribersCount} Users
+                    {currentActiveSubscribers} Users
                   </div>
                   <div style={{ fontSize: "11.5px", color: "#64748B" }}>Active Subscribers</div>
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <div style={{ fontSize: "14px", fontWeight: 700, color: "#16A34A" }}>
-                    {plan.monthlyRevenue}
+                    {calculatedMonthlyRev}
                   </div>
                   <div style={{ fontSize: "11.5px", color: "#64748B" }}>Monthly Rev.</div>
                 </div>
@@ -1012,10 +1056,10 @@ export default function ManageSubscriptionCanvas({
                   type="button"
                   disabled={processingPlanId === plan.id}
                   onClick={() => handleDeletePlan(plan.id)}
-                  title={plan.subscribersCount > 0 ? "Cannot delete: has active subscribers (inactivate instead)" : "Permanently delete plan"}
+                  title={currentActiveSubscribers > 0 ? "Cannot delete: has active subscribers (inactivate instead)" : "Permanently delete plan"}
                   style={{
                     backgroundColor: "#F8FAFC",
-                    color: plan.subscribersCount > 0 ? "#94A3B8" : "#EF4444",
+                    color: currentActiveSubscribers > 0 ? "#94A3B8" : "#EF4444",
                     border: "1px solid #E2E8F0",
                     padding: "9px 11px",
                     borderRadius: "7px",
@@ -1026,12 +1070,13 @@ export default function ManageSubscriptionCanvas({
                     transition: "all 0.15s ease",
                   }}
                 >
-                  <Trash2 size={14} color={plan.subscribersCount > 0 ? "#94A3B8" : "#EF4444"} />
+                  <Trash2 size={14} color={currentActiveSubscribers > 0 ? "#94A3B8" : "#EF4444"} />
                 </button>
               </div>
             </div>
           </div>
-        ))}
+            );
+          })}
       </div>
       )}
 

@@ -960,10 +960,12 @@ const loadRazorpayScript = (): Promise<boolean> => {
     if (appliedCoupon.discountType === "PERCENTAGE" || (appliedCoupon.discountPercentage && !appliedCoupon.discountAmount)) {
       const pct = appliedCoupon.discountPercentage || 0;
       const raw = Math.round((targetSubtotal * pct) / 100);
-      return appliedCoupon.maxDiscountAmount ? Math.min(raw, appliedCoupon.maxDiscountAmount) : raw;
+      const capped = appliedCoupon.maxDiscountAmount ? Math.min(raw, appliedCoupon.maxDiscountAmount) : raw;
+      if (capped >= targetSubtotal || capped >= subtotal) return 0;
+      return capped;
     }
     const flat = appliedCoupon.discountAmount || 0;
-    if (flat > targetSubtotal) return 0;
+    if (flat >= targetSubtotal || flat >= subtotal) return 0;
     return flat;
   }, [isPromoApplied, appliedCoupon, subtotal, checkoutItems]);
 
@@ -1070,12 +1072,34 @@ const loadRazorpayScript = (): Promise<boolean> => {
     const isTypeChanged = appliedCoupon.discountType !== latestType;
 
     if (isPctChanged || isAmtChanged || isMaxChanged || isMinChanged || isTypeChanged) {
+      if ((latestType === "FLAT" || (!latestPct && latestAmt)) && latestAmt && latestAmt >= subtotal) {
+        setIsPromoApplied(false);
+        setDiscountPercent(0);
+        setAppliedCoupon(null);
+        setPromoCode("");
+        return;
+      }
+
       let recalculatedDiscount = 0;
       if (latestPct > 0) {
         recalculatedDiscount = Math.round((subtotal * latestPct) / 100);
         if (latestMax) recalculatedDiscount = Math.min(recalculatedDiscount, latestMax);
+        if (recalculatedDiscount >= subtotal) {
+          setIsPromoApplied(false);
+          setDiscountPercent(0);
+          setAppliedCoupon(null);
+          setPromoCode("");
+          return;
+        }
       } else if (latestAmt) {
-        recalculatedDiscount = Math.min(latestAmt, subtotal);
+        if (latestAmt >= subtotal) {
+          setIsPromoApplied(false);
+          setDiscountPercent(0);
+          setAppliedCoupon(null);
+          setPromoCode("");
+          return;
+        }
+        recalculatedDiscount = latestAmt;
       }
 
       const updatedCouponObj = {
@@ -1157,7 +1181,10 @@ const loadRazorpayScript = (): Promise<boolean> => {
           });
           eligibleSub = matchingItems.reduce((acc, it) => acc + it.price, 0);
         }
-        if (flatAmt > eligibleSub) return false;
+        if (flatAmt >= eligibleSub || flatAmt >= subtotal) return false;
+      } else {
+        const pct = Number(offer.discountPercentage || 0);
+        if (pct >= 100) return false;
       }
       return true;
     });
@@ -1185,16 +1212,17 @@ const loadRazorpayScript = (): Promise<boolean> => {
         if (offer.maxDiscountAmount) disc = Math.min(disc, offer.maxDiscountAmount);
       } else {
         const flatAmt = Number(offer.discountAmount || offer.discountValue || 0);
-        if (flatAmt > subtotal) continue;
+        if (flatAmt >= subtotal) continue;
         disc = flatAmt;
       }
-      if (disc >= maxDiscount) {
+      if (disc >= subtotal) continue;
+      if (disc > 0 && disc >= maxDiscount) {
         maxDiscount = disc;
         bestOffer = offer;
       }
     }
 
-    if (!isPromoApplied || ((appliedCoupon as any)?.isAutoApply && appliedCoupon?.code !== bestOffer.code)) {
+    if (maxDiscount > 0 && (!isPromoApplied || ((appliedCoupon as any)?.isAutoApply && appliedCoupon?.code !== bestOffer.code))) {
       const pct = bestOffer.discountPercentage || (bestOffer.discountType === "PERCENTAGE" ? (bestOffer.discountValue || 0) : 0);
       setAppliedCoupon({
         id: bestOffer.id,
@@ -1327,33 +1355,45 @@ const loadRazorpayScript = (): Promise<boolean> => {
       return;
     }
 
-    // Pre-check for flat coupons from availableOffers if discount exceeds eligible subtotal
+    // Pre-check for flat/percentage coupons from availableOffers if discount equals or exceeds eligible subtotal or cart total
     const matchingOffer = availableOffers.find(
       (o) => (o.code && o.code.toUpperCase() === clean) || (o.id && o.id === clean)
     );
     if (matchingOffer) {
       const isPct = matchingOffer.discountType === "PERCENTAGE" || (matchingOffer.discountPercentage && !matchingOffer.discountAmount);
-      if (!isPct) {
-        const flatAmt = Number(matchingOffer.discountAmount || (matchingOffer.discountType === "FLAT" ? matchingOffer.discountValue : 0) || 0);
-        let eligibleSub = subtotal;
-        if (matchingOffer.appliesToProductId) {
-          const allowedKeys = String(matchingOffer.appliesToProductId).split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
-          const matchingItems = checkoutItems.filter((it) => {
-            const itemId = String(it.id || "").toLowerCase();
-            const foodItemId = String(it.foodItemId || "").toLowerCase();
-            const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
-            const name = String(it.name || "").toLowerCase().trim();
-            return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name || (name && (name.includes(k) || k.includes(name))));
-          });
-          eligibleSub = matchingItems.reduce((acc, it) => acc + it.price, 0);
+      let eligibleSub = subtotal;
+      if (matchingOffer.appliesToProductId) {
+        const allowedKeys = String(matchingOffer.appliesToProductId).split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+        const matchingItems = checkoutItems.filter((it) => {
+          const itemId = String(it.id || "").toLowerCase();
+          const foodItemId = String(it.foodItemId || "").toLowerCase();
+          const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+          const name = String(it.name || "").toLowerCase().trim();
+          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name || (name && (name.includes(k) || k.includes(name))));
+        });
+        eligibleSub = matchingItems.reduce((acc, it) => acc + it.price, 0);
+      }
+
+      let calculatedDisc = 0;
+      if (isPct) {
+        const pct = matchingOffer.discountPercentage || (matchingOffer.discountType === "PERCENTAGE" ? matchingOffer.discountValue || 0 : 0);
+        calculatedDisc = Math.round((eligibleSub * pct) / 100);
+        if (matchingOffer.maxDiscountAmount) {
+          calculatedDisc = Math.min(calculatedDisc, matchingOffer.maxDiscountAmount);
         }
-        if (flatAmt > eligibleSub) {
-          setIsPromoApplied(false);
-          setDiscountPercent(0);
-          setAppliedCoupon(null);
-          showToast(`Coupon "${matchingOffer.code}" cannot be applied as the discount (₹${flatAmt}) exceeds the eligible item/cart value of ₹${eligibleSub}.`, "error");
-          return;
-        }
+      } else {
+        calculatedDisc = Number(matchingOffer.discountAmount || (matchingOffer.discountType === "FLAT" ? matchingOffer.discountValue : 0) || 0);
+      }
+
+      if (calculatedDisc >= eligibleSub || calculatedDisc >= subtotal) {
+        setIsPromoApplied(false);
+        setDiscountPercent(0);
+        setAppliedCoupon(null);
+        showToast(
+          `Coupon "${matchingOffer.code}" cannot be applied as the discount (₹${calculatedDisc}) cannot reduce the payable amount to ₹0. Cart value must be greater than the discount amount.`,
+          "error"
+        );
+        return;
       }
     }
 

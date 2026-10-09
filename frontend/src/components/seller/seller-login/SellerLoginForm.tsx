@@ -8,7 +8,7 @@ import { Mail, Lock, Eye, EyeOff, ArrowRight, Check } from "lucide-react";
 import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
 import { fetchApi } from "@/lib/fetch-api";
 import { updateCachedProfile } from "@/hooks/useSellerProfile";
-import { discardExistingSession } from "@/lib/logout";
+import { clearAllAuthData } from "@/lib/logout";
 import { validateEmail } from "@/lib/email-validation";
 import styles from "./SellerLogin.module.css";
 
@@ -18,6 +18,30 @@ export interface SellerLoginFormProps {
   forgotPasswordHref?: string;
   termsHref?: string;
   privacyHref?: string;
+}
+
+function getSafeSellerCallback(callbackUrl: string | null | undefined, defaultPath = "/seller/dashboard"): string {
+  if (!callbackUrl) return defaultPath;
+  try {
+    const decoded = decodeURIComponent(callbackUrl);
+    if (
+      decoded.includes("/registration") ||
+      decoded.includes("/account-information") ||
+      decoded.includes("/business-information") ||
+      decoded.includes("/verification-status") ||
+      decoded.includes("/verification") ||
+      decoded.includes("/confirm-registration") ||
+      decoded.includes("/login")
+    ) {
+      return defaultPath;
+    }
+    if (decoded.startsWith("/seller") || decoded.startsWith("/dashboard")) {
+      return decoded;
+    }
+  } catch {
+    return defaultPath;
+  }
+  return defaultPath;
 }
 
 export const SellerLoginForm: React.FC<SellerLoginFormProps> = ({
@@ -34,9 +58,10 @@ export const SellerLoginForm: React.FC<SellerLoginFormProps> = ({
   useEffect(() => {
     if (authStatus === "authenticated" && session?.user?.role === "SELLER") {
       const explicitCallback = searchParams?.get("callbackUrl");
-      router.replace(explicitCallback || "/seller/dashboard");
+      const safeDestination = getSafeSellerCallback(explicitCallback, "/seller/dashboard");
+      window.location.replace(safeDestination);
     }
-  }, [authStatus, session, router, searchParams]);
+  }, [authStatus, session, searchParams]);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -68,12 +93,13 @@ export const SellerLoginForm: React.FC<SellerLoginFormProps> = ({
     setErrorMessage("");
 
     try {
-      await discardExistingSession();
+      clearAllAuthData();
       const res = await signIn("credentials", {
         redirect: false,
         email: emailValidation.normalizedEmail,
         password: password.trim(),
         loginType: "SELLER",
+        callbackUrl: "/seller/dashboard",
       });
 
       if (res?.error) {
@@ -98,42 +124,20 @@ export const SellerLoginForm: React.FC<SellerLoginFormProps> = ({
               const profJson = await profRes.json();
               const user = profJson.data?.user || profJson.user;
               const profile = profJson.data?.profile || profJson.profile;
-              const vStatus = profile?.verificationStatus;
 
               updateCachedProfile({
                 user,
                 profile,
                 isOnline: profile?.isOnline ?? true,
               });
-
-              const explicitCallback = searchParams?.get("callbackUrl");
-
-              if (vStatus === "APPROVED") {
-                router.replace(explicitCallback || "/seller/dashboard");
-              } else if (vStatus === "REVISION") {
-                router.replace(
-                  explicitCallback && explicitCallback.startsWith("/seller/revision")
-                    ? explicitCallback
-                    : "/seller/revision"
-                );
-              } else if (vStatus === "REJECTED" || vStatus === "PENDING") {
-                router.replace(
-                  explicitCallback &&
-                    (explicitCallback.startsWith("/seller/verification") ||
-                      explicitCallback.startsWith("/seller/registration"))
-                    ? explicitCallback
-                    : "/seller/verification-status"
-                );
-              } else {
-                router.replace(explicitCallback || "/seller/verification-status");
-              }
-            } else {
-              router.replace("/seller/registration");
             }
           } catch (routeErr) {
-            console.error("Post-login status check error:", routeErr);
-            router.replace("/seller/verification-status");
+            console.warn("Post-login profile check error:", routeErr);
           }
+
+          const explicitCallback = searchParams?.get("callbackUrl");
+          const safeDestination = getSafeSellerCallback(explicitCallback, "/seller/dashboard");
+          window.location.replace(safeDestination);
         }
       }
     } catch (err) {

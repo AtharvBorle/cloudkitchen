@@ -236,12 +236,15 @@ export const authConfig: NextAuthConfig = {
         },
         async session({ session, token }) {
             if (session.user && token?.id) {
-                const dbUser = await db.user.findUnique({
-                    where: { id: token.id as string },
-                    select: { isActive: true, deletedAt: true, isPermanentlyDeleted: true }
-                });
-                if (!dbUser || !dbUser.isActive || dbUser.deletedAt || dbUser.isPermanentlyDeleted) {
-                    return null as any;
+                try {
+                    const dbUser = await db.user.findUnique({
+                        where: { id: token.id as string },
+                    });
+                    if (dbUser && (dbUser.isActive === false || (dbUser as any).deletedAt || (dbUser as any).isPermanentlyDeleted)) {
+                        return null as any;
+                    }
+                } catch (dbErr) {
+                    console.warn("Session user verification warning:", dbErr);
                 }
                 session.user.role = token.role as string;
                 session.user.id = token.id as string;
@@ -294,9 +297,8 @@ export const getAuthSession = async () => {
             if (decoded && decoded.id) {
                 const dbUser = await db.user.findUnique({
                     where: { id: decoded.id },
-                    select: { isActive: true, deletedAt: true, isPermanentlyDeleted: true }
                 });
-                if (!dbUser || !dbUser.isActive || dbUser.deletedAt || dbUser.isPermanentlyDeleted) {
+                if (!dbUser || dbUser.isActive === false || (dbUser as any).deletedAt || (dbUser as any).isPermanentlyDeleted) {
                     return null;
                 }
                 return {

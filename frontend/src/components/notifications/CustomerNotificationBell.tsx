@@ -168,7 +168,7 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
     if (dynamicOrders && dynamicOrders.length > 0) {
       dynamicOrders.forEach((order: any) => {
         const orderId = order.id || order.orderNumber || order.trackingId || "order";
-        const shortId = typeof orderId === "string" ? orderId.slice(-6).toUpperCase() : "ORDER";
+        const shortId = typeof orderId === "string" ? (order.orderNumber ? order.orderNumber : (orderId.length > 8 ? orderId.slice(0, 8) : orderId)).toUpperCase() : "ORDER";
         const status = (order.status || "PENDING").toUpperCase();
         const sellerName = order.seller?.businessName || order.sellerName || "Kitchen Partner";
         const eventDate = (status !== "PENDING" && order.updatedAt)
@@ -205,6 +205,13 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
           actionText = "View Details";
         }
 
+        let actionParam = "view";
+        if (actionText === "Reorder") {
+          actionParam = "reorder";
+        } else if (actionText === "Track Order") {
+          actionParam = "track";
+        }
+
         list.push({
           id: `order-notif-${orderId}`,
           type: "order",
@@ -213,7 +220,7 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
           timestamp: eventDate.toISOString(),
           relativeTime: getRelativeTime(eventDate.toISOString()),
           isRead: readIds.includes(`order-notif-${orderId}`),
-          link: "/orders-desktop",
+          link: `/orders-desktop?orderId=${encodeURIComponent(order.id || orderId)}&action=${actionParam}`,
           tag,
           tagColor,
           actionText,

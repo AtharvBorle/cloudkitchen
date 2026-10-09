@@ -274,6 +274,7 @@ export function isKitchenMatchingDiet(
     name?: string | null;
     id?: string | null;
     trackingId?: string | null;
+    locality?: string | null;
   },
   dietary?: string | null,
   foodItems?: Array<{

@@ -228,7 +228,8 @@ export default function PopularOrders({
               key={offer.id}
               style={{
                 width: "100%",
-                height: "302px",
+                minHeight: "330px",
+                height: "auto",
                 borderRadius: "20px",
                 padding: "16px",
                 background: isClosed
@@ -283,18 +284,6 @@ export default function PopularOrders({
                   backgroundColor: "#FFFFFF",
                 }}
               >
-                <div style={{ position: "absolute", top: "8px", left: "8px", zIndex: 2 }}>
-                  <DietaryTag
-                    itemType={
-                      offer.itemType ||
-                      (offer.title.toLowerCase().includes("biryani") ||
-                      offer.title.toLowerCase().includes("chicken")
-                        ? "NON_VEG"
-                        : "VEG")
-                    }
-                    size="xs"
-                  />
-                </div>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={offer.imageUrl}
@@ -360,6 +349,18 @@ export default function PopularOrders({
                 >
                   {offer.title}
                 </h3>
+                <div style={{ display: "flex", alignItems: "center", gap: "4px", margin: "2px 0", flexWrap: "wrap" }}>
+                  <DietaryTag
+                    itemType={
+                      offer.itemType ||
+                      (offer.title.toLowerCase().includes("biryani") ||
+                      offer.title.toLowerCase().includes("chicken")
+                        ? "NON_VEG"
+                        : "VEG")
+                    }
+                    size="xs"
+                  />
+                </div>
                 <span
                   style={{
                     fontSize: "0.80rem",

@@ -78,7 +78,7 @@ export const SellerLayout: React.FC<SellerLayoutProps> = ({
     } else if (currentStep && currentStep > 1) {
       router.back();
     } else {
-      router.push("/seller/registration");
+      router.push("/seller/dashboard");
     }
   };
 
