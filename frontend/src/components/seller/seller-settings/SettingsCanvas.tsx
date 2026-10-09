@@ -30,10 +30,9 @@ import SellerNotificationChannels, {
 } from "./notification-channels/SellerNotificationChannels";
 import {
   PasswordManagementCard,
-  ActiveLoginSessionsCard,
+  SellerDeleteAccountCard,
 } from "./security-settings/SellerSecuritySettings";
 import { useSellerProfile, updateCachedProfile, computeInitials } from "@/hooks/useSellerProfile";
-import { useRoomModule } from "@/context/RoomModuleContext";
 import { fetchApi } from "@/lib/fetch-api";
 import { validateEmail } from "@/lib/email-validation";
 import { validateKitchenName } from "@/lib/kitchen-validation";
@@ -217,7 +216,6 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
   onSave,
   onCancel,
 }) => {
-  const { isRoomEnabled } = useRoomModule();
   const searchParams = useSearchParams();
   const seller = useSellerProfile();
   const [activeTab, setActiveTab] = useState<SettingsTab>(() => {
@@ -2154,7 +2152,7 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
               {/* 1. Order & Booking Alerts */}
               <div className={styles.card}>
                 <h2 className={styles.cardTitle} style={{ margin: "0 0 4px 0", fontSize: "16px", fontWeight: 700 }}>
-                  {isRoomEnabled ? "Order & Booking Alerts" : "Order Alerts"}
+                  Order &amp; Booking Alerts
                 </h2>
 
                 <div className={styles.notificationGroup}>
@@ -2188,22 +2186,20 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                     </label>
                   </div>
 
-                  {isRoomEnabled && (
-                    <div className={styles.notificationRow}>
-                      <div className={styles.notificationInfo}>
-                        <span className={styles.notificationLabel}>Room Bookings</span>
-                        <span className={styles.notificationDesc}>Alert when a customer books a cloud dining space or workspace.</span>
-                      </div>
-                      <label className={styles.toggleSwitch}>
-                        <input
-                          type="checkbox"
-                          checked={formData.bookingRequestAlert}
-                          onChange={() => handleCheckboxToggle("bookingRequestAlert")}
-                        />
-                        <span className={styles.toggleSlider} />
-                      </label>
+                  <div className={styles.notificationRow}>
+                    <div className={styles.notificationInfo}>
+                      <span className={styles.notificationLabel}>Room Bookings</span>
+                      <span className={styles.notificationDesc}>Alert when a customer books a cloud dining space or workspace.</span>
                     </div>
-                  )}
+                    <label className={styles.toggleSwitch}>
+                      <input
+                        type="checkbox"
+                        checked={formData.bookingRequestAlert}
+                        onChange={() => handleCheckboxToggle("bookingRequestAlert")}
+                      />
+                      <span className={styles.toggleSlider} />
+                    </label>
+                  </div>
 
                   <div className={styles.notificationRow}>
                     <div className={styles.notificationInfo}>
@@ -2221,6 +2217,45 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                   </div>
                 </div>
               </div>
+
+              {/* 2. Marketing & Growth Alerts */}
+              <div className={styles.card}>
+                <h2 className={styles.cardTitle} style={{ margin: "0 0 4px 0", fontSize: "16px", fontWeight: 700 }}>
+                  Marketing &amp; Growth Alerts
+                </h2>
+
+                <div className={styles.notificationGroup}>
+                  <div className={styles.notificationRow}>
+                    <div className={styles.notificationInfo}>
+                      <span className={styles.notificationLabel}>Weekly Growth Performance</span>
+                      <span className={styles.notificationDesc}>Receive analytics detailing revenue, popular items, and rider performance.</span>
+                    </div>
+                    <label className={styles.toggleSwitch}>
+                      <input
+                        type="checkbox"
+                        checked={formData.weeklyGrowthPerformance}
+                        onChange={() => handleCheckboxToggle("weeklyGrowthPerformance")}
+                      />
+                      <span className={styles.toggleSlider} />
+                    </label>
+                  </div>
+
+                  <div className={styles.notificationRow}>
+                    <div className={styles.notificationInfo}>
+                      <span className={styles.notificationLabel}>Promotions &amp; Product Beta</span>
+                      <span className={styles.notificationDesc}>Receive updates regarding new cloud kitchen features, partner promos, and discounts.</span>
+                    </div>
+                    <label className={styles.toggleSwitch}>
+                      <input
+                        type="checkbox"
+                        checked={formData.promotionsProductBeta}
+                        onChange={() => handleCheckboxToggle("promotionsProductBeta")}
+                      />
+                      <span className={styles.toggleSlider} />
+                    </label>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -2228,112 +2263,11 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
         {/* Tab 3: Security */}
         {activeTab === "Security" && (
           <div className={styles.mainGrid}>
-            <div className={styles.leftColumn}>
+            <div className={styles.leftColumn} style={{ gridColumn: "1 / -1", maxWidth: "720px" }}>
               {/* 1. Password Management Card (Matching Reference Image) */}
               <PasswordManagementCard />
-
-              {/* 2. Authentication & Access Control Card (Disabled via comment - uncomment to re-enable) */}
-              {/*
-              <div className={styles.card}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-                  <Shield size={18} color="#F97316" />
-                  <h2 className={styles.cardTitle} style={{ margin: 0 }}>Authentication &amp; Access Control</h2>
-                </div>
-                
-                <div className={styles.notificationGroup}>
-                  <div className={styles.notificationRow}>
-                    <div className={styles.notificationInfo}>
-                      <span className={styles.notificationLabel}>Two-Factor Authentication (2FA)</span>
-                      <span className={styles.notificationDesc}>Require OTP code via SMS / Authenticator app when signing in</span>
-                    </div>
-                    <label className={styles.toggleSwitch}>
-                      <input
-                        type="checkbox"
-                        checked={formData.twoFactorAuth}
-                        onChange={() => handleCheckboxToggle("twoFactorAuth")}
-                      />
-                      <span className={styles.toggleSlider} />
-                    </label>
-                  </div>
-
-                  <div className={styles.notificationRow}>
-                    <div className={styles.notificationInfo}>
-                      <span className={styles.notificationLabel}>Require PIN for Order Cancellations &amp; Voids</span>
-                      <span className={styles.notificationDesc}>Ask for 4-digit manager PIN to void or refund orders</span>
-                    </div>
-                    <label className={styles.toggleSwitch}>
-                      <input
-                        type="checkbox"
-                        checked={formData.pinRequiredForCancel}
-                        onChange={() => handleCheckboxToggle("pinRequiredForCancel")}
-                      />
-                      <span className={styles.toggleSlider} />
-                    </label>
-                  </div>
-
-                  <div className={styles.notificationRow}>
-                    <div className={styles.notificationInfo}>
-                      <span className={styles.notificationLabel}>Auto Session Timeout (30 Mins)</span>
-                      <span className={styles.notificationDesc}>Automatically lock console if inactive to protect kitchen POS</span>
-                    </div>
-                    <label className={styles.toggleSwitch}>
-                      <input
-                        type="checkbox"
-                        checked={formData.sessionTimeout}
-                        onChange={() => handleCheckboxToggle("sessionTimeout")}
-                      />
-                      <span className={styles.toggleSlider} />
-                    </label>
-                  </div>
-                </div>
-              </div>
-              */}
-            </div>
-
-            <div className={styles.rightColumn}>
-              {/* 3. Active Login Sessions Card (Matching Reference Image) */}
-              <ActiveLoginSessionsCard />
-
-              {/* 4. Login & Recovery Controls Card (Disabled via comment - uncomment to re-enable) */}
-              {/*
-              <div className={styles.card}>
-                <h2 className={styles.cardTitle} style={{ margin: "0 0 4px 0", fontSize: "16px", fontWeight: 700 }}>
-                  Login &amp; Recovery Controls
-                </h2>
-
-                <div className={styles.notificationGroup}>
-                  <div className={styles.notificationRow}>
-                    <div className={styles.notificationInfo}>
-                      <span className={styles.notificationLabel}>Unfamiliar Login Alerts</span>
-                      <span className={styles.notificationDesc}>Send instant email alerts upon logins from new browsers/locations.</span>
-                    </div>
-                    <label className={styles.toggleSwitch}>
-                      <input
-                        type="checkbox"
-                        checked={formData.unfamiliarLoginAlerts}
-                        onChange={() => handleCheckboxToggle("unfamiliarLoginAlerts")}
-                      />
-                      <span className={styles.toggleSlider} />
-                    </label>
-                  </div>
-
-                  <div className={styles.notificationRow}>
-                    <div className={styles.notificationInfo}>
-                      <span className={styles.notificationLabel}>Password Reset Safety Check</span>
-                      <span className={styles.notificationDesc}>Require recovery email confirmation before allowing password resets.</span>
-                    </div>
-                    <label className={styles.toggleSwitch}>
-                      <input
-                        type="checkbox"
-                        checked={formData.passwordResetSafetyCheck}
-                        onChange={() => handleCheckboxToggle("passwordResetSafetyCheck")}
-                      />
-                      <span className={styles.toggleSlider} />
-                    </label>
-                  </div>
-                </div>
-              </div>
-              */}
+              {/* 2. Danger Zone: Delete Kitchen Account */}
+              <SellerDeleteAccountCard />
             </div>
           </div>
         )}

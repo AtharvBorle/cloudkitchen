@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Menu as MenuIcon, ChevronRight, Settings, Bell } from "lucide-react";
+import { Menu as MenuIcon, ChevronRight, Settings, Bell, Search, X } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import styles from "./ResponsiveDelivery.module.css";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
@@ -21,6 +21,7 @@ export interface ResponsiveRiderItem {
 export interface ResponsiveDeliveryProps {
   ownerName?: string;
   totalOutstanding?: string;
+  cashCollectedToday?: string;
   riders?: ResponsiveRiderItem[];
   onSelectRider?: (rider: ResponsiveRiderItem) => void;
   onSyncDevices?: () => void;
@@ -29,6 +30,7 @@ export interface ResponsiveDeliveryProps {
 export const ResponsiveDelivery: React.FC<ResponsiveDeliveryProps> = ({
   ownerName,
   totalOutstanding = "₹0",
+  cashCollectedToday = "₹0",
   riders = [],
   onSelectRider,
   onSyncDevices,
@@ -45,6 +47,23 @@ export const ResponsiveDelivery: React.FC<ResponsiveDeliveryProps> = ({
       ? ownerName
       : seller.ownerName;
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredRiders = React.useMemo(() => {
+    if (!searchQuery.trim()) return riders;
+    const q = searchQuery.toLowerCase().trim();
+    const tokens = q.split(/\s+/).filter(Boolean);
+    return riders.filter((r) => {
+      const name = (r.name || "").toLowerCase();
+      const phone = (r.phone || "").toLowerCase();
+      const id = (r.id || "").toLowerCase();
+      if (name.includes(q) || phone.includes(q) || id.includes(q)) return true;
+      if (tokens.length > 1) {
+        return tokens.every((t) => name.includes(t) || phone.includes(t) || id.includes(t));
+      }
+      return false;
+    });
+  }, [riders, searchQuery]);
 
   const handleRiderClick = (rider: ResponsiveRiderItem) => {
     if (onSelectRider) {
@@ -123,25 +142,42 @@ export const ResponsiveDelivery: React.FC<ResponsiveDeliveryProps> = ({
 
         {/* Content Area */}
         <main className={styles.contentArea}>
-          {/* Total Outstanding Card */}
-          <section
-            className={styles.totalCard}
-            onClick={() => router.push("/seller/delivery/riders")}
-            role="button"
-            tabIndex={0}
-            style={{ cursor: "pointer" }}
-          >
-            <div className={styles.totalCardHeader}>
-              <span className={styles.totalLabel}>Total Outstanding</span>
-              <span className={styles.viewRidersLink}>Manage Riders →</span>
-            </div>
-            <span className={styles.totalAmount}>{totalOutstanding}</span>
-          </section>
+          {/* Delivery & COD Metrics Grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            {/* Total Outstanding Card */}
+            <section
+              className={styles.totalCard}
+              onClick={() => router.push("/seller/delivery/riders")}
+              role="button"
+              tabIndex={0}
+              style={{ cursor: "pointer", padding: "14px 16px" }}
+            >
+              <div className={styles.totalCardHeader}>
+                <span className={styles.totalLabel} style={{ fontSize: "11px", fontWeight: 700 }}>COD Outstanding</span>
+              </div>
+              <span className={styles.totalAmount} style={{ fontSize: "20px" }}>{totalOutstanding}</span>
+            </section>
+
+            {/* Cash Collected Today Card */}
+            <section
+              className={styles.totalCard}
+              style={{ padding: "14px 16px" }}
+            >
+              <div className={styles.totalCardHeader}>
+                <span className={styles.totalLabel} style={{ fontSize: "11px", fontWeight: 700 }}>Cash Collected</span>
+              </div>
+              <span className={styles.totalAmount} style={{ fontSize: "20px", color: "#16A34A" }}>
+                {cashCollectedToday}
+              </span>
+            </section>
+          </div>
 
           {/* Riders List Section */}
           <section className={styles.ridersSection}>
             <div className={styles.sectionHeaderRow}>
-              <h2 className={styles.sectionLabel}>RIDERS</h2>
+              <h2 className={styles.sectionLabel}>
+                RIDERS ({filteredRiders.length}{searchQuery.trim() ? ` / ${riders.length}` : ""})
+              </h2>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <button
                   type="button"
@@ -161,9 +197,58 @@ export const ResponsiveDelivery: React.FC<ResponsiveDeliveryProps> = ({
               </div>
             </div>
 
-            {riders.length > 0 ? (
+            {/* Mobile Rider Search Bar */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                backgroundColor: "#FFFFFF",
+                borderRadius: "10px",
+                border: "1px solid #E2E8F0",
+                padding: "8px 12px",
+                gap: "8px",
+                marginBottom: "12px",
+                boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
+              }}
+            >
+              <Search size={16} color="#64748B" />
+              <input
+                type="text"
+                placeholder="Search riders by name, phone..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  border: "none",
+                  backgroundColor: "transparent",
+                  outline: "none",
+                  fontSize: "13px",
+                  color: "#1E293B",
+                  width: "100%",
+                }}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: 0,
+                    color: "#94A3B8",
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                  title="Clear search"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            {filteredRiders.length > 0 ? (
               <div className={styles.ridersList}>
-                {riders.map((rider) => (
+                {filteredRiders.map((rider) => (
                   <article
                     key={rider.id}
                     className={styles.riderCard}
@@ -196,6 +281,27 @@ export const ResponsiveDelivery: React.FC<ResponsiveDeliveryProps> = ({
                     </div>
                   </article>
                 ))}
+              </div>
+            ) : searchQuery.trim() ? (
+              <div className={styles.emptyState}>
+                <p className={styles.emptyText}>No delivery persons found matching &quot;{searchQuery}&quot;.</p>
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  style={{
+                    marginTop: "10px",
+                    backgroundColor: "#F1F5F9",
+                    color: "#334155",
+                    border: "1px solid #CBD5E1",
+                    borderRadius: "8px",
+                    padding: "7px 16px",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  Clear Search
+                </button>
               </div>
             ) : (
               <div className={styles.emptyState}>

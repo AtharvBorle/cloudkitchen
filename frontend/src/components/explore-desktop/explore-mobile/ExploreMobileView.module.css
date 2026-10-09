@@ -644,19 +644,27 @@
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
 }
 
-/* 5. What's on Your Mind? */
+/* 5. What's on Your Mind? - Dual Row Bi-Directional Scroll Carousel */
 .mindSection {
-  margin-bottom: 16px;
+  margin-bottom: 24px;
+  position: relative;
+}
+
+.mindHeaderRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  gap: 12px;
 }
 
 .mindHeaderCol {
   display: flex;
   flex-direction: column;
-  margin-bottom: 12px;
 }
 
 .mindTitle {
-  font-size: 16px;
+  font-size: 16.5px;
   font-weight: 800;
   color: #0f172a;
   margin: 0;
@@ -669,28 +677,99 @@
   margin: 2px 0 0 0;
 }
 
-.mindGrid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
+.mindScrollControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
-.momentCard {
-  border-radius: 14px;
-  padding: 12px 14px;
+.mindArrowBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  padding: 0;
+}
+
+.mindArrowBtn:active {
+  transform: scale(0.92);
+}
+
+.mindArrowBtn:hover {
+  background: #ff6b00;
+  border-color: #ff6b00;
+  color: #ffffff;
+  box-shadow: 0 3px 10px rgba(255, 107, 0, 0.3);
+}
+
+.mindPulseNextBtn {
+  background: #fff7ed;
+  border-color: #fdba74;
+  color: #ea580c;
+}
+
+/* Two Lines Container */
+.mindTwoLinesWrapper {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  width: 100%;
+}
+
+/* Horizontal Track (Edge-to-edge scrollable track matching desktop technique) */
+.mindCardsTrack {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 16px;
+  margin: 0 -16px;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.mindCardsTrack::-webkit-scrollbar {
+  display: none;
+}
+
+/* Individual Card (Fixed width for dual line horizontal scrolling) */
+.momentCard {
+  flex: 0 0 142px;
+  width: 142px;
+  height: 80px;
+  border-radius: 14px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
   box-sizing: border-box;
+  scroll-snap-align: start;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  user-select: none;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
 }
 
 .momentCard:active {
-  transform: scale(0.98);
+  transform: scale(0.96);
 }
 
-/* Variations */
+/* Variations with high-contrast text */
 .cardBreakfast {
   background-color: #fff8eb;
   border: 1px solid #fed7aa;
@@ -707,7 +786,7 @@
 }
 
 .cardSnacks {
-  background: linear-gradient(135deg, #fbcfe8 0%, #f472b6 100%);
+  background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
   border: 1px solid #f9a8d4;
 }
 
@@ -717,18 +796,37 @@
 }
 
 .cardDrinks {
-  background-color: #d1fae5;
-  border: 1px solid #a7f3d0;
+  background-color: #ccfbf1;
+  border: 1px solid #99f6e4;
+}
+
+.cardDesserts {
+  background-color: #fef08a;
+  border: 1px solid #fde047;
+}
+
+.cardHealthy {
+  background-color: #bbf7d0;
+  border: 1px solid #86efac;
+}
+
+/* Top Badge */
+.momentTopRow {
+  display: flex;
+  align-items: flex-start;
 }
 
 .momentTag {
   background-color: rgba(255, 255, 255, 0.95);
-  font-size: 9px;
+  backdrop-filter: blur(4px);
+  font-size: 8.5px;
   font-weight: 700;
   color: #475569;
-  padding: 2px 8px;
+  padding: 2px 6.5px;
   border-radius: 20px;
-  width: fit-content;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  letter-spacing: -0.01em;
+  line-height: 1.1;
 }
 
 .momentTagDark {
@@ -736,26 +834,59 @@
   color: #e2e8f0;
 }
 
+.momentTagSelected {
+  background-color: #ff6b00 !important;
+  color: #ffffff !important;
+  font-weight: 800;
+}
+
+/* Bottom Row with 3D Category Image + Name */
 .momentBottomRow {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.momentIconImg {
-  width: 36px;
-  height: 36px;
-  object-fit: contain;
+.momentIconWrapper {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.momentIconImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+  display: block;
 }
 
 .momentName {
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 12.5px;
+  font-weight: 800;
   color: #0f172a;
   margin: 0;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.01em;
 }
 
 .momentNameLight {
   color: #ffffff;
+}
+
+/* Active Selected Category Card */
+.momentCardSelected {
+  border: 2px solid #ff6b00 !important;
+  box-shadow: 0 4px 14px rgba(255, 107, 0, 0.25) !important;
+  transform: translateY(-1.5px);
 }

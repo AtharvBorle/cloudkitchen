@@ -13,9 +13,19 @@ export async function GET() {
             throw new ApiError("Access denied. Superadmin privileges required.", 403);
         }
 
-        const totalAgents = await db.user.count({ where: { role: "AGENT" } });
-        const activeSellers = await db.user.count({ where: { role: "SELLER", isActive: true } });
-        const totalSubscriptions = await db.subscription.count();
+        const totalAgents = await db.user.count({ where: { role: { in: ["AGENT", "SUPPORT", "REEL_MANAGER"] } } });
+        const activeSellers = await db.sellerProfile.count({
+            where: {
+                verificationStatus: "APPROVED",
+                user: { isActive: true }
+            }
+        });
+        const totalSubscriptions = await db.subscription.count({
+            where: {
+                status: "ACTIVE",
+                validUntil: { gte: new Date() }
+            }
+        });
 
         return successResponse({
             totalAgents,

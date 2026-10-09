@@ -292,11 +292,12 @@ function RoomBookingContent() {
           />
 
           {/* Featured Top Colivings / Stays */}
-          <FeaturedColivings rooms={filteredRooms.length > 0 ? filteredRooms : allRooms} />
+          <FeaturedColivings rooms={filteredRooms.length > 0 ? filteredRooms : allRooms} isLoading={loading} />
 
           {/* All Filtered Available Rooms Grid */}
           <AllAvailableRooms
             rooms={filteredRooms}
+            isLoading={loading}
             searchQuery={searchQuery}
             activeLocation={selectedLocation}
             activeBudget={selectedBudget}
@@ -309,7 +310,7 @@ function RoomBookingContent() {
 
       {/* 2. Mobile View (<=768px) matching native mobile design */}
       <div className={styles.mobileOnly}>
-        <RoomBookingMobileView rooms={filteredRooms} />
+        <RoomBookingMobileView rooms={filteredRooms} isLoading={loading} />
         <Footer />
       </div>
     </div>
@@ -324,17 +325,20 @@ export default function RoomBookingPage() {
           style={{
             minHeight: "100vh",
             backgroundColor: "#FFF8F2",
-            padding: "40px",
-            textAlign: "center",
+            padding: "40px 24px",
             display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontFamily: "inherit",
-            color: "#64748B",
-            fontWeight: "600",
+            flexDirection: "column",
+            gap: "24px",
+            maxWidth: "1320px",
+            margin: "0 auto",
           }}
         >
-          Loading available rooms & stays...
+          <div style={{ width: "300px", height: "40px", borderRadius: "10px", background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite ease-in-out" }} />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "24px" }}>
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} style={{ height: "340px", borderRadius: "20px", background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite ease-in-out" }} />
+            ))}
+          </div>
         </div>
       }
     >

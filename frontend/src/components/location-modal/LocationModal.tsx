@@ -53,29 +53,6 @@ export const LocationModal: React.FC = () => {
     savedAddresses,
   } = useLocation();
 
-  const isStaffOrSeller = Boolean(
-    session?.user?.role && session.user.role !== "USER"
-  );
-
-  const isNonCustomerRoute = Boolean(
-    !pathname ||
-      pathname.startsWith("/seller") ||
-      pathname.startsWith("/seller-onboarding") ||
-      pathname.startsWith("/dashboard/seller") ||
-      pathname.startsWith("/admin") ||
-      pathname.startsWith("/dashboard/admin") ||
-      pathname.startsWith("/superadmin") ||
-      pathname.startsWith("/dashboard/superadmin") ||
-      pathname.startsWith("/dashboard/support") ||
-      pathname.startsWith("/support") ||
-      pathname.startsWith("/dashboard/delivery") ||
-      pathname.startsWith("/delivery") ||
-      pathname.startsWith("/auth") ||
-      pathname.startsWith("/invoice") ||
-      pathname === "/login" ||
-      pathname === "/signup"
-  );
-
   const [pincodeInput, setPincodeInput] = useState("");
   const [selectedAreaInfo, setSelectedAreaInfo] = useState<{
     pincode: string;
@@ -104,7 +81,7 @@ export const LocationModal: React.FC = () => {
   const [longitude, setLongitude] = useState<number | null>(73.8567);
 
   useEffect(() => {
-    if (isLocationModalOpen && !isStaffOrSeller && !isNonCustomerRoute) {
+    if (isLocationModalOpen) {
       const pin =
         defaultAddress?.pincode ||
         (typeof window !== "undefined"
@@ -133,9 +110,9 @@ export const LocationModal: React.FC = () => {
       setFeedback(null);
       setIsApplying(false);
     }
-  }, [isLocationModalOpen, defaultAddress, isStaffOrSeller, isNonCustomerRoute]);
+  }, [isLocationModalOpen, defaultAddress]);
 
-  if (!isLocationModalOpen || isStaffOrSeller || isNonCustomerRoute) return null;
+  if (!isLocationModalOpen) return null;
 
   const showNotification = (type: "success" | "error", message: string) => {
     setFeedback({ type, message });

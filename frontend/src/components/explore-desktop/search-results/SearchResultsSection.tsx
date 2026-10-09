@@ -94,43 +94,48 @@ export const SearchResultsSection: React.FC<SearchResultsSectionProps> = ({
 
   return (
     <div id="search-results-section" className={styles.searchSectionWrapper}>
-      {/* 1. Header Banner */}
-      <div className={styles.headerBanner}>
-        <div className={styles.headerLeft}>
-          <div className={styles.badgeRow}>
-            <span className={styles.searchBadge}>
-              <Search size={13} />
-              <span>Search Results</span>
-            </span>
-            <span className={styles.countBadge}>
-              {totalResults} {totalResults === 1 ? "result" : "results"} found
-            </span>
-          </div>
-          <h2 className={styles.queryTitle}>
-            Results for &ldquo;{currentQuery}&rdquo;
-          </h2>
-          <p className={styles.querySubtitle}>
-            Showing matching cloud kitchens, authentic dishes, and verified rooms.
-          </p>
-        </div>
+      {/* 1. Header Banner (Rendered when results exist) */}
+      {totalResults > 0 && (
+        <div className={styles.headerBanner}>
+          <div className={styles.headerTopBar}>
+            <div className={styles.badgeRow}>
+              <span className={styles.searchBadge}>
+                <Search size={13} />
+                <span>Search Results</span>
+              </span>
+              <span className={styles.countBadge}>
+                {totalResults} {totalResults === 1 ? "result" : "results"} found
+              </span>
+            </div>
 
-        {onClearSearch ? (
-          <button
-            type="button"
-            onClick={onClearSearch}
-            className={styles.clearBtn}
-            aria-label="Clear current search"
-          >
-            <X size={15} />
-            <span>Clear Search</span>
-          </button>
-        ) : (
-          <Link href="/explore-desktop" className={styles.clearBtn}>
-            <X size={15} />
-            <span>Clear Filter</span>
-          </Link>
-        )}
-      </div>
+            {onClearSearch ? (
+              <button
+                type="button"
+                onClick={onClearSearch}
+                className={styles.clearBtn}
+                aria-label="Clear current search"
+              >
+                <X size={15} />
+                <span>Clear Search</span>
+              </button>
+            ) : (
+              <Link href="/explore-desktop" className={styles.clearBtn}>
+                <X size={15} />
+                <span>Clear Filter</span>
+              </Link>
+            )}
+          </div>
+
+          <div className={styles.headerContent}>
+            <h2 className={styles.queryTitle}>
+              Results for &ldquo;{currentQuery}&rdquo;
+            </h2>
+            <p className={styles.querySubtitle}>
+              Showing matching cloud kitchens, authentic dishes, and verified rooms.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* 2. Category Filter Tabs */}
       {totalResults > 0 && (
@@ -182,47 +187,78 @@ export const SearchResultsSection: React.FC<SearchResultsSectionProps> = ({
         </div>
       )}
 
-      {/* 3. Empty State if No Results */}
+      {/* 3. Empty State if No Results (Single Structured Card) */}
       {totalResults === 0 && (
         <div className={styles.emptyStateCard}>
-          <div className={styles.emptyIconCircle}>
-            <Search size={32} color="#FF6B00" />
-          </div>
-          <h3 className={styles.emptyTitle}>No matching results found for &ldquo;{currentQuery}&rdquo;</h3>
-          <p className={styles.emptyDesc}>
-            We couldn&apos;t find any kitchens, dishes, or rooms matching your query. Try checking your spelling or search for something else.
-          </p>
-
-          <div className={styles.popularTagsWrapper}>
-            <span className={styles.popularLabel}>
-              <Sparkles size={14} color="#FF6B00" />
-              <span>Popular Searches:</span>
-            </span>
-            <div className={styles.tagsList}>
-              {POPULAR_SEARCH_TAGS.map((tag) => (
-                <button
-                  key={tag}
-                  type="button"
-                  className={styles.popularTagBtn}
-                  onClick={() => {
-                    if (onTagClick) {
-                      onTagClick(tag);
-                    } else if (typeof window !== "undefined") {
-                      window.location.href = `/explore-desktop?query=${encodeURIComponent(tag)}`;
-                    }
-                  }}
-                >
-                  {tag}
-                </button>
-              ))}
+          <div className={styles.emptyTopBar}>
+            <div className={styles.badgeRow}>
+              <span className={styles.searchBadge}>
+                <Search size={13} />
+                <span>Search Results</span>
+              </span>
+              <span className={styles.countBadge}>0 results found</span>
             </div>
+
+            {onClearSearch ? (
+              <button
+                type="button"
+                onClick={onClearSearch}
+                className={styles.clearBtn}
+                aria-label="Clear current search"
+              >
+                <X size={15} />
+                <span>Clear Search</span>
+              </button>
+            ) : (
+              <Link href="/explore-desktop" className={styles.clearBtn}>
+                <X size={15} />
+                <span>Clear Filter</span>
+              </Link>
+            )}
           </div>
 
-          {onClearSearch && (
-            <button type="button" onClick={onClearSearch} className={styles.resetSearchBtn}>
-              Explore All Items
-            </button>
-          )}
+          <div className={styles.emptyBody}>
+            <div className={styles.emptyIconCircle}>
+              <Search size={30} color="#FF6B00" />
+            </div>
+            <h3 className={styles.emptyTitle}>
+              No matching results found for &ldquo;{currentQuery}&rdquo;
+            </h3>
+            <p className={styles.emptyDesc}>
+              We couldn&apos;t find any kitchens, dishes, or rooms matching your query. Try checking your spelling or pick a popular search below.
+            </p>
+
+            <div className={styles.popularTagsWrapper}>
+              <span className={styles.popularLabel}>
+                <Sparkles size={14} color="#FF6B00" />
+                <span>Popular Searches:</span>
+              </span>
+              <div className={styles.tagsList}>
+                {POPULAR_SEARCH_TAGS.map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    className={styles.popularTagBtn}
+                    onClick={() => {
+                      if (onTagClick) {
+                        onTagClick(tag);
+                      } else if (typeof window !== "undefined") {
+                        window.location.href = `/explore-desktop?query=${encodeURIComponent(tag)}`;
+                      }
+                    }}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {onClearSearch && (
+              <button type="button" onClick={onClearSearch} className={styles.resetSearchBtn}>
+                Explore All Items
+              </button>
+            )}
+          </div>
         </div>
       )}
 

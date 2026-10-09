@@ -5,6 +5,7 @@ import { ApiError } from "@/lib/api-error";
 import jwt from "jsonwebtoken";
 import { validateEmail } from "@/lib/email-validation";
 import { validateKitchenName } from "@/lib/kitchen-validation";
+import { isGracePeriodExpired, anonymizeUserAccount, restoreAccountIfWithinGracePeriod } from "@/lib/account-deletion";
 
 export const registerUser = async (req: Request) => {
     const contentType = req.headers.get('content-type') || "";
@@ -398,6 +399,21 @@ export const loginUser = async (req: Request) => {
             throw new ApiError("No registered user account found with this phone number.", 404);
         }
 
+        if (user.isPermanentlyDeleted) {
+            throw new ApiError("This account has been permanently deleted and cannot be accessed.", 403);
+        }
+
+        if (user.deletedAt) {
+            if (isGracePeriodExpired(user.deletedAt)) {
+                await anonymizeUserAccount(user.id);
+                throw new ApiError("Your account deletion grace period has expired and the account has been permanently deleted.", 403);
+            } else {
+                await restoreAccountIfWithinGracePeriod(user);
+            }
+        } else if (user.isActive === false) {
+            throw new ApiError("Your account is inactive. Please contact the administrator.", 403);
+        }
+
         const secret = process.env.NEXTAUTH_SECRET || "fallback_secret_for_development_only";
         const token = jwt.sign(
             {
@@ -459,7 +475,18 @@ export const loginUser = async (req: Request) => {
         throw new ApiError("Invalid email or password. Please check your credentials and try again.", 401);
     }
 
-    if (user.isActive === false) {
+    if (user.isPermanentlyDeleted) {
+        throw new ApiError("This account has been permanently deleted and cannot be accessed.", 403);
+    }
+
+    if (user.deletedAt) {
+        if (isGracePeriodExpired(user.deletedAt)) {
+            await anonymizeUserAccount(user.id);
+            throw new ApiError("Your account deletion grace period has expired and the account has been permanently deleted.", 403);
+        } else {
+            await restoreAccountIfWithinGracePeriod(user);
+        }
+    } else if (user.isActive === false) {
         throw new ApiError("Your account is inactive. Please contact the administrator.", 403);
     }
 

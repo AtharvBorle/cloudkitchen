@@ -789,11 +789,6 @@ export default function SellerPaymentCanvasDas() {
                     </>
                   )}
                 </button>
-
-                <div className={styles.secureNote}>
-                  <ShieldCheck size={14} color="#16A34A" />
-                  <span>256-Bit SSL Encrypted Razorpay Gateway</span>
-                </div>
               </div>
             </div>
           )}

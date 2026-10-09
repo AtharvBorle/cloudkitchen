@@ -12,17 +12,33 @@ export interface SellerOffersCanvasDasProps {
   topbarTitle?: string;
   searchPlaceholder?: string;
   activeSidebarId?: string;
+  searchQuery?: string;
+  onSearch?: (query: string) => void;
 }
 
 export default function SellerOffersCanvasDas({
   topbarTitle = "Offers & Coupons",
   searchPlaceholder = "Search coupons, offers, discounts...",
   activeSidebarId = "offers",
+  searchQuery: searchQueryProp,
+  onSearch,
 }: SellerOffersCanvasDasProps) {
   const seller = useSellerProfile();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<{ sellerId: string; products: any[] } | null>(null);
+  const [searchQuery, setSearchQuery] = useState(searchQueryProp || "");
+
+  useEffect(() => {
+    if (searchQueryProp !== undefined) {
+      setSearchQuery(searchQueryProp);
+    }
+  }, [searchQueryProp]);
+
+  const handleSearch = (q: string) => {
+    setSearchQuery(q);
+    if (onSearch) onSearch(q);
+  };
 
   useEffect(() => {
     async function loadOffers() {
@@ -100,6 +116,8 @@ export default function SellerOffersCanvasDas({
         <Topbar
           title={topbarTitle}
           searchPlaceholder={searchPlaceholder}
+          searchQuery={searchQuery}
+          onSearch={handleSearch}
           onMenuClick={() => setIsMobileOpen(true)}
           ownerName={seller.ownerName}
           partnerRole={seller.partnerRole}
@@ -122,7 +140,12 @@ export default function SellerOffersCanvasDas({
               Loading offers & coupons...
             </div>
           ) : data ? (
-            <SellerOffersClient sellerId={data.sellerId} products={data.products} />
+            <SellerOffersClient
+              sellerId={data.sellerId}
+              products={data.products}
+              searchQuery={searchQuery}
+              onSearchChange={handleSearch}
+            />
           ) : (
             <div style={{ padding: "40px", textAlign: "center", color: "#EF4444" }}>
               Failed to load offers.

@@ -27,10 +27,9 @@ import {
 } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import SellerNotificationChannels from "../notification-channels/SellerNotificationChannels";
-import { useRoomModule } from "@/context/RoomModuleContext";
 import {
   PasswordManagementCard,
-  ActiveLoginSessionsCard,
+  SellerDeleteAccountCard,
 } from "../security-settings/SellerSecuritySettings";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import { validateEmail } from "@/lib/email-validation";
@@ -230,7 +229,6 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
   onSave,
   onSyncDevices,
 }) => {
-  const { isRoomEnabled } = useRoomModule();
   const router = useRouter();
   const searchParams = useSearchParams();
   const seller = useSellerProfile();
@@ -2164,7 +2162,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
               <div className={styles.card}>
                 <div className={styles.cardHeaderRow}>
                   <Package size={17} className={styles.cardHeaderIcon} />
-                  <h2 className={styles.cardTitle}>{isRoomEnabled ? "Order & Booking Alerts" : "Order Alerts"}</h2>
+                  <h2 className={styles.cardTitle}>Order &amp; Booking Alerts</h2>
                 </div>
 
                 <div className={styles.hoursRow}>
@@ -2201,24 +2199,22 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                   </div>
                 </div>
 
-                {isRoomEnabled && (
-                  <div className={styles.hoursRow}>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                      <span className={styles.label}>Room Bookings</span>
-                      <span style={{ fontSize: "12px", color: "#64748B" }}>Alert when a customer books a space or room.</span>
-                    </div>
-                    <div className={styles.switchWrapper}>
-                      <label className={styles.toggleSwitch}>
-                        <input
-                          type="checkbox"
-                          checked={formData.bookingRequestAlert}
-                          onChange={(e) => handleInputChange("bookingRequestAlert", e.target.checked)}
-                        />
-                        <span className={styles.toggleSlider} />
-                      </label>
-                    </div>
+                <div className={styles.hoursRow}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                    <span className={styles.label}>Room Bookings</span>
+                    <span style={{ fontSize: "12px", color: "#64748B" }}>Alert when a customer books a space or room.</span>
                   </div>
-                )}
+                  <div className={styles.switchWrapper}>
+                    <label className={styles.toggleSwitch}>
+                      <input
+                        type="checkbox"
+                        checked={formData.bookingRequestAlert}
+                        onChange={(e) => handleInputChange("bookingRequestAlert", e.target.checked)}
+                      />
+                      <span className={styles.toggleSlider} />
+                    </label>
+                  </div>
+                </div>
 
                 <div className={styles.hoursRow}>
                   <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
@@ -2238,7 +2234,49 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                 </div>
               </div>
 
-              {/* 3. Reviews & Reports */}
+              {/* 3. Marketing & Growth Alerts */}
+              <div className={styles.card}>
+                <div className={styles.cardHeaderRow}>
+                  <Clock size={17} className={styles.cardHeaderIcon} />
+                  <h2 className={styles.cardTitle}>Marketing &amp; Growth Alerts</h2>
+                </div>
+
+                <div className={styles.hoursRow}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                    <span className={styles.label}>Weekly Growth Performance</span>
+                    <span style={{ fontSize: "12px", color: "#64748B" }}>Weekly analytics on revenue, popular dishes &amp; ratings.</span>
+                  </div>
+                  <div className={styles.switchWrapper}>
+                    <label className={styles.toggleSwitch}>
+                      <input
+                        type="checkbox"
+                        checked={formData.weeklyGrowthPerformance}
+                        onChange={(e) => handleInputChange("weeklyGrowthPerformance", e.target.checked)}
+                      />
+                      <span className={styles.toggleSlider} />
+                    </label>
+                  </div>
+                </div>
+
+                <div className={styles.hoursRow}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                    <span className={styles.label}>Promotions &amp; Product Updates</span>
+                    <span style={{ fontSize: "12px", color: "#64748B" }}>Campaign insights, promotional tools and feature updates.</span>
+                  </div>
+                  <div className={styles.switchWrapper}>
+                    <label className={styles.toggleSwitch}>
+                      <input
+                        type="checkbox"
+                        checked={formData.promotionsProductBeta}
+                        onChange={(e) => handleInputChange("promotionsProductBeta", e.target.checked)}
+                      />
+                      <span className={styles.toggleSlider} />
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* 4. Reviews & Reports */}
               <div className={styles.card}>
                 <div className={styles.cardHeaderRow}>
                   <Star size={17} className={styles.cardHeaderIcon} />
@@ -2286,6 +2324,8 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
             <>
               {/* 1. Password Management Card (Matching Reference Image) */}
               <PasswordManagementCard />
+              {/* 2. Danger Zone: Delete Kitchen Account */}
+              <SellerDeleteAccountCard />
 
               {/* 2. Security & Access Card (Disabled via comment - uncomment to re-enable) */}
               {/*
@@ -2348,8 +2388,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
               </div>
               */}
 
-              {/* 3. Active Login Sessions Card (Matching Reference Image) */}
-              <ActiveLoginSessionsCard />
+
 
               {/* 4. Login & Recovery Controls Card (Disabled via comment - uncomment to re-enable) */}
               {/*

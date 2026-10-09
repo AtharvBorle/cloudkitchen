@@ -11,6 +11,8 @@ import {
   Heart,
   Menu,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Bell,
   Globe,
   Check,
@@ -315,6 +317,29 @@ export const ExploreMobileView: React.FC = () => {
     }));
   }, [homeData.foodItems]);
 
+  const topScrollRef = React.useRef<HTMLDivElement>(null);
+  const bottomScrollRef = React.useRef<HTMLDivElement>(null);
+
+  const handleMindScrollNext = () => {
+    // Top line scrolls right, bottom line scrolls left
+    if (topScrollRef.current) {
+      topScrollRef.current.scrollBy({ left: 180, behavior: "smooth" });
+    }
+    if (bottomScrollRef.current) {
+      bottomScrollRef.current.scrollBy({ left: -180, behavior: "smooth" });
+    }
+  };
+
+  const handleMindScrollPrev = () => {
+    // Top line scrolls left, bottom line scrolls right
+    if (topScrollRef.current) {
+      topScrollRef.current.scrollBy({ left: -180, behavior: "smooth" });
+    }
+    if (bottomScrollRef.current) {
+      bottomScrollRef.current.scrollBy({ left: 180, behavior: "smooth" });
+    }
+  };
+
   const mealMoments = React.useMemo(() => {
     const cardClasses = [
       styles.cardBreakfast,
@@ -323,6 +348,8 @@ export const ExploreMobileView: React.FC = () => {
       styles.cardSnacks,
       styles.cardLateNight,
       styles.cardDrinks,
+      styles.cardDesserts,
+      styles.cardHealthy,
     ];
     const seen = new Set<string>();
     const foodCategories: typeof homeData.categories = [];
@@ -334,15 +361,34 @@ export const ExploreMobileView: React.FC = () => {
         foodCategories.push(c);
       }
     }
-    return foodCategories.map((c, idx) => ({
-      id: c.id,
-      tag: "Category",
-      name: c.name,
-      icon: c.image || "/images/categories/cat-food.png",
-      cardClass: cardClasses[idx % cardClasses.length],
-      isDark: idx % 2 === 1,
-    }));
+    return foodCategories.map((c, idx) => {
+      const cardClass = cardClasses[idx % cardClasses.length];
+      const isDark = cardClass === styles.cardLateNight;
+      return {
+        id: c.id,
+        tag: "Category",
+        name: c.name,
+        icon: c.image || "/images/categories/cat-food.png",
+        cardClass,
+        isDark,
+      };
+    });
   }, [homeData.categories]);
+
+  // Divide food items perfectly in two
+  const half = Math.ceil(mealMoments.length / 2);
+  const row1Moments = React.useMemo(() => mealMoments.slice(0, half), [mealMoments, half]);
+  const row2Moments = React.useMemo(() => mealMoments.slice(half), [mealMoments, half]);
+
+  // Initial scroll setup: Top row starts at left, Bottom row starts at right
+  useEffect(() => {
+    if (bottomScrollRef.current) {
+      const el = bottomScrollRef.current;
+      requestAnimationFrame(() => {
+        el.scrollLeft = el.scrollWidth - el.clientWidth;
+      });
+    }
+  }, [row2Moments]);
 
   const toggleFavorite = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -735,61 +781,152 @@ export const ExploreMobileView: React.FC = () => {
         </section>
       )}
 
-      {/* 5. What's on Your Mind? */}
+      {/* 5. What's on Your Mind? (Horizontal Scrollable Carousel) */}
       {mealMoments.length > 0 && (
-        <section className={styles.mindSection}>
-          <div className={styles.mindHeaderCol}>
-            <h2 className={styles.mindTitle}>What’s on Your Mind?</h2>
-            <p className={styles.mindSubtitle}>
-              Pick a category to explore delicious options.
-            </p>
+        <section className={styles.mindSection} aria-label="What's on Your Mind?">
+          <div className={styles.mindHeaderRow}>
+            <div className={styles.mindHeaderCol}>
+              <h2 className={styles.mindTitle}>What’s on Your Mind?</h2>
+              <p className={styles.mindSubtitle}>
+                Pick a category to explore delicious options.
+              </p>
+            </div>
+
+            {/* Scroll Navigation Arrows */}
+            <div className={styles.mindScrollControls}>
+              <button
+                type="button"
+                className={styles.mindArrowBtn}
+                onClick={handleMindScrollPrev}
+                aria-label="Scroll categories back"
+              >
+                <ChevronLeft size={16} strokeWidth={2.5} />
+              </button>
+              <button
+                type="button"
+                className={`${styles.mindArrowBtn} ${styles.mindPulseNextBtn}`}
+                onClick={handleMindScrollNext}
+                aria-label="Scroll categories forward"
+              >
+                <ChevronRight size={16} strokeWidth={2.5} />
+              </button>
+            </div>
           </div>
 
-          <div className={styles.mindGrid}>
-            {mealMoments.map((moment) => {
-              const isSelected = categoryFilter.toLowerCase().trim() === moment.name.toLowerCase().trim();
-              return (
-                <div
-                  key={moment.id}
-                  className={`${styles.momentCard} ${moment.cardClass}`}
-                  onClick={() => {
-                    if (isSelected) {
-                      router.push("/explore-desktop");
-                    } else {
-                      router.push(`/explore-desktop?category=${encodeURIComponent(moment.name.toLowerCase())}`);
-                      window.scrollTo({ top: 0, behavior: "smooth" });
-                    }
-                  }}
-                  style={{
-                    cursor: "pointer",
-                    border: isSelected ? "2.5px solid #FF6B00" : undefined,
-                    transform: isSelected ? "scale(1.03)" : undefined,
-                  }}
-                >
-                  <span
-                    className={`${styles.momentTag} ${moment.isDark ? styles.momentTagDark : ""}`}
-                    style={isSelected ? { backgroundColor: "#FF6B00", color: "#FFFFFF" } : undefined}
+          <div className={styles.mindTwoLinesWrapper}>
+            {/* 1. Above Line: Scrollable towards Right */}
+            <div
+              ref={topScrollRef}
+              className={styles.mindCardsTrack}
+              role="region"
+              aria-label="Categories top line"
+            >
+              {row1Moments.map((moment) => {
+                const isSelected = categoryFilter.toLowerCase().trim() === moment.name.toLowerCase().trim();
+                return (
+                  <article
+                    key={moment.id}
+                    className={`${styles.momentCard} ${moment.cardClass} ${isSelected ? styles.momentCardSelected : ""}`}
+                    onClick={() => {
+                      if (isSelected) {
+                        router.push("/explore-desktop");
+                      } else {
+                        router.push(`/explore-desktop?category=${encodeURIComponent(moment.name.toLowerCase())}`);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }
+                    }}
+                    tabIndex={0}
+                    role="button"
+                    aria-pressed={isSelected}
+                    aria-label={`${moment.name} - ${moment.tag}`}
                   >
-                    {isSelected ? "Selected" : moment.tag}
-                  </span>
+                    <div className={styles.momentTopRow}>
+                      <span
+                        className={`${styles.momentTag} ${moment.isDark ? styles.momentTagDark : ""} ${isSelected ? styles.momentTagSelected : ""}`}
+                      >
+                        {isSelected ? "Selected" : moment.tag}
+                      </span>
+                    </div>
 
-                  <div className={styles.momentBottomRow}>
-                    <Image
-                      src={moment.icon}
-                      alt={moment.name}
-                      width={32}
-                      height={32}
-                      className={styles.momentIconImg}
-                    />
-                    <span
-                      className={`${styles.momentName} ${moment.isDark ? styles.momentNameLight : ""}`}
-                    >
-                      {moment.name}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
+                    <div className={styles.momentBottomRow}>
+                      <div className={styles.momentIconWrapper}>
+                        <Image
+                          src={moment.icon}
+                          alt={moment.name}
+                          width={32}
+                          height={32}
+                          className={styles.momentIconImg}
+                          unoptimized
+                        />
+                      </div>
+                      <span
+                        className={`${styles.momentName} ${moment.isDark ? styles.momentNameLight : ""}`}
+                        title={moment.name}
+                      >
+                        {moment.name}
+                      </span>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+
+            {/* 2. Below Line: Scrollable towards Left */}
+            <div
+              ref={bottomScrollRef}
+              className={styles.mindCardsTrack}
+              role="region"
+              aria-label="Categories bottom line"
+            >
+              {row2Moments.map((moment) => {
+                const isSelected = categoryFilter.toLowerCase().trim() === moment.name.toLowerCase().trim();
+                return (
+                  <article
+                    key={moment.id}
+                    className={`${styles.momentCard} ${moment.cardClass} ${isSelected ? styles.momentCardSelected : ""}`}
+                    onClick={() => {
+                      if (isSelected) {
+                        router.push("/explore-desktop");
+                      } else {
+                        router.push(`/explore-desktop?category=${encodeURIComponent(moment.name.toLowerCase())}`);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }
+                    }}
+                    tabIndex={0}
+                    role="button"
+                    aria-pressed={isSelected}
+                    aria-label={`${moment.name} - ${moment.tag}`}
+                  >
+                    <div className={styles.momentTopRow}>
+                      <span
+                        className={`${styles.momentTag} ${moment.isDark ? styles.momentTagDark : ""} ${isSelected ? styles.momentTagSelected : ""}`}
+                      >
+                        {isSelected ? "Selected" : moment.tag}
+                      </span>
+                    </div>
+
+                    <div className={styles.momentBottomRow}>
+                      <div className={styles.momentIconWrapper}>
+                        <Image
+                          src={moment.icon}
+                          alt={moment.name}
+                          width={32}
+                          height={32}
+                          className={styles.momentIconImg}
+                          unoptimized
+                        />
+                      </div>
+                      <span
+                        className={`${styles.momentName} ${moment.isDark ? styles.momentNameLight : ""}`}
+                        title={moment.name}
+                      >
+                        {moment.name}
+                      </span>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
           </div>
         </section>
       )}

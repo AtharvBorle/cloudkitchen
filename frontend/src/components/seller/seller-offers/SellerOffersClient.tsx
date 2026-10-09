@@ -1,24 +1,42 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { Plus, Tag, Percent, ArrowUpRight, TrendingUp, AlertCircle, Edit2, Trash2, CheckCircle2 } from "lucide-react";
+import { Plus, Tag, Percent, ArrowUpRight, TrendingUp, AlertCircle, Edit2, Trash2, CheckCircle2, Search, X } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
-import PaginationControls from "../common/PaginationControls";
 
 interface SellerOffersClientProps {
     sellerId: string;
     products: any[];
+    searchQuery?: string;
+    onSearchChange?: (query: string) => void;
 }
 
-export default function SellerOffersClient({ sellerId, products }: SellerOffersClientProps) {
+export default function SellerOffersClient({
+    sellerId,
+    products,
+    searchQuery: searchQueryProp = "",
+    onSearchChange,
+}: SellerOffersClientProps) {
     const [offers, setOffers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [filterStatus, setFilterStatus] = useState<"ALL" | "ACTIVE" | "EXPIRED" | "DRAFT">("ALL");
     const [couponToDelete, setCouponToDelete] = useState<{ id: string; code: string } | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
-    const [currentPage, setCurrentPage] = useState<number>(1);
-    const [pageSize, setPageSize] = useState<number | "All">(10);
+
+    const [localSearchQuery, setLocalSearchQuery] = useState(searchQueryProp || "");
+    const searchQuery = searchQueryProp !== undefined ? searchQueryProp : localSearchQuery;
+
+    useEffect(() => {
+        if (searchQueryProp !== undefined) {
+            setLocalSearchQuery(searchQueryProp);
+        }
+    }, [searchQueryProp]);
+
+    const handleSearchChange = (q: string) => {
+        setLocalSearchQuery(q);
+        if (onSearchChange) onSearchChange(q);
+    };
 
     const loadOffers = async () => {
         try {
@@ -79,31 +97,71 @@ export default function SellerOffersClient({ sellerId, products }: SellerOffersC
 
     const isOfferDraft = (o: any) => o.approvalStatus === "DRAFT" || o.status === "Draft" || o.status === "DRAFT";
 
-    const filteredOffers = offers.filter(o => {
-        const isExpired = o.endDate && new Date(o.endDate) < new Date();
-        const isDraft = isOfferDraft(o);
-        if (filterStatus === "ACTIVE") return o.isActive && !isDraft && !isExpired;
-        if (filterStatus === "EXPIRED") return (!o.isActive && !isDraft) || isExpired;
-        if (filterStatus === "DRAFT") return isDraft;
-        return true;
-    });
+    const filteredOffers = useMemo(() => {
+        return offers.filter(o => {
+            const isExpired = o.endDate && new Date(o.endDate) < new Date();
+            const isDraft = isOfferDraft(o);
+            if (filterStatus === "ACTIVE" && (!o.isActive || isDraft || isExpired)) return false;
+            if (filterStatus === "EXPIRED" && !((!o.isActive && !isDraft) || isExpired)) return false;
+            if (filterStatus === "DRAFT" && !isDraft) return false;
+
+            if (!searchQuery.trim()) return true;
+
+            const q = searchQuery.toLowerCase().trim();
+            const tokens = q.split(/\s+/).filter(Boolean);
+
+            const code = (o.code || "").toLowerCase();
+            const name = (o.name || o.title || "").toLowerCase();
+            const desc = (o.description || o.internalDescription || "").toLowerCase();
+            const discountType = (o.discountType || "").toLowerCase();
+            const discountVal = String(o.discountPercentage ?? o.discountAmount ?? o.discountValue ?? "").toLowerCase();
+            const discountLabel = (o.discountType === "PERCENTAGE" || o.discountPercentage
+                ? `${o.discountPercentage || o.discountValue}% off`
+                : `₹${o.discountAmount || o.discountValue} off`).toLowerCase();
+            const category = (o.category || "").toLowerCase();
+            const appliesTo = (o.appliesTo || "").toLowerCase();
+            const statusStr = isDraft ? "draft" : (o.isActive && !isExpired ? "live active" : "paused expired inactive");
+            const minOrder = String(o.minOrderAmount ?? o.minimumCartValue ?? "").toLowerCase();
+
+            // Direct check
+            if (
+                code.includes(q) ||
+                name.includes(q) ||
+                desc.includes(q) ||
+                discountType.includes(q) ||
+                discountVal.includes(q) ||
+                discountLabel.includes(q) ||
+                category.includes(q) ||
+                appliesTo.includes(q) ||
+                statusStr.includes(q) ||
+                minOrder.includes(q)
+            ) {
+                return true;
+            }
+
+            // Multi-token match
+            if (tokens.length > 1) {
+                return tokens.every(token =>
+                    code.includes(token) ||
+                    name.includes(token) ||
+                    desc.includes(token) ||
+                    discountType.includes(token) ||
+                    discountVal.includes(token) ||
+                    discountLabel.includes(token) ||
+                    category.includes(token) ||
+                    appliesTo.includes(token) ||
+                    statusStr.includes(token) ||
+                    minOrder.includes(token)
+                );
+            }
+
+            return false;
+        });
+    }, [offers, filterStatus, searchQuery]);
 
     const activeCount = offers.filter(o => o.isActive && !isOfferDraft(o) && (!o.endDate || new Date(o.endDate) >= new Date())).length;
     const draftCount = offers.filter(o => isOfferDraft(o)).length;
     const totalUsage = offers.reduce((sum, o) => sum + (o.currentUsage || o.usedCount || 0), 0);
-
-    // Reset to page 1 whenever filter changes
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [filterStatus]);
-
-    // Slice paginated offers
-    const paginatedOffers = React.useMemo(() => {
-        if (pageSize === "All") return filteredOffers;
-        const numSize = Number(pageSize) || 10;
-        const startIndex = (currentPage - 1) * numSize;
-        return filteredOffers.slice(startIndex, startIndex + numSize);
-    }, [filteredOffers, currentPage, pageSize]);
 
     return (
         <div style={{ width: "100%", fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}>
@@ -234,25 +292,76 @@ export default function SellerOffersClient({ sellerId, products }: SellerOffersC
                     </button>
                 </div>
 
-                <Link
-                    href="/seller/offers/create"
-                    style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "6px",
-                        backgroundColor: "#FF5500",
-                        color: "#FFFFFF",
-                        padding: "9px 16px",
-                        borderRadius: "8px",
-                        fontSize: "13px",
-                        fontWeight: 700,
-                        textDecoration: "none",
-                        boxShadow: "0 2px 8px rgba(255, 85, 0, 0.25)",
-                    }}
-                >
-                    <Plus size={16} />
-                    <span>Create New Offer</span>
-                </Link>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                    {/* In-page Search Bar */}
+                    <div
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            backgroundColor: "#F8FAFC",
+                            border: "1px solid #CBD5E1",
+                            borderRadius: "8px",
+                            padding: "6px 12px",
+                            width: "280px",
+                            maxWidth: "100%",
+                            gap: "8px",
+                        }}
+                    >
+                        <Search size={16} color="#64748B" />
+                        <input
+                            type="text"
+                            placeholder="Search offer name, code, discount..."
+                            value={searchQuery}
+                            onChange={(e) => handleSearchChange(e.target.value)}
+                            style={{
+                                border: "none",
+                                backgroundColor: "transparent",
+                                outline: "none",
+                                fontSize: "13px",
+                                color: "#1E293B",
+                                width: "100%",
+                            }}
+                        />
+                        {searchQuery && (
+                            <button
+                                type="button"
+                                onClick={() => handleSearchChange("")}
+                                style={{
+                                    background: "none",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    padding: 0,
+                                    color: "#94A3B8",
+                                    display: "flex",
+                                    alignItems: "center",
+                                }}
+                                title="Clear search"
+                            >
+                                <X size={14} />
+                            </button>
+                        )}
+                    </div>
+
+                    <Link
+                        href="/seller/offers/create"
+                        style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            backgroundColor: "#FF5500",
+                            color: "#FFFFFF",
+                            padding: "9px 16px",
+                            borderRadius: "8px",
+                            fontSize: "13px",
+                            fontWeight: 700,
+                            textDecoration: "none",
+                            boxShadow: "0 2px 8px rgba(255, 85, 0, 0.25)",
+                        }}
+                    >
+                        <Plus size={16} />
+                        <span>Create New Offer</span>
+                    </Link>
+                </div>
             </div>
 
             {/* Offers Table / Cards */}
@@ -268,29 +377,63 @@ export default function SellerOffersClient({ sellerId, products }: SellerOffersC
                         textAlign: "center",
                     }}
                 >
-                    <div style={{ width: "48px", height: "48px", borderRadius: "12px", backgroundColor: "#FFF1E8", color: "#FF5500", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
-                        <Tag size={24} />
-                    </div>
-                    <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#0F172A", margin: "0 0 6px" }}>No offers found</h3>
-                    <p style={{ fontSize: "13px", color: "#64748B", margin: "0 0 16px" }}>Create dynamic promo codes and item discounts to attract more orders.</p>
-                    <Link
-                        href="/seller/offers/create"
-                        style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "6px",
-                            backgroundColor: "#FF5500",
-                            color: "#FFFFFF",
-                            padding: "9px 16px",
-                            borderRadius: "8px",
-                            fontSize: "13px",
-                            fontWeight: 700,
-                            textDecoration: "none",
-                        }}
-                    >
-                        <Plus size={16} />
-                        <span>Create Offer</span>
-                    </Link>
+                    {searchQuery.trim() ? (
+                        <>
+                            <div style={{ width: "48px", height: "48px", borderRadius: "12px", backgroundColor: "#F1F5F9", color: "#64748B", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+                                <Search size={24} />
+                            </div>
+                            <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#0F172A", margin: "0 0 6px" }}>No offers or coupons found</h3>
+                            <p style={{ fontSize: "13px", color: "#64748B", margin: "0 0 16px" }}>
+                                No results match &quot;{searchQuery}&quot;. Try searching with a different name, coupon code, or discount percentage.
+                            </p>
+                            <button
+                                type="button"
+                                onClick={() => handleSearchChange("")}
+                                style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "6px",
+                                    backgroundColor: "#F1F5F9",
+                                    color: "#334155",
+                                    border: "1px solid #CBD5E1",
+                                    padding: "8px 16px",
+                                    borderRadius: "8px",
+                                    fontSize: "13px",
+                                    fontWeight: 600,
+                                    cursor: "pointer",
+                                }}
+                            >
+                                <X size={14} />
+                                <span>Clear Search</span>
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <div style={{ width: "48px", height: "48px", borderRadius: "12px", backgroundColor: "#FFF1E8", color: "#FF5500", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+                                <Tag size={24} />
+                            </div>
+                            <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#0F172A", margin: "0 0 6px" }}>No offers found</h3>
+                            <p style={{ fontSize: "13px", color: "#64748B", margin: "0 0 16px" }}>Create dynamic promo codes and item discounts to attract more orders.</p>
+                            <Link
+                                href="/seller/offers/create"
+                                style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "6px",
+                                    backgroundColor: "#FF5500",
+                                    color: "#FFFFFF",
+                                    padding: "9px 16px",
+                                    borderRadius: "8px",
+                                    fontSize: "13px",
+                                    fontWeight: 700,
+                                    textDecoration: "none",
+                                }}
+                            >
+                                <Plus size={16} />
+                                <span>Create Offer</span>
+                            </Link>
+                        </>
+                    )}
                 </div>
             ) : (
                 <div style={{ backgroundColor: "#FFFFFF", borderRadius: "14px", border: "1px solid #E2E8F0", overflow: "hidden" }}>
@@ -308,7 +451,7 @@ export default function SellerOffersClient({ sellerId, products }: SellerOffersC
                                 </tr>
                             </thead>
                             <tbody>
-                                {paginatedOffers.map(offer => {
+                                {filteredOffers.map(offer => {
                                     const isExpired = offer.endDate && new Date(offer.endDate) < new Date();
                                     const discountLabel = offer.discountType === "PERCENTAGE" || offer.discountPercentage
                                         ? `${offer.discountPercentage || offer.discountValue}% OFF`
@@ -345,6 +488,23 @@ export default function SellerOffersClient({ sellerId, products }: SellerOffersC
                                                         </span>
                                                     )}
                                                 </div>
+                                                {(offer.name || offer.title || offer.description || offer.internalDescription) && (
+                                                    <div 
+                                                        style={{ 
+                                                            fontSize: "11.5px", 
+                                                            color: "#64748B", 
+                                                            fontWeight: 400, 
+                                                            marginTop: "4px", 
+                                                            maxWidth: "240px", 
+                                                            overflow: "hidden", 
+                                                            textOverflow: "ellipsis", 
+                                                            whiteSpace: "nowrap" 
+                                                        }} 
+                                                        title={offer.name || offer.title || offer.description || offer.internalDescription}
+                                                    >
+                                                        {offer.name || offer.title || offer.description || offer.internalDescription}
+                                                    </div>
+                                                )}
                                             </td>
                                             <td style={{ padding: "14px 16px", fontWeight: 600, color: "#16A34A" }}>
                                                 {discountLabel}
@@ -420,21 +580,6 @@ export default function SellerOffersClient({ sellerId, products }: SellerOffersC
                             </tbody>
                         </table>
                     </div>
-
-                    {/* Pagination Controls */}
-                    {filteredOffers.length > 0 && (
-                        <div style={{ padding: "16px 20px", borderTop: "1px solid #E2E8F0" }}>
-                            <PaginationControls
-                                currentPage={currentPage}
-                                totalItems={filteredOffers.length}
-                                pageSize={pageSize}
-                                onPageChange={setCurrentPage}
-                                onPageSizeChange={setPageSize}
-                                itemName="offers"
-                                pageSizeOptions={[10, 20, 25, 50, "All"]}
-                            />
-                        </div>
-                    )}
                 </div>
             )}
 

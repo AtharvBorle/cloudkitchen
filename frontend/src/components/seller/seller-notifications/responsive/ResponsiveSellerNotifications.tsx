@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -18,6 +18,7 @@ import {
   Settings,
   AlertCircle,
   Inbox,
+  Search,
 } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import {
@@ -53,11 +54,15 @@ import { formatNotificationTime } from "../notificationData";
 export interface ResponsiveSellerNotificationsProps {
   ownerName?: string;
   onSyncDevices?: () => void;
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
 }
 
 export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificationsProps> = ({
   ownerName,
   onSyncDevices,
+  searchQuery: searchQueryProp,
+  onSearchChange,
 }) => {
   const seller = useSellerProfile();
   const effectiveOwnerName =
@@ -76,12 +81,44 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
     deleteNotification,
     markAllAsRead,
     clearAllNotifications,
+    syncNotifications,
   } = useSellerNotifications();
   const [activeTab, setActiveTab] = useState<TabFilter>("all");
+  const [searchQuery, setSearchQuery] = useState(searchQueryProp || "");
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showBanner, setShowBanner] = useState(true);
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = (params.get("tab") || params.get("filter") || "").toLowerCase();
+      if (
+        tabParam === "unread" ||
+        tabParam === "orders" ||
+        tabParam === "stock" ||
+        tabParam === "delivery" ||
+        tabParam === "timings" ||
+        tabParam === "bookings" ||
+        tabParam === "reviews" ||
+        tabParam === "settlements"
+      ) {
+        setActiveTab(tabParam as TabFilter);
+      }
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (searchQueryProp !== undefined) {
+      setSearchQuery(searchQueryProp);
+    }
+  }, [searchQueryProp]);
+
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
+    if (onSearchChange) onSearchChange(query);
+  };
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -108,16 +145,62 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
 
   const toggleExpand = (id: string) => {
     setExpandedId((prev) => (prev === id ? null : id));
-    // Auto mark read on expansion
-    markAsRead(id);
+    // Auto mark read on expansion only if not viewing unread tab
+    if (activeTab !== "unread") {
+      markAsRead(id);
+    }
   };
 
   // Filtered list
-  const filteredNotifications = notifications.filter((item) => {
-    if (activeTab === "all") return true;
-    if (activeTab === "unread") return !item.isRead;
-    return item.category === activeTab;
-  });
+  const filteredNotifications = useMemo(() => {
+    return notifications.filter((item) => {
+      if (activeTab === "unread" && item.isRead) return false;
+      if (activeTab !== "all" && activeTab !== "unread" && item.category !== activeTab) return false;
+
+      if (!searchQuery.trim()) return true;
+
+      const q = searchQuery.toLowerCase().trim();
+      const tokens = q.split(/\s+/).filter(Boolean);
+
+      const title = (item.title || "").toLowerCase();
+      const message = (item.message || "").toLowerCase();
+      const details = (item.details || "").toLowerCase();
+      const category = (item.category || "").toLowerCase();
+      const severity = (item.severity || "").toLowerCase();
+      const actionLabel = (item.actionLabel || "").toLowerCase();
+      const timeAgo = (item.timeAgo || "").toLowerCase();
+      const readStatus = item.isRead ? "read" : "unread";
+
+      if (
+        title.includes(q) ||
+        message.includes(q) ||
+        details.includes(q) ||
+        category.includes(q) ||
+        severity.includes(q) ||
+        actionLabel.includes(q) ||
+        timeAgo.includes(q) ||
+        readStatus.includes(q)
+      ) {
+        return true;
+      }
+
+      if (tokens.length > 1) {
+        return tokens.every(
+          (token) =>
+            title.includes(token) ||
+            message.includes(token) ||
+            details.includes(token) ||
+            category.includes(token) ||
+            severity.includes(token) ||
+            actionLabel.includes(token) ||
+            timeAgo.includes(token) ||
+            readStatus.includes(token)
+        );
+      }
+
+      return false;
+    });
+  }, [notifications, activeTab, searchQuery]);
 
   const getCategoryIcon = (category: NotificationCategory) => {
     switch (category) {
@@ -177,10 +260,53 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
   };
 
   const getCountForTab = (tabId: TabFilter) => {
+    const list = searchQuery.trim()
+      ? notifications.filter((item) => {
+          const q = searchQuery.toLowerCase().trim();
+          const tokens = q.split(/\s+/).filter(Boolean);
+          const title = (item.title || "").toLowerCase();
+          const message = (item.message || "").toLowerCase();
+          const details = (item.details || "").toLowerCase();
+          const category = (item.category || "").toLowerCase();
+          const severity = (item.severity || "").toLowerCase();
+          const actionLabel = (item.actionLabel || "").toLowerCase();
+          const timeAgo = (item.timeAgo || "").toLowerCase();
+          const readStatus = item.isRead ? "read" : "unread";
 
-    if (tabId === "all") return notifications.length;
-    if (tabId === "unread") return unreadCount;
-    return notifications.filter((n) => n.category === tabId).length;
+          if (
+            title.includes(q) ||
+            message.includes(q) ||
+            details.includes(q) ||
+            category.includes(q) ||
+            severity.includes(q) ||
+            actionLabel.includes(q) ||
+            timeAgo.includes(q) ||
+            readStatus.includes(q)
+          ) {
+            return true;
+          }
+
+          if (tokens.length > 1) {
+            return tokens.every(
+              (token) =>
+                title.includes(token) ||
+                message.includes(token) ||
+                details.includes(token) ||
+                category.includes(token) ||
+                severity.includes(token) ||
+                actionLabel.includes(token) ||
+                timeAgo.includes(token) ||
+                readStatus.includes(token)
+            );
+          }
+
+          return false;
+        })
+      : notifications;
+
+    if (tabId === "all") return list.length;
+    if (tabId === "unread") return list.filter((n) => !n.isRead).length;
+    return list.filter((n) => n.category === tabId).length;
   };
 
   return (
@@ -274,6 +400,56 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
           </div>
         )}
 
+        {/* Search Bar */}
+        <div
+          style={{
+            margin: "10px 16px 2px 16px",
+            display: "flex",
+            alignItems: "center",
+            backgroundColor: "#FFFFFF",
+            border: "1px solid #E2E8F0",
+            borderRadius: "10px",
+            padding: "8px 12px",
+            gap: "8px",
+            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.02)",
+          }}
+        >
+          <Search size={16} color="#64748B" />
+          <input
+            type="text"
+            placeholder="Search notifications..."
+            value={searchQuery}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            style={{
+              border: "none",
+              backgroundColor: "transparent",
+              outline: "none",
+              fontSize: "13px",
+              color: "#1E293B",
+              width: "100%",
+            }}
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => handleSearchChange("")}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: 0,
+                color: "#94A3B8",
+                display: "flex",
+                alignItems: "center",
+              }}
+              title="Clear search"
+              aria-label="Clear search"
+            >
+              <X size={15} />
+            </button>
+          )}
+        </div>
+
         {/* Horizontal Scrollable Tabs */}
         <div className={styles.pillsContainer}>
           {TABS.map((tab) => {
@@ -283,7 +459,10 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
                 key={tab.id}
                 type="button"
                 className={`${styles.pillBtn} ${activeTab === tab.id ? styles.activePill : ""}`}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  if (syncNotifications) syncNotifications();
+                }}
               >
                 <span>{tab.label}</span>
                 {count > 0 && <span className={styles.pillBadge}>{count}</span>}
@@ -297,14 +476,41 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
           {filteredNotifications.length === 0 ? (
             <div className={styles.emptyState}>
               <div className={styles.emptyIconWrapper}>
-                <Inbox size={26} />
+                {searchQuery.trim() ? <Search size={24} color="#64748B" /> : <Inbox size={26} />}
               </div>
-              <h3 className={styles.emptyTitle}>No Notifications Here</h3>
+              <h3 className={styles.emptyTitle}>
+                {searchQuery.trim()
+                  ? `No Notifications Matching "${searchQuery}"`
+                  : activeTab === "unread"
+                  ? "All Caught Up"
+                  : "No Notifications Here"}
+              </h3>
               <p className={styles.emptyDesc}>
-                {activeTab === "unread"
+                {searchQuery.trim()
+                  ? "We couldn't find any notifications matching your keyword. Try a different search term."
+                  : activeTab === "unread"
                   ? "You are all caught up! No unread notifications."
                   : `No notifications in this category yet.`}
               </p>
+              {searchQuery.trim() && (
+                <button
+                  type="button"
+                  onClick={() => handleSearchChange("")}
+                  style={{
+                    marginTop: "8px",
+                    padding: "6px 14px",
+                    backgroundColor: "#FF5200",
+                    color: "#FFFFFF",
+                    border: "none",
+                    borderRadius: "6px",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  Clear Search
+                </button>
+              )}
             </div>
           ) : (
             filteredNotifications.map((notif) => {
@@ -377,6 +583,17 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
                           {notif.actionLabel || "View"} <ChevronRight size={14} />
                         </Link>
                       )}
+
+                      <button
+                        type="button"
+                        className={styles.dismissBtn}
+                        onClick={(e) => handleToggleRead(notif.id, e)}
+                        title={notif.isRead ? "Mark unread" : "Mark as read"}
+                        aria-label="Toggle read status"
+                        style={{ marginRight: "4px" }}
+                      >
+                        <CheckCircle2 size={15} color={notif.isRead ? "#10B981" : "#94A3B8"} />
+                      </button>
 
                       <button
                         type="button"

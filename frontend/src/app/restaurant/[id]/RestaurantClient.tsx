@@ -24,7 +24,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
   const { data: session } = useSession();
   const { addToCart, decreaseQuantity } = useCart();
   const isStatic = isStaticKitchen(kitchenId);
-  const [isLoaded, setIsLoaded] = useState<boolean>(() => isStatic);
+  const [isLoaded, setIsLoaded] = useState<boolean>(false);
   const [isNotFound, setIsNotFound] = useState<boolean>(false);
   const [kitchenData, setKitchenData] = useState<KitchenData>(() => getKitchenById(kitchenId));
   const [isVegOnly, setIsVegOnly] = useState<boolean>(() => {
@@ -43,6 +43,60 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
   const [rawMealPlans, setRawMealPlans] = useState<any[]>([]);
   const [selectedModalPlan, setSelectedModalPlan] = useState<SubscribeModalPlan | null>(null);
   const [isSubscribeModalOpen, setIsSubscribeModalOpen] = useState(false);
+
+  interface PriceFilterState {
+    minPrice?: number;
+    maxPrice?: number;
+    preset?: string;
+  }
+
+  const [priceFilter, setPriceFilter] = useState<PriceFilterState | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const pParam = params.get("price");
+      const minParam = params.get("minPrice");
+      const maxParam = params.get("maxPrice");
+
+      if (pParam || minParam || maxParam) {
+        let min = minParam ? Number(minParam) : undefined;
+        let max = maxParam ? Number(maxParam) : undefined;
+        if (pParam === "under-150") {
+          max = 150;
+        } else if (pParam === "150-300") {
+          min = 150;
+          max = 300;
+        } else if (pParam === "150-400") {
+          min = 150;
+          max = 400;
+        } else if (pParam === "300-plus") {
+          min = 300;
+        } else if (pParam === "400-plus") {
+          min = 400;
+        } else if (pParam === "under-300") {
+          max = 300;
+        }
+        return {
+          minPrice: min,
+          maxPrice: max,
+          preset: pParam || undefined,
+        };
+      }
+
+      const stored = localStorage.getItem("cloudkitchen_price_filter");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && (parsed.preset !== "all" || (parsed.maxPrice && parsed.maxPrice < 2500) || parsed.minPrice)) {
+          return {
+            minPrice: parsed.minPrice,
+            maxPrice: parsed.maxPrice,
+            preset: parsed.preset,
+          };
+        }
+      }
+    } catch {}
+    return null;
+  });
 
   // Sync veg filter preference with localStorage and across tabs/components
   useEffect(() => {
@@ -72,6 +126,53 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
     };
   }, []);
 
+  // Sync price filter preference with localStorage and across tabs/components
+  useEffect(() => {
+    const syncPrice = (e: any) => {
+      if (e?.detail !== undefined) {
+        setPriceFilter(e.detail);
+      } else if (typeof window !== "undefined") {
+        try {
+          const stored = localStorage.getItem("cloudkitchen_price_filter");
+          if (stored) {
+            setPriceFilter(JSON.parse(stored));
+          } else {
+            setPriceFilter(null);
+          }
+        } catch {}
+      }
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("cloudkitchen_price_filter_changed", syncPrice);
+      window.addEventListener("storage", syncPrice);
+    }
+
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("cloudkitchen_price_filter_changed", syncPrice);
+        window.removeEventListener("storage", syncPrice);
+      }
+    };
+  }, []);
+
+  const handleClearPriceFilter = () => {
+    setPriceFilter(null);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.removeItem("cloudkitchen_price_filter");
+        window.dispatchEvent(
+          new CustomEvent("cloudkitchen_price_filter_changed", { detail: null })
+        );
+        const url = new URL(window.location.href);
+        url.searchParams.delete("price");
+        url.searchParams.delete("minPrice");
+        url.searchParams.delete("maxPrice");
+        window.history.replaceState({}, "", url.pathname + (url.search || ""));
+      } catch {}
+    }
+  };
+
   const handleVegToggle = (veg: boolean) => {
     setIsVegOnly(veg);
     if (typeof window !== "undefined") {
@@ -88,12 +189,9 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
     let isMounted = true;
     const isCurrentStatic = isStaticKitchen(kitchenId);
 
-    if (!isCurrentStatic) {
-      setIsLoaded(false);
-      setIsNotFound(false);
-    } else {
-      setIsLoaded(true);
-      setIsNotFound(false);
+    setIsLoaded(false);
+    setIsNotFound(false);
+    if (isCurrentStatic) {
       setKitchenData(getKitchenById(kitchenId));
     }
 
@@ -453,9 +551,62 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
     setIsSubscribeModalOpen(true);
   };
 
-  const displayedItems = isVegOnly
-    ? kitchenData.items.filter((item) => item.isVeg)
-    : kitchenData.items;
+  const isItemMatchingPrice = (item: FoodCardItem): boolean => {
+    if (!priceFilter) return true;
+    const { minPrice, maxPrice, preset } = priceFilter;
+    if (preset === "all" && (!maxPrice || maxPrice >= 2500) && !minPrice) {
+      return true;
+    }
+
+    const rawNum = parseFloat(String(item.price).replace(/[^0-9.]/g, ""));
+    const price = isNaN(rawNum) ? 0 : rawNum;
+
+    if (preset === "under-150" || (maxPrice === 150 && !minPrice)) {
+      return price <= 150;
+    }
+    if (preset === "150-300" || (minPrice === 150 && maxPrice === 300)) {
+      return price >= 150 && price <= 300;
+    }
+    if (preset === "150-400" || (minPrice === 150 && maxPrice === 400)) {
+      return price >= 150 && price <= 400;
+    }
+    if (preset === "300-plus" || (minPrice === 300 && (!maxPrice || maxPrice >= 2500))) {
+      return price >= 300;
+    }
+    if (preset === "400-plus" || (minPrice === 400 && (!maxPrice || maxPrice >= 2500))) {
+      return price >= 400;
+    }
+    if (minPrice !== undefined && minPrice !== null && price < minPrice) {
+      return false;
+    }
+    if (maxPrice !== undefined && maxPrice !== null && maxPrice < 2500 && price > maxPrice) {
+      return false;
+    }
+    return true;
+  };
+
+  const displayedItems = kitchenData.items.filter((item) => {
+    if (isVegOnly && !item.isVeg) return false;
+    if (!isItemMatchingPrice(item)) return false;
+    return true;
+  });
+
+  const getPriceFilterBadgeText = () => {
+    if (!priceFilter) return "";
+    const { preset, minPrice, maxPrice } = priceFilter;
+    if (preset === "all" && (!maxPrice || maxPrice >= 2500) && !minPrice) return "";
+    if (preset === "150-300" || (minPrice === 150 && maxPrice === 300)) return "₹150 – ₹300";
+    if (preset === "under-150" || (maxPrice === 150 && !minPrice)) return "Under ₹150";
+    if (preset === "150-400" || (minPrice === 150 && maxPrice === 400)) return "₹150 – ₹400";
+    if (preset === "300-plus" || (minPrice === 300 && (!maxPrice || maxPrice >= 2500))) return "₹300+";
+    if (preset === "400-plus" || (minPrice === 400 && (!maxPrice || maxPrice >= 2500))) return "₹400+";
+    if (minPrice && maxPrice) return `₹${minPrice} – ₹${maxPrice}`;
+    if (maxPrice && maxPrice < 2500) return `Up to ₹${maxPrice}`;
+    if (minPrice) return `From ₹${minPrice}`;
+    return "";
+  };
+
+  const priceFilterBadgeText = getPriceFilterBadgeText();
 
   if (isNotFound) {
     return (
@@ -626,12 +777,66 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
             />
           )}
 
+          {priceFilterBadgeText && (
+            <div
+              style={{
+                maxWidth: "1280px",
+                margin: "0 auto 24px auto",
+                padding: "12px 20px",
+                backgroundColor: "#FFF7ED",
+                border: "1.5px solid #FFEDD5",
+                borderRadius: "14px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "12px",
+                fontFamily: "var(--font-poppins), sans-serif",
+                boxShadow: "0 2px 8px rgba(255, 107, 0, 0.05)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                <span style={{ fontSize: "16px" }}>🏷️</span>
+                <span style={{ fontSize: "14px", fontWeight: "600", color: "#C2410C" }}>
+                  Price filter applied:{" "}
+                  <strong style={{ color: "#9A3412" }}>{priceFilterBadgeText}</strong>
+                  {" "}• Showing {displayedItems.length} eligible dish{displayedItems.length === 1 ? "" : "es"}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleClearPriceFilter}
+                style={{
+                  background: "none",
+                  border: "1px solid #FDBA74",
+                  backgroundColor: "#FFFFFF",
+                  color: "#EA580C",
+                  fontWeight: "600",
+                  fontSize: "12px",
+                  borderRadius: "8px",
+                  padding: "5px 12px",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  transition: "all 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "#FFF7ED";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "#FFFFFF";
+                }}
+              >
+                Show All Dishes ✕
+              </button>
+            </div>
+          )}
+
           <PopularFood
             heading={`Popular at ${kitchenData.restaurantName}`}
             categories={kitchenData.categories}
             defaultActiveCategory={kitchenData.defaultActiveCategory}
             items={displayedItems}
             isOnline={kitchenData.isOnline !== false}
+            isLoading={!isLoaded}
             onAddItem={handleAddItem}
             onDecreaseItem={handleDecreaseItem}
           />
@@ -642,13 +847,19 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
       {/* 2. MOBILE / ANDROID RESPONSIVE VIEW */}
       <div className={styles.mobileOnly}>
         <RestaurantMobileView
-          kitchenData={kitchenData}
+          kitchenData={{
+            ...kitchenData,
+            items: displayedItems,
+          }}
           isVegOnly={isVegOnly}
+          isLoading={!isLoaded}
           onVegToggle={handleVegToggle}
           onAddItem={handleAddItem}
           onDecreaseItem={handleDecreaseItem}
           subscriptionPlans={subscriptionPlans}
           onSelectPlan={handleSelectPlan}
+          priceFilterText={priceFilterBadgeText}
+          onClearPriceFilter={handleClearPriceFilter}
         />
         <Footer />
       </div>

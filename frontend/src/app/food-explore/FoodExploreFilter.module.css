@@ -1,0 +1,406 @@
+/* Multi-Dimensional Filter Box Styles */
+.filterBox {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background-color: #ffffff;
+  border-radius: 16px;
+  padding: 16px 22px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+  position: relative;
+  z-index: 40;
+}
+
+/* Row Layout */
+.filterRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.filterRowDietary {
+  position: relative;
+}
+
+.filterRowRefine {
+  position: relative;
+  z-index: 45;
+}
+
+/* Desktop Side Labels */
+.filterLabelDesktop {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #64748b;
+  min-width: 75px;
+  flex-shrink: 0;
+}
+
+/* Mobile Section Header (hidden on desktop) */
+.sectionHeaderMobile {
+  display: none;
+}
+
+.sectionTitleText {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Mobile Clear Button in Section Header */
+.clearBtnMobile {
+  display: none;
+}
+
+/* Dietary Pills Group */
+.dietaryPillsGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.dietPillBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
+  color: #475569;
+  font-weight: 600;
+  font-size: 0.84rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.dietPillBtn:hover {
+  border-color: #cbd5e1;
+  background-color: #f8fafc;
+}
+
+.dietPillBtnSelected {
+  border: 1.5px solid #ff6b00 !important;
+  background-color: #fff3eb !important;
+  color: #ff6b00 !important;
+  font-weight: 700;
+}
+
+.dietPillCount {
+  font-size: 0.74rem;
+  color: #94a3b8;
+  font-weight: 700;
+}
+
+.dietPillCountSelected {
+  color: #ea580c !important;
+}
+
+/* Divider */
+.filterDivider {
+  height: 1px;
+  background-color: #f1f5f9;
+  width: 100%;
+}
+
+/* Refine Controls Group (Desktop Flex Row) */
+.refineControlsGroup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.refineDropdownWrapper {
+  position: relative;
+}
+
+/* Dropdown Trigger Button */
+.dropdownTriggerBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
+  color: #475569;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.dropdownTriggerBtn:hover {
+  border-color: #cbd5e1;
+  background-color: #f8fafc;
+}
+
+.dropdownTriggerBtnActive {
+  border: 1.5px solid #ff6b00 !important;
+  background-color: #fff3eb !important;
+  color: #ff6b00 !important;
+  font-weight: 700;
+}
+
+/* Toggle Buttons */
+.toggleBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
+  color: #475569;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.toggleBtn:hover {
+  border-color: #cbd5e1;
+  background-color: #f8fafc;
+}
+
+.toggleBtnActiveOffers {
+  border: 1.5px solid #ff6b00 !important;
+  background-color: #fff3eb !important;
+  color: #ff6b00 !important;
+  font-weight: 700;
+}
+
+.toggleBtnActiveOpen {
+  border: 1.5px solid #10b981 !important;
+  background-color: #ecfdf5 !important;
+  color: #047857 !important;
+  font-weight: 700;
+}
+
+.checkboxIndicator {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1.5px solid #94a3b8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.checkboxIndicatorActiveOffers {
+  border-color: #ff6b00 !important;
+  background-color: #ff6b00 !important;
+}
+
+.checkboxIndicatorActiveOpen {
+  border-color: #10b981 !important;
+  background-color: #10b981 !important;
+}
+
+/* Clear All Button on Desktop */
+.clearAllBtnDesktop {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 10px;
+  border: 1px solid #fca5a5;
+  background-color: #fef2f2;
+  color: #dc2626;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-left: auto;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.clearAllBtnDesktop:hover {
+  background-color: #fee2e2;
+  border-color: #f87171;
+}
+
+/* Popover Dropdown Menus */
+.pricePopover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  background-color: #ffffff;
+  border-radius: 14px;
+  padding: 8px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.16);
+  border: 1px solid #e2e8f0;
+  z-index: 1000;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cuisinePopover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  background-color: #ffffff;
+  border-radius: 14px;
+  padding: 8px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.16);
+  border: 1px solid #e2e8f0;
+  z-index: 1000;
+  min-width: 220px;
+  max-height: 260px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.popoverItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #334155;
+  font-weight: 500;
+  font-size: 13px;
+  cursor: pointer;
+  gap: 12px;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.popoverItem:hover {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+.popoverItemSelected {
+  background-color: #fff3eb !important;
+  color: #ff6b00 !important;
+  font-weight: 700;
+}
+
+/* ===================================================================
+   RESPONSIVE MOBILE VIEW (<= 768px)
+   =================================================================== */
+@media (max-width: 768px) {
+  .filterBox {
+    padding: 14px 14px;
+    gap: 12px;
+    border-radius: 14px;
+  }
+
+  .filterRow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  /* Hide desktop side label */
+  .filterLabelDesktop {
+    display: none !important;
+  }
+
+  /* Show mobile section headers */
+  .sectionHeaderMobile {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 2px;
+  }
+
+  .clearBtnMobile {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 8px;
+    border: 1px solid #fca5a5;
+    background-color: #fef2f2;
+    color: #dc2626;
+    font-size: 0.74rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .dietaryPillsGroup {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .dietPillBtn {
+    padding: 6px 11px;
+    font-size: 0.79rem;
+    border-radius: 8px;
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  /* 2x2 Grid for Refine Controls on Mobile */
+  .refineControlsGroup {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .refineDropdownWrapper {
+    width: 100%;
+  }
+
+  .dropdownTriggerBtn {
+    width: 100%;
+    justify-content: space-between;
+    padding: 8px 10px;
+    font-size: 0.79rem;
+    border-radius: 8px;
+    box-sizing: border-box;
+  }
+
+  .toggleBtn {
+    width: 100%;
+    justify-content: flex-start;
+    padding: 8px 10px;
+    font-size: 0.79rem;
+    border-radius: 8px;
+    box-sizing: border-box;
+  }
+
+  /* Desktop Clear Button hidden in row on mobile */
+  .clearAllBtnDesktop {
+    display: none !important;
+  }
+
+  /* Popover positioning on mobile */
+  .pricePopover {
+    left: 0;
+    right: auto;
+    min-width: 170px;
+    max-width: calc(100vw - 32px);
+  }
+
+  .cuisinePopover {
+    left: auto;
+    right: 0;
+    min-width: 200px;
+    max-width: calc(100vw - 32px);
+  }
+}

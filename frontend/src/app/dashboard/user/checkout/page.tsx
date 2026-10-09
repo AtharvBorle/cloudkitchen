@@ -917,14 +917,20 @@ function CheckoutContent() {
                 });
 
                 if (res.ok) {
+                    const resJson = await res.json().catch(() => null);
+                    const newBooking = resJson?.data?.booking || resJson?.booking || {};
                     sessionStorage.removeItem("active_room_booking");
                     try {
                         broadcastBookingAlert({
+                            bookingId: newBooking.id,
                             roomName: roomDetails.title || roomDetails.name || "Room Suite",
                             guestName: session?.user?.name || "Guest",
+                            guestPhone: (session?.user as any)?.phone || roomDetails.contactPhone,
                             nightsCount: days,
                             totalAmount: totalAmount,
                             checkInDate: bookingDates.start,
+                            checkOutDate: bookingDates.end,
+                            status: newBooking.status || "PENDING",
                         });
                     } catch {}
                     alert("Room booked successfully! Awaiting host confirmation.");

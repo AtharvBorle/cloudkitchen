@@ -65,6 +65,8 @@
   flex-shrink: 0;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+  position: relative;
+  overflow: visible;
 }
 
 .floatingLeftBtns {
@@ -848,5 +850,182 @@
 .cartPayBtn:active {
   transform: scale(0.97);
 }
+
+/* ==========================================================================
+   DELIGHTFUL LIKE / HEART MICRO-INTERACTION (BALLOON POP + MINI RISING PARTICLES)
+   ========================================================================== */
+
+/* Main heart icon balloon expansion pop */
+.heartIconBalloon {
+  animation: heartBalloonPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes heartBalloonPop {
+  0% {
+    transform: scale(1);
+  }
+  28% {
+    transform: scale(1.36);
+  }
+  52% {
+    transform: scale(0.92);
+  }
+  75% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Subtle ripple ring behind the heart */
+.heartRippleRing {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 24px;
+  height: 24px;
+  margin-top: -12px;
+  margin-left: -12px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(239, 68, 68, 0.55);
+  pointer-events: none;
+  animation: heartRippleBurst 0.45s ease-out forwards;
+}
+
+@keyframes heartRippleBurst {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(1.45);
+    opacity: 0;
+  }
+}
+
+/* Floating mini hearts (3-4 tiny balloons rising up behind the icon) */
+.miniHeartParticle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin-top: -6px;
+  margin-left: -6px;
+  pointer-events: none;
+  z-index: 25;
+}
+
+/* Particle 1: floats slightly up and left */
+.miniHeart1 {
+  animation: floatHeart1 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes floatHeart1 {
+  0% {
+    transform: translate(0, 0) scale(0.3);
+    opacity: 0;
+  }
+  25% {
+    transform: translate(-7px, -9px) scale(1.15);
+    opacity: 1;
+  }
+  65% {
+    transform: translate(-11px, -21px) scale(0.9);
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate(-13px, -29px) scale(0.35);
+    opacity: 0;
+  }
+}
+
+/* Particle 2: floats straight up, slightly taller like a balloon */
+.miniHeart2 {
+  animation: floatHeart2 0.72s cubic-bezier(0.22, 1, 0.36, 1) 0.04s forwards;
+}
+
+@keyframes floatHeart2 {
+  0% {
+    transform: translate(0, 0) scale(0.25);
+    opacity: 0;
+  }
+  25% {
+    transform: translate(1px, -11px) scale(1.25);
+    opacity: 1;
+  }
+  65% {
+    transform: translate(0px, -25px) scale(1.0);
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate(1px, -34px) scale(0.35);
+    opacity: 0;
+  }
+}
+
+/* Particle 3: floats slightly up and right */
+.miniHeart3 {
+  animation: floatHeart3 0.64s cubic-bezier(0.22, 1, 0.36, 1) 0.07s forwards;
+}
+
+@keyframes floatHeart3 {
+  0% {
+    transform: translate(0, 0) scale(0.3);
+    opacity: 0;
+  }
+  25% {
+    transform: translate(7px, -9px) scale(1.15);
+    opacity: 1;
+  }
+  65% {
+    transform: translate(12px, -20px) scale(0.9);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(14px, -27px) scale(0.35);
+    opacity: 0;
+  }
+}
+
+/* Particle 4: gentle trailing mini heart */
+.miniHeart4 {
+  animation: floatHeart4 0.58s cubic-bezier(0.22, 1, 0.36, 1) 0.05s forwards;
+}
+
+@keyframes floatHeart4 {
+  0% {
+    transform: translate(0, 0) scale(0.2);
+    opacity: 0;
+  }
+  30% {
+    transform: translate(-4px, -7px) scale(1.0);
+    opacity: 0.95;
+  }
+  70% {
+    transform: translate(-6px, -16px) scale(0.75);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translate(-7px, -23px) scale(0.25);
+    opacity: 0;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeletonPulse {
+  background: linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite ease-in-out;
+}
+
+
 
 

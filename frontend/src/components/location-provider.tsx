@@ -63,33 +63,28 @@ export function LocationProvider({ children }: LocationProviderProps) {
   const pathname = usePathname();
   const hasAttemptedGpsRef = useRef(false);
 
-  const isStaffOrSeller = Boolean(
-    session?.user?.role && session.user.role !== "USER"
-  );
-
   const isNonCustomerRoute = Boolean(
-    !pathname ||
-      pathname.startsWith("/seller") ||
-      pathname.startsWith("/seller-onboarding") ||
-      pathname.startsWith("/dashboard/seller") ||
-      pathname.startsWith("/admin") ||
-      pathname.startsWith("/dashboard/admin") ||
-      pathname.startsWith("/superadmin") ||
-      pathname.startsWith("/dashboard/superadmin") ||
-      pathname.startsWith("/dashboard/support") ||
-      pathname.startsWith("/support") ||
-      pathname.startsWith("/dashboard/delivery") ||
-      pathname.startsWith("/delivery") ||
-      pathname.startsWith("/auth") ||
-      pathname.startsWith("/invoice") ||
-      pathname === "/login" ||
-      pathname === "/signup"
+    pathname &&
+      (pathname.startsWith("/seller") ||
+        pathname.startsWith("/seller-onboarding") ||
+        pathname.startsWith("/dashboard/seller") ||
+        pathname.startsWith("/admin") ||
+        pathname.startsWith("/dashboard/admin") ||
+        pathname.startsWith("/superadmin") ||
+        pathname.startsWith("/dashboard/superadmin") ||
+        pathname.startsWith("/dashboard/support") ||
+        pathname.startsWith("/support") ||
+        pathname.startsWith("/dashboard/delivery") ||
+        pathname.startsWith("/delivery") ||
+        pathname.startsWith("/auth") ||
+        pathname.startsWith("/invoice") ||
+        pathname === "/login" ||
+        pathname === "/signup")
   );
 
-  const shouldDisableLocation = isStaffOrSeller || isNonCustomerRoute;
+  const shouldDisableLocation = isNonCustomerRoute;
 
   const openLocationModal = () => {
-    if (shouldDisableLocation) return;
     setIsLocationModalOpen(true);
   };
   const closeLocationModal = () => setIsLocationModalOpen(false);
@@ -142,7 +137,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
                 localStorage.setItem("guest-lat", String(latitude));
                 localStorage.setItem("guest-lng", String(longitude));
 
-                if (status === "authenticated" && !isStaffOrSeller) {
+                if (status === "authenticated") {
                   fetchApi("/api/user/location", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -166,7 +161,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
         { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
       );
     });
-  }, [status, shouldDisableLocation, isStaffOrSeller]);
+  }, [status, shouldDisableLocation]);
 
   const setGuestLocation = (
     pincode: string,
@@ -242,10 +237,9 @@ export function LocationProvider({ children }: LocationProviderProps) {
   };
 
   const fetchAddress = useCallback(async () => {
-    // If on seller/admin panel or logged in as seller/admin, bypass location modal and address fetch
+    // If on seller/admin panel, bypass background location and address fetch
     if (shouldDisableLocation) {
       setIsLoading(false);
-      setIsLocationModalOpen(false);
       return;
     }
 
@@ -436,7 +430,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
       }}
     >
       {children}
-      {!shouldDisableLocation && <LocationModal />}
+      <LocationModal />
     </LocationContext.Provider>
   );
 }

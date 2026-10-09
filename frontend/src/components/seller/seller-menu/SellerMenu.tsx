@@ -7,7 +7,7 @@ import ConsoleSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
 import { fetchApi } from "@/lib/fetch-api";
 import { useSellerProfile, toggleSellerOnlineStatus } from "@/hooks/useSellerProfile";
-import { broadcastShopTimingAlert } from "@/hooks/useSellerNotifications";
+import { broadcastShopTimingAlert, broadcastStockAlert } from "@/hooks/useSellerNotifications";
 import PaginationControls from "../common/PaginationControls";
 import styles from "./SellerMenu.module.css";
 
@@ -419,8 +419,45 @@ export default function SellerMenu({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isAvailable: nextInStock, stockQuantity: nextQty }),
       });
+      broadcastStockAlert({
+        itemId: id,
+        itemName: targetDish.name,
+        currentStock: nextQty,
+      });
     } catch (err) {
       console.error("Failed to toggle dish stock in DB:", err);
+    }
+  };
+
+  const handleStockQtyChange = async (id: string, delta: number) => {
+    const targetDish = dishList.find((d) => d.id === id);
+    if (!targetDish) return;
+    const nextQty = Math.max(0, targetDish.stockQty + delta);
+    const nextInStock = nextQty > 0;
+
+    setDishList((prev) =>
+      prev.map((dish) =>
+        dish.id === id ? { ...dish, inStock: nextInStock, stockQty: nextQty } : dish
+      )
+    );
+
+    if (onStockQtyChange) {
+      onStockQtyChange(id, delta);
+    }
+
+    try {
+      await fetchApi(`/api/seller/menu/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isAvailable: nextInStock, stockQuantity: nextQty }),
+      });
+      broadcastStockAlert({
+        itemId: id,
+        itemName: targetDish.name,
+        currentStock: nextQty,
+      });
+    } catch (err) {
+      console.error("Failed to update dish stock in DB:", err);
     }
   };
 
@@ -694,24 +731,146 @@ export default function SellerMenu({
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredDishes.length === 0 ? (
+                  {loading ? (
+                    Array.from({ length: 6 }).map((_, idx) => (
+                      <tr key={`dish-skeleton-${idx}`}>
+                        <td>
+                          <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                            <div
+                              style={{
+                                width: "48px",
+                                height: "48px",
+                                borderRadius: "10px",
+                                background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)",
+                                backgroundSize: "200% 100%",
+                                animation: "shimmer 1.5s infinite ease-in-out",
+                                flexShrink: 0,
+                              }}
+                            />
+                            <div style={{ display: "flex", flexDirection: "column", gap: "6px", width: "160px" }}>
+                              <div
+                                style={{
+                                  width: "80%",
+                                  height: "16px",
+                                  borderRadius: "4px",
+                                  background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)",
+                                  backgroundSize: "200% 100%",
+                                  animation: "shimmer 1.5s infinite ease-in-out",
+                                }}
+                              />
+                              <div
+                                style={{
+                                  width: "50%",
+                                  height: "12px",
+                                  borderRadius: "4px",
+                                  background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)",
+                                  backgroundSize: "200% 100%",
+                                  animation: "shimmer 1.5s infinite ease-in-out",
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <div
+                            style={{
+                              width: "75px",
+                              height: "14px",
+                              borderRadius: "4px",
+                              background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)",
+                              backgroundSize: "200% 100%",
+                              animation: "shimmer 1.5s infinite ease-in-out",
+                            }}
+                          />
+                        </td>
+                        <td>
+                          <div
+                            style={{
+                              width: "48px",
+                              height: "16px",
+                              borderRadius: "4px",
+                              background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)",
+                              backgroundSize: "200% 100%",
+                              animation: "shimmer 1.5s infinite ease-in-out",
+                            }}
+                          />
+                        </td>
+                        <td>
+                          <div
+                            style={{
+                              width: "55px",
+                              height: "22px",
+                              borderRadius: "6px",
+                              background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)",
+                              backgroundSize: "200% 100%",
+                              animation: "shimmer 1.5s infinite ease-in-out",
+                            }}
+                          />
+                        </td>
+                        <td>
+                          <div
+                            style={{
+                              width: "32px",
+                              height: "16px",
+                              borderRadius: "4px",
+                              background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)",
+                              backgroundSize: "200% 100%",
+                              animation: "shimmer 1.5s infinite ease-in-out",
+                            }}
+                          />
+                        </td>
+                        <td>
+                          <div
+                            style={{
+                              width: "70px",
+                              height: "24px",
+                              borderRadius: "12px",
+                              background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)",
+                              backgroundSize: "200% 100%",
+                              animation: "shimmer 1.5s infinite ease-in-out",
+                            }}
+                          />
+                        </td>
+                        <td>
+                          <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+                            <div
+                              style={{
+                                width: "28px",
+                                height: "28px",
+                                borderRadius: "6px",
+                                background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)",
+                                backgroundSize: "200% 100%",
+                                animation: "shimmer 1.5s infinite ease-in-out",
+                              }}
+                            />
+                            <div
+                              style={{
+                                width: "28px",
+                                height: "28px",
+                                borderRadius: "6px",
+                                background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)",
+                                backgroundSize: "200% 100%",
+                                animation: "shimmer 1.5s infinite ease-in-out",
+                              }}
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : filteredDishes.length === 0 ? (
                     <tr>
                       <td colSpan={7} style={{ textAlign: "center", padding: "48px 16px", color: "#64748b", fontSize: "14px" }}>
-                        {loading ? (
-                          <span>Loading menu items...</span>
-                        ) : (
-                          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
-                            <div className={styles.dishPlaceholderIcon} style={{ width: 44, height: 44, borderRadius: "50%" }}>
-                              <Utensils size={20} strokeWidth={2.2} />
-                            </div>
-                            <span style={{ fontWeight: 600, color: "#1E293B", fontSize: "15px" }}>No dishes found</span>
-                            <span style={{ color: "#64748B", fontSize: "13px" }}>
-                              {searchQuery || selectedCategory !== "All Items"
-                                ? "Try adjusting your search query or category filter"
-                                : "Click '+ Add New Dish' to publish dishes to your cloud kitchen menu."}
-                            </span>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+                          <div className={styles.dishPlaceholderIcon} style={{ width: 44, height: 44, borderRadius: "50%" }}>
+                            <Utensils size={20} strokeWidth={2.2} />
                           </div>
-                        )}
+                          <span style={{ fontWeight: 600, color: "#1E293B", fontSize: "15px" }}>No dishes found</span>
+                          <span style={{ color: "#64748B", fontSize: "13px" }}>
+                            {searchQuery || selectedCategory !== "All Items"
+                              ? "Try adjusting your search query or category filter"
+                              : "Click '+ Add New Dish' to publish dishes to your cloud kitchen menu."}
+                          </span>
+                        </div>
                       </td>
                     </tr>
                   ) : (
@@ -795,15 +954,66 @@ export default function SellerMenu({
 
                       {/* Stock Qty */}
                       <td>
-                        <span
-                          className={
-                            dish.stockQty <= 5 && dish.stockQty > 0
-                              ? styles.stockQtyLow
-                              : styles.stockQtyText
-                          }
-                        >
-                          {dish.stockQty}
-                        </span>
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                          <button
+                            type="button"
+                            onClick={() => handleStockQtyChange(dish.id, -1)}
+                            disabled={dish.stockQty <= 0}
+                            style={{
+                              width: "22px",
+                              height: "22px",
+                              borderRadius: "4px",
+                              border: "1px solid #CBD5E1",
+                              backgroundColor: "#FFFFFF",
+                              cursor: dish.stockQty <= 0 ? "not-allowed" : "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: "13px",
+                              fontWeight: "bold",
+                              color: "#475569",
+                              opacity: dish.stockQty <= 0 ? 0.4 : 1,
+                              padding: 0,
+                            }}
+                            title="Decrease stock"
+                            aria-label={`Decrease stock for ${dish.name}`}
+                          >
+                            -
+                          </button>
+                          <span
+                            className={
+                              dish.stockQty <= 5 && dish.stockQty > 0
+                                ? styles.stockQtyLow
+                                : styles.stockQtyText
+                            }
+                            style={{ minWidth: "24px", textAlign: "center" }}
+                          >
+                            {dish.stockQty}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleStockQtyChange(dish.id, 1)}
+                            style={{
+                              width: "22px",
+                              height: "22px",
+                              borderRadius: "4px",
+                              border: "1px solid #CBD5E1",
+                              backgroundColor: "#FFFFFF",
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: "13px",
+                              fontWeight: "bold",
+                              color: "#475569",
+                              padding: 0,
+                            }}
+                            title="Increase stock"
+                            aria-label={`Increase stock for ${dish.name}`}
+                          >
+                            +
+                          </button>
+                        </div>
                       </td>
 
                       {/* In-Stock Status with interactive toggle */}

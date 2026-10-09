@@ -146,7 +146,9 @@ export function formatMealPlan(rawPlan: any): MealSubscriptionPlan {
     status: rawPlan.status || "Live",
     deployedDate,
     allowCancel: rawPlan.allowCancel ?? false,
-    pauseBillingPeriod: rawPlan.pauseBillingPeriod || "30 Days",
+    pauseBillingPeriod: (rawPlan.allowPause === false || rawPlan.allowPauseBilling === false)
+      ? "None"
+      : (rawPlan.pauseBillingPeriod !== undefined ? rawPlan.pauseBillingPeriod : "30 Days"),
   };
 }
 

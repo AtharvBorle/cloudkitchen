@@ -37,6 +37,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 20px;
+  flex-wrap: wrap;
 }
 
 .headerGroup {
@@ -59,6 +60,114 @@
   margin: 0;
   font-weight: 400;
   line-height: 1.45;
+}
+
+.headerControls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.calendarTriggerBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #ffffff;
+  border: 1.5px solid #fed7aa;
+  color: #0f172a;
+  padding: 9px 16px;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.calendarTriggerBtn:hover {
+  background-color: #fff7ed;
+  border-color: #ea580c;
+  color: #ea580c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.15);
+}
+
+.calendarTriggerBtnFiltered {
+  background-color: #fff7ed;
+  border-color: #ea580c;
+  color: #ea580c;
+}
+
+.calendarTriggerDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #10b981;
+}
+
+.calendarTriggerDotFiltered {
+  background-color: #ea580c;
+  animation: pulse 1.8s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+}
+
+/* Date Filter Banner */
+.dateFilterBanner {
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+  border: 1.5px solid #fdba74;
+  border-radius: 14px;
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(234, 88, 12, 0.08);
+  animation: fadeIn 0.2s ease;
+  flex-wrap: wrap;
+}
+
+.dateFilterLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.88rem;
+  color: #9a3412;
+}
+
+.resetDateBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #ffffff;
+  border: 1px solid #ea580c;
+  color: #ea580c;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.resetDateBtn:hover {
+  background-color: #ea580c;
+  color: #ffffff;
 }
 
 /* Sync Devices Button */
@@ -358,8 +467,8 @@
 .customerText {
   font-weight: 600;
   color: #1E293B;
-  min-width: 120px;
-  max-width: 160px;
+  min-width: 110px;
+  max-width: 150px;
   line-height: 1.4;
   word-break: break-word;
 }
@@ -367,25 +476,47 @@
 .roomNoText {
   color: #64748B;
   font-weight: 500;
-  min-width: 200px;
-  max-width: 320px;
+  min-width: 160px;
+  max-width: 280px;
   line-height: 1.45;
   word-break: break-word;
 }
 
 .itemsText {
   color: #475569;
-  min-width: 130px;
-  max-width: 180px;
+  min-width: 120px;
+  max-width: 170px;
   line-height: 1.4;
   word-break: break-word;
+}
+
+.dateTimeCell {
+  white-space: nowrap;
+  min-width: 92px;
+  line-height: 1.25;
+}
+
+.dateText {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #1E293B;
+  letter-spacing: 0.01em;
+}
+
+.timeText {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #64748B;
+  margin-top: 2px;
 }
 
 .totalPriceText {
   font-weight: 500;
   color: #0F172A;
   white-space: nowrap;
-  min-width: 75px;
+  min-width: 70px;
 }
 
 /* Status Column & Text */
@@ -503,6 +634,7 @@
   0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.6); }
   70% { transform: scale(1.15); box-shadow: 0 0 0 6px rgba(220, 38, 38, 0); }
   100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+}
 
 .statusTimer {
   background-color: #FFF7ED;

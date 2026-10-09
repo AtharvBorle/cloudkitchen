@@ -8,6 +8,7 @@ import ConsoleSidebar from '../sidebar/Sidebar';
 import Topbar from '../nav/Topbar';
 import { fetchApi } from '@/lib/fetch-api';
 import { useSellerProfile } from '@/hooks/useSellerProfile';
+import { broadcastStockAlert } from '@/hooks/useSellerNotifications';
 import styles from './EditMenu.module.css';
 
 export interface VariantItem {
@@ -55,13 +56,12 @@ function EditMenuInner({
 
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [categoriesList, setCategoriesList] = useState<Array<{ id: string; name: string; subCategories?: Array<{ id: string; name: string }> }>>([]);
+  const [categoriesList, setCategoriesList] = useState<Array<{ id: string; name: string }>>([]);
 
   // Form states (clean empty defaults for Add New Dish)
   const [itemName, setItemName] = useState('');
   const [price, setPrice] = useState('');
   const [category, setCategory] = useState('');
-  const [subCategory, setSubCategory] = useState('');
   const [description, setDescription] = useState('');
 
   // Food type dropdown & multi-select
@@ -94,13 +94,10 @@ function EditMenuInner({
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [existingImageUrl, setExistingImageUrl] = useState<string>('');
 
-  const currentCategoryObj = categoriesList.find(c => c.name.toLowerCase() === category.toLowerCase());
-  const availableSubCategories = currentCategoryObj?.subCategories || [];
-
   useEffect(() => {
     async function loadItem() {
       try {
-        const res = await fetchApi(`/api/seller/menu?t=${Date.now()}`, { cache: 'no-store' });
+        const res = await fetchApi('/api/seller/menu');
         if (res.ok) {
           const json = await res.json();
           const dataPayload = json.data || json;
@@ -121,7 +118,6 @@ function EditMenuInner({
               setItemName(found.name || '');
               setPrice(found.price !== null && found.price !== undefined ? String(found.price) : '');
               if (found.foodCategory?.name) setCategory(found.foodCategory.name);
-              if (found.foodSubCategory?.name) setSubCategory(found.foodSubCategory.name);
               setDescription(found.description || '');
               if (found.imageUrl) setExistingImageUrl(found.imageUrl);
               setStockQty(found.stockQuantity !== null && found.stockQuantity !== undefined && found.stockQuantity >= 0 ? String(found.stockQuantity) : '');
@@ -237,7 +233,6 @@ function EditMenuInner({
     setItemName('');
     setPrice('');
     setCategory(categoriesList[0]?.name || '');
-    setSubCategory('');
     setDescription('');
     setSelectedFoodTypes([]);
     setFoodTypeError(null);
@@ -347,15 +342,7 @@ function EditMenuInner({
 
       let matchedCatId = categoriesList[0]?.id || '';
       const matched = categoriesList.find((c) => c.name.toLowerCase() === category.toLowerCase());
-      if (matched) {
-        matchedCatId = matched.id;
-        if (subCategory && matched.subCategories) {
-          const matchedSub = matched.subCategories.find(sc => sc.name.toLowerCase() === subCategory.toLowerCase());
-          if (matchedSub) {
-            formData.append('foodSubCategoryId', matchedSub.id);
-          }
-        }
-      }
+      if (matched) matchedCatId = matched.id;
       if (matchedCatId) {
         formData.append('foodCategoryId', matchedCatId);
       }
@@ -382,6 +369,20 @@ function EditMenuInner({
         alert(errorData.message || 'Failed to save menu item');
         setLoading(false);
         return;
+      }
+
+      const resData = await res.json().catch(() => ({}));
+      const savedItem = resData.data?.item || resData.item || {};
+      const targetId = savedItem.id || itemId;
+
+      try {
+        broadcastStockAlert({
+          itemId: targetId,
+          itemName: itemName.trim(),
+          currentStock: cleanStock,
+        });
+      } catch (e) {
+        console.error('Failed to broadcast stock alert:', e);
       }
 
       setSavedDishName(itemName);
@@ -521,31 +522,6 @@ function EditMenuInner({
                   <ChevronDown size={16} className={styles.selectArrow} />
                 </div>
               </div>
-
-              {/* Field: Sub-Category (if available for selected Category) */}
-              {availableSubCategories && availableSubCategories.length > 0 && (
-                <div className={styles.fieldGroup} style={{ marginTop: '14px' }}>
-                  <label className={styles.fieldLabel} htmlFor="subCategorySelect">
-                    Sub-Category <span style={{ fontSize: "0.8rem", color: "#64748B", fontWeight: "normal" }}>(Optional)</span>
-                  </label>
-                  <div className={styles.selectWrapper}>
-                    <select
-                      id="subCategorySelect"
-                      className={styles.selectInput}
-                      value={subCategory}
-                      onChange={(e) => setSubCategory(e.target.value)}
-                    >
-                      <option value="">Select a sub-category (optional)</option>
-                      {availableSubCategories.map((sc) => (
-                        <option key={sc.id} value={sc.name}>
-                          {sc.name}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown size={16} className={styles.selectArrow} />
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* 2-Column Row: Food Type & Automatic Stock */}
@@ -743,6 +719,32 @@ function EditMenuInner({
                 <Plus size={15} strokeWidth={2.6} />
                 <span>Add Add-on</span>
               </button>
+            </div>
+
+            {/* Day-wise Operational Hours */}
+            <div className={styles.subSection}>
+              <label className={styles.subSectionTitle}>Day-wise Operational Hours</label>
+              <div className={styles.scheduleList}>
+                {schedules.map((schedule) => (
+                  <div key={schedule.day} className={styles.scheduleRow}>
+                    <span className={styles.scheduleDay}>{schedule.day}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleDay(schedule.day)}
+                      className={`${styles.toggleSwitch} ${
+                        schedule.isOpen ? styles.toggleSwitchActive : ''
+                      }`}
+                      aria-label={`Toggle ${schedule.day} hours`}
+                    >
+                      <span
+                        className={`${styles.toggleThumb} ${
+                          schedule.isOpen ? styles.toggleThumbActive : ''
+                        }`}
+                      />
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Dish Image Representation */}

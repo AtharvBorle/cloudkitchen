@@ -9,6 +9,7 @@ import {
   Send,
   Menu,
   Plus,
+  PlusCircle,
   ArrowLeft,
   X,
   Loader2,
@@ -38,6 +39,7 @@ export interface Ticket {
   preview: string;
   customerName: string;
   customerInitials: string;
+  customerEmail?: string;
   time: string;
   status: "Open" | "In Progress" | "Closed" | "Resolved";
   priority?: "High" | "Medium" | "Low" | null;
@@ -230,6 +232,7 @@ function mapRawTicket(t: any): Ticket {
     preview: cleanTicketText(t.description),
     customerName: name,
     customerInitials: initials,
+    customerEmail: t.user?.email || "",
     time: formatRelativeTime(t.createdAt),
     status,
     priority: resolveTicketPriority(t),
@@ -338,11 +341,15 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
   const selectedTicket = tickets.find((t) => t.id === selectedTicketId) || tickets[0] || null;
 
   const filteredTickets = tickets.filter((ticket) => {
+    const q = searchQuery.toLowerCase().trim().replace(/\s+/g, " ");
+    const queryWords = q.split(" ").filter(Boolean);
+    const fullText = `${ticket.title} ${ticket.customerName} ${ticket.customerEmail || ""} ${ticket.ticketNumber} ${ticket.category} ${ticket.preview}`.toLowerCase();
     const matchesSearch =
-      ticket.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ticket.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ticket.ticketNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ticket.category.toLowerCase().includes(searchQuery.toLowerCase());
+      !q ||
+      fullText.includes(q) ||
+      ticket.customerName.toLowerCase().includes(q) ||
+      (ticket.customerEmail && ticket.customerEmail.toLowerCase().includes(q)) ||
+      (queryWords.length > 1 && queryWords.every((w) => fullText.includes(w)));
 
     const matchesStatus =
       statusFilter === "All" || ticket.status.toLowerCase() === statusFilter.toLowerCase();
@@ -485,7 +492,8 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
             ownerName={effectiveOwnerName}
             partnerRole={effectivePartnerRole}
             avatarInitials={effectiveAvatarInitials}
-            onSearch={onSearch}
+            hideSearch={true}
+            showSearch={false}
             onNotificationClick={onNotificationClick}
             onMenuToggle={() => setIsMobileOpen(true)}
           />
@@ -540,7 +548,7 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
                 onClick={() => setIsCreateModalOpen(true)}
                 title="Raise New Ticket"
               >
-                <Plus size={18} />
+                <PlusCircle size={22} strokeWidth={2.4} />
               </button>
             </div>
           )}

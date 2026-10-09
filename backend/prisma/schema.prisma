@@ -17,6 +17,8 @@ model User {
   city            String
   pincode         String
   isActive        Boolean         @default(true)
+  deletedAt       DateTime?
+  isPermanentlyDeleted Boolean         @default(false)
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
   addresses       Address[]
@@ -54,6 +56,7 @@ model SellerProfile {
   trackingId                 String           @unique
   upiId                      String?
   isOnline                   Boolean          @default(true)
+  deletedAt                  DateTime?
   agentId                    String?
   businessCategory           String           @default("FOOD")
   foodType                   String           @default("BOTH")

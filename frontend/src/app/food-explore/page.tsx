@@ -44,6 +44,7 @@ import {
   getDishOfferBadge,
 } from "@/lib/dietary-filter";
 import Link from "next/link";
+import filterStyles from "./FoodExploreFilter.module.css";
 
 function parseDishAddons(rawAddons: any): AddonItem[] {
   if (!rawAddons) return [];
@@ -95,8 +96,26 @@ function FoodExploreContent() {
   // Popover & Modal state
   const [openPricePopover, setOpenPricePopover] = useState(false);
   const [openCuisinePopover, setOpenCuisinePopover] = useState(false);
+  const pricePopoverRef = React.useRef<HTMLDivElement>(null);
+  const cuisinePopoverRef = React.useRef<HTMLDivElement>(null);
   const [addedIds, setAddedIds] = useState<Record<string, boolean>>({});
   const [addonModalDish, setAddonModalDish] = useState<(DynamicFoodItem & { parsedAddons: AddonItem[] }) | null>(null);
+
+  // Outside click to close price and cuisine popovers
+  React.useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (pricePopoverRef.current && !pricePopoverRef.current.contains(e.target as Node)) {
+        setOpenPricePopover(false);
+      }
+      if (cuisinePopoverRef.current && !cuisinePopoverRef.current.contains(e.target as Node)) {
+        setOpenCuisinePopover(false);
+      }
+    }
+    if (openPricePopover || openCuisinePopover) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [openPricePopover, openCuisinePopover]);
 
   // Sync state if URL changes
   React.useEffect(() => {
@@ -916,41 +935,18 @@ function FoodExploreContent() {
         )}
 
         {/* Multi-Dimensional Filter Box */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "14px",
-            backgroundColor: "#FFFFFF",
-            borderRadius: "16px",
-            padding: "18px 22px",
-            border: "1px solid #E2E8F0",
-            boxShadow: "0 2px 10px rgba(0, 0, 0, 0.02)",
-            position: "relative",
-            zIndex: 40,
-          }}
-        >
+        <div className={filterStyles.filterBox}>
           {/* Row 1: Dietary */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "14px",
-              flexWrap: "wrap",
-            }}
-          >
-            <span
-              style={{
-                fontSize: "0.85rem",
-                fontWeight: "600",
-                color: "#64748B",
-                minWidth: "75px",
-              }}
-            >
-              Dietary
-            </span>
+          <div className={`${filterStyles.filterRow} ${filterStyles.filterRowDietary}`}>
+            {/* Desktop Side Label */}
+            <span className={filterStyles.filterLabelDesktop}>Dietary</span>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", flex: 1 }}>
+            {/* Mobile Section Header */}
+            <div className={filterStyles.sectionHeaderMobile}>
+              <span className={filterStyles.sectionTitleText}>Dietary</span>
+            </div>
+
+            <div className={filterStyles.dietaryPillsGroup}>
               {[
                 { id: "all", label: "All Diet", count: filterCounts.all },
                 { id: "veg", label: "🌱 Pure Veg", count: filterCounts.veg },
@@ -964,30 +960,11 @@ function FoodExploreContent() {
                     key={d.id}
                     type="button"
                     onClick={() => setSelectedDiet(d.id as any)}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      padding: "6px 14px",
-                      borderRadius: "10px",
-                      border: isSelected ? "1.5px solid #FF6B00" : "1px solid #E2E8F0",
-                      backgroundColor: isSelected ? "#FFF3EB" : "#FFFFFF",
-                      color: isSelected ? "#FF6B00" : "#475569",
-                      fontWeight: isSelected ? "700" : "600",
-                      fontSize: "0.84rem",
-                      cursor: "pointer",
-                      transition: "all 0.15s ease",
-                    }}
+                    className={`${filterStyles.dietPillBtn} ${isSelected ? filterStyles.dietPillBtnSelected : ""}`}
                   >
                     <span>{d.label}</span>
                     {d.count !== undefined && (
-                      <span
-                        style={{
-                          fontSize: "0.74rem",
-                          color: isSelected ? "#EA580C" : "#94A3B8",
-                          fontWeight: "700",
-                        }}
-                      >
+                      <span className={`${filterStyles.dietPillCount} ${isSelected ? filterStyles.dietPillCountSelected : ""}`}>
                         {d.count}
                       </span>
                     )}
@@ -998,49 +975,36 @@ function FoodExploreContent() {
           </div>
 
           {/* Horizontal Line separating Dietary & Refine by */}
-          <div style={{ height: "1px", backgroundColor: "#F1F5F9", width: "100%" }} />
+          <div className={filterStyles.filterDivider} />
 
           {/* Row 2: Refine by */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "14px",
-              flexWrap: "wrap",
-              position: "relative",
-              zIndex: 45,
-            }}
-          >
-            <span
-              style={{
-                fontSize: "0.85rem",
-                fontWeight: "600",
-                color: "#64748B",
-                minWidth: "75px",
-              }}
-            >
-              Refine by
-            </span>
+          <div className={`${filterStyles.filterRow} ${filterStyles.filterRowRefine}`}>
+            {/* Desktop Side Label */}
+            <span className={filterStyles.filterLabelDesktop}>Refine by</span>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", flex: 1 }}>
+            {/* Mobile Section Header with Clear All */}
+            <div className={filterStyles.sectionHeaderMobile}>
+              <span className={filterStyles.sectionTitleText}>Refine by</span>
+              {activeFiltersCount > 0 && (
+                <button
+                  type="button"
+                  onClick={handleClearAll}
+                  className={filterStyles.clearBtnMobile}
+                >
+                  <SlidersHorizontal size={11} />
+                  <span>Clear All ({activeFiltersCount})</span>
+                  <X size={11} />
+                </button>
+              )}
+            </div>
+
+            <div className={filterStyles.refineControlsGroup}>
               {/* Price Range Dropdown */}
-              <div style={{ position: "relative" }}>
+              <div className={filterStyles.refineDropdownWrapper} ref={pricePopoverRef}>
                 <button
                   type="button"
                   onClick={() => setOpenPricePopover(!openPricePopover)}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    padding: "7px 14px",
-                    borderRadius: "10px",
-                    border: selectedPrice !== "all" ? "1.5px solid #FF6B00" : "1px solid #E2E8F0",
-                    backgroundColor: selectedPrice !== "all" ? "#FFF3EB" : "#FFFFFF",
-                    color: selectedPrice !== "all" ? "#FF6B00" : "#475569",
-                    fontWeight: selectedPrice !== "all" ? "700" : "600",
-                    fontSize: "0.85rem",
-                    cursor: "pointer",
-                  }}
+                  className={`${filterStyles.dropdownTriggerBtn} ${selectedPrice !== "all" ? filterStyles.dropdownTriggerBtnActive : ""}`}
                 >
                   <span>
                     {selectedPrice === "under-150"
@@ -1051,27 +1015,17 @@ function FoodExploreContent() {
                       ? "₹300+"
                       : "Price Range"}
                   </span>
-                  <ChevronDown size={13} />
+                  <ChevronDown
+                    size={13}
+                    style={{
+                      transform: openPricePopover ? "rotate(180deg)" : "none",
+                      transition: "transform 0.15s ease",
+                    }}
+                  />
                 </button>
 
                 {openPricePopover && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: "calc(100% + 6px)",
-                      left: 0,
-                      backgroundColor: "#FFFFFF",
-                      borderRadius: "14px",
-                      padding: "8px",
-                      boxShadow: "0 16px 36px rgba(0,0,0,0.16)",
-                      border: "1px solid #E2E8F0",
-                      zIndex: 1000,
-                      minWidth: "180px",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "4px",
-                    }}
-                  >
+                  <div className={filterStyles.pricePopover}>
                     {[
                       { id: "all", label: "Any Price", count: filterCounts.all },
                       { id: "under-150", label: "Under ₹150", count: filterCounts.under150 },
@@ -1087,23 +1041,9 @@ function FoodExploreContent() {
                             setSelectedPrice(p.id as any);
                             setOpenPricePopover(false);
                           }}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            padding: "8px 10px",
-                            borderRadius: "8px",
-                            border: "none",
-                            backgroundColor: isSelected ? "#FFF3EB" : "transparent",
-                            color: isSelected ? "#FF6B00" : "#334155",
-                            fontWeight: isSelected ? "700" : "500",
-                            fontSize: "13px",
-                            cursor: "pointer",
-                            gap: "12px",
-                            whiteSpace: "nowrap",
-                          }}
+                          className={`${filterStyles.popoverItem} ${isSelected ? filterStyles.popoverItemSelected : ""}`}
                         >
-                          <span style={{ whiteSpace: "nowrap" }}>{p.label}</span>
+                          <span>{p.label}</span>
                           {p.count > 0 && (
                             <span style={{ fontSize: "11px", color: isSelected ? "#FF6B00" : "#94A3B8", flexShrink: 0 }}>
                               ({p.count})
@@ -1118,50 +1058,26 @@ function FoodExploreContent() {
 
               {/* Cuisines Dropdown */}
               {availableCuisines.length > 0 && (
-                <div style={{ position: "relative" }}>
+                <div className={filterStyles.refineDropdownWrapper} ref={cuisinePopoverRef}>
                   <button
                     type="button"
                     onClick={() => setOpenCuisinePopover(!openCuisinePopover)}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      padding: "7px 14px",
-                      borderRadius: "10px",
-                      border: selectedCuisines.length > 0 ? "1.5px solid #FF6B00" : "1px solid #E2E8F0",
-                      backgroundColor: selectedCuisines.length > 0 ? "#FFF3EB" : "#FFFFFF",
-                      color: selectedCuisines.length > 0 ? "#FF6B00" : "#475569",
-                      fontWeight: selectedCuisines.length > 0 ? "700" : "600",
-                      fontSize: "0.85rem",
-                      cursor: "pointer",
-                    }}
+                    className={`${filterStyles.dropdownTriggerBtn} ${selectedCuisines.length > 0 ? filterStyles.dropdownTriggerBtnActive : ""}`}
                   >
                     <span>
                       {selectedCuisines.length > 0 ? `Cuisines (${selectedCuisines.length})` : "Cuisines"}
                     </span>
-                    <ChevronDown size={13} />
+                    <ChevronDown
+                      size={13}
+                      style={{
+                        transform: openCuisinePopover ? "rotate(180deg)" : "none",
+                        transition: "transform 0.15s ease",
+                      }}
+                    />
                   </button>
 
                   {openCuisinePopover && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        top: "calc(100% + 6px)",
-                        left: 0,
-                        backgroundColor: "#FFFFFF",
-                        borderRadius: "14px",
-                        padding: "8px",
-                        boxShadow: "0 16px 36px rgba(0,0,0,0.16)",
-                        border: "1px solid #E2E8F0",
-                        zIndex: 1000,
-                        minWidth: "220px",
-                        maxHeight: "260px",
-                        overflowY: "auto",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "4px",
-                      }}
-                    >
+                    <div className={filterStyles.cuisinePopover}>
                       {availableCuisines.map((c) => {
                         const isSelected = selectedCuisines.includes(c);
                         const count = filterCounts.cuisineCounts[c];
@@ -1174,19 +1090,7 @@ function FoodExploreContent() {
                                 prev.includes(c) ? prev.filter((item) => item !== c) : [...prev, c]
                               );
                             }}
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "space-between",
-                              padding: "7px 10px",
-                              borderRadius: "8px",
-                              border: "none",
-                              backgroundColor: isSelected ? "#FFF3EB" : "transparent",
-                              color: isSelected ? "#FF6B00" : "#334155",
-                              fontWeight: isSelected ? "700" : "500",
-                              fontSize: "13px",
-                              cursor: "pointer",
-                            }}
+                            className={`${filterStyles.popoverItem} ${isSelected ? filterStyles.popoverItemSelected : ""}`}
                           >
                             <span>{c}</span>
                             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
@@ -1205,31 +1109,10 @@ function FoodExploreContent() {
               <button
                 type="button"
                 onClick={() => setOffersOnly(!offersOnly)}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: "7px 14px",
-                  borderRadius: "10px",
-                  border: offersOnly ? "1.5px solid #FF6B00" : "1px solid #E2E8F0",
-                  backgroundColor: offersOnly ? "#FFF3EB" : "#FFFFFF",
-                  color: offersOnly ? "#FF6B00" : "#475569",
-                  fontWeight: offersOnly ? "700" : "600",
-                  fontSize: "0.85rem",
-                  cursor: "pointer",
-                }}
+                className={`${filterStyles.toggleBtn} ${offersOnly ? filterStyles.toggleBtnActiveOffers : ""}`}
               >
                 <span
-                  style={{
-                    width: "14px",
-                    height: "14px",
-                    borderRadius: "4px",
-                    border: offersOnly ? "1.5px solid #FF6B00" : "1.5px solid #94A3B8",
-                    backgroundColor: offersOnly ? "#FF6B00" : "transparent",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
+                  className={`${filterStyles.checkboxIndicator} ${offersOnly ? filterStyles.checkboxIndicatorActiveOffers : ""}`}
                 >
                   {offersOnly && <Check size={10} color="#FFFFFF" />}
                 </span>
@@ -1241,56 +1124,22 @@ function FoodExploreContent() {
               <button
                 type="button"
                 onClick={() => setOpenOnly(!openOnly)}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: "7px 14px",
-                  borderRadius: "10px",
-                  border: openOnly ? "1.5px solid #10B981" : "1px solid #E2E8F0",
-                  backgroundColor: openOnly ? "#ECFDF5" : "#FFFFFF",
-                  color: openOnly ? "#047857" : "#475569",
-                  fontWeight: openOnly ? "700" : "600",
-                  fontSize: "0.85rem",
-                  cursor: "pointer",
-                }}
+                className={`${filterStyles.toggleBtn} ${openOnly ? filterStyles.toggleBtnActiveOpen : ""}`}
               >
                 <span
-                  style={{
-                    width: "14px",
-                    height: "14px",
-                    borderRadius: "4px",
-                    border: openOnly ? "1.5px solid #10B981" : "1.5px solid #94A3B8",
-                    backgroundColor: openOnly ? "#10B981" : "transparent",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
+                  className={`${filterStyles.checkboxIndicator} ${openOnly ? filterStyles.checkboxIndicatorActiveOpen : ""}`}
                 >
                   {openOnly && <Check size={10} color="#FFFFFF" />}
                 </span>
                 <span>Open Kitchens</span>
               </button>
 
-              {/* Clear All Button */}
+              {/* Clear All Button on Desktop */}
               {activeFiltersCount > 0 && (
                 <button
                   type="button"
                   onClick={handleClearAll}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    padding: "7px 12px",
-                    borderRadius: "10px",
-                    border: "1px solid #FCA5A5",
-                    backgroundColor: "#FEF2F2",
-                    color: "#DC2626",
-                    fontSize: "0.82rem",
-                    fontWeight: "700",
-                    cursor: "pointer",
-                    marginLeft: "auto",
-                  }}
+                  className={filterStyles.clearAllBtnDesktop}
                 >
                   <SlidersHorizontal size={13} />
                   <span>Clear All ({activeFiltersCount})</span>
@@ -1420,12 +1269,13 @@ function FoodExploreContent() {
                       display: "flex",
                       flexDirection: "column",
                       gap: "12px",
+                      boxShadow: "0 4px 16px rgba(0, 0, 0, 0.03)",
                     }}
                   >
-                    <div style={{ width: "100%", height: "170px", backgroundColor: "#F1F5F9", borderRadius: "14px" }} />
-                    <div style={{ width: "70%", height: "20px", backgroundColor: "#F1F5F9", borderRadius: "6px" }} />
-                    <div style={{ width: "45%", height: "16px", backgroundColor: "#F1F5F9", borderRadius: "4px" }} />
-                    <div style={{ width: "90%", height: "36px", backgroundColor: "#F1F5F9", borderRadius: "10px", marginTop: "auto" }} />
+                    <div className="skeleton-shimmer" style={{ width: "100%", height: "170px", borderRadius: "14px" }} />
+                    <div className="skeleton-shimmer" style={{ width: "70%", height: "20px", borderRadius: "6px" }} />
+                    <div className="skeleton-shimmer" style={{ width: "45%", height: "16px", borderRadius: "4px" }} />
+                    <div className="skeleton-shimmer" style={{ width: "90%", height: "36px", borderRadius: "10px", marginTop: "auto" }} />
                   </div>
                 ))}
               </div>
@@ -1579,7 +1429,7 @@ function FoodExploreContent() {
                             {dish.name}
                           </h3>
                           <Link
-                            href={dish.sellerTrackingId ? `/shop/${dish.sellerTrackingId}` : "#"}
+                            href={dish.sellerTrackingId ? `/shop/${dish.sellerTrackingId}${selectedPrice && selectedPrice !== "all" ? `?price=${selectedPrice}` : ""}` : "#"}
                             style={{
                               fontSize: "0.82rem",
                               color: "#64748B",
@@ -2038,11 +1888,12 @@ function FoodExploreContent() {
                       display: "flex",
                       flexDirection: "column",
                       gap: "12px",
+                      boxShadow: "0 4px 16px rgba(0, 0, 0, 0.03)",
                     }}
                   >
-                    <div style={{ width: "100%", height: "170px", backgroundColor: "#F1F5F9", borderRadius: "14px" }} />
-                    <div style={{ width: "65%", height: "22px", backgroundColor: "#F1F5F9", borderRadius: "6px" }} />
-                    <div style={{ width: "40%", height: "16px", backgroundColor: "#F1F5F9", borderRadius: "4px" }} />
+                    <div className="skeleton-shimmer" style={{ width: "100%", height: "170px", borderRadius: "14px" }} />
+                    <div className="skeleton-shimmer" style={{ width: "65%", height: "22px", borderRadius: "6px" }} />
+                    <div className="skeleton-shimmer" style={{ width: "40%", height: "16px", borderRadius: "4px" }} />
                   </div>
                 ))}
               </div>
@@ -2061,7 +1912,7 @@ function FoodExploreContent() {
                   return (
                     <Link
                       key={kitchen.id}
-                      href={`/shop/${kitchen.trackingId || kitchen.id}`}
+                      href={`/shop/${kitchen.trackingId || kitchen.id}${selectedPrice && selectedPrice !== "all" ? `?price=${selectedPrice}` : ""}`}
                       style={{ textDecoration: "none", height: "100%", display: "flex", flexDirection: "column" }}
                     >
                       <div
@@ -2310,6 +2161,19 @@ function FoodExploreContent() {
             padding: 20px 16px 60px 16px !important;
           }
         }
+        @keyframes shimmer {
+          0% {
+            background-position: -200% 0;
+          }
+          100% {
+            background-position: 200% 0;
+          }
+        }
+        .skeleton-shimmer {
+          background: linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%) !important;
+          background-size: 200% 100% !important;
+          animation: shimmer 1.5s infinite ease-in-out !important;
+        }
         @media (max-width: 600px) {
           .food-explore-grid {
             grid-template-columns: 1fr !important;
@@ -2327,8 +2191,13 @@ export default function FoodExplorePage() {
   return (
     <Suspense
       fallback={
-        <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ fontSize: "16px", fontWeight: "700", color: "#FF6B00" }}>Loading delicious dishes...</div>
+        <div style={{ minHeight: "100vh", backgroundColor: "#FAFAFA", padding: "40px 24px", display: "flex", flexDirection: "column", gap: "24px", maxWidth: "1280px", margin: "0 auto" }}>
+          <div style={{ width: "240px", height: "36px", borderRadius: "8px", background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite ease-in-out" }} />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "20px" }}>
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} style={{ height: "300px", borderRadius: "18px", background: "linear-gradient(90deg, #F1F5F9 0%, #E2E8F0 50%, #F1F5F9 100%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite ease-in-out" }} />
+            ))}
+          </div>
         </div>
       }
     >
