@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { CheckCircle2, AlertCircle, Loader2, Laptop, Smartphone } from "lucide-react";
+import { CheckCircle2, AlertCircle, Loader2, Laptop, Smartphone, Trash2, X } from "lucide-react";
+import { signOut } from "next-auth/react";
 import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
 import { fetchApi } from "@/lib/fetch-api";
 import styles from "./SellerSecuritySettings.module.css";
@@ -500,6 +501,296 @@ export interface SellerSecuritySettingsProps {
   className?: string;
 }
 
+/* ======================================================== */
+/* 2. Danger Zone: Delete Kitchen Account                   */
+/* ======================================================== */
+export const SellerDeleteAccountCard: React.FC<{ className?: string }> = ({ className = "" }) => {
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const handleConfirmDelete = async () => {
+    setDeleteLoading(true);
+    setDeleteError(null);
+    try {
+      const res = await fetchApi("/api/seller/delete-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: deletePassword || undefined })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setDeleteError(data.message || data.error || "Failed to schedule seller account deletion.");
+        return;
+      }
+      setDeleteModalOpen(false);
+      await signOut({ callbackUrl: "/auth/login/seller?deletion_scheduled=true" });
+    } catch (err: any) {
+      setDeleteError(err.message || "An unexpected network error occurred.");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  return (
+    <div
+      className={`${styles.card || ""} ${className}`}
+      style={{
+        border: "1px solid #FCA5A5",
+        backgroundColor: "#FFF8F8",
+        borderRadius: "16px",
+        padding: "24px",
+        marginTop: "24px",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "16px", flexWrap: "wrap" }}>
+        <div style={{ maxWidth: "560px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+            <Trash2 size={20} color="#DC2626" />
+            <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "#991B1B" }}>
+              Delete Kitchen Account
+            </h3>
+          </div>
+          <p style={{ margin: 0, fontSize: "0.86rem", color: "#64748B", lineHeight: "1.5" }}>
+            Requesting account deletion immediately takes your kitchen offline. You have a <strong>30-day grace period</strong> to recover your account simply by logging back in. After 30 days, personal seller details are permanently anonymized while order history is safely retained.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            setDeleteError(null);
+            setDeletePassword("");
+            setDeleteModalOpen(true);
+          }}
+          style={{
+            padding: "9px 18px",
+            backgroundColor: "#FEF2F2",
+            color: "#DC2626",
+            border: "1.5px solid #F87171",
+            borderRadius: "10px",
+            fontSize: "0.85rem",
+            fontWeight: 700,
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "8px",
+            transition: "all 0.15s ease",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = "#FEE2E2";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "#FEF2F2";
+          }}
+        >
+          <Trash2 size={15} />
+          <span>Delete Kitchen</span>
+        </button>
+      </div>
+
+      {deleteModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.65)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 99999,
+            padding: "16px",
+          }}
+          onClick={() => !deleteLoading && setDeleteModalOpen(false)}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: "500px",
+              backgroundColor: "#FFFFFF",
+              borderRadius: "16px",
+              padding: "24px",
+              boxShadow: "0 20px 40px rgba(0, 0, 0, 0.2)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "18px",
+              boxSizing: "border-box",
+              fontFamily: "inherit",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div
+                  style={{
+                    width: "40px",
+                    height: "40px",
+                    borderRadius: "10px",
+                    backgroundColor: "#FEF2F2",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#DC2626",
+                  }}
+                >
+                  <Trash2 size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: "#991B1B" }}>
+                    Confirm Kitchen Deletion
+                  </h3>
+                  <p style={{ margin: 0, fontSize: "0.8rem", color: "#64748B", marginTop: "2px" }}>
+                    30-Day Soft Deletion Period
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => !deleteLoading && setDeleteModalOpen(false)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#94A3B8",
+                  cursor: "pointer",
+                  padding: "4px",
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div
+              style={{
+                backgroundColor: "#FFFBEB",
+                border: "1px solid #FDE68A",
+                color: "#92400E",
+                borderRadius: "10px",
+                padding: "12px 14px",
+                fontSize: "0.82rem",
+                lineHeight: "1.5",
+              }}
+            >
+              <div style={{ fontWeight: 700, marginBottom: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
+                <AlertCircle size={15} color="#D97706" />
+                <span>Notice for Kitchen Owners:</span>
+              </div>
+              <ul style={{ margin: 0, paddingLeft: "18px", fontSize: "0.8rem", color: "#78350F" }}>
+                <li>Your kitchen will be placed <strong>offline immediately</strong>.</li>
+                <li><strong>Cancel anytime within 30 days:</strong> Logging back into your account restores your kitchen and cancels deletion.</li>
+                <li>After 30 days, personal documents, KYC, and contacts are permanently anonymized.</li>
+              </ul>
+            </div>
+
+            {deleteError && (
+              <div
+                style={{
+                  backgroundColor: "#FEF2F2",
+                  color: "#991B1B",
+                  border: "1px solid #F87171",
+                  padding: "10px 14px",
+                  borderRadius: "8px",
+                  fontSize: "0.82rem",
+                  fontWeight: 600,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                <AlertCircle size={15} />
+                <span>{deleteError}</span>
+              </div>
+            )}
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+              <label style={{ fontSize: "0.76rem", fontWeight: 700, color: "#475569" }}>
+                CONFIRM PASSWORD (OPTIONAL)
+              </label>
+              <input
+                type="password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                placeholder="Enter password to verify ownership"
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: "8px",
+                  border: "1.5px solid #CBD5E1",
+                  fontSize: "0.88rem",
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px" }}>
+              <button
+                type="button"
+                onClick={() => setDeleteModalOpen(false)}
+                disabled={deleteLoading}
+                style={{
+                  padding: "9px 18px",
+                  backgroundColor: "#F1F5F9",
+                  color: "#475569",
+                  border: "1px solid #CBD5E1",
+                  borderRadius: "8px",
+                  fontSize: "0.85rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={deleteLoading}
+                style={{
+                  padding: "9px 18px",
+                  backgroundColor: "#DC2626",
+                  color: "#FFFFFF",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "0.85rem",
+                  fontWeight: 600,
+                  cursor: deleteLoading ? "not-allowed" : "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  opacity: deleteLoading ? 0.7 : 1,
+                }}
+              >
+                {deleteLoading && <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} />}
+                <span>{deleteLoading ? "Processing..." : "Confirm & Delete Kitchen"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ======================================================== */
+/* 3. Combined SellerSecuritySettings Component              */
+/* ======================================================== */
+export interface SellerSecuritySettingsProps {
+  passwords?: {
+    current?: string;
+    newPass?: string;
+    confirm?: string;
+  };
+  sessions?: LoginSessionItem[];
+  onPasswordChange?: (passwords: {
+    current: string;
+    newPass: string;
+    confirm: string;
+  }) => void;
+  onLogoutOtherSessions?: () => void;
+  className?: string;
+}
+
 export const SellerSecuritySettings: React.FC<SellerSecuritySettingsProps> = ({
   passwords,
   onPasswordChange,
@@ -513,6 +804,7 @@ export const SellerSecuritySettings: React.FC<SellerSecuritySettingsProps> = ({
         confirmPassword={passwords?.confirm}
         onPasswordChange={onPasswordChange}
       />
+      <SellerDeleteAccountCard />
     </div>
   );
 };

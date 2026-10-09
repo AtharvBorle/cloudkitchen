@@ -80,6 +80,8 @@ export const ResSellerLogin: React.FC<ResSellerLoginProps> = ({
       if (res?.error) {
         if (res.error === "USER_NOT_FOUND" || res.error.includes("USER_NOT_FOUND")) {
           setErrorMessage("Owner account not found. Please start onboarding.");
+        } else if (res.error.includes("ACCOUNT_DELETED")) {
+          setErrorMessage("This seller account has been permanently deleted.");
         } else if (res.error === "INVALID_PASSWORD" || res.error.includes("INVALID_PASSWORD")) {
           setErrorMessage("Incorrect password. Please try again.");
         } else if (res.error.includes("ROLE_MISMATCH")) {

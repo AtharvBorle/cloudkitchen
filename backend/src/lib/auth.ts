@@ -2,6 +2,7 @@ import NextAuth, { NextAuthConfig, CredentialsSignin } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { db } from "./db";
 import bcrypt from "bcryptjs";
+import { isGracePeriodExpired, anonymizeUserAccount, restoreAccountIfWithinGracePeriod } from "./account-deletion";
 
 class CustomAuthError extends CredentialsSignin {
     constructor(code: string) {
@@ -99,7 +100,21 @@ export const authConfig: NextAuthConfig = {
                         throw new CustomAuthError("USER_NOT_FOUND");
                     }
 
-                    if (user.isActive === false) {
+                    if (user.isPermanentlyDeleted) {
+                        console.log("Account permanently deleted for phone:", phoneDigits);
+                        throw new CustomAuthError("ACCOUNT_DELETED");
+                    }
+
+                    if (user.deletedAt) {
+                        if (isGracePeriodExpired(user.deletedAt)) {
+                            console.log("Deletion grace period expired for phone:", phoneDigits);
+                            await anonymizeUserAccount(user.id);
+                            throw new CustomAuthError("ACCOUNT_DELETED");
+                        } else {
+                            // Restore account and cancel deletion
+                            await restoreAccountIfWithinGracePeriod(user);
+                        }
+                    } else if (user.isActive === false) {
                         console.log("Account is inactive for phone:", phoneDigits);
                         throw new CustomAuthError("ACCOUNT_INACTIVE");
                     }
@@ -160,8 +175,21 @@ export const authConfig: NextAuthConfig = {
                     throw new CustomAuthError("INVALID_PASSWORD");
                 }
 
-                // Check if account is active
-                if (user.isActive === false) {
+                if (user.isPermanentlyDeleted) {
+                    console.log("Account permanently deleted for user:", rawIdentifier);
+                    throw new CustomAuthError("ACCOUNT_DELETED");
+                }
+
+                if (user.deletedAt) {
+                    if (isGracePeriodExpired(user.deletedAt)) {
+                        console.log("Deletion grace period expired for user:", rawIdentifier);
+                        await anonymizeUserAccount(user.id);
+                        throw new CustomAuthError("ACCOUNT_DELETED");
+                    } else {
+                        // Restore account and cancel deletion
+                        await restoreAccountIfWithinGracePeriod(user);
+                    }
+                } else if (user.isActive === false) {
                     console.log("Account is inactive for user:", rawIdentifier);
                     throw new CustomAuthError("ACCOUNT_INACTIVE");
                 }
@@ -210,9 +238,9 @@ export const authConfig: NextAuthConfig = {
             if (session.user && token?.id) {
                 const dbUser = await db.user.findUnique({
                     where: { id: token.id as string },
-                    select: { isActive: true }
+                    select: { isActive: true, deletedAt: true, isPermanentlyDeleted: true }
                 });
-                if (dbUser && !dbUser.isActive) {
+                if (!dbUser || !dbUser.isActive || dbUser.deletedAt || dbUser.isPermanentlyDeleted) {
                     return null as any;
                 }
                 session.user.role = token.role as string;
@@ -264,6 +292,13 @@ export const getAuthSession = async () => {
             const secret = process.env.NEXTAUTH_SECRET || "fallback_secret_for_development_only";
             const decoded = jwt.verify(token, secret) as any;
             if (decoded && decoded.id) {
+                const dbUser = await db.user.findUnique({
+                    where: { id: decoded.id },
+                    select: { isActive: true, deletedAt: true, isPermanentlyDeleted: true }
+                });
+                if (!dbUser || !dbUser.isActive || dbUser.deletedAt || dbUser.isPermanentlyDeleted) {
+                    return null;
+                }
                 return {
                     user: {
                         id: decoded.id,
