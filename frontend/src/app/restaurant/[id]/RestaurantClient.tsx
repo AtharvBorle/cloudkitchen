@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Navbar } from "@/components/navbar";
 import { FoodHeroBanner } from "@/components/restaurant-desktop/foodherobanner";
@@ -21,6 +21,8 @@ interface RestaurantClientProps {
 
 export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isVegParam = searchParams?.get("vegOnly") === "true" || searchParams?.get("veg") === "true" || searchParams?.get("diet") === "veg";
   const { data: session } = useSession();
   const { addToCart, decreaseQuantity } = useCart();
   const isStatic = isStaticKitchen(kitchenId);
@@ -28,6 +30,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
   const [isNotFound, setIsNotFound] = useState<boolean>(false);
   const [kitchenData, setKitchenData] = useState<KitchenData>(() => getKitchenById(kitchenId));
   const [isVegOnly, setIsVegOnly] = useState<boolean>(() => {
+    if (isVegParam) return true;
     if (typeof window !== "undefined") {
       try {
         const stored = localStorage.getItem("cloudkitchen_veg_preference");
@@ -82,18 +85,6 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
           preset: pParam || undefined,
         };
       }
-
-      const stored = localStorage.getItem("cloudkitchen_price_filter");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed && (parsed.preset !== "all" || (parsed.maxPrice && parsed.maxPrice < 2500) || parsed.minPrice)) {
-          return {
-            minPrice: parsed.minPrice,
-            maxPrice: parsed.maxPrice,
-            preset: parsed.preset,
-          };
-        }
-      }
     } catch {}
     return null;
   });
@@ -126,32 +117,21 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
     };
   }, []);
 
-  // Sync price filter preference with localStorage and across tabs/components
+  // Sync price filter preference with custom event when changed
   useEffect(() => {
     const syncPrice = (e: any) => {
       if (e?.detail !== undefined) {
         setPriceFilter(e.detail);
-      } else if (typeof window !== "undefined") {
-        try {
-          const stored = localStorage.getItem("cloudkitchen_price_filter");
-          if (stored) {
-            setPriceFilter(JSON.parse(stored));
-          } else {
-            setPriceFilter(null);
-          }
-        } catch {}
       }
     };
 
     if (typeof window !== "undefined") {
       window.addEventListener("cloudkitchen_price_filter_changed", syncPrice);
-      window.addEventListener("storage", syncPrice);
     }
 
     return () => {
       if (typeof window !== "undefined") {
         window.removeEventListener("cloudkitchen_price_filter_changed", syncPrice);
-        window.removeEventListener("storage", syncPrice);
       }
     };
   }, []);
@@ -369,6 +349,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
             let computedDietType = "Veg & Non-Veg 🍱";
             if (isPureVegKitchen) {
               computedDietType = "Pure Veg 🥦";
+              setIsVegOnly(true);
             } else if (rawFoodType === "NON_VEG" && !hasVegItems) {
               computedDietType = "Non-Veg 🍗";
             } else {
@@ -839,6 +820,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
             isLoading={!isLoaded}
             onAddItem={handleAddItem}
             onDecreaseItem={handleDecreaseItem}
+            onResetFilters={handleClearPriceFilter}
           />
         </main>
         <Footer />

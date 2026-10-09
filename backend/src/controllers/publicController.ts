@@ -85,7 +85,8 @@ export const getPublicExploreData = unstable_cache(
                 parsedKitchenImages = [];
             }
 
-            const defaultCoords = getPincodeCoordinates(seller.user.pincode);
+            const effectiveSellerPincode = seller.user.pincode || seller.servedPincodes?.[0]?.pincode || "";
+            const defaultCoords = effectiveSellerPincode ? getPincodeCoordinates(effectiveSellerPincode) : null;
             const resolvedLat = seller.latitude ?? defaultCoords?.lat ?? null;
             const resolvedLng = seller.longitude ?? defaultCoords?.lng ?? null;
 
@@ -95,7 +96,7 @@ export const getPublicExploreData = unstable_cache(
                 trackingId: seller.trackingId,
                 type: seller.type,
                 city: seller.user.city,
-                pincode: seller.user.pincode,
+                pincode: effectiveSellerPincode,
                 locality: seller.addressLocality,
                 landmark: seller.addressLandmark,
                 latitude: resolvedLat,
@@ -127,7 +128,7 @@ export const getPublicExploreData = unstable_cache(
                     reviewsCount: itemRatingCount > 0 ? itemRatingCount : reviewsCount,
                     sellerName: seller.businessName || seller.user.name,
                     sellerCity: seller.user.city,
-                    sellerPincode: seller.user.pincode,
+                    sellerPincode: effectiveSellerPincode,
                     sellerLocality: seller.addressLocality,
                     sellerLandmark: seller.addressLandmark,
                     sellerTrackingId: seller.trackingId,

@@ -101,8 +101,8 @@ export default function Home() {
 
   // Dynamic Kitchens / Places (and multi-dimensional filtering)
   const dynamicPlaces = useMemo(() => {
-    const sourceKitchens = homeSearchQuery ? homeData.allKitchens : homeData.kitchens;
-    const sourceFoodItems = homeSearchQuery ? homeData.allFoodItems : homeData.foodItems;
+    const sourceKitchens = (homeData.allKitchens && homeData.allKitchens.length > 0) ? homeData.allKitchens : homeData.kitchens;
+    const sourceFoodItems = (homeData.allFoodItems && homeData.allFoodItems.length > 0) ? homeData.allFoodItems : homeData.foodItems;
 
     if (!sourceKitchens || sourceKitchens.length === 0) {
       return [];
@@ -203,7 +203,7 @@ export default function Home() {
 
   // Dynamic Offers for PopularOrders derived from active coupons & all eligible food items
   const dynamicOffers = useMemo(() => {
-    const sourceFoodItems = homeSearchQuery ? homeData.allFoodItems : homeData.foodItems;
+    const sourceFoodItems = (homeData.allFoodItems && homeData.allFoodItems.length > 0) ? homeData.allFoodItems : homeData.foodItems;
     if (!sourceFoodItems || sourceFoodItems.length === 0 || !homeData.coupons || homeData.coupons.length === 0) {
       return [];
     }
@@ -291,7 +291,7 @@ export default function Home() {
 
   // Dynamic Dishes for BestPlaces
   const dynamicDishes = useMemo(() => {
-    const sourceFoodItems = homeSearchQuery ? homeData.allFoodItems : homeData.foodItems;
+    const sourceFoodItems = (homeData.allFoodItems && homeData.allFoodItems.length > 0) ? homeData.allFoodItems : homeData.foodItems;
     if (!sourceFoodItems || sourceFoodItems.length === 0) return [];
     let list = sourceFoodItems;
 
@@ -362,7 +362,7 @@ export default function Home() {
 
   // Dynamic Top Rated Items for DashboardBody
   const dynamicTopRated = useMemo(() => {
-    const sourceFoodItems = homeSearchQuery ? homeData.allFoodItems : homeData.foodItems;
+    const sourceFoodItems = (homeData.allFoodItems && homeData.allFoodItems.length > 0) ? homeData.allFoodItems : homeData.foodItems;
     if (!sourceFoodItems || sourceFoodItems.length === 0) return [];
     let list = sourceFoodItems;
 
@@ -426,7 +426,7 @@ export default function Home() {
 
   // Dynamic Recommended Dishes for RecommendedForYou
   const dynamicRecommended = useMemo(() => {
-    const sourceFoodItems = homeSearchQuery ? homeData.allFoodItems : homeData.foodItems;
+    const sourceFoodItems = (homeData.allFoodItems && homeData.allFoodItems.length > 0) ? homeData.allFoodItems : homeData.foodItems;
     if (!sourceFoodItems || sourceFoodItems.length === 0) return [];
     let list = sourceFoodItems;
 
@@ -629,7 +629,7 @@ export default function Home() {
         />
 
         {/* Out of Service Area Alert Banner (only shown during location browsing, not during name search) */}
-        {!homeSearchQuery && homeData.activePincode && !homeData.isLoading && homeData.kitchens.length === 0 && (
+        {!homeSearchQuery && homeData.activePincode && !homeData.isLoading && !homeData.isDirectlyDeliverable && (
           <div
             style={{
               width: "100%",
@@ -664,10 +664,10 @@ export default function Home() {
               </div>
               <div>
                 <h3 style={{ margin: "0 0 2px 0", fontSize: "1rem", fontWeight: "700", color: "#0F172A" }}>
-                  No Cloud Kitchens Delivering to PIN {homeData.activePincode}
+                  Direct Delivery Limited for PIN {homeData.activePincode}
                 </h3>
                 <p style={{ margin: 0, fontSize: "0.85rem", color: "#64748B" }}>
-                  We haven&apos;t expanded to this specific pincode yet. Choose a nearby area like Kothrud (411038), Baner (411045), or Aundh (411007) to explore delicious dishes.
+                  Showing all active cloud kitchens in Pune. Choose an area like Kothrud (411038 / 411052) or Shivajinagar (411004) for direct doorstep delivery.
                 </p>
               </div>
             </div>
@@ -700,7 +700,7 @@ export default function Home() {
         {/* 4. Properties / Best Places Nearby */}
         <Properties
           places={dynamicPlaces}
-          foodItems={homeSearchQuery ? homeData.allFoodItems : homeData.foodItems}
+          foodItems={(homeData.allFoodItems && homeData.allFoodItems.length > 0) ? homeData.allFoodItems : homeData.foodItems}
           allKitchens={homeData.allKitchens}
           isLoading={homeData.isLoading}
         />

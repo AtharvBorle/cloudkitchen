@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Star, Check } from "lucide-react";
 import Link from "next/link";
 
-import { isKitchenMatchingDiet } from "@/lib/dietary-filter";
+import { isKitchenMatchingDiet, isNonVegDish } from "@/lib/dietary-filter";
 
 export interface PlaceCardData {
   id: string;
@@ -142,8 +142,59 @@ function isKitchenMatchingPrice(
   return true;
 }
 
+function isPlacePureVeg(
+  kitchen: PlaceCardData,
+  foodItems: Array<any> = []
+): boolean {
+  const rawFoodType = String(kitchen.foodType || "").toUpperCase().replace(/[\s-]/g, "_").trim();
+  if (
+    rawFoodType === "PURE_VEG" ||
+    rawFoodType === "VEG" ||
+    rawFoodType === "VEG_ONLY" ||
+    rawFoodType === "PUREVEG"
+  ) {
+    return true;
+  }
+  const kText = `${kitchen.name || ""} ${kitchen.category || ""}`.toLowerCase();
+  if (kText.includes("pure veg") || kText.includes("pure-veg") || kText.includes("100% veg") || kText.includes("pureveg")) {
+    const hasNonVegKeywords = /\b(chicken|mutton|fish|meat|biryani|egg|eggs|non[\s-_]?veg|kebab|shawarma|seafood|prawns?)\b/i.test(kText);
+    if (!hasNonVegKeywords) return true;
+  }
+  if (rawFoodType === "BOTH" || rawFoodType === "NON_VEG" || rawFoodType === "VEG_NON_VEG" || rawFoodType === "VEG_AND_NON_VEG") {
+    return false;
+  }
+  const dishes = getKitchenDishes(kitchen, foodItems);
+  if (dishes.length > 0) {
+    const hasNonVegDish = dishes.some((d) => isNonVegDish(d));
+    return !hasNonVegDish;
+  }
+  return false;
+}
+
+function isPlaceVegAndNonVeg(
+  kitchen: PlaceCardData,
+  foodItems: Array<any> = []
+): boolean {
+  if (isPlacePureVeg(kitchen, foodItems)) return false;
+  const rawFoodType = String(kitchen.foodType || "").toUpperCase().replace(/[\s-]/g, "_").trim();
+  if (
+    rawFoodType === "BOTH" ||
+    rawFoodType === "VEG_NON_VEG" ||
+    rawFoodType === "VEG_AND_NON_VEG"
+  ) {
+    return true;
+  }
+  const dishes = getKitchenDishes(kitchen, foodItems);
+  if (dishes.length > 0) {
+    const hasVeg = dishes.some((d) => !isNonVegDish(d));
+    const hasNonVeg = dishes.some((d) => isNonVegDish(d));
+    if (hasVeg && hasNonVeg) return true;
+  }
+  return rawFoodType !== "NON_VEG";
+}
+
 const DIETARY = [
-  { id: "veg", label: "Pure Veg 🥦" },
+  { id: "pure_veg", label: "Pure Veg 🥦" },
   { id: "non-veg", label: "Non-Veg 🍗" },
   { id: "vegan", label: "Vegan (Plant-Based 🌱)" },
   { id: "jain", label: "Jain / Satvik 🌿" },
@@ -165,13 +216,13 @@ interface PropertiesProps {
   isLoading?: boolean;
 }
 
-export default function Properties({ places, foodItems = [], isLoading = false }: PropertiesProps) {
+export default function Properties({ places, foodItems = [], allKitchens = [], isLoading = false }: PropertiesProps) {
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
   const [selectedDietary, setSelectedDietary] = useState<string[]>([]);
   const [maxPrice, setMaxPrice] = useState<number>(2500);
   const [activePricePreset, setActivePricePreset] = useState<string>("all");
 
-  const basePlaces = places || [];
+  const basePlaces = (places && places.length > 0) ? places : (allKitchens && allKitchens.length > 0 ? allKitchens : []);
 
   // Compute dynamic cuisine counts from available places & dishes
   const dynamicCuisines = React.useMemo(() => {
@@ -315,6 +366,13 @@ export default function Properties({ places, foodItems = [], isLoading = false }
   const getKitchenHref = (place: PlaceCardData) => {
     const base = place.trackingId ? `/shop/${place.trackingId}` : `/restaurant/${place.kitchenId || "7-12-kitchen"}`;
     const params = new URLSearchParams();
+
+    const isPure = isPlacePureVeg(place, foodItems);
+    const isPureVegActive = selectedDietary.includes("pure_veg") || selectedDietary.includes("pure-veg") || selectedDietary.includes("veg");
+
+    if (isPure || isPureVegActive) {
+      params.set("vegOnly", "true");
+    }
 
     if (activePricePreset && activePricePreset !== "all") {
       params.set("price", activePricePreset);
@@ -934,6 +992,8 @@ export default function Properties({ places, foodItems = [], isLoading = false }
                       </span>
                     </div>
                   )}
+
+
                 </div>
 
                 {/* Card Content Footer */}

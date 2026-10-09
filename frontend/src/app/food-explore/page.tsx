@@ -143,7 +143,7 @@ function FoodExploreContent() {
 
   // Dynamic filter counts
   const filterCounts = useMemo(() => {
-    const items = searchQuery ? homeData.allFoodItems : homeData.foodItems;
+    const items = (homeData.allFoodItems && homeData.allFoodItems.length > 0) ? homeData.allFoodItems : homeData.foodItems;
     if (!items || items.length === 0) return { all: 0, veg: 0, non_veg: 0, vegan: 0, jain: 0, under150: 0, price150to300: 0, price300plus: 0, cuisineCounts: {} };
 
     const cuisineCounts: Record<string, number> = {};
@@ -162,11 +162,11 @@ function FoodExploreContent() {
       price300plus: items.filter((f) => f.price > 300).length,
       cuisineCounts,
     };
-  }, [homeData.foodItems, homeData.allFoodItems, availableCuisines, searchQuery]);
+  }, [homeData.foodItems, homeData.allFoodItems, availableCuisines]);
 
   // Filter and sort food items
   const filteredFoodItems = useMemo(() => {
-    const sourceItems = searchQuery ? homeData.allFoodItems : homeData.foodItems;
+    const sourceItems = (homeData.allFoodItems && homeData.allFoodItems.length > 0) ? homeData.allFoodItems : homeData.foodItems;
     if (!sourceItems || sourceItems.length === 0) return [];
 
     let list = sourceItems;
@@ -294,8 +294,8 @@ function FoodExploreContent() {
 
   // Filter and sort kitchens
   const filteredKitchens = useMemo(() => {
-    const sourceKitchens = searchQuery ? homeData.allKitchens : homeData.kitchens;
-    const sourceFoodItems = searchQuery ? homeData.allFoodItems : homeData.foodItems;
+    const sourceKitchens = (homeData.allKitchens && homeData.allKitchens.length > 0) ? homeData.allKitchens : homeData.kitchens;
+    const sourceFoodItems = (homeData.allFoodItems && homeData.allFoodItems.length > 0) ? homeData.allFoodItems : homeData.foodItems;
     if (!sourceKitchens || sourceKitchens.length === 0) return [];
 
     let list = sourceKitchens;

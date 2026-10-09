@@ -1,10 +1,11 @@
-export type DietaryOption = "all" | "veg" | "non_veg" | "non-veg" | "vegan" | "jain";
+export type DietaryOption = "all" | "veg" | "pure_veg" | "non_veg" | "non-veg" | "vegan" | "jain";
 
 export function normalizeDietary(diet?: string | null): DietaryOption {
   if (!diet) return "all";
-  const lower = diet.toLowerCase().trim();
-  if (lower === "veg" || lower === "pure_veg" || lower === "pure veg") return "veg";
-  if (lower === "non_veg" || lower === "non-veg" || lower === "non veg" || lower === "nonveg") return "non_veg";
+  const lower = diet.toLowerCase().trim().replace(/[\s-]/g, "_");
+  if (lower === "pure_veg" || lower === "pureveg") return "pure_veg";
+  if (lower === "veg") return "veg";
+  if (lower === "non_veg" || lower === "nonveg") return "non_veg";
   if (lower === "vegan") return "vegan";
   if (lower === "jain" || lower === "satvik") return "jain";
   return "all";
@@ -219,7 +220,7 @@ export function isDishMatchingDiet(
     rawType.includes("SATVIK") ||
     JAIN_POSITIVE_WORDS.some((w) => text.includes(w));
 
-  if (norm === "veg") {
+  if (norm === "veg" || norm === "pure_veg") {
     // If it is non-veg, it is NEVER pure veg
     if (isNonVeg) return false;
     return true;
@@ -328,6 +329,22 @@ export function isKitchenMatchingDiet(
     rawFoodType === "VEG_AND_NON_VEG";
 
   if (norm === "veg") {
+    // When user chooses "veg", show both kitchen: veg and non-veg (hybrid BOTH / kitchens serving veg)
+    if (isDeclaredPureVeg || isBothVegAndNonVeg) {
+      return true;
+    }
+
+    if (kitchenDishes.length > 0) {
+      // Show kitchen if it offers at least one veg dish
+      const hasAnyVegDish = kitchenDishes.some((d) => isDishMatchingDiet(d, "veg"));
+      return hasAnyVegDish;
+    }
+
+    // If no dishes loaded, show unless explicitly declared pure non-veg
+    return !isDeclaredNonVeg;
+  }
+
+  if (norm === "pure_veg") {
     // 1. Explicitly Non-Veg or Hybrid BOTH kitchen is NOT 100% Pure Veg
     if (isDeclaredNonVeg || isBothVegAndNonVeg) {
       return false;
@@ -341,7 +358,7 @@ export function isKitchenMatchingDiet(
         return false;
       }
       // Must have at least one veg dish or all dishes are veg
-      const allDishesVeg = kitchenDishes.every((d) => isDishMatchingDiet(d, "veg"));
+      const allDishesVeg = kitchenDishes.every((d) => isDishMatchingDiet(d, "pure_veg"));
       return allDishesVeg;
     }
 
