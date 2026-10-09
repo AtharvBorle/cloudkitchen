@@ -373,7 +373,6 @@ export default function Properties({ places, foodItems = [], allKitchens = [], i
     if (isPure || isPureVegActive) {
       params.set("vegOnly", "true");
     }
-
     if (activePricePreset && activePricePreset !== "all") {
       params.set("price", activePricePreset);
       if (activePricePreset === "under-150") {

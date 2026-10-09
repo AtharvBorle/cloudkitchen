@@ -36,6 +36,7 @@ import { Footer } from "@/components/explore-desktop/footer";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import { broadcastOrderToSellerNotifications } from "@/hooks/useSellerNotifications";
 import { calculateDistanceKm, getPincodeCoordinates, MAX_DELIVERY_RADIUS_KM } from "@/lib/geo-distance";
+import { HouseMapPicker } from "@/components/house-map-picker";
 import styles from "./SecureCheckout.module.css";
 
 export interface SavedAddressItem {
@@ -148,12 +149,16 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
   const [city, setCity] = useState<string>(initialCity);
   const [postalCode, setPostalCode] = useState<string>(initialPincode);
   const [deliveryInstructions, setDeliveryInstructions] = useState<string>("");
+  const [manualLat, setManualLat] = useState<number | null>(null);
+  const [manualLng, setManualLng] = useState<number | null>(null);
+  const [hasPinnedLocation, setHasPinnedLocation] = useState<boolean>(false);
   const [errors, setErrors] = useState<{
     fullName?: string;
     phoneNumber?: string;
     streetAddress?: string;
     city?: string;
     postalCode?: string;
+    mapPin?: string;
   }>({});
   const [isSellerClosed, setIsSellerClosed] = useState<boolean>(false);
   const [sellerDetails, setSellerDetails] = useState<any>(null);
@@ -237,7 +242,35 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
       postalCode: undefined,
       fullName: undefined,
       phoneNumber: undefined,
+      mapPin: undefined,
     }));
+  };
+
+  const handleSwitchToManualAddress = () => {
+    setAddressMode("manual");
+    setSelectedSavedAddressId(null);
+    setStreetAddress("");
+    setCity("");
+    setPostalCode("");
+    setDeliveryInstructions("");
+    setManualLat(null);
+    setManualLng(null);
+    setHasPinnedLocation(false);
+    setErrors((prev) => ({
+      ...prev,
+      streetAddress: undefined,
+      city: undefined,
+      postalCode: undefined,
+      mapPin: undefined,
+    }));
+  };
+
+  const handleSwitchToSavedAddress = () => {
+    setAddressMode("saved");
+    const target = (selectedSavedAddressId && savedAddresses.find((a) => a.id === selectedSavedAddressId)) || savedAddresses.find((a) => a.isDefault) || savedAddresses[0];
+    if (target) {
+      selectSavedAddress(target);
+    }
   };
 
   useEffect(() => {
@@ -315,6 +348,21 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
         }
         activePin = selectedAddr.pincode ? selectedAddr.pincode.trim() : null;
       }
+    } else if (addressMode === "manual") {
+      if (manualLat !== null && manualLng !== null && !isNaN(manualLat) && !isNaN(manualLng)) {
+        userLat = manualLat;
+        userLng = manualLng;
+      }
+      if (postalCode && postalCode.trim()) {
+        activePin = postalCode.trim();
+        if (userLat === null || userLng === null) {
+          const pinCoords = getPincodeCoordinates(activePin);
+          if (pinCoords) {
+            userLat = pinCoords.lat;
+            userLng = pinCoords.lng;
+          }
+        }
+      }
     }
 
     // 2. If in Manual Address mode or no saved address coordinates yet
@@ -373,7 +421,7 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
     }
 
     return { isOutsideCoverage: false, shopDistanceKm: null, maxDeliveryRadius: maxRadius };
-  }, [sellerDetails, addressMode, selectedSavedAddressId, savedAddresses, postalCode, defaultAddress]);
+  }, [sellerDetails, addressMode, selectedSavedAddressId, savedAddresses, postalCode, defaultAddress, manualLat, manualLng]);
 
   const getActiveLocationPayload = () => {
     let activeLat: number | null = null;
@@ -398,10 +446,15 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
         }
       }
     } else {
-      const pinCoords = getPincodeCoordinates(activePincode);
-      if (pinCoords) {
-        activeLat = pinCoords.lat;
-        activeLng = pinCoords.lng;
+      if (manualLat !== null && manualLng !== null && !isNaN(manualLat) && !isNaN(manualLng)) {
+        activeLat = manualLat;
+        activeLng = manualLng;
+      } else {
+        const pinCoords = getPincodeCoordinates(activePincode);
+        if (pinCoords) {
+          activeLat = pinCoords.lat;
+          activeLng = pinCoords.lng;
+        }
       }
     }
 
@@ -420,16 +473,6 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
   }, [session, fullName]);
 
   useEffect(() => {
-    if (addressMode === "manual" && defaultAddress) {
-      const parts = [defaultAddress.houseNumber, defaultAddress.street, defaultAddress.locality, defaultAddress.landmark].filter(Boolean);
-      const formattedStreet = parts.join(", ");
-      if (formattedStreet) setStreetAddress(formattedStreet);
-      if (defaultAddress.city) setCity(defaultAddress.city);
-      if (defaultAddress.pincode) setPostalCode(defaultAddress.pincode);
-    }
-  }, [defaultAddress, addressMode]);
-
-  useEffect(() => {
     async function loadUserProfile() {
       try {
         const res = await fetchApi("/api/user/profile");
@@ -439,8 +482,6 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
           if (user) {
             if (user.name) setFullName((prev) => prev || user.name);
             if (user.phone) setPhoneNumber((prev) => prev || user.phone);
-            if (user.city) setCity((prev) => prev || user.city);
-            if (user.pincode) setPostalCode((prev) => prev || user.pincode);
           }
         }
       } catch (e) {
@@ -475,6 +516,7 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
       streetAddress?: string;
       city?: string;
       postalCode?: string;
+      mapPin?: string;
     } = {};
 
     if (!fullName.trim()) {
@@ -499,6 +541,13 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
       newErrors.postalCode = "Please enter your 6-digit postal code";
     } else if (!/^[0-9]{6}$/.test(postalCode.trim().replace(/\D/g, ""))) {
       newErrors.postalCode = "Please enter a valid 6-digit PIN code";
+    }
+
+    if (addressMode === "manual") {
+      if (manualLat === null || manualLng === null || !hasPinnedLocation) {
+        newErrors.mapPin = "Please pinpoint your exact delivery location on the map (Mandatory)";
+        showToast("Please drop a pin on the map to set your delivery coordinates.", "error");
+      }
     }
 
     setErrors(newErrors);
@@ -849,7 +898,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
         const catName = String(it.categoryName || (it.foodCategory as any)?.name || (it.category as any)?.name || it.category || it.foodCategory || "").toLowerCase().trim();
         isMatch = allowedKeys.some((k) => k === catId || k === catName || (catName && catName.includes(k)) || (k && catName && k.includes(catName)) || (name && name.includes(k)));
       } else {
-        isMatch = allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
+        isMatch = allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name || (name && (name.includes(k) || k.includes(name))));
       }
 
       if (isMatch) {
@@ -901,7 +950,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
             return allowedKeys.some((k) => k === catId || k === catName || (catName && catName.includes(k)) || (k && catName && k.includes(catName)) || (name && name.includes(k)));
           }
 
-          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
+          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name || (name && (name.includes(k) || k.includes(name))));
         });
         if (matchingItems.length === 0) return 0;
         targetSubtotal = matchingItems.reduce((acc, it) => acc + it.price, 0);
@@ -914,7 +963,8 @@ const loadRazorpayScript = (): Promise<boolean> => {
       return appliedCoupon.maxDiscountAmount ? Math.min(raw, appliedCoupon.maxDiscountAmount) : raw;
     }
     const flat = appliedCoupon.discountAmount || 0;
-    return Math.min(flat, targetSubtotal);
+    if (flat > targetSubtotal) return 0;
+    return flat;
   }, [isPromoApplied, appliedCoupon, subtotal, checkoutItems]);
 
   const deliveryFee = 0;
@@ -1078,10 +1128,36 @@ const loadRazorpayScript = (): Promise<boolean> => {
       if (subtotal < minCart) return false;
 
       if (offer.appliesToProductId) {
-        const hasProduct = checkoutItems.some(
-          (it) => it.id === offer.appliesToProductId || it.foodItemId === offer.appliesToProductId
-        );
+        const allowedKeys = String(offer.appliesToProductId)
+          .split(",")
+          .map((s) => s.trim().toLowerCase())
+          .filter(Boolean);
+        const hasProduct = checkoutItems.some((it) => {
+          const itemId = String(it.id || "").toLowerCase();
+          const foodItemId = String(it.foodItemId || "").toLowerCase();
+          const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+          const name = String(it.name || "").toLowerCase().trim();
+          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name || (name && (name.includes(k) || k.includes(name))));
+        });
         if (!hasProduct) return false;
+      }
+
+      const isPct = offer.discountType === "PERCENTAGE" || (offer.discountPercentage && !offer.discountAmount);
+      if (!isPct) {
+        const flatAmt = Number(offer.discountAmount || (offer.discountType === "FLAT" ? offer.discountValue : 0) || 0);
+        let eligibleSub = subtotal;
+        if (offer.appliesToProductId) {
+          const allowedKeys = String(offer.appliesToProductId).split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+          const matchingItems = checkoutItems.filter((it) => {
+            const itemId = String(it.id || "").toLowerCase();
+            const foodItemId = String(it.foodItemId || "").toLowerCase();
+            const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+            const name = String(it.name || "").toLowerCase().trim();
+            return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name || (name && (name.includes(k) || k.includes(name))));
+          });
+          eligibleSub = matchingItems.reduce((acc, it) => acc + it.price, 0);
+        }
+        if (flatAmt > eligibleSub) return false;
       }
       return true;
     });
@@ -1108,7 +1184,9 @@ const loadRazorpayScript = (): Promise<boolean> => {
         disc = Math.round((subtotal * pct) / 100);
         if (offer.maxDiscountAmount) disc = Math.min(disc, offer.maxDiscountAmount);
       } else {
-        disc = Math.min(offer.discountAmount || offer.discountValue || 0, subtotal);
+        const flatAmt = Number(offer.discountAmount || offer.discountValue || 0);
+        if (flatAmt > subtotal) continue;
+        disc = flatAmt;
       }
       if (disc >= maxDiscount) {
         maxDiscount = disc;
@@ -1170,6 +1248,32 @@ const loadRazorpayScript = (): Promise<boolean> => {
       return;
     }
 
+    const isPercentage = appliedCoupon.discountType === "PERCENTAGE" || (appliedCoupon.discountPercentage && !appliedCoupon.discountAmount);
+    const flatAmt = Number(appliedCoupon.discountAmount || (appliedCoupon.discountType === "FLAT" ? (appliedCoupon as any).discountValue : 0) || 0);
+    if (!isPercentage && flatAmt > 0) {
+      let eligibleSub = subtotal;
+      if (appliedCoupon.appliesToProductId) {
+        const allowedKeys = String(appliedCoupon.appliesToProductId).split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+        const matchingItems = checkoutItems.filter((it) => {
+          const itemId = String(it.id || "").toLowerCase();
+          const foodItemId = String(it.foodItemId || "").toLowerCase();
+          const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+          const name = String(it.name || "").toLowerCase().trim();
+          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name || (name && (name.includes(k) || k.includes(name))));
+        });
+        eligibleSub = matchingItems.reduce((acc, it) => acc + it.price, 0);
+      }
+      if (flatAmt > eligibleSub) {
+        const code = appliedCoupon.code || promoCode || "Applied";
+        setIsPromoApplied(false);
+        setDiscountPercent(0);
+        setAppliedCoupon(null);
+        setPromoCode("");
+        showToast(`Coupon "${code}" removed as the discount (₹${flatAmt}) exceeds the eligible cart value (₹${eligibleSub}).`, "warning");
+        return;
+      }
+    }
+
     if (appliedCoupon.appliesToProductId && checkoutItems.length > 0) {
       const allowedKeys = String(appliedCoupon.appliesToProductId)
         .split(",")
@@ -1181,7 +1285,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
           const foodItemId = String(it.foodItemId || "").toLowerCase();
           const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
           const name = String(it.name || "").toLowerCase().trim();
-          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
+          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name || (name && (name.includes(k) || k.includes(name))));
         });
         if (!hasMatchingProduct) {
           const code = appliedCoupon.code || promoCode || "Applied";
@@ -1223,6 +1327,36 @@ const loadRazorpayScript = (): Promise<boolean> => {
       return;
     }
 
+    // Pre-check for flat coupons from availableOffers if discount exceeds eligible subtotal
+    const matchingOffer = availableOffers.find(
+      (o) => (o.code && o.code.toUpperCase() === clean) || (o.id && o.id === clean)
+    );
+    if (matchingOffer) {
+      const isPct = matchingOffer.discountType === "PERCENTAGE" || (matchingOffer.discountPercentage && !matchingOffer.discountAmount);
+      if (!isPct) {
+        const flatAmt = Number(matchingOffer.discountAmount || (matchingOffer.discountType === "FLAT" ? matchingOffer.discountValue : 0) || 0);
+        let eligibleSub = subtotal;
+        if (matchingOffer.appliesToProductId) {
+          const allowedKeys = String(matchingOffer.appliesToProductId).split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+          const matchingItems = checkoutItems.filter((it) => {
+            const itemId = String(it.id || "").toLowerCase();
+            const foodItemId = String(it.foodItemId || "").toLowerCase();
+            const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+            const name = String(it.name || "").toLowerCase().trim();
+            return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name || (name && (name.includes(k) || k.includes(name))));
+          });
+          eligibleSub = matchingItems.reduce((acc, it) => acc + it.price, 0);
+        }
+        if (flatAmt > eligibleSub) {
+          setIsPromoApplied(false);
+          setDiscountPercent(0);
+          setAppliedCoupon(null);
+          showToast(`Coupon "${matchingOffer.code}" cannot be applied as the discount (₹${flatAmt}) exceeds the eligible item/cart value of ₹${eligibleSub}.`, "error");
+          return;
+        }
+      }
+    }
+
     setUserDismissedPromo(false);
     setPromoCode(clean);
     setIsValidatingPromo(true);
@@ -1238,7 +1372,8 @@ const loadRazorpayScript = (): Promise<boolean> => {
           items: checkoutItems.map((it) => ({
             id: it.id,
             foodItemId: it.foodItemId,
-            price: it.price,
+            name: it.name,
+            price: it.qty > 0 ? (it.price / it.qty) : it.price,
             quantity: it.qty,
             categoryId: it.categoryId,
             foodCategoryId: it.foodCategoryId,
@@ -2129,13 +2264,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
                     <button
                       type="button"
                       className={`${styles.modeTabBtn} ${addressMode === "saved" ? styles.modeTabBtnActive : ""}`}
-                      onClick={() => {
-                        setAddressMode("saved");
-                        const target = savedAddresses.find((a) => a.id === selectedSavedAddressId) || savedAddresses[0];
-                        if (target) {
-                          selectSavedAddress(target);
-                        }
-                      }}
+                      onClick={handleSwitchToSavedAddress}
                     >
                       <MapPin size={15} />
                       <span>Choose from Saved Addresses ({savedAddresses.length})</span>
@@ -2144,9 +2273,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
                     <button
                       type="button"
                       className={`${styles.modeTabBtn} ${addressMode === "manual" ? styles.modeTabBtnActive : ""}`}
-                      onClick={() => {
-                        setAddressMode("manual");
-                      }}
+                      onClick={handleSwitchToManualAddress}
                     >
                       <Plus size={14} />
                       <span>Enter New / Custom Address</span>
@@ -2344,80 +2471,147 @@ const loadRazorpayScript = (): Promise<boolean> => {
                 ) : (
                   /* MODE 2: WRITE NEW / MANUAL ADDRESS ENTRY */
                   <div className={styles.formFieldsStack}>
-                    {/* Quick Pin on Map & GPS Location Toolbar (NC-BUG-110) */}
+                    {/* Mandatory Doorstep Pin Map Section */}
                     <div
+                      id="mapPinInput"
                       style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        backgroundColor: "#FFF7ED",
-                        border: "1px solid #FFEDD5",
+                        backgroundColor: errors.mapPin ? "#FEF2F2" : "#FFF7ED",
+                        border: errors.mapPin ? "1.5px solid #FCA5A5" : "1px solid #FFEDD5",
                         borderRadius: "14px",
-                        padding: "12px 16px",
-                        gap: "12px",
-                        flexWrap: "wrap",
-                        marginBottom: "4px",
+                        padding: "16px",
+                        marginBottom: "12px",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
                       }}
                     >
-                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                        <div
-                          style={{
-                            width: "36px",
-                            height: "36px",
-                            borderRadius: "10px",
-                            backgroundColor: "#FF6B00",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            color: "#FFFFFF",
-                            flexShrink: 0,
-                          }}
-                        >
-                          <MapPin size={18} />
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          marginBottom: "10px",
+                          flexWrap: "wrap",
+                          gap: "8px",
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                          <div
+                            style={{
+                              width: "36px",
+                              height: "36px",
+                              borderRadius: "10px",
+                              backgroundColor: "#FF6B00",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              color: "#FFFFFF",
+                              flexShrink: 0,
+                            }}
+                          >
+                            <MapPin size={18} />
+                          </div>
+                          <div>
+                            <div style={{ fontSize: "0.92rem", fontWeight: "700", color: "#1E293B" }}>
+                              Drop Pin on Map <span style={{ color: "#EF4444" }}>* (Mandatory)</span>
+                            </div>
+                            <div style={{ fontSize: "0.78rem", color: "#64748B" }}>
+                              Search your area or drag the pin to your exact delivery doorstep
+                            </div>
+                          </div>
                         </div>
+
+                        {/* Pin status badge */}
                         <div>
-                          <div style={{ fontSize: "0.88rem", fontWeight: "700", color: "#1E293B" }}>
-                            Pin Precise Delivery Location
-                          </div>
-                          <div style={{ fontSize: "0.78rem", color: "#64748B" }}>
-                            Use current GPS to auto-fill street address
-                          </div>
+                          {hasPinnedLocation && manualLat !== null && manualLng !== null ? (
+                            <span
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "5px",
+                                backgroundColor: "#ECFDF5",
+                                color: "#059669",
+                                border: "1px solid #A7F3D0",
+                                padding: "4px 10px",
+                                borderRadius: "20px",
+                                fontSize: "0.76rem",
+                                fontWeight: "700",
+                              }}
+                            >
+                              <Check size={12} strokeWidth={3} />
+                              <span>Pinned: {manualLat.toFixed(4)}, {manualLng.toFixed(4)}</span>
+                            </span>
+                          ) : (
+                            <span
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "5px",
+                                backgroundColor: errors.mapPin ? "#FEE2E2" : "#FFFBEB",
+                                color: errors.mapPin ? "#DC2626" : "#D97706",
+                                border: `1px solid ${errors.mapPin ? "#FCA5A5" : "#FDE68A"}`,
+                                padding: "4px 10px",
+                                borderRadius: "20px",
+                                fontSize: "0.76rem",
+                                fontWeight: "700",
+                              }}
+                            >
+                              <AlertCircle size={12} />
+                              <span>Pinpoint Required</span>
+                            </span>
+                          )}
                         </div>
                       </div>
 
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            if (detectGpsLocation) {
-                              const ok = await detectGpsLocation();
-                              if (ok) {
-                                showToast("Current GPS location detected!", "success");
-                              } else {
-                                showToast("Could not detect GPS location. Please check browser permissions.", "warning");
+                      {/* Interactive HouseMapPicker */}
+                      <div
+                        style={{
+                          borderRadius: "12px",
+                          overflow: "hidden",
+                          border: errors.mapPin ? "2px solid #EF4444" : "1px solid #E2E8F0",
+                        }}
+                      >
+                        <HouseMapPicker
+                          latitude={manualLat}
+                          longitude={manualLng}
+                          height="230px"
+                          skipInitialReverseGeocode={true}
+                          onChange={(newLat, newLng, details) => {
+                            setManualLat(newLat);
+                            setManualLng(newLng);
+                            setHasPinnedLocation(true);
+                            if (errors.mapPin) {
+                              setErrors((prev) => ({ ...prev, mapPin: undefined }));
+                            }
+                            if (details?.pincode) {
+                              const p = details.pincode.replace(/\D/g, "").slice(0, 6);
+                              if (p.length === 6) {
+                                setPostalCode(p);
+                                if (errors.postalCode) {
+                                  setErrors((prev) => ({ ...prev, postalCode: undefined }));
+                                }
+                              }
+                            }
+                            if (details?.city) {
+                              setCity(details.city);
+                              if (errors.city) {
+                                setErrors((prev) => ({ ...prev, city: undefined }));
+                              }
+                            }
+                            if (details?.street || details?.formattedAddress) {
+                              const streetVal = details.street || details.formattedAddress || "";
+                              setStreetAddress((prev) => (prev ? prev : streetVal));
+                              if (errors.streetAddress) {
+                                setErrors((prev) => ({ ...prev, streetAddress: undefined }));
                               }
                             }
                           }}
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "6px",
-                            padding: "8px 14px",
-                            backgroundColor: "#FF6B00",
-                            border: "none",
-                            borderRadius: "8px",
-                            fontSize: "0.82rem",
-                            fontWeight: "700",
-                            color: "#FFFFFF",
-                            cursor: "pointer",
-                            transition: "all 0.15s ease",
-                            boxShadow: "0 2px 6px rgba(255, 107, 0, 0.25)",
-                          }}
-                        >
-                          <Navigation size={14} color="#FFFFFF" />
-                          <span>🎯 Use Current GPS</span>
-                        </button>
+                        />
                       </div>
+
+                      {errors.mapPin && (
+                        <div style={{ color: "#DC2626", fontSize: "0.78rem", fontWeight: "600", marginTop: "8px" }}>
+                          ⚠️ {errors.mapPin}
+                        </div>
+                      )}
                     </div>
 
                     {/* Row 1: Full Name & Phone Number */}

@@ -3,6 +3,7 @@ export {
   PasswordManagementCard,
   ActiveLoginSessionsCard,
   DEFAULT_LOGIN_SESSIONS,
+  SellerDeleteAccountCard,
 } from "./SellerSecuritySettings";
 export type {
   SellerSecuritySettingsProps,

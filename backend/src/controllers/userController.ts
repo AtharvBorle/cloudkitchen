@@ -211,7 +211,12 @@ export const getUserDashboard = async () => {
         });
     });
 
-    const availableRooms = sellers.flatMap(seller => {
+    const roomSetting = await db.systemSettings.findUnique({
+        where: { key: "ENABLE_ROOM_MODULE" }
+    });
+    const isRoomEnabled = roomSetting?.value === "true";
+
+    const availableRooms = isRoomEnabled ? sellers.flatMap(seller => {
         const hasActivePropertySub = seller.subscriptions.some(sub => 
             sub.status === "ACTIVE" && 
             (sub.validUntil === null || new Date(sub.validUntil) > now) &&
@@ -237,7 +242,7 @@ export const getUserDashboard = async () => {
             sellerIsLocationPinned: seller.isLocationPinned,
             sellerDeliveryRadiusKm: seller.deliveryRadiusKm ?? 5.0,
         }));
-    });
+    }) : [];
 
     return {
         foodItems,

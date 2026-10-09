@@ -342,6 +342,14 @@ export const SupportTickets: React.FC = () => {
     return matchesSearch && matchesStatus && matchesCategory;
   });
 
+  const cleanTicketText = (text: string | null | undefined, isClosed: boolean): string => {
+    if (!text) return "";
+    if (isClosed) {
+      return text.replace(/\[Priority:\s*(High|Medium|Low)\]\s*\n?/gi, "").trim();
+    }
+    return text.replace(/\[Priority:\s*(High|Medium|Low)\]\s*\n?/gi, "").trim();
+  };
+
   const getCategoryClass = (cat: string) => {
     switch (cat) {
       case "FOOD":
@@ -643,38 +651,50 @@ export const SupportTickets: React.FC = () => {
                     <span>{formatDate(selectedTicket.createdAt)}</span>
                   </div>
                   <div className={styles.issueDesc}>
-                    <TicketAttachmentRenderer content={selectedTicket.description} isCurrentUser={false} />
+                    <TicketAttachmentRenderer content={cleanTicketText(selectedTicket.description, selectedTicket.status === "CLOSED")} isCurrentUser={false} />
                   </div>
                 </div>
 
                 {/* Follow-up Message Thread */}
                 {selectedTicket.messages && selectedTicket.messages.length > 0 ? (
-                  selectedTicket.messages.map((m) => {
-                    const isUserMessage =
-                      m.senderId === session?.user?.id ||
-                      m.senderRole === "USER" ||
-                      m.sender?.role === "USER";
+                  selectedTicket.messages
+                    .filter((m) => {
+                      if (selectedTicket.status === "CLOSED" || selectedTicket.status === "RESOLVED") {
+                        const msgText = (m.message || "").trim();
+                        if (/^Priority\s+(?:is\s+|updated\s+to\s+|set\s+to\s+)?(High|Medium|Low)$/i.test(msgText)) {
+                          return false;
+                        }
+                      }
+                      return true;
+                    })
+                    .map((m) => {
+                      const isUserMessage =
+                        m.senderId === session?.user?.id ||
+                        m.senderRole === "USER" ||
+                        m.sender?.role === "USER";
 
-                    return isUserMessage ? (
-                      <div key={m.id} className={styles.userBubble}>
-                        <div className={styles.userBubbleText}>
-                          <TicketAttachmentRenderer content={m.message} isCurrentUser={true} />
+                      const displayMsg = cleanTicketText(m.message, selectedTicket.status === "CLOSED");
+
+                      return isUserMessage ? (
+                        <div key={m.id} className={styles.userBubble}>
+                          <div className={styles.userBubbleText}>
+                            <TicketAttachmentRenderer content={displayMsg} isCurrentUser={true} />
+                          </div>
+                          <span className={styles.userBubbleTime}>{formatDate(m.createdAt)}</span>
                         </div>
-                        <span className={styles.userBubbleTime}>{formatDate(m.createdAt)}</span>
-                      </div>
-                    ) : (
-                      <div key={m.id} className={styles.agentBubble}>
-                        <div className={styles.agentHeader}>
-                          <ShieldCheck size={14} />
-                          <span>{m.senderName || m.sender?.name || "Support Team Specialist"}</span>
+                      ) : (
+                        <div key={m.id} className={styles.agentBubble}>
+                          <div className={styles.agentHeader}>
+                            <ShieldCheck size={14} />
+                            <span>{m.senderName || m.sender?.name || "Support Team Specialist"}</span>
+                          </div>
+                          <div className={styles.agentBubbleText}>
+                            <TicketAttachmentRenderer content={displayMsg} isCurrentUser={false} />
+                          </div>
+                          <span className={styles.agentBubbleTime}>{formatDate(m.createdAt)}</span>
                         </div>
-                        <div className={styles.agentBubbleText}>
-                          <TicketAttachmentRenderer content={m.message} isCurrentUser={false} />
-                        </div>
-                        <span className={styles.agentBubbleTime}>{formatDate(m.createdAt)}</span>
-                      </div>
-                    );
-                  })
+                      );
+                    })
                 ) : null}
 
                 {/* Resolution Milestone Indicator in Chat Stream */}

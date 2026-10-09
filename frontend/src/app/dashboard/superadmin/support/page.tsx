@@ -20,6 +20,7 @@ import { fetchApi } from "@/lib/fetch-api";
 
 import { MessageSquare, Clock, CheckCircle2, User, Send, Loader2, RefreshCw, AlertCircle, Filter, Paperclip } from "lucide-react";
 import { TicketAttachmentRenderer } from "@/components/common/TicketAttachmentRenderer";
+import { useRoomModule } from "@/context/RoomModuleContext";
 
 
 
@@ -28,6 +29,7 @@ import { TicketAttachmentRenderer } from "@/components/common/TicketAttachmentRe
 
 
 export default function SuperAdminSupportPage() {
+    const { isRoomEnabled } = useRoomModule();
 
 
 
@@ -88,15 +90,7 @@ export default function SuperAdminSupportPage() {
 
 
 
-    const [targetRefund, setTargetRefund] = useState<{ type: 'ORDER' | 'BOOKING'; id: string; amount: number } | null>(null);
 
-
-
-    const [refundReason, setRefundReason] = useState("");
-
-
-
-    const [submittingRefund, setSubmittingRefund] = useState(false);
 
 
 
@@ -191,7 +185,7 @@ export default function SuperAdminSupportPage() {
                 const foodCats = categoriesArray.filter((c: any) => c.type === "FOOD");
                 setBusinessCategories(foodCats);
                 if (foodCats.length > 0) {
-                    setSelectedBusinessCategoryIds([foodCats[0].id]);
+                    setSelectedBusinessCategoryIds(foodCats.map((c: any) => c.id));
                 }
             }
             
@@ -218,12 +212,30 @@ export default function SuperAdminSupportPage() {
                 setNewFoodCategoryName(reqDetails.name || "");
                 setSubcategoryName("");
                 setSelectedFoodCategoryId("CREATE_NEW");
-                if (businessCategories.length > 0) {
-                    setSelectedBusinessCategoryIds([businessCategories[0].id]);
+                
+                const sellerType = selectedTicket.user?.sellerProfile?.type || selectedTicket.user?.sellerProfile?.businessCategory || "";
+                let targetCategoryIds: string[] = [];
+
+                if (sellerType && businessCategories.length > 0) {
+                    const matched = businessCategories.filter((bc: any) =>
+                        bc.name.toLowerCase().includes(sellerType.toLowerCase()) ||
+                        sellerType.toLowerCase().includes(bc.name.toLowerCase())
+                    );
+                    if (matched.length > 0) {
+                        targetCategoryIds = matched.map((m: any) => m.id);
+                    }
+                }
+
+                if (targetCategoryIds.length === 0 && businessCategories.length > 0) {
+                    targetCategoryIds = businessCategories.map((bc: any) => bc.id);
+                }
+
+                if (targetCategoryIds.length > 0) {
+                    setSelectedBusinessCategoryIds(targetCategoryIds);
                 }
             }
         }
-    }, [selectedTicket]);
+    }, [selectedTicket, businessCategories]);
 
     const parseCategoryRequest = (description: string) => {
         if (!description) return null;
@@ -1716,18 +1728,25 @@ export default function SuperAdminSupportPage() {
 
 
                 // Update in local tickets list
-
-
-
-                setTickets(prev => prev.map(t => t.id === selectedTicket.id ? { ...t, status: newStatus } : t));
-
-
+                setTickets(prev => prev.map(t => t.id === selectedTicket.id ? {
+                    ...t,
+                    status: newStatus,
+                    priority: newStatus === "CLOSED" ? null : t.priority,
+                    description: newStatus === "CLOSED" ? (t.description || "").replace(/\[Priority:\s*(High|Medium|Low)\]\s*\n?/gi, "").trim() : t.description
+                } : t));
 
                 // Update selected ticket details
-
-
-
-                setSelectedTicket((prev: any) => prev ? { ...prev, status: newStatus } : null);
+                setSelectedTicket((prev: any) => prev ? {
+                    ...prev,
+                    status: newStatus,
+                    priority: newStatus === "CLOSED" ? null : prev.priority,
+                    description: newStatus === "CLOSED" ? (prev.description || "").replace(/\[Priority:\s*(High|Medium|Low)\]\s*\n?/gi, "").trim() : prev.description,
+                    messages: newStatus === "CLOSED"
+                        ? (prev.messages || [])
+                            .filter((m: any) => !/^Priority\s+(?:is\s+|updated\s+to\s+|set\s+to\s+)?(High|Medium|Low)$/i.test((m.message || "").trim()))
+                            .map((m: any) => ({ ...m, message: (m.message || "").replace(/\[Priority:\s*(High|Medium|Low)\]\s*\n?/gi, "").trim() }))
+                        : prev.messages
+                } : null);
 
 
 
@@ -1793,13 +1812,14 @@ export default function SuperAdminSupportPage() {
         const targetName = (t.user?.name || (t as any).userName || (t as any).customerName || "").toLowerCase().trim();
         const targetEmail = (t.user?.email || (t as any).userEmail || (t as any).customerEmail || (t as any).email || "").toLowerCase().trim();
         const targetPhone = (t.user?.phone || (t as any).userPhone || (t as any).phone || "").toLowerCase().trim();
+        const targetSeller = (t.user?.sellerProfile?.businessName || "").toLowerCase().trim();
         const targetRole = (t.user?.role || "").toLowerCase().trim();
         const targetTitle = (t.title || "").toLowerCase().trim();
         const targetCategory = (t.category || "").toLowerCase().trim();
         const targetDesc = (t.description || "").toLowerCase().trim();
         const targetId = (t.id || "").toLowerCase().trim();
 
-        const fullSearchable = `${targetName} ${targetEmail} ${targetPhone} ${targetRole} ${targetTitle} ${targetCategory} ${targetDesc} ${targetId}`;
+        const fullSearchable = `${targetName} ${targetEmail} ${targetPhone} ${targetSeller} ${targetRole} ${targetTitle} ${targetCategory} ${targetDesc} ${targetId}`;
 
         const matchesSearch = !normalizedQuery ||
             fullSearchable.includes(normalizedQuery) ||
@@ -2283,7 +2303,7 @@ export default function SuperAdminSupportPage() {
 
 
 
-                            <option value="ROOM">Room</option>
+                            {isRoomEnabled && <option value="ROOM">Room</option>}
 
 
 
@@ -3091,7 +3111,15 @@ export default function SuperAdminSupportPage() {
 
 
 
-                                        {selectedTicket.messages?.map((msg: any) => {
+                                        {selectedTicket.messages?.filter((msg: any) => {
+                                            if (selectedTicket.status === "CLOSED") {
+                                                const msgText = (msg.message || "").trim();
+                                                if (/^Priority\s+(?:is\s+|updated\s+to\s+|set\s+to\s+)?(High|Medium|Low)$/i.test(msgText)) {
+                                                    return false;
+                                                }
+                                            }
+                                            return true;
+                                        }).map((msg: any) => {
 
 
 
@@ -3211,7 +3239,7 @@ export default function SuperAdminSupportPage() {
 
 
 
-                                                        <TicketAttachmentRenderer content={msg.message} isCurrentUser={isAdmin} />
+                                                        <TicketAttachmentRenderer content={selectedTicket.status === "CLOSED" ? (msg.message || "").replace(/\[Priority:\s*(High|Medium|Low)\]\s*\n?/gi, "").trim() : msg.message} isCurrentUser={isAdmin} />
 
 
 
@@ -3878,7 +3906,7 @@ export default function SuperAdminSupportPage() {
                                                             <AlertCircle size={14} color="#64748B" />
                                                             <span>Non-Order Support Inquiry</span>
                                                         </div>
-                                                        This ticket is filed under <strong>{selectedTicket.category || "General"}</strong>. Order actions and refund controls are automatically hidden for non-order inquiries.
+                                                        This ticket is filed under <strong>{selectedTicket.category || "General"}</strong>. Order actions are automatically hidden for non-order inquiries.
                                                     </div>
                                                 </div>
                                             );
@@ -3890,7 +3918,7 @@ export default function SuperAdminSupportPage() {
 
 
 
-                                        ORDER & REFUND PANEL
+                                        ORDER ACTIONS PANEL
 
 
 
@@ -4278,552 +4306,7 @@ export default function SuperAdminSupportPage() {
 
 
 
-                                    <h4 style={{ fontSize: "0.75rem", fontWeight: "800", color: "#475569", marginBottom: "12px", borderBottom: "2px solid #E2E8F0", paddingBottom: "5px", letterSpacing: "0.05em", marginTop: "10px" }}>
-
-
-
-                                        REFUND CONTROL PANEL
-
-
-
-                                    </h4>
-
-
-
-
-
-
-
-                                    {loadingActivity ? (
-
-
-
-                                        <div style={{ display: "flex", flex: 1, alignItems: "center", justifyContent: "center", padding: "30px" }}>
-
-
-
-                                            <Loader2 className="animate-spin" color="var(--primary)" size={20} />
-
-
-
-                                        </div>
-
-
-
-                                    ) : !userActivity ? (
-
-
-
-                                        <p style={{ fontSize: "0.75rem", color: "#64748B" }}>No user activity retrieved.</p>
-
-
-
-                                    ) : (
-
-
-
-                                        <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
-
-
-
-                                            
-
-
-
-                                            {/* Paid Food Orders */}
-
-
-
-                                            <div>
-
-
-
-                                                <h5 style={{ fontSize: "0.75rem", fontWeight: "700", color: "#1E293B", marginBottom: "8px" }}>
-
-
-
-                                                    Refund Eligible Orders ({userActivity.orders?.filter((o: any) => Boolean(o.refund || o.status === "CANCELLED" || (selectedTicket?.orderId && selectedTicket.orderId === o.id))).length || 0})
-
-
-
-                                                </h5>
-
-
-
-                                                {userActivity.orders?.filter((o: any) => Boolean(o.refund || o.status === "CANCELLED" || (selectedTicket?.orderId && selectedTicket.orderId === o.id))).length === 0 ? (
-
-
-
-                                                    <p style={{ fontSize: "0.7rem", color: "#94A3B8", fontStyle: "italic" }}>No food orders requiring refund.</p>
-
-
-
-                                                ) : (
-
-
-
-                                                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-
-
-
-                                                        {userActivity.orders?.filter((o: any) => Boolean(o.refund || o.status === "CANCELLED" || (selectedTicket?.orderId && selectedTicket.orderId === o.id))).map((order: any) => (
-
-
-
-                                                            <div key={order.id} style={{ backgroundColor: "white", padding: "8px", borderRadius: "6px", border: "1px solid #E2E8F0", fontSize: "0.75rem" }}>
-
-
-
-                                                                <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "700", marginBottom: "2px" }}>
-
-
-
-                                                                    <span>Order #{order.id.slice(0, 8)}</span>
-
-
-
-                                                                    <span style={{ color: "var(--primary)" }}>₹{order.totalAmount}</span>
-
-
-
-                                                                </div>
-
-
-
-                                                                <div style={{ fontSize: "0.7rem", color: "#64748B", marginBottom: "6px" }}>
-
-
-
-                                                                    Kitchen: {order.seller?.businessName || "Unknown"}<br/>
-
-
-
-                                                                    Status: {order.status}
-
-
-
-                                                                </div>
-
-
-
-                                                                {order.refund ? (
-
-
-
-                                                                    <div style={{
-
-
-
-                                                                        fontSize: "0.7rem",
-
-
-
-                                                                        fontWeight: "700",
-
-
-
-                                                                        padding: "3px 6px",
-
-
-
-                                                                        borderRadius: "4px",
-
-
-
-                                                                        backgroundColor: order.refund.status === 'APPROVED' ? '#D1FAE5' : order.refund.status === 'REJECTED' ? '#FEE2E2' : '#FEF3C7',
-
-
-
-                                                                        color: order.refund.status === 'APPROVED' ? '#065F46' : order.refund.status === 'REJECTED' ? '#991B1B' : '#92400E',
-
-
-
-                                                                        textAlign: "center"
-
-
-
-                                                                    }}>
-
-
-
-                                                                        Refund: {order.refund.status} (₹{typeof order.refund.amount === "number" ? order.refund.amount : order.totalAmount})
-
-
-
-                                                                    </div>
-
-
-
-                                                                ) : (
-
-
-
-                                                                    <button
-
-
-
-                                                                        onClick={() => {
-
-
-
-                                                                            setTargetRefund({ type: 'ORDER', id: order.id, amount: order.totalAmount });
-
-
-
-                                                                            setRefundReason("");
-
-
-
-                                                                        }}
-
-
-
-                                                                        style={{
-
-
-
-                                                                            width: "100%",
-
-
-
-                                                                            padding: "5px",
-
-
-
-                                                                            backgroundColor: "var(--coral, #F16F68)",
-
-
-
-                                                                            color: "white",
-
-
-
-                                                                            border: "none",
-
-
-
-                                                                            borderRadius: "4px",
-
-
-
-                                                                            fontWeight: "700",
-
-
-
-                                                                            cursor: "pointer",
-
-
-
-                                                                            fontSize: "0.7rem"
-
-
-
-                                                                        }}
-
-
-
-                                                                    >
-
-
-
-                                                                        Initiate Refund Request
-
-
-
-                                                                    </button>
-
-
-
-                                                                )}
-
-
-
-                                                            </div>
-
-
-
-                                                        ))}
-
-
-
-                                                    </div>
-
-
-
-                                                )}
-
-
-
-                                            </div>
-
-
-
-
-
-
-
-                                            {/* Confirmed Stay Bookings */}
-
-
-
-                                            <div>
-
-
-
-                                                <h5 style={{ fontSize: "0.75rem", fontWeight: "700", color: "#1E293B", marginBottom: "8px" }}>
-
-
-
-                                                    Refund Room Bookings ({userActivity.bookings?.filter((b: any) => Boolean(b.refund || b.status === "CANCELLED" || (selectedTicket?.bookingId && selectedTicket.bookingId === b.id))).length || 0})
-
-
-
-                                                </h5>
-
-
-
-                                                {userActivity.bookings?.filter((b: any) => Boolean(b.refund || b.status === "CANCELLED" || (selectedTicket?.bookingId && selectedTicket.bookingId === b.id))).length === 0 ? (
-
-
-
-                                                    <p style={{ fontSize: "0.7rem", color: "#94A3B8", fontStyle: "italic" }}>No room bookings requiring refund.</p>
-
-
-
-                                                ) : (
-
-
-
-                                                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-
-
-
-                                                        {userActivity.bookings?.filter((b: any) => Boolean(b.refund || b.status === "CANCELLED" || (selectedTicket?.bookingId && selectedTicket.bookingId === b.id))).map((booking: any) => {
-
-
-
-                                                            const start = new Date(booking.startDate);
-
-
-
-                                                            const end = new Date(booking.endDate);
-
-
-
-                                                            const nights = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
-
-
-
-                                                            const bookingAmount = nights * booking.room.price;
-
-
-
-
-
-
-
-                                                            return (
-
-
-
-                                                                <div key={booking.id} style={{ backgroundColor: "white", padding: "8px", borderRadius: "6px", border: "1px solid #E2E8F0", fontSize: "0.75rem" }}>
-
-
-
-                                                                    <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "700", marginBottom: "2px" }}>
-
-
-
-                                                                        <span style={{ maxWidth: "70%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{booking.room.title}</span>
-
-
-
-                                                                        <span style={{ color: "var(--primary)" }}>₹{bookingAmount}</span>
-
-
-
-                                                                    </div>
-
-
-
-                                                                    <div style={{ fontSize: "0.7rem", color: "#64748B", marginBottom: "6px" }}>
-
-
-
-                                                                        Nights: {nights} ({start.toLocaleDateString()} - {end.toLocaleDateString()})
-
-
-
-                                                                    </div>
-
-
-
-                                                                    {booking.refund ? (
-
-
-
-                                                                        <div style={{
-
-
-
-                                                                            fontSize: "0.7rem",
-
-
-
-                                                                            fontWeight: "700",
-
-
-
-                                                                            padding: "3px 6px",
-
-
-
-                                                                            borderRadius: "4px",
-
-
-
-                                                                            backgroundColor: booking.refund.status === 'APPROVED' ? '#D1FAE5' : booking.refund.status === 'REJECTED' ? '#FEE2E2' : '#FEF3C7',
-
-
-
-                                                                            color: booking.refund.status === 'APPROVED' ? '#065F46' : booking.refund.status === 'REJECTED' ? '#991B1B' : '#92400E',
-
-
-
-                                                                            textAlign: "center"
-
-
-
-                                                                        }}>
-
-
-
-                                                                            Refund: {booking.refund.status} (₹{typeof booking.refund.amount === "number" ? booking.refund.amount : (booking.totalAmount || bookingAmount)})
-
-
-
-                                                                        </div>
-
-
-
-                                                                    ) : (
-
-
-
-                                                                        <button
-
-
-
-                                                                            onClick={() => {
-
-
-
-                                                                                setTargetRefund({ type: 'BOOKING', id: booking.id, amount: bookingAmount });
-
-
-
-                                                                                setRefundReason("");
-
-
-
-                                                                            }}
-
-
-
-                                                                            style={{
-
-
-
-                                                                                width: "100%",
-
-
-
-                                                                                padding: "5px",
-
-
-
-                                                                                backgroundColor: "var(--coral, #F16F68)",
-
-
-
-                                                                                color: "white",
-
-
-
-                                                                                border: "none",
-
-
-
-                                                                                borderRadius: "4px",
-
-
-
-                                                                                fontWeight: "700",
-
-
-
-                                                                                cursor: "pointer",
-
-
-
-                                                                                fontSize: "0.7rem"
-
-
-
-                                                                            }}
-
-
-
-                                                                        >
-
-
-
-                                                                            Initiate Refund Request
-
-
-
-                                                                        </button>
-
-
-
-                                                                    )}
-
-
-
-                                                                </div>
-
-
-
-                                                            );
-
-
-
-                                                        })}
-
-
-
-                                                    </div>
-
-
-
-                                                )}
-
-
-
-                                            </div>
-
-
-
-
-
-
-
-                                        </div>
-
-
-
-                                    )}
-                                            </>
+                                    </>
                                         );
                                     })()}
 
@@ -4862,690 +4345,6 @@ export default function SuperAdminSupportPage() {
 
 
 
-
-
-
-            {/* Admin Refund Trigger Modal */}
-
-
-
-            {targetRefund && (
-
-
-
-                <div style={{
-
-
-
-                    position: 'fixed',
-
-
-
-                    top: 0,
-
-
-
-                    left: 0,
-
-
-
-                    width: '100vw',
-
-
-
-                    height: '100vh',
-
-
-
-                    backgroundColor: 'rgba(15, 23, 42, 0.6)',
-
-
-
-                    backdropFilter: 'blur(5px)',
-
-
-
-                    display: 'flex',
-
-
-
-                    justifyContent: 'center',
-
-
-
-                    alignItems: 'center',
-
-
-
-                    zIndex: 99999,
-
-
-
-                    padding: '20px'
-
-
-
-                }}>
-
-
-
-                    <div style={{
-
-
-
-                        backgroundColor: 'white',
-
-
-
-                        borderRadius: '20px',
-
-
-
-                        width: '100%',
-
-
-
-                        maxWidth: '500px',
-
-
-
-                        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
-
-
-
-                        border: '1px solid #E2E8F0',
-
-
-
-                        display: 'flex',
-
-
-
-                        flexDirection: 'column'
-
-
-
-                    }}>
-
-
-
-                        <div style={{
-
-
-
-                            padding: '20px 25px',
-
-
-
-                            borderBottom: '1px solid #F1F5F9',
-
-
-
-                            display: 'flex',
-
-
-
-                            justifyContent: 'space-between',
-
-
-
-                            alignItems: 'center'
-
-
-
-                        }}>
-
-
-
-                            <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#1E293B', margin: 0 }}>
-
-
-
-                                Create Refund Request
-
-
-
-                            </h3>
-
-
-
-                            <button
-
-
-
-                                onClick={() => setTargetRefund(null)}
-
-
-
-                                style={{
-
-
-
-                                    border: 'none',
-
-
-
-                                    background: 'none',
-
-
-
-                                    fontSize: '1.5rem',
-
-
-
-                                    fontWeight: 'bold',
-
-
-
-                                    color: '#64748B',
-
-
-
-                                    cursor: 'pointer'
-
-
-
-                                }}
-
-
-
-                            >
-
-
-
-                                &times;
-
-
-
-                            </button>
-
-
-
-                        </div>
-
-
-
-
-
-
-
-                        <form
-
-
-
-                            onSubmit={async (e) => {
-
-
-
-                                e.preventDefault();
-
-
-
-                                if (!targetRefund || !refundReason.trim() || !selectedTicket) return;
-
-
-
-
-
-
-
-                                if (refundReason.trim().length < 10) {
-
-
-
-                                    alert("Please provide a refund reason of at least 10 characters.");
-
-
-
-                                    return;
-
-
-
-                                }
-
-
-
-
-
-
-
-                                setSubmittingRefund(true);
-
-
-
-                                try {
-
-
-
-                                    const bodyData: any = {
-
-
-
-                                        reason: `[Ticket Ref: #${selectedTicket.id}] ${refundReason.trim()}`,
-
-
-
-                                        amount: targetRefund.amount
-
-
-
-                                    };
-
-
-
-                                    if (targetRefund.type === 'ORDER') {
-
-
-
-                                        bodyData.orderId = targetRefund.id;
-
-
-
-                                    } else {
-
-
-
-                                        bodyData.bookingId = targetRefund.id;
-
-
-
-                                    }
-
-
-
-
-
-
-
-                                    const res = await fetchApi("/api/refunds", {
-
-
-
-                                        method: "POST",
-
-
-
-                                        headers: { "Content-Type": "application/json" },
-
-
-
-                                        body: JSON.stringify(bodyData)
-
-
-
-                                    });
-
-
-
-
-
-
-
-                                    if (res.ok) {
-
-
-
-                                        alert("Refund request successfully created! It will show up in the Refunds section.");
-
-
-
-                                        setTargetRefund(null);
-
-
-
-                                        setRefundReason("");
-
-
-
-                                        if (selectedTicket.userId) {
-
-
-
-                                            fetchUserActivity(selectedTicket.userId);
-
-
-
-                                        }
-
-
-
-                                    } else {
-
-
-
-                                        const err = await res.json();
-
-
-
-                                        alert(err.message || "Failed to create refund request.");
-
-
-
-                                    }
-
-
-
-                                } catch (error) {
-
-
-
-                                    console.error("Initiate refund error:", error);
-
-
-
-                                    alert("An error occurred. Please try again.");
-
-
-
-                                } finally {
-
-
-
-                                    setSubmittingRefund(false);
-
-
-
-                                }
-
-
-
-                            }}
-
-
-
-                            style={{ padding: '25px', display: 'flex', flexDirection: 'column', gap: '20px' }}
-
-
-
-                        >
-
-
-
-                            <div style={{ backgroundColor: "#FFF8F7", padding: "12px 15px", borderRadius: "8px", border: "1px solid #FEE2E2" }}>
-
-
-
-                                <span style={{ display: "block", fontSize: "0.8rem", color: "#64748B", fontWeight: "600" }}>REFUNDABLE AMOUNT</span>
-
-
-
-                                <strong style={{ fontSize: "1.4rem", color: "var(--coral, #F16F68)" }}>₹{targetRefund.amount}</strong>
-
-
-
-                            </div>
-
-
-
-
-
-
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-
-
-
-                                <label style={{ fontWeight: '700', fontSize: '0.95rem', color: '#334155' }}>
-
-
-
-                                    Reason for Refund (Internal Note)
-
-
-
-                                </label>
-
-
-
-                                <textarea
-
-
-
-                                    value={refundReason}
-
-
-
-                                    onChange={(e) => setRefundReason(e.target.value)}
-
-
-
-                                    placeholder="Provide context on why this refund is being requested (from customer ticket details)..."
-
-
-
-                                    required
-
-
-
-                                    style={{
-
-
-
-                                        width: '100%',
-
-
-
-                                        minHeight: '100px',
-
-
-
-                                        padding: '12px',
-
-
-
-                                        borderRadius: '8px',
-
-
-
-                                        border: '1px solid #CBD5E1',
-
-
-
-                                        fontSize: '0.9rem',
-
-
-
-                                        fontFamily: 'inherit',
-
-
-
-                                        resize: 'vertical',
-
-
-
-                                        outline: 'none'
-
-
-
-                                    }}
-
-
-
-                                />
-
-
-
-                            </div>
-
-
-
-
-
-
-
-                            <div style={{
-
-
-
-                                display: 'flex',
-
-
-
-                                gap: '12px',
-
-
-
-                                borderTop: '1px solid #F1F5F9',
-
-
-
-                                paddingTop: '20px'
-
-
-
-                            }}>
-
-
-
-                                <button
-
-
-
-                                    type="button"
-
-
-
-                                    onClick={() => setTargetRefund(null)}
-
-
-
-                                    style={{
-
-
-
-                                        flex: 1,
-
-
-
-                                        padding: '12px',
-
-
-
-                                        backgroundColor: 'white',
-
-
-
-                                        border: '1px solid #CBD5E1',
-
-
-
-                                        borderRadius: '10px',
-
-
-
-                                        fontWeight: '600',
-
-
-
-                                        color: '#475569',
-
-
-
-                                        cursor: 'pointer'
-
-
-
-                                    }}
-
-
-
-                                >
-
-
-
-                                    Cancel
-
-
-
-                                </button>
-
-
-
-                                <button
-
-
-
-                                    type="submit"
-
-
-
-                                    disabled={submittingRefund || !refundReason.trim()}
-
-
-
-                                    style={{
-
-
-
-                                        flex: 1,
-
-
-
-                                        padding: '12px',
-
-
-
-                                        backgroundColor: 'var(--coral, #F16F68)',
-
-
-
-                                        border: 'none',
-
-
-
-                                        borderRadius: '10px',
-
-
-
-                                        fontWeight: '700',
-
-
-
-                                        color: 'white',
-
-
-
-                                        cursor: 'pointer',
-
-
-
-                                        opacity: submittingRefund ? 0.7 : 1
-
-
-
-                                    }}
-
-
-
-                                >
-
-
-
-                                    {submittingRefund ? "Creating..." : "Confirm & Send"}
-
-
-
-                                </button>
-
-
-
-                            </div>
-
-
-
-                        </form>
-
-
-
-                    </div>
-
-
-
-                </div>
-
-
-
-            )}
 
 
 
@@ -6253,7 +5052,7 @@ export default function SuperAdminSupportPage() {
 
 
 
-                                    <option value="ROOM">ROOM</option>
+                                    {isRoomEnabled && <option value="ROOM">ROOM</option>}
 
 
 
@@ -6545,7 +5344,7 @@ export default function SuperAdminSupportPage() {
 
 
 
-                                            {(newTicketCategory === 'ROOM' || newTicketCategory === 'PAYMENT' || newTicketCategory === 'OTHER') && (
+                                            {isRoomEnabled && (newTicketCategory === 'ROOM' || newTicketCategory === 'PAYMENT' || newTicketCategory === 'OTHER') && (
 
 
 

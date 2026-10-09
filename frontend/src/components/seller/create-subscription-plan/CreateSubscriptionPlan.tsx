@@ -516,10 +516,6 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
                     <span className={styles.metaKey}>Cycle Duration</span>
                     <span className={styles.metaValue}>{planDuration}</span>
                   </div>
-                  <div className={styles.metaRow}>
-                    <span className={styles.metaKey}>Tax Model</span>
-                    <span className={styles.metaValue}>GST 18% Extra</span>
-                  </div>
                 </div>
 
                 {errorMessage && (
@@ -570,16 +566,6 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
                   }}
                 >
                   Create & Deploy Plan
-                </button>
-
-                <button
-                  type="button"
-                  className={styles.discardBtn}
-                  onClick={() => {
-                    router.push('/seller/subscription');
-                  }}
-                >
-                  Discard Draft
                 </button>
               </div>
             </div>

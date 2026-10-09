@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
@@ -76,6 +76,8 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
   const [saving, setSaving] = useState(false);
   const [cleaningDuplicates, setCleaningDuplicates] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [scrollToMap, setScrollToMap] = useState<boolean>(false);
+  const mapPickerSectionRef = useRef<HTMLDivElement>(null);
 
   // Address Form State
   const [addressType, setAddressType] = useState<"Home" | "Work" | "Other">("Home");
@@ -287,6 +289,25 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
     }
   };
 
+  // Auto-scroll to map picker if opened via "Set Location on Map"
+  useEffect(() => {
+    if (isModalOpen && scrollToMap) {
+      const timer = setTimeout(() => {
+        if (mapPickerSectionRef.current) {
+          mapPickerSectionRef.current.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+          const searchInput = mapPickerSectionRef.current.querySelector<HTMLInputElement>("input[type='text'], input");
+          if (searchInput) {
+            searchInput.focus();
+          }
+        }
+      }, 250);
+      return () => clearTimeout(timer);
+    }
+  }, [isModalOpen, scrollToMap]);
+
   const openAddModal = () => {
     if (onAddNewAddress) {
       onAddNewAddress();
@@ -311,11 +332,12 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
     setIsDefault(addresses.length === 0);
     setErrors({});
     setTouched({});
+    setScrollToMap(false);
     setIsModalOpen(true);
   };
 
-  const openEditModal = (addr: AddressItem) => {
-    if (onEditAddress) {
+  const openEditModal = (addr: AddressItem, shouldScrollToMap = false) => {
+    if (onEditAddress && !shouldScrollToMap) {
       onEditAddress(addr.id);
       return;
     }
@@ -330,6 +352,7 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
     setIsDefault(addr.isDefault);
     setErrors({});
     setTouched({});
+    setScrollToMap(shouldScrollToMap);
     setIsModalOpen(true);
   };
 
@@ -671,7 +694,12 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
                   <button
                     type="button"
                     className={styles.mapLocationBtn}
-                    onClick={() => openEditModal(addr)}
+                    onClick={() => {
+                      if (onSetLocationMap) {
+                        onSetLocationMap(addr.id);
+                      }
+                      openEditModal(addr, true);
+                    }}
                   >
                     <MapPin size={14} color="#F97316" />
                     <span>Set Location on Map</span>
@@ -681,7 +709,7 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
                     <button
                       type="button"
                       className={styles.iconActionBtn}
-                      onClick={() => openEditModal(addr)}
+                      onClick={() => openEditModal(addr, false)}
                       aria-label="Edit Address"
                       title="Edit Address"
                     >
@@ -881,10 +909,48 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
               </div>
 
               {/* Interactive House Map Picker */}
-              <div className={styles.inputGroup}>
-                <label className={styles.inputLabel}>
-                  Pin Exact Location on Map (Search location or drag pin)
-                </label>
+              <div
+                ref={mapPickerSectionRef}
+                className={styles.inputGroup}
+                id="address-map-picker"
+                style={
+                  scrollToMap
+                    ? {
+                        scrollMarginTop: "16px",
+                        border: "2px solid #F97316",
+                        borderRadius: "14px",
+                        padding: "14px",
+                        backgroundColor: "#FFFBF7",
+                        transition: "all 0.3s ease",
+                      }
+                    : {
+                        scrollMarginTop: "16px",
+                      }
+                }
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
+                  <label
+                    className={styles.inputLabel}
+                    style={scrollToMap ? { color: "#EA580C", fontWeight: 700 } : undefined}
+                  >
+                    <MapPin size={14} color="#EA580C" style={{ display: "inline", verticalAlign: "middle", marginRight: "4px" }} />
+                    Pin Exact Location on Map (Search location or drag pin)
+                  </label>
+                  {scrollToMap && (
+                    <span
+                      style={{
+                        fontSize: "0.72rem",
+                        fontWeight: 700,
+                        backgroundColor: "#FFEADB",
+                        color: "#EA580C",
+                        padding: "2px 8px",
+                        borderRadius: "10px",
+                      }}
+                    >
+                      Active Map Pinning
+                    </span>
+                  )}
+                </div>
                 <div className={styles.mapPickerWrapper}>
                   <HouseMapPicker
                     label=""

@@ -111,9 +111,9 @@ export const getMenuItems = async () => {
         orderBy: { pincode: 'asc' }
     });
 
-    // Find FoodCategory records associated with seller's selected business categories
+    // Find FoodCategory records associated with seller's selected business categories or any FOOD category
     const categoryNames = extractCategoryNames(sellerProfile.type, sellerProfile.businessCategory);
-    let foodCategories: any[] = [];
+    let matchingCategoryIds: string[] = [];
 
     if (categoryNames.length > 0) {
         const matchingCategories = await db.category.findMany({
@@ -123,41 +123,30 @@ export const getMenuItems = async () => {
                 }))
             }
         });
-        const matchingCategoryIds = matchingCategories.map(c => c.id);
-        if (matchingCategoryIds.length > 0) {
-            foodCategories = await db.foodCategory.findMany({
-                where: {
-                    categories: {
-                        some: {
-                            id: { in: matchingCategoryIds }
-                        }
-                    }
-                },
-                include: {
-                    subCategories: {
-                        orderBy: { name: 'asc' }
-                    }
-                },
-                orderBy: { name: 'asc' }
-            });
-        }
-    } else {
-        foodCategories = await db.foodCategory.findMany({
-            where: {
-                categories: {
-                    some: {
-                        type: "FOOD"
-                    }
-                }
-            },
-            include: {
-                subCategories: {
-                    orderBy: { name: 'asc' }
-                }
-            },
-            orderBy: { name: 'asc' }
-        });
+        matchingCategoryIds = matchingCategories.map(c => c.id);
     }
+
+    const foodCategories = await db.foodCategory.findMany({
+        where: matchingCategoryIds.length > 0 ? {
+            OR: [
+                { categories: { some: { id: { in: matchingCategoryIds } } } },
+                { categories: { some: { type: "FOOD" } } },
+                { categories: { none: {} } }
+            ]
+        } : {
+            OR: [
+                { categories: { some: { type: "FOOD" } } },
+                { categories: { none: {} } }
+            ]
+        },
+        include: {
+            subCategories: {
+                orderBy: { name: 'asc' }
+            },
+            categories: true
+        },
+        orderBy: { name: 'asc' }
+    });
 
     return { 
         items, 

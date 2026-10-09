@@ -15,7 +15,7 @@ function MenuItemContent() {
   useEffect(() => {
     async function loadData() {
       try {
-        const res = await fetchApi("/api/seller/menu");
+        const res = await fetchApi(`/api/seller/menu?t=${Date.now()}`, { cache: "no-store" });
         if (res.ok) {
           const menuData = await res.json();
           const dataPayload = menuData.data || menuData;
@@ -85,14 +85,23 @@ function MenuItemContent() {
       }
 
       let foodCatId = categories[0]?.id || "";
+      let matchedCategoryObj: any = null;
       if (data.category && categories.length > 0) {
-        const matched = categories.find(
+        matchedCategoryObj = categories.find(
           (c) => c.name.toLowerCase() === data.category.toLowerCase()
         );
-        if (matched) foodCatId = matched.id;
+        if (matchedCategoryObj) foodCatId = matchedCategoryObj.id;
       }
       if (foodCatId) {
         formData.append("foodCategoryId", foodCatId);
+      }
+      if (data.subCategory && matchedCategoryObj?.subCategories) {
+        const matchedSub = matchedCategoryObj.subCategories.find(
+          (sc: any) => sc.name.toLowerCase() === data.subCategory.toLowerCase()
+        );
+        if (matchedSub) {
+          formData.append("foodSubCategoryId", matchedSub.id);
+        }
       }
 
       if (data.imageFile) {
@@ -165,6 +174,7 @@ function MenuItemContent() {
       initialItemName={initialData?.name}
       initialPrice={initialData ? String(initialData.price) : undefined}
       initialCategory={initialData?.foodCategory?.name}
+      initialSubCategory={initialData?.foodSubCategory?.name}
       categories={categories}
       initialType={mappedType}
       initialSelectedFoodTypes={parsedFoodTypes}

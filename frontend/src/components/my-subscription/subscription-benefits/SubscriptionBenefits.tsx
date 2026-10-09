@@ -12,7 +12,7 @@ const DEFAULT_BENEFITS = [
   "Daily curated menus with fresh farm ingredients",
   "Completely free delivery on all scheduled meals",
   "Flexible customization (easily swap ingredients or meals)",
-  "No-lock-in contracts — cancel or pause anytime",
+  "Flexible schedule — pause anytime when away",
 ];
 
 export const SubscriptionBenefits: React.FC<SubscriptionBenefitsProps> = ({

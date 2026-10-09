@@ -25,6 +25,7 @@ import {
   Lock,
 } from "lucide-react";
 import { performLogout } from "@/lib/logout";
+import { useRoomModule } from "@/context/RoomModuleContext";
 import styles from "./ResponsiveNavMenu.module.css";
 
 export interface NavItemConfig {
@@ -73,8 +74,14 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
   roleTagText = "OWNER ROLE",
   onSyncDevices,
 }) => {
+  const { isRoomEnabled } = useRoomModule();
   const seller = useSellerProfile();
   const { unreadCount } = useSellerNotifications();
+
+  const visibleResponsiveItems = RESPONSIVE_SELLER_NAV_ITEMS.filter(
+    (item) => isRoomEnabled || (item.id !== "rooms" && item.id !== "bookings")
+  );
+
   const effectiveOwnerName =
     ownerName && !isGenericFallbackName(ownerName)
       ? ownerName
@@ -348,7 +355,7 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
         {/* Navigation List */}
         <nav className={styles.navList}>
           <span className={styles.sectionLabel}>Operations Menu</span>
-          {RESPONSIVE_SELLER_NAV_ITEMS.map((item) => {
+          {visibleResponsiveItems.map((item) => {
             const active = isItemActive(item);
             const IconComponent = item.icon;
             const isFood =

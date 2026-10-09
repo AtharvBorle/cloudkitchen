@@ -85,6 +85,18 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
           preset: pParam || undefined,
         };
       }
+
+      const stored = localStorage.getItem("cloudkitchen_price_filter");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && (parsed.preset !== "all" || (parsed.maxPrice && parsed.maxPrice < 2500) || parsed.minPrice)) {
+          return {
+            minPrice: parsed.minPrice,
+            maxPrice: parsed.maxPrice,
+            preset: parsed.preset,
+          };
+        }
+      }
     } catch {}
     return null;
   });
@@ -117,21 +129,32 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
     };
   }, []);
 
-  // Sync price filter preference with custom event when changed
+  // Sync price filter preference with localStorage and across tabs/components
   useEffect(() => {
     const syncPrice = (e: any) => {
       if (e?.detail !== undefined) {
         setPriceFilter(e.detail);
+      } else if (typeof window !== "undefined") {
+        try {
+          const stored = localStorage.getItem("cloudkitchen_price_filter");
+          if (stored) {
+            setPriceFilter(JSON.parse(stored));
+          } else {
+            setPriceFilter(null);
+          }
+        } catch {}
       }
     };
 
     if (typeof window !== "undefined") {
       window.addEventListener("cloudkitchen_price_filter_changed", syncPrice);
+      window.addEventListener("storage", syncPrice);
     }
 
     return () => {
       if (typeof window !== "undefined") {
         window.removeEventListener("cloudkitchen_price_filter_changed", syncPrice);
+        window.removeEventListener("storage", syncPrice);
       }
     };
   }, []);
@@ -216,7 +239,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
                       ? `Served for ${Array.isArray(plan.mealTimings) ? plan.mealTimings.join(", ") : plan.mealTimings}`
                       : "Daily breakfast, lunch or dinner",
                     "Direct doorstep delivery",
-                    "Pause or cancel anytime",
+                    "Pause anytime when away",
                   ];
                 }
 

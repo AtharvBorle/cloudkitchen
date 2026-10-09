@@ -42,7 +42,7 @@ export interface Ticket {
   customerEmail?: string;
   time: string;
   status: "Open" | "In Progress" | "Closed" | "Resolved";
-  priority: "High" | "Medium" | "Low";
+  priority?: "High" | "Medium" | "Low" | null;
   messages: TicketMessage[];
 }
 
@@ -121,11 +121,14 @@ function mapRawMessage(m: any, ticketUser?: any): TicketMessage {
 
 function cleanTicketText(text: string | null | undefined): string {
   if (!text) return "";
-  return text.replace(/^\[Priority:\s*(High|Medium|Low)\]\s*\n?/i, "").trim();
+  return text.replace(/\[Priority:\s*(High|Medium|Low)\]\s*\n?/gi, "").trim();
 }
 
-export function resolveTicketPriority(t: any): "High" | "Medium" | "Low" {
-  if (!t) return "Medium";
+export function resolveTicketPriority(t: any): "High" | "Medium" | "Low" | null {
+  if (!t) return null;
+  const rawStatus = String(t.status || "").toUpperCase();
+  if (rawStatus === "CLOSED") return null;
+
   if (t.priority && typeof t.priority === "string") {
     const p = t.priority.trim().toUpperCase();
     if (p === "HIGH" || p === "URGENT" || p === "CRITICAL") return "High";
@@ -190,14 +193,25 @@ function mapRawTicket(t: any): Ticket {
   const name = t.user?.name || "Seller";
   const initials = getInitials(name);
 
+  const isClosed = status === "Closed";
   const rawMessages = Array.isArray(t.messages) && t.messages.length > 0 ? t.messages : [];
-  const messages: TicketMessage[] = rawMessages.map((m: any) => {
-    const mapped = mapRawMessage(m, t.user);
-    return {
-      ...mapped,
-      text: cleanTicketText(mapped.text),
-    };
-  });
+  const messages: TicketMessage[] = rawMessages
+    .filter((m: any) => {
+      if (isClosed) {
+        const msgText = String(m.message || m.text || "").trim();
+        if (/^Priority\s+(?:is\s+|updated\s+to\s+|set\s+to\s+)?(High|Medium|Low)$/i.test(msgText)) {
+          return false;
+        }
+      }
+      return true;
+    })
+    .map((m: any) => {
+      const mapped = mapRawMessage(m, t.user);
+      return {
+        ...mapped,
+        text: cleanTicketText(mapped.text),
+      };
+    });
 
   if (messages.length === 0 && t.description) {
     messages.push({

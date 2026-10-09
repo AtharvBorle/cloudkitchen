@@ -2,6 +2,7 @@
 
 import { FileText, Utensils, Home, ChevronRight, Clock } from "lucide-react";
 import Link from "next/link";
+import { useRoomModule } from "@/context/RoomModuleContext";
 
 type VerificationType = {
     id: string;
@@ -21,6 +22,15 @@ type ClientPageProps = {
 };
 
 export default function AdminDashboardClient({ verifications, stats }: ClientPageProps) {
+    const { isRoomEnabled } = useRoomModule();
+    const visibleVerifications = isRoomEnabled
+        ? verifications
+        : verifications.filter(
+              (v) =>
+                  !v.type?.toLowerCase().includes("room") &&
+                  !v.type?.toLowerCase().includes("property")
+          );
+
     return (
         <div style={{ animation: "fadeIn 0.5s ease-out" }}>
             <div style={{
@@ -37,7 +47,7 @@ export default function AdminDashboardClient({ verifications, stats }: ClientPag
                             <FileText color="var(--primary)" size={24} />
                             Pending Verifications
                         </h2>
-                        <p style={{ color: "#64748b", fontSize: "0.95rem" }}>{verifications.length} Sellers require document verification to activate their stores.</p>
+                        <p style={{ color: "#64748b", fontSize: "0.95rem" }}>{visibleVerifications.length} Sellers require document verification to activate their stores.</p>
                     </div>
                     <div style={{
                         backgroundColor: "#fff0f0",
@@ -47,13 +57,13 @@ export default function AdminDashboardClient({ verifications, stats }: ClientPag
                         fontWeight: "600",
                         fontSize: "0.85rem"
                     }}>
-                        {verifications.length} Pending Actions
+                        {visibleVerifications.length} Pending Actions
                     </div>
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                    {verifications.length > 0 ? (
-                        verifications.map((request, i) => (
+                    {visibleVerifications.length > 0 ? (
+                        visibleVerifications.map((request, i) => (
                             <div key={request.id} style={{
                                 display: "flex",
                                 justifyContent: "space-between",

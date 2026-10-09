@@ -303,6 +303,7 @@ export const updateCoupon = async (req: Request, couponId: string) => {
         validUntil,
         status,
         appliesToProductId,
+        appliesToSellerId,
         isAutoApply,
         autoApply
     } = body;
@@ -337,6 +338,12 @@ export const updateCoupon = async (req: Request, couponId: string) => {
     if (appliesTo !== undefined) updateData.appliesTo = appliesTo;
     if (appliesToProductId !== undefined) updateData.appliesToProductId = appliesToProductId;
     if (customerEligibility !== undefined) updateData.customerEligibility = customerEligibility;
+
+    if (role === "SUPERADMIN" && appliesToSellerId !== undefined) {
+        updateData.appliesToSellerId = (appliesToSellerId && typeof appliesToSellerId === "string" && appliesToSellerId.trim() && appliesToSellerId !== "GLOBAL")
+            ? appliesToSellerId.trim()
+            : null;
+    }
 
     // Discount calculations
     let finalType = discountType || existingCoupon.discountType;

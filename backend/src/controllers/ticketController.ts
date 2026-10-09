@@ -8,8 +8,16 @@ export function isSuperAdminRole(role?: string): boolean {
     return r === "SUPERADMIN" || r === "ADMIN" || r === "SUPPORT";
 }
 
-export function resolveTicketPriority(ticket: any): "High" | "Medium" | "Low" {
+export function cleanTicketPriorityText(text: string | null | undefined): string {
+    if (!text) return "";
+    return text.replace(/\[Priority:\s*(High|Medium|Low)\]\s*\n?/gi, "").trim();
+}
+
+export function resolveTicketPriority(ticket: any): "High" | "Medium" | "Low" | null {
     if (!ticket) return "Medium";
+    if (ticket.status === "CLOSED" || ticket.status === "Closed") {
+        return null;
+    }
     if (ticket.priority && typeof ticket.priority === "string") {
         const p = ticket.priority.toUpperCase();
         if (p === "HIGH" || p === "URGENT" || p === "CRITICAL") return "High";
@@ -104,6 +112,24 @@ export const createTicket = async (req: Request) => {
             description: finalDescription,
             category,
             status: "OPEN"
+        },
+        include: {
+            user: {
+                select: {
+                    name: true,
+                    email: true,
+                    phone: true,
+                    role: true,
+                    sellerProfile: {
+                        select: {
+                            id: true,
+                            businessName: true,
+                            type: true,
+                            businessCategory: true
+                        }
+                    }
+                }
+            }
         }
     });
 
@@ -116,10 +142,16 @@ export const createTicket = async (req: Request) => {
         }
     });
 
-    return { ...ticket, priority: normalizedPriority };
+    return {
+        ...ticket,
+        userName: ticket.user?.name || "",
+        userEmail: ticket.user?.email || "",
+        userPhone: ticket.user?.phone || "",
+        priority: normalizedPriority
+    };
 };
 
-export const listTickets = async () => {
+export const listTickets = async (search?: string) => {
     const session = await getAuthSession();
     if (!session?.user) {
         throw new ApiError("Please log in first to view your support tickets.", 401);
@@ -127,8 +159,34 @@ export const listTickets = async () => {
 
     const isSuperAdmin = isSuperAdminRole(session.user.role);
 
+    const where: any = isSuperAdmin ? {} : { userId: session.user.id };
+
+    if (search && search.trim()) {
+        const q = search.trim();
+        const searchConditions = [
+            { user: { name: { contains: q, mode: "insensitive" } } },
+            { user: { email: { contains: q, mode: "insensitive" } } },
+            { user: { phone: { contains: q, mode: "insensitive" } } },
+            { user: { sellerProfile: { businessName: { contains: q, mode: "insensitive" } } } },
+            { title: { contains: q, mode: "insensitive" } },
+            { description: { contains: q, mode: "insensitive" } },
+            { id: { contains: q, mode: "insensitive" } },
+            { category: { contains: q, mode: "insensitive" } },
+        ];
+
+        if (where.userId) {
+            where.AND = [
+                { userId: where.userId },
+                { OR: searchConditions }
+            ];
+            delete where.userId;
+        } else {
+            where.OR = searchConditions;
+        }
+    }
+
     const tickets = await db.ticket.findMany({
-        where: isSuperAdmin ? {} : { userId: session.user.id },
+        where,
         include: {
             user: {
                 select: {
@@ -136,7 +194,15 @@ export const listTickets = async () => {
                     name: true,
                     email: true,
                     phone: true,
-                    role: true
+                    role: true,
+                    sellerProfile: {
+                        select: {
+                            id: true,
+                            businessName: true,
+                            type: true,
+                            businessCategory: true
+                        }
+                    }
                 }
             }
         },
@@ -145,10 +211,17 @@ export const listTickets = async () => {
         }
     });
 
-    return tickets.map((t) => ({
-        ...t,
-        priority: resolveTicketPriority(t)
-    }));
+    return tickets.map((t) => {
+        const isClosed = t.status === "CLOSED";
+        return {
+            ...t,
+            userName: t.user?.name || "",
+            userEmail: t.user?.email || "",
+            userPhone: t.user?.phone || "",
+            description: isClosed ? cleanTicketPriorityText(t.description) : t.description,
+            priority: isClosed ? null : resolveTicketPriority(t)
+        };
+    });
 };
 
 export const getTicketDetails = async (id: string) => {
@@ -164,7 +237,16 @@ export const getTicketDetails = async (id: string) => {
                 select: {
                     name: true,
                     email: true,
-                    role: true
+                    phone: true,
+                    role: true,
+                    sellerProfile: {
+                        select: {
+                            id: true,
+                            businessName: true,
+                            type: true,
+                            businessCategory: true
+                        }
+                    }
                 }
             },
             messages: {
@@ -193,9 +275,32 @@ export const getTicketDetails = async (id: string) => {
         throw new ApiError("Access denied. You do not have permission to view this ticket.", 403);
     }
 
+    const isClosed = ticket.status === "CLOSED";
+    const cleanedDescription = isClosed ? cleanTicketPriorityText(ticket.description) : ticket.description;
+
+    const cleanedMessages = (ticket.messages || [])
+        .filter((msg) => {
+            if (isClosed) {
+                const msgText = (msg.message || "").trim();
+                if (/^Priority\s+(?:is\s+|updated\s+to\s+|set\s+to\s+)?(High|Medium|Low)$/i.test(msgText)) {
+                    return false;
+                }
+            }
+            return true;
+        })
+        .map((msg) => ({
+            ...msg,
+            message: isClosed ? cleanTicketPriorityText(msg.message) : msg.message
+        }));
+
     return {
         ...ticket,
-        priority: resolveTicketPriority(ticket)
+        userName: ticket.user?.name || "",
+        userEmail: ticket.user?.email || "",
+        userPhone: ticket.user?.phone || "",
+        description: cleanedDescription,
+        messages: cleanedMessages,
+        priority: isClosed ? null : resolveTicketPriority(ticket)
     };
 };
 
@@ -240,7 +345,7 @@ export const updateTicketStatus = async (id: string, req: Request) => {
     }
 
     let updatedPriority: "High" | "Medium" | "Low" | null = null;
-    if (priority) {
+    if (priority && status !== "CLOSED") {
         const normPri = String(priority).toUpperCase() === "HIGH" ? "High" : String(priority).toUpperCase() === "LOW" ? "Low" : "Medium";
         updatedPriority = normPri;
         
@@ -261,14 +366,71 @@ export const updateTicketStatus = async (id: string, req: Request) => {
         });
     }
 
+    if (status === "CLOSED") {
+        updateData.description = cleanTicketPriorityText(ticket.description);
+
+        // Delete priority system messages
+        try {
+            await db.ticketMessage.deleteMany({
+                where: {
+                    ticketId: id,
+                    OR: [
+                        { message: { startsWith: "Priority updated to " } },
+                        { message: { startsWith: "Priority set to " } },
+                        { message: { startsWith: "Priority is " } }
+                    ]
+                }
+            });
+
+            // Clean messages that have [Priority: ...]
+            const msgsWithPriority = await db.ticketMessage.findMany({
+                where: {
+                    ticketId: id,
+                    message: { contains: "[Priority:" }
+                }
+            });
+            for (const msg of msgsWithPriority) {
+                await db.ticketMessage.update({
+                    where: { id: msg.id },
+                    data: { message: cleanTicketPriorityText(msg.message) }
+                });
+            }
+        } catch (cleanErr) {
+            console.error("Error cleaning priority from closed ticket messages:", cleanErr);
+        }
+    }
+
     const updatedTicket = await db.ticket.update({
         where: { id },
-        data: updateData
+        data: updateData,
+        include: {
+            user: {
+                select: {
+                    name: true,
+                    email: true,
+                    phone: true,
+                    role: true,
+                    sellerProfile: {
+                        select: {
+                            id: true,
+                            businessName: true,
+                            type: true,
+                            businessCategory: true
+                        }
+                    }
+                }
+            }
+        }
     });
 
+    const isClosed = updatedTicket.status === "CLOSED";
     return {
         ...updatedTicket,
-        priority: updatedPriority || resolveTicketPriority(updatedTicket)
+        userName: updatedTicket.user?.name || "",
+        userEmail: updatedTicket.user?.email || "",
+        userPhone: updatedTicket.user?.phone || "",
+        description: isClosed ? cleanTicketPriorityText(updatedTicket.description) : updatedTicket.description,
+        priority: isClosed ? null : (updatedPriority || resolveTicketPriority(updatedTicket))
     };
 };
 

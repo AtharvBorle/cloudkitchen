@@ -2,7 +2,26 @@ import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { uploadImage } from "@/lib/upload";
-import { revalidateTag } from "next/cache";
+import { revalidateTag, revalidatePath } from "next/cache";
+
+const triggerCategoryRevalidation = () => {
+    try {
+        revalidateTag("categories", {});
+        revalidateTag("food-categories", {});
+        revalidateTag("public-categories", {});
+        revalidateTag("explore", {});
+        revalidateTag("public-explore-data", {});
+        revalidatePath("/api/seller/menu");
+        revalidatePath("/api/public/categories");
+        revalidatePath("/api/superadmin/food-categories");
+        revalidatePath("/seller/menu");
+        revalidatePath("/seller/edit-menu");
+        revalidatePath("/seller/res/menu/item");
+        revalidatePath("/dashboard/superadmin/categories");
+    } catch (e) {
+        console.error("Category revalidation error:", e);
+    }
+};
 
 export const getFoodCategories = async () => {
     const session = await getAuthSession();
@@ -96,12 +115,7 @@ export const createFoodCategory = async (req: Request) => {
         }
     });
 
-    try {
-        revalidateTag("categories", {});
-        revalidateTag("public-categories", {});
-        revalidateTag("explore", {});
-        revalidateTag("public-explore-data", {});
-    } catch (e) {}
+    triggerCategoryRevalidation();
 
     return { foodCategory };
 };
@@ -123,12 +137,7 @@ export const deleteFoodCategory = async (id: string) => {
         where: { id }
     });
 
-    try {
-        revalidateTag("categories", {});
-        revalidateTag("public-categories", {});
-        revalidateTag("explore", {});
-        revalidateTag("public-explore-data", {});
-    } catch (e) {}
+    triggerCategoryRevalidation();
 
     return { success: true };
 };
@@ -183,12 +192,7 @@ export const createFoodSubCategory = async (req: Request) => {
         }
     });
 
-    try {
-        revalidateTag("categories", {});
-        revalidateTag("public-categories", {});
-        revalidateTag("explore", {});
-        revalidateTag("public-explore-data", {});
-    } catch (e) {}
+    triggerCategoryRevalidation();
 
     return { subCategory };
 };
@@ -210,12 +214,7 @@ export const deleteFoodSubCategory = async (id: string) => {
         where: { id }
     });
 
-    try {
-        revalidateTag("categories", {});
-        revalidateTag("public-categories", {});
-        revalidateTag("explore", {});
-        revalidateTag("public-explore-data", {});
-    } catch (e) {}
+    triggerCategoryRevalidation();
 
     return { success: true };
 };
@@ -265,12 +264,7 @@ export const updateFoodCategory = async (id: string, req: Request) => {
         }
     });
 
-    try {
-        revalidateTag("categories", {});
-        revalidateTag("public-categories", {});
-        revalidateTag("explore", {});
-        revalidateTag("public-explore-data", {});
-    } catch (e) {}
+    triggerCategoryRevalidation();
 
     return { foodCategory: updated };
 };
@@ -308,12 +302,7 @@ export const updateFoodSubCategory = async (id: string, req: Request) => {
         data: dataToUpdate
     });
 
-    try {
-        revalidateTag("categories", {});
-        revalidateTag("public-categories", {});
-        revalidateTag("explore", {});
-        revalidateTag("public-explore-data", {});
-    } catch (e) {}
+    triggerCategoryRevalidation();
 
     return { subCategory: updated };
 };

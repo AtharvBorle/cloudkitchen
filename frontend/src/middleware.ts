@@ -137,6 +137,14 @@ export async function middleware(request: NextRequest) {
   // ──────────────────────────────────────────
   // 4. LOGIN PAGE GUARDS — allow users to access login pages directly to sign in or switch accounts
   // ──────────────────────────────────────────
+  const isUserLoginPage =
+    pathname === "/login" ||
+    pathname === "/auth/login" ||
+    pathname === "/signup" ||
+    (pathname.startsWith("/auth/login") &&
+      !pathname.startsWith("/auth/login/admin") &&
+      !pathname.startsWith("/auth/login/delivery") &&
+      !pathname.startsWith("/auth/login/seller"));
   const isSellerLoginPage =
     pathname === "/seller" ||
     pathname === "/seller/login" ||
@@ -145,12 +153,19 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/seller/res/login") ||
     pathname === "/auth/login/seller";
   const isAdminLoginPage =
+    pathname === "/admin" ||
     pathname === "/auth/login/admin" ||
     pathname === "/admin/login";
-  const isDeliveryLoginPage = pathname === "/auth/login/delivery";
+  const isDeliveryLoginPage =
+    pathname === "/delivery" ||
+    pathname === "/auth/login/delivery";
   const isLoggedOut = request.nextUrl.searchParams.get("logged_out") === "true";
+
   if (isAuthenticated && !isLoggedOut) {
     const role = (userRole || "USER").toUpperCase();
+    if (role === "USER" && isUserLoginPage) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
     if (
       (role === "ADMIN" || role === "SUPERADMIN" || role === "AGENT" || role === "SUPPORT") &&
       isAdminLoginPage
@@ -204,6 +219,7 @@ export async function middleware(request: NextRequest) {
 
   // Admin routes (protected)
   const isPublicAdminPath =
+    pathname === "/admin" ||
     pathname === "/auth/login/admin" ||
     pathname === "/admin/login";
 
@@ -220,6 +236,7 @@ export async function middleware(request: NextRequest) {
 
   // Delivery routes (protected)
   const isPublicDeliveryPath =
+    pathname === "/delivery" ||
     pathname === "/auth/login/delivery" ||
     pathname === "/delivery-addresses-desktop";
 

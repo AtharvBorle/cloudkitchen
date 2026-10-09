@@ -34,6 +34,7 @@ import { useSession } from "next-auth/react";
 import { performLogout } from "@/lib/logout";
 import { MobileSidebar } from "@/components/mobile-sidebar";
 import { CustomerNotificationBell } from "@/components/notifications";
+import { useRoomModule } from "@/context/RoomModuleContext";
 import styles from "./Navbar.module.css";
 import logoImg from "./logo-nav.png";
 import profilePic from "./Rectangle.jpg";
@@ -139,6 +140,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   const { cartItems } = useCart();
   const { defaultAddress, openLocationModal } = useLocation();
   const { data: session } = useSession();
+  const { isRoomEnabled } = useRoomModule();
+
+  const effectiveNavItems = navItems.filter((item) => isRoomEnabled || item !== "Rooms");
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [internalActiveItem, setInternalActiveItem] = useState<string>(initialActiveItem);
@@ -154,7 +158,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     return false;
   });
 
-  // Sync veg filter preference with localStorage and across tabs/components
+  // Sync veg & diet filter preference with localStorage and across tabs/components
   useEffect(() => {
     const syncVeg = (e: any) => {
       if (e?.detail !== undefined) {
@@ -169,20 +173,46 @@ export const Navbar: React.FC<NavbarProps> = ({
       }
     };
 
+    const syncDiet = (e: any) => {
+      if (e?.detail) {
+        setSelectedDiet(e.detail);
+      } else if (typeof window !== "undefined") {
+        try {
+          const stored = localStorage.getItem("cloudkitchen_diet_preference");
+          if (stored) {
+            setSelectedDiet(stored);
+          }
+        } catch {}
+      }
+    };
+
     if (typeof window !== "undefined") {
       window.addEventListener("cloudkitchen_veg_preference_changed", syncVeg);
+      window.addEventListener("cloudkitchen_diet_preference_changed", syncDiet);
       window.addEventListener("storage", syncVeg);
+      window.addEventListener("storage", syncDiet);
     }
 
     return () => {
       if (typeof window !== "undefined") {
         window.removeEventListener("cloudkitchen_veg_preference_changed", syncVeg);
+        window.removeEventListener("cloudkitchen_diet_preference_changed", syncDiet);
         window.removeEventListener("storage", syncVeg);
+        window.removeEventListener("storage", syncDiet);
       }
     };
   }, []);
 
-  const [selectedDiet, setSelectedDiet] = useState<string>(controlledDiet || "all");
+  const [selectedDiet, setSelectedDiet] = useState<string>(() => {
+    if (controlledDiet !== undefined) return controlledDiet;
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("cloudkitchen_diet_preference");
+        if (stored) return stored;
+      } catch {}
+    }
+    return "all";
+  });
   const [isDietDropdownOpen, setIsDietDropdownOpen] = useState<boolean>(false);
   const [selectedLang, setSelectedLang] = useState<string>("en");
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState<boolean>(false);
@@ -200,7 +230,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     ) {
       return navItems.includes("Food") ? "Food" : "Explore";
     }
-    if (pathname.startsWith("/room-booking")) {
+    if (isRoomEnabled && pathname.startsWith("/room-booking")) {
       return "Rooms";
     }
     if (pathname.startsWith("/explore/furniture")) {
@@ -327,17 +357,26 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const toggleVegOnly = () => {
     const nextState = !currentVegOnly;
+    const nextDiet = nextState ? "veg" : "all";
     setInternalVegOnly(nextState);
+    setSelectedDiet(nextDiet);
     if (typeof window !== "undefined") {
       try {
         localStorage.setItem("cloudkitchen_veg_preference", String(nextState));
+        localStorage.setItem("cloudkitchen_diet_preference", nextDiet);
         window.dispatchEvent(
           new CustomEvent("cloudkitchen_veg_preference_changed", { detail: nextState })
+        );
+        window.dispatchEvent(
+          new CustomEvent("cloudkitchen_diet_preference_changed", { detail: nextDiet })
         );
       } catch {}
     }
     if (onVegToggle) {
       onVegToggle(nextState);
+    }
+    if (onDietChange) {
+      onDietChange(nextDiet);
     }
   };
 
@@ -385,7 +424,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   // Section-aware search target, placeholder, and label
   const getSectionSearchConfig = () => {
-    if (pathname.startsWith("/room-booking") || currentActiveItem === "Rooms") {
+    if (isRoomEnabled && (pathname.startsWith("/room-booking") || currentActiveItem === "Rooms")) {
       return {
         section: "Rooms",
         placeholder: "Search rooms, stays, coliving...",
@@ -531,7 +570,11 @@ export const Navbar: React.FC<NavbarProps> = ({
     setInternalVegOnly(isVeg);
     if (typeof window !== "undefined") {
       try {
+        localStorage.setItem("cloudkitchen_diet_preference", id);
         localStorage.setItem("cloudkitchen_veg_preference", String(isVeg));
+        window.dispatchEvent(
+          new CustomEvent("cloudkitchen_diet_preference_changed", { detail: id })
+        );
         window.dispatchEvent(
           new CustomEvent("cloudkitchen_veg_preference_changed", { detail: isVeg })
         );
@@ -668,7 +711,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* 2. CENTER SECTION (Desktop Only) */}
           <nav className={styles.centerSection} aria-label="Desktop Navigation">
-            {navItems.map((item) => {
+            {effectiveNavItems.map((item) => {
               const isActive = currentActiveItem === item;
               return (
                 <button

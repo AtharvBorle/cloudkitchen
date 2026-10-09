@@ -27,6 +27,7 @@ import { useSellerNotifications, addSellerNotification } from "@/hooks/useSeller
 import { playNewOrderChime } from "@/lib/audio-chime";
 import { performLogout } from "@/lib/logout";
 import { getRemainingSeconds } from "../seller-orders/SellerOrders";
+import { useRoomModule } from "@/context/RoomModuleContext";
 import styles from "./SellerDashboard.module.css";
 
 export interface OrderItem {
@@ -88,6 +89,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
 }) => {
   const router = useRouter();
   const seller = useSellerProfile();
+  const { isRoomEnabled } = useRoomModule();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [orders, setOrders] = useState<OrderItem[]>(
@@ -732,22 +734,23 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                   </div>
                 </div>
 
-                {/* Card 3: Pending Bookings */}
-                <div className={styles.statCard}>
-                  <div className={styles.cardHeader}>
-                    <span className={styles.cardLabel}>Rooms &amp; Bookings</span>
-                    <div className={styles.iconBadge}>
-                      <Calendar size={18} strokeWidth={2.4} />
+                {isRoomEnabled && (
+                  <div className={styles.statCard}>
+                    <div className={styles.cardHeader}>
+                      <span className={styles.cardLabel}>Rooms &amp; Bookings</span>
+                      <div className={styles.iconBadge}>
+                        <Calendar size={18} strokeWidth={2.4} />
+                      </div>
+                    </div>
+                    <h2 className={styles.cardValue}>
+                      {overview?.roomsCount !== undefined ? `${overview.roomsCount} Rooms` : "0 Rooms"}
+                    </h2>
+                    <div className={styles.cardFooter}>
+                      <span className={styles.badgeOrange}>Inventory</span>
+                      <span className={styles.footerMuted}>configured units</span>
                     </div>
                   </div>
-                  <h2 className={styles.cardValue}>
-                    {overview?.roomsCount !== undefined ? `${overview.roomsCount} Rooms` : "0 Rooms"}
-                  </h2>
-                  <div className={styles.cardFooter}>
-                    <span className={styles.badgeOrange}>Inventory</span>
-                    <span className={styles.footerMuted}>configured units</span>
-                  </div>
-                </div>
+                )}
 
                 {/* Card 4: COD Outstanding / Selected Date COD */}
                 <div className={styles.statCard}>
@@ -801,7 +804,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
               <div className={styles.tableCard}>
                 <div className={styles.tableHeader}>
                   <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-                    <h3 className={styles.tableTitle}>Recent Food & Room Orders</h3>
+                    <h3 className={styles.tableTitle}>{isRoomEnabled ? "Recent Food & Room Orders" : "Recent Food Orders"}</h3>
                     {searchQuery.trim() && (
                       <span
                         style={{
@@ -851,7 +854,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                       <tr>
                         <th>ORDER ID</th>
                         <th>CUSTOMER</th>
-                        <th>ROOM NO</th>
+                        {isRoomEnabled && <th>ROOM NO</th>}
                         <th>ITEMS</th>
                         <th>DATE & TIME</th>
                         <th>TOTAL</th>
@@ -861,7 +864,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                     <tbody>
                       {displayedOrders.length === 0 ? (
                         <tr>
-                          <td colSpan={7} style={{ textAlign: "center", padding: "40px 16px", color: "#64748B" }}>
+                          <td colSpan={isRoomEnabled ? 7 : 6} style={{ textAlign: "center", padding: "40px 16px", color: "#64748B" }}>
                             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
                               <Search size={28} color="#94A3B8" />
                               <p style={{ margin: 0, fontWeight: 600, color: "#1E293B", fontSize: "14px" }}>
@@ -910,7 +913,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                             <tr key={order.id}>
                               <td className={styles.orderIdText}>{order.orderId}</td>
                               <td className={styles.customerText}>{order.customer}</td>
-                              <td className={styles.roomNoText}>{order.roomNo}</td>
+                              {isRoomEnabled && <td className={styles.roomNoText}>{order.roomNo}</td>}
                               <td className={styles.itemsText}>{order.items}</td>
                               <td className={styles.dateTimeCell}>
                                 <span className={styles.dateText}>{orderDate.date}</span>

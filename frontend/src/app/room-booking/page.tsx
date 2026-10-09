@@ -17,6 +17,7 @@ import {
 } from "@/lib/geo-distance";
 import { extractRoomPropertyLocation } from "@/lib/room-location-helper";
 import { Footer } from "@/components/explore-desktop/footer";
+import { useRoomModule } from "@/context/RoomModuleContext";
 import styles from "./page.module.css";
 
 function RoomBookingContent() {
@@ -240,6 +241,29 @@ function RoomBookingContent() {
     setSelectedRoomType("all");
     setSearchQuery("");
   };
+
+  const { isRoomEnabled } = useRoomModule();
+
+  if (!isRoomEnabled) {
+    return (
+      <div className={styles.pageContainer}>
+        <Navbar />
+        <div style={{ maxWidth: "600px", margin: "80px auto", padding: "40px 24px", textAlign: "center", backgroundColor: "white", borderRadius: "16px", boxShadow: "0 4px 20px rgba(0,0,0,0.06)" }}>
+          <div style={{ width: "64px", height: "64px", borderRadius: "50%", backgroundColor: "#FFF7ED", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+            <span style={{ fontSize: "28px" }}>🏨</span>
+          </div>
+          <h1 style={{ fontSize: "1.6rem", fontWeight: "700", color: "#1E293B", marginBottom: "12px" }}>Rooms & Stays Coming Soon!</h1>
+          <p style={{ color: "#64748B", fontSize: "0.95rem", lineHeight: "1.6", marginBottom: "28px" }}>
+            The Room booking module is launching in our next version. In the meantime, explore our fresh food, tiffins, and delicious kitchen meals!
+          </p>
+          <a href="/explore-desktop" style={{ display: "inline-block", backgroundColor: "#FF6B00", color: "white", padding: "12px 28px", borderRadius: "8px", fontWeight: "600", textDecoration: "none" }}>
+            Explore Delicious Food
+          </a>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className={styles.pageContainer}>

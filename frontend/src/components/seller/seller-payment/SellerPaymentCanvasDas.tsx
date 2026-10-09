@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import ConsoleSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useRoomModule } from "@/context/RoomModuleContext";
 import { fetchApi } from "@/lib/fetch-api";
 import {
   ShieldCheck,
@@ -58,6 +59,7 @@ export default function SellerPaymentCanvasDas() {
   const queryCategory = searchParams?.get("category") || "";
 
   const seller = useSellerProfile();
+  const { isRoomEnabled } = useRoomModule();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [plans, setPlans] = useState<SubscriptionPlanItem[]>([]);
@@ -75,6 +77,12 @@ export default function SellerPaymentCanvasDas() {
 
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+  useEffect(() => {
+    if (!isRoomEnabled && (activeCategoryFilter === "PROPERTY" || activeCategoryFilter === "BOTH")) {
+      setActiveCategoryFilter("FOOD");
+    }
+  }, [isRoomEnabled, activeCategoryFilter]);
 
   // Sync mobile token and initialize web session
   useEffect(() => {
@@ -154,38 +162,43 @@ export default function SellerPaymentCanvasDas() {
     loadData();
   }, [queryPlanId, queryCategory, queryToken]);
 
+  const availablePlans = useMemo(() => {
+    if (isRoomEnabled) return plans;
+    return plans.filter((p) => p.category === "FOOD" || !p.category);
+  }, [plans, isRoomEnabled]);
+
   // Keep selected plan valid when plans change
   useEffect(() => {
-    if (plans.length > 0) {
-      const exists = plans.some((p) => p.id === selectedPlanId);
+    if (availablePlans.length > 0) {
+      const exists = availablePlans.some((p) => p.id === selectedPlanId);
       if (!exists) {
         // Pick first plan matching current filter or simply first plan
-        const matching = plans.filter((p) => {
+        const matching = availablePlans.filter((p) => {
           if (activeCategoryFilter === "ALL") return true;
           if (activeCategoryFilter === "FOOD") return p.category === "FOOD";
-          if (activeCategoryFilter === "PROPERTY") return p.category === "PROPERTY";
-          if (activeCategoryFilter === "BOTH") return p.category === "BOTH";
+          if (isRoomEnabled && activeCategoryFilter === "PROPERTY") return p.category === "PROPERTY";
+          if (isRoomEnabled && activeCategoryFilter === "BOTH") return p.category === "BOTH";
           return p.category === activeCategoryFilter;
         });
         if (matching.length > 0) {
           setSelectedPlanId(matching[0].id);
         } else {
-          setSelectedPlanId(plans[0].id);
+          setSelectedPlanId(availablePlans[0].id);
         }
       }
     }
-  }, [activeCategoryFilter, plans, selectedPlanId]);
+  }, [activeCategoryFilter, availablePlans, selectedPlanId, isRoomEnabled]);
 
   // Filtered plans list - strictly isolate FOOD, PROPERTY, and BOTH
-  const filteredPlans = plans.filter((p) => {
+  const filteredPlans = availablePlans.filter((p) => {
     if (activeCategoryFilter === "ALL") return true;
     if (activeCategoryFilter === "FOOD") return p.category === "FOOD";
-    if (activeCategoryFilter === "PROPERTY") return p.category === "PROPERTY";
-    if (activeCategoryFilter === "BOTH") return p.category === "BOTH";
+    if (isRoomEnabled && activeCategoryFilter === "PROPERTY") return p.category === "PROPERTY";
+    if (isRoomEnabled && activeCategoryFilter === "BOTH") return p.category === "BOTH";
     return true;
   });
 
-  const selectedPlan = plans.find((p) => p.id === selectedPlanId) || filteredPlans[0];
+  const selectedPlan = availablePlans.find((p) => p.id === selectedPlanId) || filteredPlans[0];
 
   // Coupon handling
   const handleApplyCoupon = async () => {
@@ -377,14 +390,16 @@ export default function SellerPaymentCanvasDas() {
     statusData?.sellerProfile?.foodVerificationStatus === "APPROVED";
 
   const hasPropertyVerification =
-    statusData?.sellerProfile?.businessCategory === "PROPERTY" ||
+    isRoomEnabled &&
+    (statusData?.sellerProfile?.businessCategory === "PROPERTY" ||
     statusData?.sellerProfile?.businessCategory === "BOTH" ||
-    statusData?.sellerProfile?.propertyVerificationStatus === "APPROVED";
+    statusData?.sellerProfile?.propertyVerificationStatus === "APPROVED");
 
   const isDualVerified =
-    statusData?.sellerProfile?.businessCategory === "BOTH" ||
+    isRoomEnabled &&
+    (statusData?.sellerProfile?.businessCategory === "BOTH" ||
     (hasFoodVerification && hasPropertyVerification) ||
-    !statusData?.sellerProfile;
+    !statusData?.sellerProfile);
 
   // Price calculations
   const basePrice = selectedPlan ? selectedPlan.price : 0;
@@ -466,7 +481,7 @@ export default function SellerPaymentCanvasDas() {
                   </div>
                 )}
 
-                {propertyExpiry && (
+                {isRoomEnabled && propertyExpiry && (
                   <div className={styles.activeSubItem}>
                     <div className={styles.activeSubItemTop}>
                       <span className={styles.activeSubName}>Room & Property Bookings</span>

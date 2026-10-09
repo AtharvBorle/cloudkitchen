@@ -8,9 +8,17 @@ import { fetchApi } from "@/lib/fetch-api";
 import Link from "next/link";
 import { Lock, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useRoomModule } from "@/context/RoomModuleContext";
 
 export default function ResponsiveRoomsPage() {
   const router = useRouter();
+  const { isRoomEnabled } = useRoomModule();
+
+  useEffect(() => {
+    if (!isRoomEnabled) {
+      router.replace("/seller/dashboard");
+    }
+  }, [isRoomEnabled, router]);
   const [rooms, setRooms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -112,6 +120,8 @@ export default function ResponsiveRoomsPage() {
       console.error("Failed to toggle room availability:", err);
     }
   };
+
+  if (!isRoomEnabled) return null;
 
   if (statusChecked && isPropertyActive === false) {
     return (

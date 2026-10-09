@@ -30,6 +30,7 @@ import SellerNotificationChannels, {
 } from "./notification-channels/SellerNotificationChannels";
 import {
   PasswordManagementCard,
+  SellerDeleteAccountCard,
 } from "./security-settings/SellerSecuritySettings";
 import { useSellerProfile, updateCachedProfile, computeInitials } from "@/hooks/useSellerProfile";
 import { fetchApi } from "@/lib/fetch-api";
@@ -2265,6 +2266,8 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
             <div className={styles.leftColumn} style={{ gridColumn: "1 / -1", maxWidth: "720px" }}>
               {/* 1. Password Management Card (Matching Reference Image) */}
               <PasswordManagementCard />
+              {/* 2. Danger Zone: Delete Kitchen Account */}
+              <SellerDeleteAccountCard />
             </div>
           </div>
         )}

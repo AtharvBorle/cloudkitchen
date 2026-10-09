@@ -10478,6 +10478,1036 @@ export const swaggerSpec = {
           }
         }
       }
+    },
+    "/api/auth/check-email": {
+      "get": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Check Email Availability (Query)",
+        "description": "Checks if an email address is already in use by an active account via query parameter.",
+        "parameters": [
+          {
+            "name": "email",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "email",
+              "example": "user@example.com"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Availability result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "available": {
+                          "type": "boolean",
+                          "example": true
+                        },
+                        "exists": {
+                          "type": "boolean",
+                          "example": false
+                        },
+                        "email": {
+                          "type": "string",
+                          "example": "user@example.com"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Email is available and verified."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Check Email Availability (JSON Body)",
+        "description": "Checks if an email address is already in use by an active account via JSON payload.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "user@example.com"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Availability result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "available": {
+                          "type": "boolean",
+                          "example": true
+                        },
+                        "exists": {
+                          "type": "boolean",
+                          "example": false
+                        },
+                        "email": {
+                          "type": "string",
+                          "example": "user@example.com"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Email is available and verified."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/check-phone": {
+      "get": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Check Mobile Phone Availability (Query)",
+        "description": "Checks if a 10-digit mobile phone number is already registered via query parameter.",
+        "parameters": [
+          {
+            "name": "phone",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "9876543210"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Availability result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "available": {
+                          "type": "boolean",
+                          "example": true
+                        },
+                        "exists": {
+                          "type": "boolean",
+                          "example": false
+                        },
+                        "phone": {
+                          "type": "string",
+                          "example": "9876543210"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Mobile number is available and verified."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Check Mobile Phone Availability (JSON Body)",
+        "description": "Checks if a 10-digit mobile phone number is already registered via JSON payload.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "phone"
+                ],
+                "properties": {
+                  "phone": {
+                    "type": "string",
+                    "example": "9876543210"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Availability result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "available": {
+                          "type": "boolean",
+                          "example": true
+                        },
+                        "exists": {
+                          "type": "boolean",
+                          "example": false
+                        },
+                        "phone": {
+                          "type": "string",
+                          "example": "9876543210"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Mobile number is available and verified."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/user/delete-account": {
+      "get": {
+        "tags": [
+          "Customer-User"
+        ],
+        "summary": "Get Account Deletion Status",
+        "description": "Retrieves the user's account deletion status, soft delete timestamp, and scheduled permanent deletion date.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Account deletion status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "isSoftDeleted": {
+                          "type": "boolean",
+                          "example": false
+                        },
+                        "isPermanentlyDeleted": {
+                          "type": "boolean",
+                          "example": false
+                        },
+                        "deletedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true
+                        },
+                        "scheduledPermanentDeletionDate": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true
+                        },
+                        "isExpired": {
+                          "type": "boolean",
+                          "example": false
+                        },
+                        "gracePeriodConfig": {
+                          "type": "object",
+                          "properties": {
+                            "days": {
+                              "type": "number",
+                              "example": 30
+                            },
+                            "hours": {
+                              "type": "number",
+                              "example": 0
+                            },
+                            "minutes": {
+                              "type": "number",
+                              "example": 0
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Customer-User"
+        ],
+        "summary": "Request User Account Deletion",
+        "description": "Soft deletes the user account with a configurable grace period (default 30 days). If the user logs in before expiry, deletion is cancelled.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "password": {
+                    "type": "string",
+                    "description": "Optional password verification"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Account deletion scheduled successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Account deletion requested. Your account is scheduled for permanent deletion in 30 days."
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "deletedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "scheduledDeletionDate": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Customer-User"
+        ],
+        "summary": "Delete User Account",
+        "description": "Alias for POST /api/user/delete-account.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Account deletion scheduled successfully"
+          }
+        }
+      }
+    },
+    "/api/seller/delete-account": {
+      "get": {
+        "tags": [
+          "Seller-Profile"
+        ],
+        "summary": "Get Seller Account Deletion Status",
+        "description": "Retrieves the seller's account deletion status, store online status, and scheduled permanent deletion date.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Seller account deletion status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "isSoftDeleted": {
+                          "type": "boolean",
+                          "example": false
+                        },
+                        "isPermanentlyDeleted": {
+                          "type": "boolean",
+                          "example": false
+                        },
+                        "isOnline": {
+                          "type": "boolean",
+                          "example": false
+                        },
+                        "deletedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true
+                        },
+                        "scheduledPermanentDeletionDate": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Seller-Profile"
+        ],
+        "summary": "Request Seller Account Deletion",
+        "description": "Soft deletes the seller account and takes the kitchen offline. Enters a configurable grace period (default 30 days) and cancels if seller logs back in.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "password": {
+                    "type": "string",
+                    "description": "Optional password verification"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Seller account deletion scheduled successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Seller account deletion requested. Kitchen has been taken offline."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Seller-Profile"
+        ],
+        "summary": "Delete Seller Account",
+        "description": "Alias for POST /api/seller/delete-account.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Seller account deletion scheduled successfully"
+          }
+        }
+      }
+    },
+    "/api/cron/account-deletion": {
+      "get": {
+        "tags": [
+          "Admin-Superadmin"
+        ],
+        "summary": "Execute Account Deletion Cron Job",
+        "description": "Scans soft-deleted accounts and anonymizes personal details for any accounts whose grace period has expired without removing relational order history.",
+        "parameters": [
+          {
+            "name": "secret",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Optional cron secret key if CRON_SECRET is configured in environment."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Processed expired account deletions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Processed 0 expired account deletions."
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "scanned": {
+                          "type": "number",
+                          "example": 2
+                        },
+                        "processedCount": {
+                          "type": "number",
+                          "example": 1
+                        },
+                        "processedUserIds": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Admin-Superadmin"
+        ],
+        "summary": "Trigger Account Deletion Cron Job",
+        "description": "Alias for GET /api/cron/account-deletion for automated webhooks.",
+        "responses": {
+          "200": {
+            "description": "Processed expired account deletions"
+          }
+        }
+      }
+    },
+    "/api/public/coupons/validate": {
+      "post": {
+        "tags": [
+          "Coupons-Discounts"
+        ],
+        "summary": "Validate Coupon For Cart",
+        "description": "Validates a coupon code against current cart items, total amount, and seller requirements, returning calculated discount.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "code",
+                  "cartTotal"
+                ],
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "example": "FLAT200"
+                  },
+                  "cartTotal": {
+                    "type": "number",
+                    "example": 350
+                  },
+                  "sellerId": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Validation result and discount details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "valid": {
+                          "type": "boolean",
+                          "example": true
+                        },
+                        "discountAmount": {
+                          "type": "number",
+                          "example": 200
+                        },
+                        "finalTotal": {
+                          "type": "number",
+                          "example": 150
+                        },
+                        "coupon": {
+                          "type": "object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/public/reels": {
+      "get": {
+        "tags": [
+          "Public-Discovery"
+        ],
+        "summary": "Get Curated Public Reels",
+        "description": "Returns active curated video reels with linked dishes and kitchens for the mobile/web explore feed.",
+        "responses": {
+          "200": {
+            "description": "List of curated reels",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "reels": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "mediaUrl": {
+                                "type": "string"
+                              },
+                              "caption": {
+                                "type": "string"
+                              },
+                              "permalink": {
+                                "type": "string"
+                              },
+                              "seller": {
+                                "type": "object"
+                              },
+                              "foodItem": {
+                                "type": "object"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/public/settings": {
+      "get": {
+        "tags": [
+          "Public-Discovery"
+        ],
+        "summary": "Get Public System Settings",
+        "description": "Retrieves public application configurations such as app brand, default city, operational settings, and features.",
+        "responses": {
+          "200": {
+            "description": "Public system settings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/seller/export-data": {
+      "get": {
+        "tags": [
+          "Seller-Profile"
+        ],
+        "summary": "Export Seller Business Data",
+        "description": "Exports complete kitchen business profile, dish inventory, and historical orders in JSON/CSV format for archival.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Exported business data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Seller business data exported successfully"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/reels": {
+      "get": {
+        "tags": [
+          "Admin-Superadmin"
+        ],
+        "summary": "List Administrative Reels",
+        "description": "Retrieves all Instagram reels for administrative curation and kitchen tagging.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "example": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "example": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Administrative reels list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/reels/{id}": {
+      "patch": {
+        "tags": [
+          "Admin-Superadmin"
+        ],
+        "summary": "Update Admin Reel Curation",
+        "description": "Updates linked seller, food item, active visibility status, or display order for a reel.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sellerId": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "foodItemId": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "isActive": {
+                    "type": "boolean",
+                    "example": true
+                  },
+                  "displayOrder": {
+                    "type": "number",
+                    "example": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reel updated successfully"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Admin-Superadmin"
+        ],
+        "summary": "Delete Admin Reel",
+        "description": "Removes a reel from the platform.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reel deleted successfully"
+          }
+        }
+      }
+    },
+    "/api/admin/reels/sellers-and-dishes": {
+      "get": {
+        "tags": [
+          "Admin-Superadmin"
+        ],
+        "summary": "Get Sellers and Dishes for Reel Tagging",
+        "description": "Retrieves the roster of active verified kitchens and dishes for tagging in reels.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sellers and dishes list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/reels/sync": {
+      "post": {
+        "tags": [
+          "Admin-Superadmin"
+        ],
+        "summary": "Sync Instagram Reels",
+        "description": "Triggers Instagram Graph API sync to pull new reels from the brand's connected Instagram account.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sync completed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Instagram reels synced successfully."
+                    },
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 };

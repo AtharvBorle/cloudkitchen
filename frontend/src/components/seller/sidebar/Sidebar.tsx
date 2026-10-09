@@ -47,6 +47,7 @@ import {
 import styles from "./ConsoleSidebar.module.css";
 import { useSellerProfile, computeInitials, isGenericFallbackName } from "@/hooks/useSellerProfile";
 import { useSellerNotifications } from "@/hooks/useSellerNotifications";
+import { useRoomModule } from "@/context/RoomModuleContext";
 
 export interface NavItem {
   id: string;
@@ -102,9 +103,14 @@ export default function SellerSidebar({
   partnerRole,
   avatarInitials,
 }: SellerSidebarProps) {
+  const { isRoomEnabled } = useRoomModule();
   const pathname = usePathname();
   const seller = useSellerProfile();
   const { unreadCount } = useSellerNotifications();
+
+  const visibleSellerNavItems = SELLER_NAV_ITEMS.filter(
+    (item) => isRoomEnabled || (item.id !== "rooms-seller" && item.id !== "bookings")
+  );
 
   const effectiveOwnerName =
     ownerName && !isGenericFallbackName(ownerName)
@@ -625,7 +631,7 @@ export default function SellerSidebar({
             width: "100%",
           }}
         >
-          {SELLER_NAV_ITEMS.map((item) => {
+          {visibleSellerNavItems.map((item) => {
             const active = isItemActive(item);
             const IconComponent = item.icon;
             const isFood =

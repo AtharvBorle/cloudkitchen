@@ -22,7 +22,8 @@ export interface ResponsiveMenuItemsProps {
   initialItemName?: string;
   initialPrice?: string;
   initialCategory?: string;
-  categories?: Array<{ id: string; name: string }>;
+  initialSubCategory?: string;
+  categories?: Array<{ id: string; name: string; subCategories?: Array<{ id: string; name: string }> }>;
   initialType?: string;
   initialSelectedFoodTypes?: string[];
   initialDescription?: string;
@@ -37,6 +38,7 @@ export interface ResponsiveMenuItemsProps {
     itemName: string;
     price: string;
     category: string;
+    subCategory?: string;
     type: string;
     selectedFoodTypes?: string[];
     description: string;
@@ -64,6 +66,7 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
   initialItemName = "",
   initialPrice = "",
   initialCategory = "",
+  initialSubCategory = "",
   categories = [],
   initialType = "Veg",
   initialSelectedFoodTypes,
@@ -83,6 +86,7 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
   const [itemName, setItemName] = useState(initialItemName);
   const [price, setPrice] = useState(initialPrice);
   const [category, setCategory] = useState(() => initialCategory || (categories.length > 0 ? categories[0].name : ""));
+  const [subCategory, setSubCategory] = useState(initialSubCategory);
   const [type, setType] = useState(initialType);
   const [selectedFoodTypes, setSelectedFoodTypes] = useState<string[]>(() => {
     if (initialSelectedFoodTypes && initialSelectedFoodTypes.length > 0) {
@@ -91,6 +95,9 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
     if (initialType) return [initialType];
     return ["Veg"];
   });
+
+  const selectedCategoryObj = categories.find((c) => c.name.toLowerCase() === category.toLowerCase());
+  const availableSubCategories = selectedCategoryObj?.subCategories || [];
 
   const toggleFoodType = (foodType: string) => {
     setSelectedFoodTypes((prev) => {
@@ -249,6 +256,7 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
       itemName,
       price,
       category,
+      subCategory,
       type,
       selectedFoodTypes,
       description,
@@ -416,6 +424,31 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
             </div>
           </div>
 
+          {/* Sub-Category (if available for selected Category) */}
+          {availableSubCategories && availableSubCategories.length > 0 && (
+            <div className={styles.formGroup}>
+              <label className={styles.fieldLabel} htmlFor="subCategorySelect">
+                Sub-Category <span style={{ fontSize: "0.8rem", color: "#64748B", fontWeight: "normal" }}>(Optional)</span>
+              </label>
+              <div className={styles.selectWrapper}>
+                <select
+                  id="subCategorySelect"
+                  className={styles.selectInput}
+                  value={subCategory}
+                  onChange={(e) => setSubCategory(e.target.value)}
+                >
+                  <option value="">Select a sub-category (optional)</option>
+                  {availableSubCategories.map((sc) => (
+                    <option key={sc.id} value={sc.name}>
+                      {sc.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={18} className={styles.selectArrow} />
+              </div>
+            </div>
+          )}
+
           {/* 5. Food Type Multi-Select */}
           <div className={styles.formGroup}>
             <label className={styles.fieldLabel}>
@@ -505,31 +538,7 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
             />
           </div>
 
-          {/* 7. Day-wise Operational Hours */}
-          <div className={styles.formGroup}>
-            <h2 className={styles.sectionTitle}>Day-wise Operational Hours</h2>
-            <div className={styles.scheduleList}>
-              {schedules.map((schedule) => (
-                <div key={schedule.day} className={styles.scheduleRow}>
-                  <span className={styles.dayLabel}>{schedule.day}</span>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={schedule.isOpen}
-                    className={`${styles.toggleSwitch} ${
-                      schedule.isOpen ? styles.toggleSwitchActive : ""
-                    }`}
-                    onClick={() => handleToggleDay(schedule.day)}
-                    aria-label={`Toggle hours for ${schedule.day}`}
-                  >
-                    <span className={styles.toggleThumb} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* 8. Dish Add-Ons */}
+          {/* 7. Dish Add-Ons */}
           <div className={styles.formGroup}>
             <h2 className={styles.sectionTitle}>
               Dish Add-Ons <span style={{ fontSize: "0.85rem", fontWeight: "normal", color: "#64748B" }}>(Optional add-ons with extra price)</span>

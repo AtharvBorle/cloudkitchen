@@ -29,6 +29,7 @@ import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import SellerNotificationChannels from "../notification-channels/SellerNotificationChannels";
 import {
   PasswordManagementCard,
+  SellerDeleteAccountCard,
 } from "../security-settings/SellerSecuritySettings";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import { validateEmail } from "@/lib/email-validation";
@@ -2323,6 +2324,8 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
             <>
               {/* 1. Password Management Card (Matching Reference Image) */}
               <PasswordManagementCard />
+              {/* 2. Danger Zone: Delete Kitchen Account */}
+              <SellerDeleteAccountCard />
 
               {/* 2. Security & Access Card (Disabled via comment - uncomment to re-enable) */}
               {/*

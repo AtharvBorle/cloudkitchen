@@ -5,8 +5,19 @@ import ResponsiveBooking, {
   ResponsiveBookingItem,
 } from "@/components/seller/booking/responsive/ResponsiveBooking";
 import { fetchApi } from "@/lib/fetch-api";
+import { useRouter } from "next/navigation";
+import { useRoomModule } from "@/context/RoomModuleContext";
 
 export default function ResponsiveBookingPage() {
+  const router = useRouter();
+  const { isRoomEnabled } = useRoomModule();
+
+  useEffect(() => {
+    if (!isRoomEnabled) {
+      router.replace("/seller/dashboard");
+    }
+  }, [isRoomEnabled, router]);
+
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -100,6 +111,8 @@ export default function ResponsiveBookingPage() {
       };
     });
   }, [bookings]);
+
+  if (!isRoomEnabled) return null;
 
   return (
     <ResponsiveBooking

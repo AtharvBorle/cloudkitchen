@@ -210,10 +210,35 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
         }
       }
       if (offer.appliesToProductId) {
-        const hasProduct = cartItems.some(
-          (it) => it.id === offer.appliesToProductId || it.foodItemId === offer.appliesToProductId
-        );
+        const allowedKeys = String(offer.appliesToProductId)
+          .split(",")
+          .map((s) => s.trim().toLowerCase())
+          .filter(Boolean);
+        const hasProduct = cartItems.some((it) => {
+          const itemId = String(it.id || "").toLowerCase();
+          const foodItemId = String(it.foodItemId || "").toLowerCase();
+          const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+          const name = String(it.name || "").toLowerCase().trim();
+          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name || (name && (name.includes(k) || k.includes(name))));
+        });
         if (!hasProduct) return false;
+      }
+      const isPct = offer.discountType === "PERCENTAGE" || (offer.discountPercentage && !offer.discountAmount);
+      if (!isPct) {
+        const flatAmt = Number(offer.discountAmount || (offer.discountType === "FLAT" ? offer.discountValue : 0) || 0);
+        let eligibleSub = subtotal;
+        if (offer.appliesToProductId) {
+          const allowedKeys = String(offer.appliesToProductId).split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+          const matchingItems = cartItems.filter((it) => {
+            const itemId = String(it.id || "").toLowerCase();
+            const foodItemId = String(it.foodItemId || "").toLowerCase();
+            const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+            const name = String(it.name || "").toLowerCase().trim();
+            return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name || (name && (name.includes(k) || k.includes(name))));
+          });
+          eligibleSub = matchingItems.reduce((acc, it) => acc + it.price * it.qty, 0);
+        }
+        if (flatAmt > eligibleSub) return false;
       }
       return true;
     });
@@ -240,7 +265,9 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
         disc = Math.round((subtotal * pct) / 100);
         if (offer.maxDiscountAmount) disc = Math.min(disc, offer.maxDiscountAmount);
       } else {
-        disc = Math.min(offer.discountAmount || offer.discountValue || 0, subtotal);
+        const flatAmt = Number(offer.discountAmount || offer.discountValue || 0);
+        if (flatAmt > subtotal) continue;
+        disc = flatAmt;
       }
       if (disc >= maxDiscount) {
         maxDiscount = disc;
@@ -310,6 +337,32 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
       return;
     }
 
+    const isPercentage = appliedCoupon.discountType === "PERCENTAGE" || (appliedCoupon.discountPercentage && !appliedCoupon.discountAmount);
+    const flatAmt = Number(appliedCoupon.discountAmount || (appliedCoupon.discountType === "FLAT" ? (appliedCoupon as any).discountValue : 0) || 0);
+    if (!isPercentage && flatAmt > 0) {
+      let eligibleSub = subtotal;
+      if (appliedCoupon.appliesToProductId) {
+        const allowedKeys = String(appliedCoupon.appliesToProductId).split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+        const matchingItems = cartItems.filter((it) => {
+          const itemId = String(it.id || "").toLowerCase();
+          const foodItemId = String(it.foodItemId || "").toLowerCase();
+          const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+          const name = String(it.name || "").toLowerCase().trim();
+          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name || (name && (name.includes(k) || k.includes(name))));
+        });
+        eligibleSub = matchingItems.reduce((acc, it) => acc + it.price * it.qty, 0);
+      }
+      if (flatAmt > eligibleSub) {
+        const code = appliedCoupon.code || appliedPromo || "Applied";
+        setAppliedCoupon(null);
+        setAppliedPromo(null);
+        setDiscountPercent(0);
+        setPromoCode("");
+        showToast(`Coupon "${code}" removed as the discount (₹${flatAmt}) exceeds the eligible cart value (₹${eligibleSub}).`);
+        return;
+      }
+    }
+
     if (appliedCoupon.appliesToProductId && cartItems.length > 0) {
       const allowedKeys = String(appliedCoupon.appliesToProductId)
         .split(",")
@@ -321,7 +374,7 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
           const foodItemId = String(it.foodItemId || "").toLowerCase();
           const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
           const name = String(it.name || "").toLowerCase().trim();
-          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
+          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name || (name && (name.includes(k) || k.includes(name))));
         });
         if (!hasMatchingProduct) {
           const code = appliedCoupon.code || appliedPromo || "Applied";
@@ -382,6 +435,36 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
       return;
     }
 
+    // Pre-check for flat coupons from availableOffers if discount exceeds eligible subtotal
+    const matchingOffer = availableOffers.find(
+      (o) => (o.code && o.code.toUpperCase() === targetCode) || (o.id && o.id === targetCode)
+    );
+    if (matchingOffer) {
+      const isPct = matchingOffer.discountType === "PERCENTAGE" || (matchingOffer.discountPercentage && !matchingOffer.discountAmount);
+      if (!isPct) {
+        const flatAmt = Number(matchingOffer.discountAmount || (matchingOffer.discountType === "FLAT" ? matchingOffer.discountValue : 0) || 0);
+        let eligibleSub = currentSubtotal;
+        if (matchingOffer.appliesToProductId) {
+          const allowedKeys = String(matchingOffer.appliesToProductId).split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+          const matchingItems = cartItems.filter((it) => {
+            const itemId = String(it.id || "").toLowerCase();
+            const foodItemId = String(it.foodItemId || "").toLowerCase();
+            const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+            const name = String(it.name || "").toLowerCase().trim();
+            return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name || (name && (name.includes(k) || k.includes(name))));
+          });
+          eligibleSub = matchingItems.reduce((acc, it) => acc + it.price * it.qty, 0);
+        }
+        if (flatAmt > eligibleSub) {
+          setAppliedCoupon(null);
+          setAppliedPromo(null);
+          setDiscountPercent(0);
+          showToast(`Coupon "${matchingOffer.code}" cannot be applied as the discount (₹${flatAmt}) exceeds the eligible item/cart value of ₹${eligibleSub}.`);
+          return;
+        }
+      }
+    }
+
     setIsValidatingPromo(true);
     try {
       const res = await fetchApi("/api/public/coupons/validate", {
@@ -393,6 +476,8 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
           subtotal: currentSubtotal,
           items: cartItems.map((it) => ({
             id: it.id,
+            foodItemId: it.foodItemId,
+            name: it.name,
             price: it.price,
             quantity: it.qty,
           })),
@@ -444,7 +529,7 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
           const foodItemId = String(it.foodItemId || "").toLowerCase();
           const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
           const name = String(it.name || "").toLowerCase().trim();
-          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name);
+          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name || (name && (name.includes(k) || k.includes(name))));
         });
         if (matchingItems.length === 0) return 0;
         targetSubtotal = matchingItems.reduce((acc, it) => acc + it.price * it.qty, 0);
@@ -457,7 +542,8 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
       return appliedCoupon.maxDiscountAmount ? Math.min(raw, appliedCoupon.maxDiscountAmount) : raw;
     }
     const flat = appliedCoupon.discountAmount || 0;
-    return Math.min(flat, targetSubtotal);
+    if (flat > targetSubtotal) return 0;
+    return flat;
   }, [appliedCoupon, subtotal, cartItems]);
   const deliveryFee = 0;
   const taxesAndCharges = 0;

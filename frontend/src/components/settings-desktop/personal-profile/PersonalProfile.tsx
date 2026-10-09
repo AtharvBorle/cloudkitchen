@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import {
   User,
   Pencil,
@@ -15,6 +15,7 @@ import {
   Loader2,
   KeyRound,
   ShieldCheck,
+  Trash2,
 } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
@@ -67,6 +68,12 @@ export const PersonalProfile: React.FC<PersonalProfileProps> = ({
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Dedicated Delete Account States
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -257,6 +264,29 @@ export const PersonalProfile: React.FC<PersonalProfileProps> = ({
     }
   };
 
+  const handleConfirmDeleteAccount = async () => {
+    setDeleteLoading(true);
+    setDeleteError(null);
+    try {
+      const res = await fetchApi("/api/user/delete-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: deletePassword || undefined })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setDeleteError(data.message || data.error || "Failed to schedule account deletion.");
+        return;
+      }
+      setDeleteModalOpen(false);
+      await signOut({ callbackUrl: "/login?deletion_scheduled=true" });
+    } catch (err: any) {
+      setDeleteError(err.message || "An unexpected network error occurred.");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   return (
     <div className={styles.cardContainer}>
       {/* Feedback Toast */}
@@ -352,6 +382,41 @@ export const PersonalProfile: React.FC<PersonalProfileProps> = ({
             >
               <Pencil size={13} strokeWidth={2.4} />
               <span>Edit Details</span>
+            </button>
+
+            {/* Delete Account Button */}
+            <button
+              type="button"
+              onClick={() => {
+                setDeleteError(null);
+                setDeletePassword("");
+                setDeleteModalOpen(true);
+              }}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "7px 14px",
+                backgroundColor: "#FEF2F2",
+                color: "#DC2626",
+                border: "1px solid #FECACA",
+                borderRadius: "8px",
+                fontSize: "0.82rem",
+                fontWeight: 600,
+                cursor: "pointer",
+                fontFamily: "inherit",
+                transition: "all 0.15s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#FEE2E2";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "#FEF2F2";
+              }}
+              aria-label="Delete Account"
+            >
+              <Trash2 size={13} strokeWidth={2.4} />
+              <span>Delete Account</span>
             </button>
           </div>
         )}
@@ -685,6 +750,195 @@ export const PersonalProfile: React.FC<PersonalProfileProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Account Modal */}
+      {deleteModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.65)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "16px",
+          }}
+          onClick={() => !deleteLoading && setDeleteModalOpen(false)}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: "480px",
+              backgroundColor: "#FFFFFF",
+              borderRadius: "16px",
+              padding: "24px",
+              boxShadow: "0 20px 40px rgba(0, 0, 0, 0.2)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "18px",
+              boxSizing: "border-box",
+              fontFamily: "inherit",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div
+                  style={{
+                    width: "38px",
+                    height: "38px",
+                    borderRadius: "10px",
+                    backgroundColor: "#FEF2F2",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#DC2626",
+                  }}
+                >
+                  <Trash2 size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "#991B1B" }}>
+                    Delete Account
+                  </h3>
+                  <p style={{ margin: 0, fontSize: "0.78rem", color: "#64748B", marginTop: "2px" }}>
+                    Soft delete with 30-day recovery grace period
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => !deleteLoading && setDeleteModalOpen(false)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#94A3B8",
+                  cursor: "pointer",
+                  padding: "4px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Explanatory Notice */}
+            <div
+              style={{
+                backgroundColor: "#FFFBEB",
+                border: "1px solid #FDE68A",
+                color: "#92400E",
+                borderRadius: "10px",
+                padding: "12px 14px",
+                fontSize: "0.82rem",
+                lineHeight: "1.5",
+              }}
+            >
+              <div style={{ fontWeight: 700, marginBottom: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
+                <AlertCircle size={15} color="#D97706" />
+                <span>What happens when you request deletion:</span>
+              </div>
+              <ul style={{ margin: 0, paddingLeft: "18px", fontSize: "0.8rem", color: "#78350F" }}>
+                <li>Your account will be deactivated immediately.</li>
+                <li><strong>30-Day Recovery Period:</strong> You can cancel this request anytime within 30 days simply by logging in.</li>
+                <li>After 30 days, personal details (name, email, phone) will be permanently anonymized while order history is safely preserved.</li>
+              </ul>
+            </div>
+
+            {/* Error Message */}
+            {deleteError && (
+              <div
+                style={{
+                  backgroundColor: "#FEF2F2",
+                  color: "#991B1B",
+                  border: "1px solid #F87171",
+                  padding: "10px 14px",
+                  borderRadius: "8px",
+                  fontSize: "0.82rem",
+                  fontWeight: 600,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                <AlertCircle size={15} />
+                <span>{deleteError}</span>
+              </div>
+            )}
+
+            {/* Password input for security */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+              <label style={{ fontSize: "0.76rem", fontWeight: 700, color: "#475569" }}>
+                ENTER PASSWORD TO CONFIRM (OPTIONAL)
+              </label>
+              <input
+                type="password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                placeholder="Enter your current password"
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: "8px",
+                  border: "1.5px solid #CBD5E1",
+                  fontSize: "0.88rem",
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px" }}>
+              <button
+                type="button"
+                onClick={() => setDeleteModalOpen(false)}
+                disabled={deleteLoading}
+                style={{
+                  padding: "9px 18px",
+                  backgroundColor: "#F1F5F9",
+                  color: "#475569",
+                  border: "1px solid #CBD5E1",
+                  borderRadius: "8px",
+                  fontSize: "0.85rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteAccount}
+                disabled={deleteLoading}
+                style={{
+                  padding: "9px 18px",
+                  backgroundColor: "#DC2626",
+                  color: "#FFFFFF",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "0.85rem",
+                  fontWeight: 600,
+                  cursor: deleteLoading ? "not-allowed" : "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  opacity: deleteLoading ? 0.7 : 1,
+                }}
+              >
+                {deleteLoading && <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} />}
+                <span>{deleteLoading ? "Scheduling..." : "Confirm & Delete Account"}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

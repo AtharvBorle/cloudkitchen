@@ -8,10 +8,20 @@ export const getUserAddresses = async () => {
         throw new ApiError("Please log in first to view saved addresses.", 401);
     }
 
-    const addresses = await db.address.findMany({
+    const user = await db.user.findUnique({
+        where: { id: session.user.id },
+        select: { phone: true }
+    });
+
+    const rawAddresses = await db.address.findMany({
         where: { userId: session.user.id },
         orderBy: { createdAt: "desc" }
     });
+
+    const addresses = rawAddresses.map((addr) => ({
+        ...addr,
+        recipientPhone: user?.phone || ""
+    }));
 
     return { addresses };
 };

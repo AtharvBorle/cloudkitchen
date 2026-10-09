@@ -10,6 +10,7 @@ import { useCart } from "@/context/CartContext";
 import { AddToCartButton, BookRoomButton } from "@/components/cart-buttons";
 import { useLocation } from "@/components/location-provider";
 import { useSession } from "next-auth/react";
+import { useRoomModule } from "@/context/RoomModuleContext";
 import {
     calculateDistanceKm,
     MAX_DELIVERY_RADIUS_KM,
@@ -62,6 +63,7 @@ const isCurrentlyOpen = (item: any) => {
 };
 
 export default function UserDashboard() {
+    const { isRoomEnabled } = useRoomModule();
     const { addToCart, initiateRoomBooking } = useCart();
     const router = useRouter();
     const { defaultAddress, isLoading: isLocationLoading, openLocationModal } = useLocation();
@@ -313,35 +315,39 @@ export default function UserDashboard() {
                 </div>
 
                 {/* Rooms Section */}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-                    <div className="dash-skeleton" style={{ width: "220px", height: "28px", borderRadius: "8px" }} />
-                    <div className="dash-skeleton" style={{ width: "80px", height: "18px", borderRadius: "6px" }} />
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "24px" }}>
-                    {[1, 2, 3].map((i) => (
-                        <div
-                            key={`room-skel-${i}`}
-                            style={{
-                                backgroundColor: "white",
-                                borderRadius: "12px",
-                                overflow: "hidden",
-                                border: "1px solid #E2E8F0",
-                                display: "flex",
-                                flexDirection: "column",
-                            }}
-                        >
-                            <div className="dash-skeleton" style={{ width: "100%", height: "200px" }} />
-                            <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "10px" }}>
-                                <div className="dash-skeleton" style={{ width: "65%", height: "20px", borderRadius: "6px" }} />
-                                <div className="dash-skeleton" style={{ width: "45%", height: "14px", borderRadius: "4px" }} />
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
-                                    <div className="dash-skeleton" style={{ width: "80px", height: "20px", borderRadius: "4px" }} />
-                                    <div className="dash-skeleton" style={{ width: "90px", height: "32px", borderRadius: "6px" }} />
-                                </div>
-                            </div>
+                {isRoomEnabled && (
+                    <>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                            <div className="dash-skeleton" style={{ width: "220px", height: "28px", borderRadius: "8px" }} />
+                            <div className="dash-skeleton" style={{ width: "80px", height: "18px", borderRadius: "6px" }} />
                         </div>
-                    ))}
-                </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "24px" }}>
+                            {[1, 2, 3].map((i) => (
+                                <div
+                                    key={`room-skel-${i}`}
+                                    style={{
+                                        backgroundColor: "white",
+                                        borderRadius: "12px",
+                                        overflow: "hidden",
+                                        border: "1px solid #E2E8F0",
+                                        display: "flex",
+                                        flexDirection: "column",
+                                    }}
+                                >
+                                    <div className="dash-skeleton" style={{ width: "100%", height: "200px" }} />
+                                    <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                                        <div className="dash-skeleton" style={{ width: "65%", height: "20px", borderRadius: "6px" }} />
+                                        <div className="dash-skeleton" style={{ width: "45%", height: "14px", borderRadius: "4px" }} />
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
+                                            <div className="dash-skeleton" style={{ width: "80px", height: "20px", borderRadius: "4px" }} />
+                                            <div className="dash-skeleton" style={{ width: "90px", height: "32px", borderRadius: "6px" }} />
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </>
+                )}
             </div>
         );
     }
@@ -483,7 +489,7 @@ export default function UserDashboard() {
                                 Delivery Location Not Selected
                             </h3>
                             <p style={{ margin: "3px 0 0 0", fontSize: "0.88rem", color: "#B45309" }}>
-                                Please select your delivery area to view cloud kitchens, fresh food, and rooms near you.
+                                Please select your delivery area to view cloud kitchens and fresh food{isRoomEnabled ? ", and rooms" : ""} near you.
                             </p>
                         </div>
                     </div>
@@ -780,10 +786,12 @@ export default function UserDashboard() {
                 </div>
             )}
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h2 style={{ fontSize: "1.5rem", fontWeight: "bold", color: "var(--text-main)" }}>Need a Place to Stay?</h2>
-                <Link href="/dashboard/user/rooms" style={{ color: 'var(--teal)', fontWeight: 'bold' }}>Browse Rooms &rarr;</Link>
-            </div>
+            {isRoomEnabled && (
+                <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                        <h2 style={{ fontSize: "1.5rem", fontWeight: "bold", color: "var(--text-main)" }}>Need a Place to Stay?</h2>
+                        <Link href="/dashboard/user/rooms" style={{ color: 'var(--teal)', fontWeight: 'bold' }}>Browse Rooms &rarr;</Link>
+                    </div>
 
             {filteredRooms.length === 0 ? (
                 <div style={{ backgroundColor: '#F8F9F9', padding: '40px 20px', textAlign: 'center', borderRadius: '12px', color: 'var(--text-muted)' }}>
@@ -843,6 +851,8 @@ export default function UserDashboard() {
                         </div>
                     ))}
                 </div>
+            )}
+                </>
             )}
 
 

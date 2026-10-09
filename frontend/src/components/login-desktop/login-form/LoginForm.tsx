@@ -91,6 +91,14 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     return () => clearInterval(interval);
   }, [resendTimer]);
 
+  if (authStatus === "loading") {
+    return <div className={styles.formContainer} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>Loading...</div>;
+  }
+
+  if (authStatus === "authenticated" && session?.user) {
+    return null;
+  }
+
   const handleCreateAccount = () => {
     if (onCreateAccount) {
       onCreateAccount();
@@ -210,6 +218,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             res.error.includes("USER_NOT_FOUND")
           ) {
             setError("Account not found. Please create an account first.");
+          } else if (res.error.includes("ACCOUNT_DELETED")) {
+            setError("This account has been permanently deleted.");
           } else if (
             res.error === "INVALID_PASSWORD" ||
             res.error.includes("INVALID_PASSWORD")
@@ -268,6 +278,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             res.error.includes("USER_NOT_FOUND")
           ) {
             setError("No account found with this mobile number. Please create an account first.");
+          } else if (res.error.includes("ACCOUNT_DELETED")) {
+            setError("This account has been permanently deleted.");
           } else if (
             res.error === "INVALID_OTP" ||
             res.error.includes("INVALID_OTP")

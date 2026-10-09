@@ -5,9 +5,11 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { performLogout } from "@/lib/logout";
 import { CheckCircle2, AlertCircle, AlertTriangle, Users, Trash2 } from "lucide-react";
+import { useRoomModule } from "@/context/RoomModuleContext";
 
 export default function SuperadminSubscriptionsPage() {
     const router = useRouter();
+    const { isRoomEnabled } = useRoomModule();
     const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
     const showToast = (message: string, type: "success" | "error" = "success") => {
         setToast({ message, type });
@@ -571,15 +573,15 @@ export default function SuperadminSubscriptionsPage() {
                 <h2 style={{ fontSize: '1.4rem', fontWeight: 'bold', marginBottom: '20px', color: 'var(--text-main)' }}>Subscription Plans</h2>
 
                 {/* Active Plans List */}
-                <div style={{ marginBottom: '30px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
-                    {plans.map((plan) => (
+                <div style={{ marginBottom: '30px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
+                    {plans.filter((plan: any) => isRoomEnabled || plan.category !== "PROPERTY").map((plan) => (
                         <div key={plan.id} style={{ border: '1px solid #EAEAEA', borderRadius: '8px', padding: '20px', backgroundColor: '#F8F9F9', position: 'relative', opacity: plan.isActive ? 1 : 0.7, borderLeft: plan.isActive ? 'none' : '4px solid var(--text-muted)' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-                                <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-main)', margin: 0 }}>
-                                    {plan.name}
-                                    {!plan.isActive && <span style={{ marginLeft: '10px', fontSize: '0.75rem', backgroundColor: '#E2E8F0', color: '#475569', padding: '2px 8px', borderRadius: '4px', fontWeight: 'bold' }}>INACTIVE</span>}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', gap: '10px' }}>
+                                <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                    <span>{plan.name}</span>
+                                    {!plan.isActive && <span style={{ fontSize: '0.75rem', backgroundColor: '#E2E8F0', color: '#475569', padding: '2px 8px', borderRadius: '4px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>INACTIVE</span>}
                                 </h3>
-                                <div style={{ display: 'flex', gap: '8px' }}>
+                                <div style={{ display: 'flex', gap: '8px', flexShrink: 0, whiteSpace: 'nowrap' }}>
                                     <button onClick={() => handleOpenEditPlan(plan)} style={{ background: 'none', border: 'none', color: 'var(--teal)', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem' }}>Edit</button>
                                     <button onClick={() => handleTogglePlanActive(plan)} style={{ background: 'none', border: 'none', color: plan.isActive ? '#E74C3C' : '#27AE60', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem' }}>
                                         {plan.isActive ? "Deactivate" : "Activate"}
@@ -587,48 +589,57 @@ export default function SuperadminSubscriptionsPage() {
                                     <button onClick={() => setPlanToDelete(plan)} style={{ background: 'none', border: 'none', color: 'var(--coral)', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem' }}>Delete</button>
                                 </div>
                             </div>
-                            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--primary)', marginBottom: '5px' }}>₹{plan.price}</div>
-                            <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--primary)', marginBottom: '6px', whiteSpace: 'nowrap' }}>₹{plan.price}</div>
+                            <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', whiteSpace: 'nowrap' }}>
                                 <span>Duration: {plan.durationMonths} Month(s)</span>
                                 <span style={{ backgroundColor: '#E2E8F0', color: '#475569', padding: '2px 8px', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 'bold' }}>
                                     {plan.category || "BOTH"}
                                 </span>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.825rem', color: '#475569', marginBottom: '14px', backgroundColor: '#FFFFFF', padding: '6px 10px', borderRadius: '6px', border: '1px solid #E2E8F0', width: 'fit-content' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.825rem', color: '#475569', marginBottom: '14px', backgroundColor: '#FFFFFF', padding: '6px 10px', borderRadius: '6px', border: '1px solid #E2E8F0', width: 'fit-content', whiteSpace: 'nowrap' }}>
                                 <Users size={14} color={plan.activeSubscribersCount > 0 ? '#16A34A' : '#64748B'} />
                                 <span>Active Subscribers: <strong style={{ color: plan.activeSubscribersCount > 0 ? '#16A34A' : '#0F172A' }}>{plan.activeSubscribersCount || 0}</strong></span>
                             </div>
-                            <ul style={{ paddingLeft: '20px', color: '#555', fontSize: '0.9rem' }}>
+                            <ul style={{ paddingLeft: '20px', color: '#555', fontSize: '0.9rem', margin: 0 }}>
                                 {(() => {
                                     try {
                                         const parsed = JSON.parse(plan.features);
-                                        return parsed.map((feat: string, i: number) => <li key={i}>{feat}</li>);
+                                        return parsed.map((feat: string, i: number) => <li key={i} style={{ marginBottom: '4px' }}>{feat}</li>);
                                     } catch (e) { return null; }
                                 })()}
                             </ul>
                         </div>
                     ))}
-                    {plans.length === 0 && <p style={{ color: 'var(--text-muted)' }}>No plans created yet.</p>}
+                    {plans.filter((plan: any) => isRoomEnabled || plan.category !== "PROPERTY").length === 0 && <p style={{ color: 'var(--text-muted)' }}>No plans created yet.</p>}
                 </div>
 
                 <hr style={{ margin: '30px 0', border: 'none', borderTop: '1px solid #EAEAEA' }} />
 
-                <h2 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '10px', color: 'var(--text-main)' }}>Create New Plan</h2>
-                <form onSubmit={handleCreatePlan} style={{ display: 'flex', flexDirection: 'column', gap: '15px', maxWidth: '600px' }}>
-                    <div style={{ display: 'flex', gap: '15px' }}>
-                        <input type="text" value={newPlanName} onChange={e => setNewPlanName(e.target.value)} className="input-field" placeholder="Plan Name (e.g., Monthly Pro)" style={{ flex: 2, marginBottom: 0 }} required />
-                        <div style={{ position: "relative", flex: 1 }}>
-                            <span style={{ position: "absolute", left: "15px", top: "50%", transform: "translateY(-50%)", color: "#555", fontWeight: "bold" }}>₹</span>
-                            <input type="number" value={newPlanPrice} onChange={e => setNewPlanPrice(e.target.value)} className="input-field" placeholder="Price" style={{ paddingLeft: "35px", marginBottom: 0, width: '100%' }} min="0" required />
+                <h2 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '16px', color: 'var(--text-main)' }}>Create New Plan</h2>
+                <form onSubmit={handleCreatePlan} style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '640px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 2fr) minmax(130px, 1fr) minmax(110px, 1fr)', gap: '14px', alignItems: 'center' }}>
+                        <input type="text" value={newPlanName} onChange={e => setNewPlanName(e.target.value)} className="input-field" placeholder="Plan Name (e.g., Monthly Pro)" style={{ marginBottom: 0, width: '100%' }} required />
+                        <div style={{ position: "relative", width: '100%' }}>
+                            <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#555", fontWeight: "bold" }}>₹</span>
+                            <input type="number" value={newPlanPrice} onChange={e => setNewPlanPrice(e.target.value)} className="input-field" placeholder="Price" style={{ paddingLeft: "32px", marginBottom: 0, width: '100%' }} min="0" required />
                         </div>
-                        <input type="number" value={newPlanDuration} onChange={e => setNewPlanDuration(e.target.value)} className="input-field" placeholder="Months" style={{ flex: 1, marginBottom: 0 }} min="1" required />
+                        <input type="number" value={newPlanDuration} onChange={e => setNewPlanDuration(e.target.value)} className="input-field" placeholder="Months" style={{ marginBottom: 0, width: '100%' }} min="1" required />
                     </div>
 
-                    <div style={{ display: 'flex', gap: '15px' }}>
-                        <select value={newPlanCategory} onChange={e => setNewPlanCategory(e.target.value)} className="input-field" style={{ flex: 1, marginBottom: 0 }}>
-                            <option value="BOTH">All/Both Categories (FOOD & PROPERTY)</option>
-                            <option value="FOOD">Food Focus Only (FOOD)</option>
-                            <option value="PROPERTY">Property Focus Only (PROPERTY)</option>
+                    <div>
+                        <select value={newPlanCategory} onChange={e => setNewPlanCategory(e.target.value)} className="input-field" style={{ marginBottom: 0, width: '100%' }}>
+                            {isRoomEnabled ? (
+                                <>
+                                    <option value="BOTH">All/Both Categories (FOOD & PROPERTY)</option>
+                                    <option value="FOOD">Food Focus Only (FOOD)</option>
+                                    <option value="PROPERTY">Property Focus Only (PROPERTY)</option>
+                                </>
+                            ) : (
+                                <>
+                                    <option value="BOTH">All Categories (Food)</option>
+                                    <option value="FOOD">Food Focus Only (FOOD)</option>
+                                </>
+                            )}
                         </select>
                     </div>
 
@@ -644,11 +655,11 @@ export default function SuperadminSubscriptionsPage() {
                         </div>
                         <div style={{ display: 'flex', gap: '10px' }}>
                             <input type="text" value={newFeature} onChange={e => setNewFeature(e.target.value)} className="input-field" placeholder="E.g., 24/7 Support" style={{ flex: 1, marginBottom: 0 }} />
-                            <button type="button" onClick={handleAddFeature} className="btn btn-secondary" style={{ width: 'auto', padding: '10px 15px', fontSize: '0.9rem' }}>Add</button>
+                            <button type="button" onClick={handleAddFeature} className="btn btn-secondary" style={{ width: 'auto', padding: '10px 15px', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>Add</button>
                         </div>
                     </div>
 
-                    <button type="submit" className="btn btn-coral" style={{ width: '100%', padding: '14px 25px' }} disabled={savingPlan}>
+                    <button type="submit" className="btn btn-coral" style={{ width: '100%', padding: '14px 25px', whiteSpace: 'nowrap' }} disabled={savingPlan}>
                         {savingPlan ? "Creating..." : "Create Plan"}
                     </button>
                 </form>
@@ -657,11 +668,21 @@ export default function SuperadminSubscriptionsPage() {
             {/* Subscription Coupons Management Area */}
             <div style={{ backgroundColor: 'white', padding: '25px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', marginBottom: '30px', borderLeft: '4px solid #1ABC9C' }}>
                 <h2 style={{ fontSize: '1.4rem', fontWeight: 'bold', marginBottom: '20px', color: 'var(--text-main)' }}>Subscription Coupons</h2>
-                <form onSubmit={handleCreateCoupon} style={{ display: 'flex', flexDirection: 'column', gap: '15px', maxWidth: '800px', marginBottom: '30px' }}>
-                    <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
-                        <input type="text" value={newCode} onChange={e => setNewCode(e.target.value)} className="input-field" placeholder="Code (e.g., SAVE50)" style={{ flex: 1, minWidth: '150px', textTransform: 'uppercase', marginBottom: 0 }} required />
+                <form onSubmit={handleCreateCoupon} style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '840px', marginBottom: '30px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 1.2fr) minmax(320px, 2fr)', gap: '16px', alignItems: 'center' }}>
+                        <div>
+                            <input
+                                type="text"
+                                value={newCode}
+                                onChange={e => setNewCode(e.target.value)}
+                                className="input-field"
+                                placeholder="Code (e.g., SAVE50)"
+                                style={{ textTransform: 'uppercase', marginBottom: 0, width: '100%' }}
+                                required
+                            />
+                        </div>
 
-                        <div style={{ display: 'flex', gap: '10px', flex: 2, minWidth: '250px' }}>
+                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', width: '100%' }}>
                             <input
                                 type="number"
                                 value={newDiscountPercent}
@@ -673,7 +694,7 @@ export default function SuperadminSubscriptionsPage() {
                                 min="1"
                                 max="100"
                             />
-                            <span style={{ alignSelf: 'center', color: '#555', fontWeight: 'bold' }}>OR</span>
+                            <span style={{ color: '#64748B', fontWeight: 'bold', fontSize: '0.85rem', flexShrink: 0, padding: '0 4px', whiteSpace: 'nowrap' }}>OR</span>
                             <input
                                 type="number"
                                 value={newDiscountAmount}
@@ -687,7 +708,7 @@ export default function SuperadminSubscriptionsPage() {
                         </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(240px, 1.8fr) minmax(180px, 1.2fr)', gap: '16px', alignItems: 'center' }}>
                         <select
                             value={newPlanId}
                             onChange={e => {
@@ -702,54 +723,65 @@ export default function SuperadminSubscriptionsPage() {
                                 }
                             }}
                             className="input-field"
-                            style={{ flex: 2, minWidth: '200px', marginBottom: 0 }}
+                            style={{ marginBottom: 0, width: '100%' }}
                         >
                             <option value="">All Plans (Global)</option>
-                            {plans.map((plan: any) => (
+                            {plans.filter((plan: any) => isRoomEnabled || plan.category !== "PROPERTY").map((plan: any) => (
                                 <option key={plan.id} value={plan.id}>{plan.name} (₹{plan.price})</option>
                             ))}
                         </select>
-                        <input type="number" value={newMaxUsage} onKeyDown={handleDiscountKeyDown} onChange={e => setNewMaxUsage(e.target.value.replace(/[^0-9]/g, ''))} className="input-field" placeholder="Max Usage (0 for unlimited)" style={{ flex: 1, minWidth: '150px', marginBottom: 0 }} min="0" />
+                        <input
+                            type="number"
+                            value={newMaxUsage}
+                            onKeyDown={handleDiscountKeyDown}
+                            onChange={e => setNewMaxUsage(e.target.value.replace(/[^0-9]/g, ''))}
+                            className="input-field"
+                            placeholder="Max Usage (0 for unlimited)"
+                            style={{ marginBottom: 0, width: '100%' }}
+                            min="0"
+                        />
                     </div>
 
-                    <button type="submit" className="btn btn-teal" style={{ width: '200px', padding: '14px 25px' }} disabled={loading}>
-                        {loading ? "Creating..." : "Create Coupon"}
-                    </button>
+                    <div>
+                        <button type="submit" className="btn btn-teal" style={{ padding: '12px 28px', whiteSpace: 'nowrap' }} disabled={loading}>
+                            {loading ? "Creating..." : "Create Coupon"}
+                        </button>
+                    </div>
                 </form>
 
                 <div style={{ marginTop: '20px' }}>
                     {coupons.length === 0 ? (
                         <p style={{ color: 'var(--text-muted)' }}>No subscription coupons generated.</p>
                     ) : (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '15px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '16px' }}>
                             {coupons.map((coupon: any) => (
                                 <div key={coupon.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: coupon.isActive ? '#E8F8F5' : '#F2F4F4', padding: '20px', borderRadius: '12px', border: coupon.isActive ? '1px solid #1ABC9C' : '1px solid #BDC3C7', opacity: coupon.isActive ? 1 : 0.8 }}>
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                            <div style={{ fontSize: '1.4rem', fontWeight: '900', color: coupon.isActive ? '#16A085' : '#7F8C8D', letterSpacing: '1px' }}>{coupon.code}</div>
-                                            {!coupon.isActive && <span style={{ fontSize: '0.7rem', backgroundColor: '#7F8C8D', color: 'white', padding: '2px 8px', borderRadius: '10px', fontWeight: 'bold' }}>INACTIVE</span>}
+                                    <div style={{ flex: 1, minWidth: 0, paddingRight: '12px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'nowrap' }}>
+                                            <div style={{ fontSize: '1.3rem', fontWeight: '900', color: coupon.isActive ? '#16A085' : '#7F8C8D', letterSpacing: '1px', whiteSpace: 'nowrap' }}>{coupon.code}</div>
+                                            {!coupon.isActive && <span style={{ fontSize: '0.7rem', backgroundColor: '#7F8C8D', color: 'white', padding: '2px 8px', borderRadius: '10px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>INACTIVE</span>}
                                         </div>
 
-                                        <div style={{ fontSize: '1rem', color: '#333', marginTop: '8px', fontWeight: 'bold' }}>
+                                        <div style={{ fontSize: '1rem', color: '#333', marginTop: '6px', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
                                             {coupon.discountPercentage ? `${coupon.discountPercentage}% OFF` : `₹${coupon.discountAmount} OFF`}
                                         </div>
 
                                         <div style={{ fontSize: '0.85rem', color: '#555', marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                            <div>Valid for: <span style={{ fontWeight: 'bold' }}>{coupon.plan ? coupon.plan.name : 'All Plans'}</span></div>
-                                            <div>Category: <span style={{ fontWeight: 'bold', color: coupon.isActive ? '#16a085' : '#7f8c8d', backgroundColor: coupon.isActive ? '#e8f8f5' : '#f2f4f4', padding: '2px 6px', borderRadius: '4px' }}>{coupon.category || 'BOTH'}</span></div>
-                                            <div>
+                                            <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Valid for: <span style={{ fontWeight: 'bold' }}>{coupon.plan ? coupon.plan.name : 'All Plans'}</span></div>
+                                            <div style={{ whiteSpace: 'nowrap' }}>Category: <span style={{ fontWeight: 'bold', color: coupon.isActive ? '#16a085' : '#7f8c8d', backgroundColor: coupon.isActive ? '#e8f8f5' : '#f2f4f4', padding: '2px 6px', borderRadius: '4px' }}>{coupon.category || 'BOTH'}</span></div>
+                                            <div style={{ whiteSpace: 'nowrap' }}>
                                                 Usage: <span style={{ fontWeight: 'bold', color: coupon.maxUsage > 0 && coupon.currentUsage >= coupon.maxUsage ? '#E74C3C' : '#27AE60' }}>
                                                     {coupon.currentUsage} / {coupon.maxUsage > 0 ? coupon.maxUsage : 'Unlimited'}
                                                 </span>
                                             </div>
                                         </div>
                                     </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                        <button onClick={() => handleOpenEditSubCoupon(coupon)} style={{ border: 'none', color: '#16A085', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem', padding: '6px 12px', borderRadius: '6px', backgroundColor: '#E8F8F5' }}>Edit</button>
-                                        <button onClick={() => handleToggleSubCouponActive(coupon)} style={{ border: 'none', color: coupon.isActive ? '#E67E22' : '#27AE60', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem', padding: '6px 12px', borderRadius: '6px', backgroundColor: coupon.isActive ? '#FDF2E9' : '#EAF2F8' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flexShrink: 0 }}>
+                                        <button onClick={() => handleOpenEditSubCoupon(coupon)} style={{ border: 'none', color: '#16A085', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem', padding: '6px 12px', borderRadius: '6px', backgroundColor: '#E8F8F5', whiteSpace: 'nowrap' }}>Edit</button>
+                                        <button onClick={() => handleToggleSubCouponActive(coupon)} style={{ border: 'none', color: coupon.isActive ? '#E67E22' : '#27AE60', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem', padding: '6px 12px', borderRadius: '6px', backgroundColor: coupon.isActive ? '#FDF2E9' : '#EAF2F8', whiteSpace: 'nowrap' }}>
                                             {coupon.isActive ? "Deactivate" : "Activate"}
                                         </button>
-                                        <button onClick={() => handleDeleteCoupon(coupon.id)} style={{ border: 'none', color: '#E74C3C', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem', padding: '6px 12px', borderRadius: '6px', backgroundColor: '#FDEDEC' }}>Delete</button>
+                                        <button onClick={() => handleDeleteCoupon(coupon.id)} style={{ border: 'none', color: '#E74C3C', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem', padding: '6px 12px', borderRadius: '6px', backgroundColor: '#FDEDEC', whiteSpace: 'nowrap' }}>Delete</button>
                                     </div>
                                 </div>
                             ))}
@@ -759,27 +791,51 @@ export default function SuperadminSubscriptionsPage() {
             </div>
 
             {/* Active Subscriptions Overview */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h2 style={{ fontSize: '1.4rem', fontWeight: 'bold', color: 'var(--text-main)', margin: 0 }}>Active Seller Subscriptions</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+                <h2 style={{ fontSize: '1.4rem', fontWeight: 'bold', color: 'var(--text-main)', margin: 0, whiteSpace: 'nowrap' }}>Active Seller Subscriptions</h2>
                 <input
                     type="text"
                     placeholder="Search by ID, Name, Plan, or Coupon..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    style={{ padding: '10px 15px', borderRadius: '8px', border: '1px solid #ccc', minWidth: '300px' }}
+                    style={{ padding: '10px 15px', borderRadius: '8px', border: '1px solid #ccc', minWidth: '280px' }}
                 />
             </div>
-            <div style={{ backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <div style={{ backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '850px' }}>
                     <thead style={{ backgroundColor: '#F8F9F9' }}>
                         <tr>
-                            <th onClick={() => handleSort('sellerId')} style={{ padding: '20px', borderBottom: '1px solid #EAEAEA', fontWeight: 'bold', color: 'var(--text-main)', cursor: 'pointer' }}>Seller ID {sortConfig?.key === 'sellerId' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
-                            <th onClick={() => handleSort('seller')} style={{ padding: '20px', borderBottom: '1px solid #EAEAEA', fontWeight: 'bold', color: 'var(--text-main)', cursor: 'pointer' }}>Seller {sortConfig?.key === 'seller' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
-                            <th onClick={() => handleSort('plan')} style={{ padding: '20px', borderBottom: '1px solid #EAEAEA', fontWeight: 'bold', color: 'var(--text-main)', cursor: 'pointer' }}>Plan {sortConfig?.key === 'plan' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
-                            <th onClick={() => handleSort('coupon')} style={{ padding: '20px', borderBottom: '1px solid #EAEAEA', fontWeight: 'bold', color: 'var(--text-main)', cursor: 'pointer' }}>Coupon {sortConfig?.key === 'coupon' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
-                            <th onClick={() => handleSort('amount')} style={{ padding: '20px', borderBottom: '1px solid #EAEAEA', fontWeight: 'bold', color: 'var(--text-main)', cursor: 'pointer' }}>Amount Paid {sortConfig?.key === 'amount' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
-                            <th onClick={() => handleSort('validUntil')} style={{ padding: '20px', borderBottom: '1px solid #EAEAEA', fontWeight: 'bold', color: 'var(--text-main)', cursor: 'pointer' }}>Valid Until {sortConfig?.key === 'validUntil' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
-                            <th style={{ padding: '20px', borderBottom: '1px solid #EAEAEA', fontWeight: 'bold', color: 'var(--text-main)' }}>Status</th>
+                            <th onClick={() => handleSort('sellerId')} style={{ padding: '16px 20px', borderBottom: '1px solid #EAEAEA', fontWeight: 'bold', color: 'var(--text-main)', cursor: 'pointer', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                    Seller ID {sortConfig?.key === 'sellerId' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+                                </span>
+                            </th>
+                            <th onClick={() => handleSort('seller')} style={{ padding: '16px 20px', borderBottom: '1px solid #EAEAEA', fontWeight: 'bold', color: 'var(--text-main)', cursor: 'pointer', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                    Seller {sortConfig?.key === 'seller' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+                                </span>
+                            </th>
+                            <th onClick={() => handleSort('plan')} style={{ padding: '16px 20px', borderBottom: '1px solid #EAEAEA', fontWeight: 'bold', color: 'var(--text-main)', cursor: 'pointer', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                    Plan {sortConfig?.key === 'plan' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+                                </span>
+                            </th>
+                            <th onClick={() => handleSort('coupon')} style={{ padding: '16px 20px', borderBottom: '1px solid #EAEAEA', fontWeight: 'bold', color: 'var(--text-main)', cursor: 'pointer', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                    Coupon {sortConfig?.key === 'coupon' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+                                </span>
+                            </th>
+                            <th onClick={() => handleSort('amount')} style={{ padding: '16px 20px', borderBottom: '1px solid #EAEAEA', fontWeight: 'bold', color: 'var(--text-main)', cursor: 'pointer', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                    Amount Paid {sortConfig?.key === 'amount' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+                                </span>
+                            </th>
+                            <th onClick={() => handleSort('validUntil')} style={{ padding: '16px 20px', borderBottom: '1px solid #EAEAEA', fontWeight: 'bold', color: 'var(--text-main)', cursor: 'pointer', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                    Valid Until {sortConfig?.key === 'validUntil' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+                                </span>
+                            </th>
+                            <th style={{ padding: '16px 20px', borderBottom: '1px solid #EAEAEA', fontWeight: 'bold', color: 'var(--text-main)', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>Status</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -787,26 +843,28 @@ export default function SuperadminSubscriptionsPage() {
                             const validDate = new Date(sub.validUntil);
                             const isExpired = validDate < new Date();
                             return (
-                                <tr key={sub.id}>
-                                    <td style={{ padding: '20px', borderBottom: '1px solid #EAEAEA', color: '#555', fontSize: '0.85rem', fontFamily: 'monospace' }}>{sub.seller?.trackingId || sub.sellerId.substring(0, 8)}</td>
-                                    <td style={{ padding: '20px', borderBottom: '1px solid #EAEAEA', color: '#555', fontWeight: 'bold' }}>{sub.seller?.businessName || "Unknown Seller"}</td>
-                                    <td style={{ padding: '20px', borderBottom: '1px solid #EAEAEA', color: '#555' }}>{sub.plan?.name || "Unknown Plan"}</td>
-                                    <td style={{ padding: '20px', borderBottom: '1px solid #EAEAEA', color: '#555' }}>
+                                <tr key={sub.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                                    <td style={{ padding: '16px 20px', color: '#555', fontSize: '0.85rem', fontFamily: 'monospace', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>{sub.seller?.trackingId || sub.sellerId.substring(0, 8)}</td>
+                                    <td style={{ padding: '16px 20px', color: '#1E293B', fontWeight: '600', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>{sub.seller?.businessName || "Unknown Seller"}</td>
+                                    <td style={{ padding: '16px 20px', color: '#475569', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>{sub.plan?.name || "Unknown Plan"}</td>
+                                    <td style={{ padding: '16px 20px', color: '#475569', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
                                         {sub.appliedCoupon ? (
-                                            <span style={{ backgroundColor: '#E8F8F5', color: '#16A085', padding: '4px 8px', borderRadius: '4px', fontWeight: 'bold', fontSize: '0.85rem' }}>
+                                            <span style={{ backgroundColor: '#E8F8F5', color: '#16A085', padding: '4px 8px', borderRadius: '4px', fontWeight: 'bold', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
                                                 {sub.appliedCoupon}
                                             </span>
                                         ) : (
-                                            <span style={{ color: '#aaa', fontSize: '0.85rem' }}>None</span>
+                                            <span style={{ color: '#aaa', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>None</span>
                                         )}
                                     </td>
-                                    <td style={{ padding: '20px', borderBottom: '1px solid #EAEAEA', color: '#555' }}>₹{sub.amount}</td>
-                                    <td style={{ padding: '20px', borderBottom: '1px solid #EAEAEA', color: '#555' }}>{validDate.toLocaleDateString()}</td>
-                                    <td style={{ padding: '20px', borderBottom: '1px solid #EAEAEA', color: '#555' }}>
+                                    <td style={{ padding: '16px 20px', color: '#1E293B', fontWeight: '600', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>₹{sub.amount}</td>
+                                    <td style={{ padding: '16px 20px', color: '#475569', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>{validDate.toLocaleDateString()}</td>
+                                    <td style={{ padding: '16px 20px', color: '#555', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
                                         <span style={{
-                                            padding: '5px 10px', borderRadius: '15px', fontSize: '0.8rem', fontWeight: 'bold',
+                                            padding: '4px 10px', borderRadius: '15px', fontSize: '0.8rem', fontWeight: 'bold',
                                             backgroundColor: isExpired ? '#F2D7D5' : '#D4EFDF',
-                                            color: isExpired ? '#E74C3C' : '#27AE60'
+                                            color: isExpired ? '#E74C3C' : '#27AE60',
+                                            whiteSpace: 'nowrap',
+                                            display: 'inline-block'
                                         }}>
                                             {isExpired ? "EXPIRED" : "ACTIVE"}
                                         </span>
@@ -816,7 +874,7 @@ export default function SuperadminSubscriptionsPage() {
                         })}
                         {processedSubscriptions.length === 0 && (
                             <tr>
-                                <td colSpan={7} style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                                <td colSpan={7} style={{ padding: '24px 20px', textAlign: 'center', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
                                     {subscriptions.length === 0 ? "No live subscriptions found." : "No subscriptions match your search."}
                                 </td>
                             </tr>
@@ -849,9 +907,18 @@ export default function SuperadminSubscriptionsPage() {
                             <div className="input-group">
                                 <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '5px', color: '#475569', fontWeight: '500' }}>Plan Category</label>
                                 <select value={editPlanCategory} onChange={e => setEditPlanCategory(e.target.value)} className="input-field">
-                                    <option value="BOTH">All/Both Categories (FOOD & PROPERTY)</option>
-                                    <option value="FOOD">Food Focus Only (FOOD)</option>
-                                    <option value="PROPERTY">Property Focus Only (PROPERTY)</option>
+                                    {isRoomEnabled ? (
+                                        <>
+                                            <option value="BOTH">All/Both Categories (FOOD & PROPERTY)</option>
+                                            <option value="FOOD">Food Focus Only (FOOD)</option>
+                                            <option value="PROPERTY">Property Focus Only (PROPERTY)</option>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <option value="BOTH">All Categories (Food)</option>
+                                            <option value="FOOD">Food Focus Only (FOOD)</option>
+                                        </>
+                                    )}
                                 </select>
                             </div>
                             <div className="input-group">
@@ -944,7 +1011,7 @@ export default function SuperadminSubscriptionsPage() {
                                     className="input-field"
                                 >
                                     <option value="">All Plans (Global)</option>
-                                    {plans.map((plan: any) => (
+                                    {plans.filter((plan: any) => isRoomEnabled || plan.category !== "PROPERTY").map((plan: any) => (
                                         <option key={plan.id} value={plan.id}>{plan.name} (₹{plan.price})</option>
                                     ))}
                                 </select>

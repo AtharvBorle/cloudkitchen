@@ -37,6 +37,7 @@ import { fetchApi } from "@/lib/fetch-api";
 import { useRealtimeStream } from "@/hooks/useRealtimeStream";
 import { ReorderModal, ReorderModalType, ReorderItemInfo, UnavailableAddonInfo } from "@/components/order-history-desktop/reorder-modal";
 import CancelOrderModal from "@/components/orders/CancelOrderModal";
+import { useRoomModule } from "@/context/RoomModuleContext";
 import styles from "./MyOrdersView.module.css";
 
 export interface OrderItemData {
@@ -370,9 +371,10 @@ function parseBookingFromDb(b: any): RoomBookingData {
 }
 
 export default function MyOrdersView() {
+  const { isRoomEnabled } = useRoomModule();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialTab = searchParams?.get("category") === "rooms" || searchParams?.get("tab") === "rooms" ? "ROOMS" : "FOODS";
+  const initialTab = isRoomEnabled && (searchParams?.get("category") === "rooms" || searchParams?.get("tab") === "rooms") ? "ROOMS" : "FOODS";
 
   const { data: session, status: authStatus } = useSession();
   const { cartItems, addToCart, addMultipleToCart } = useCart();
@@ -397,6 +399,12 @@ export default function MyOrdersView() {
   const [isReorderValidating, setIsReorderValidating] = useState(false);
 
   const [mainCategory, setMainCategory] = useState<MainCategory>(initialTab);
+
+  useEffect(() => {
+    if (!isRoomEnabled && mainCategory === "ROOMS") {
+      setMainCategory("FOODS");
+    }
+  }, [isRoomEnabled, mainCategory]);
   const [orders, setOrders] = useState<OrderItemData[]>([]);
   const [bookings, setBookings] = useState<RoomBookingData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1108,43 +1116,47 @@ export default function MyOrdersView() {
         <div className={styles.ordersListColumn}>
           {/* Header Section */}
           <header className={styles.headerSection}>
-            <h1 className={styles.pageTitle}>My Orders & Bookings</h1>
+            <h1 className={styles.pageTitle}>{isRoomEnabled ? "My Orders & Bookings" : "My Orders"}</h1>
             <p className={styles.pageSubtitle}>
-              Track your live deliveries, manage room reservations and view order history.
+              {isRoomEnabled
+                ? "Track your live deliveries, manage room reservations and view order history."
+                : "Track your live deliveries and view order history."}
             </p>
 
             {/* Top-level Category Switcher: Foods vs Room Bookings */}
-            <div className={styles.mainCategoryTabs} role="tablist" aria-label="Main Categories">
-              <button
-                type="button"
-                className={`${styles.mainCategoryBtn} ${mainCategory === "FOODS" ? styles.mainCategoryBtnActive : ""}`}
-                onClick={() => {
-                  setMainCategory("FOODS");
-                  if (!selectedOrder && orders.length > 0) setSelectedOrder(orders[0]);
-                }}
-              >
-                <Utensils size={18} />
-                <span>Foods</span>
-                {ongoingOrdersCount > 0 && (
-                  <span className={styles.mainCategoryBadge}>{ongoingOrdersCount}</span>
-                )}
-              </button>
+            {isRoomEnabled && (
+              <div className={styles.mainCategoryTabs} role="tablist" aria-label="Main Categories">
+                <button
+                  type="button"
+                  className={`${styles.mainCategoryBtn} ${mainCategory === "FOODS" ? styles.mainCategoryBtnActive : ""}`}
+                  onClick={() => {
+                    setMainCategory("FOODS");
+                    if (!selectedOrder && orders.length > 0) setSelectedOrder(orders[0]);
+                  }}
+                >
+                  <Utensils size={18} />
+                  <span>Foods</span>
+                  {ongoingOrdersCount > 0 && (
+                    <span className={styles.mainCategoryBadge}>{ongoingOrdersCount}</span>
+                  )}
+                </button>
 
-              <button
-                type="button"
-                className={`${styles.mainCategoryBtn} ${mainCategory === "ROOMS" ? styles.mainCategoryBtnActive : ""}`}
-                onClick={() => {
-                  setMainCategory("ROOMS");
-                  if (!selectedBooking && bookings.length > 0) setSelectedBooking(bookings[0]);
-                }}
-              >
-                <BedDouble size={18} />
-                <span>Room Bookings</span>
-                {activeBookingsCount > 0 && (
-                  <span className={styles.mainCategoryBadge}>{activeBookingsCount}</span>
-                )}
-              </button>
-            </div>
+                <button
+                  type="button"
+                  className={`${styles.mainCategoryBtn} ${mainCategory === "ROOMS" ? styles.mainCategoryBtnActive : ""}`}
+                  onClick={() => {
+                    setMainCategory("ROOMS");
+                    if (!selectedBooking && bookings.length > 0) setSelectedBooking(bookings[0]);
+                  }}
+                >
+                  <BedDouble size={18} />
+                  <span>Room Bookings</span>
+                  {activeBookingsCount > 0 && (
+                    <span className={styles.mainCategoryBadge}>{activeBookingsCount}</span>
+                  )}
+                </button>
+              </div>
+            )}
 
             {/* Sub-Filter Pills */}
             {mainCategory === "FOODS" ? (

@@ -18,9 +18,6 @@ export default function AdminLoginPage() {
             if (errParam && errParam.includes("ACCOUNT_INACTIVE")) {
                 setError("Your account is inactive. Please contact the administrator.");
             }
-            if (window.location.pathname === "/auth/login/admin") {
-                router.replace("/admin");
-            }
         }
     }, [router]);
     const [email, setEmail] = useState("");
