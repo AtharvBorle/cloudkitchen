@@ -32,6 +32,7 @@ import {
   formatRoomLocationComment,
 } from "@/lib/room-location-helper";
 import { getPincodeCoordinates } from "@/lib/geo-distance";
+import { reverseGeocodeCoords, geocodeAddressQuery } from "@/lib/google-maps";
 
 export interface AmenityItem {
   id: string;
@@ -382,35 +383,16 @@ export default function RoomConfigCanvas({
           useSellerDefaultLocation: false,
         }));
         try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
-          );
-          if (res.ok) {
-            const data = await res.json();
-            const addr = data.address || {};
-            const pincode = addr.postcode || "";
-            const locality =
-              addr.suburb ||
-              addr.neighbourhood ||
-              addr.city_district ||
-              addr.quarter ||
-              addr.residential ||
-              "";
-            const street = addr.road || addr.street || "";
-            const landmark = addr.amenity || addr.shop || addr.building || "";
-            const city = addr.city || addr.town || addr.village || "Pune";
-            const houseNumber = addr.house_number || "";
-
-            setFormData((prev) => ({
-              ...prev,
-              houseNumber: houseNumber || prev.houseNumber,
-              street: street || prev.street,
-              locality: locality || prev.locality,
-              landmark: landmark || prev.landmark,
-              city: city || prev.city,
-              pincode: pincode || prev.pincode,
-            }));
-          }
+          const details = await reverseGeocodeCoords(lat, lng);
+          setFormData((prev) => ({
+            ...prev,
+            houseNumber: details.houseNumber || prev.houseNumber,
+            street: details.street || prev.street,
+            locality: details.locality || prev.locality,
+            landmark: details.landmark || prev.landmark,
+            city: details.city || prev.city,
+            pincode: details.pincode || prev.pincode,
+          }));
         } catch (e) {
           console.error("Reverse geocoding error:", e);
         } finally {
@@ -437,45 +419,23 @@ export default function RoomConfigCanvas({
     setIsSearchingLocation(true);
     try {
       const fullQuery = query.toLowerCase().includes("pune") ? query : `${query}, Pune, Maharashtra`;
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-          fullQuery
-        )}&limit=1&addressdetails=1`
-      );
-      if (res.ok) {
-        const results = await res.json();
-        if (results && results.length > 0) {
-          const first = results[0];
-          const lat = parseFloat(first.lat);
-          const lng = parseFloat(first.lon);
-          const addr = first.address || {};
-          const pincode = addr.postcode || "";
-          const locality =
-            addr.suburb ||
-            addr.neighbourhood ||
-            addr.city_district ||
-            addr.quarter ||
-            query.split(",")[0].trim();
-          const street = addr.road || "";
-          const landmark = addr.amenity || addr.shop || "";
-          const city = addr.city || addr.town || addr.village || "Pune";
-
-          setFormData((prev) => ({
-            ...prev,
-            latitude: lat,
-            longitude: lng,
-            locality: locality || prev.locality,
-            pincode: pincode || prev.pincode,
-            street: street || prev.street,
-            landmark: landmark || prev.landmark,
-            city: city || prev.city,
-            useSellerDefaultLocation: false,
-          }));
-          setToastMessage(`Pinned to ${locality || query}!`);
-          setTimeout(() => setToastMessage(null), 2500);
-        } else {
-          alert(`No map coordinates found for "${query}". Try adding specific landmark or area name.`);
-        }
+      const geocoded = await geocodeAddressQuery(fullQuery);
+      if (geocoded && geocoded.lat && geocoded.lng) {
+        setFormData((prev) => ({
+          ...prev,
+          latitude: geocoded.lat,
+          longitude: geocoded.lng,
+          locality: geocoded.locality || prev.locality,
+          pincode: geocoded.pincode || prev.pincode,
+          street: geocoded.street || prev.street,
+          landmark: geocoded.landmark || prev.landmark,
+          city: geocoded.city || prev.city,
+          useSellerDefaultLocation: false,
+        }));
+        setToastMessage(`Pinned to ${geocoded.locality || query}!`);
+        setTimeout(() => setToastMessage(null), 2500);
+      } else {
+        alert(`No map coordinates found for "${query}". Try adding specific landmark or area name.`);
       }
     } catch (err) {
       console.error("Location search failed:", err);
