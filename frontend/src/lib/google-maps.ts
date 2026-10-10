@@ -46,6 +46,46 @@ interface MapsConfigResponse {
 
 let mapsConfigPromise: Promise<MapsConfigResponse | null> | null = null;
 let googleMapsScriptPromise: Promise<boolean> | null = null;
+let isAuthFailureRegistered = false;
+let googleMapsAuthFailed = false;
+
+function cleanClientKey(raw?: string | null): string | null {
+  if (!raw) return null;
+  const cleaned = raw.replace(/^["']|["']$/g, "").trim();
+  const lower = cleaned.toLowerCase();
+  if (
+    !cleaned ||
+    lower === "my key" ||
+    lower === "your_google_maps_key" ||
+    lower.includes("placeholder") ||
+    lower.includes("your_key") ||
+    lower.includes("my_key") ||
+    cleaned.length < 20
+  ) {
+    return null;
+  }
+  return cleaned;
+}
+
+function setupAuthFailureHandler() {
+  if (typeof window === "undefined" || isAuthFailureRegistered) return;
+  isAuthFailureRegistered = true;
+
+  const prevHandler = (window as any).gm_authFailure;
+  (window as any).gm_authFailure = () => {
+    googleMapsAuthFailed = true;
+    console.warn(
+      "[Google Maps] Authentication failure: InvalidKeyMapError or API restrictions/billing issue detected. " +
+      "Falling back automatically to Leaflet & OpenStreetMap."
+    );
+    if (typeof prevHandler === "function") {
+      try {
+        prevHandler();
+      } catch {}
+    }
+    window.dispatchEvent(new CustomEvent("google-maps-auth-failure"));
+  };
+}
 
 /**
  * Fetch Google Maps config from backend
@@ -60,11 +100,11 @@ export async function getGoogleMapsConfig(): Promise<MapsConfigResponse | null> 
   mapsConfigPromise = (async () => {
     try {
       // 1. Direct client env check if available
-      const clientKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-      if (clientKey && clientKey.trim() && clientKey !== "your_google_maps_key") {
+      const clientKey = cleanClientKey(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
+      if (clientKey) {
         return {
           isConfigured: true,
-          apiKey: clientKey.trim(),
+          apiKey: clientKey,
           provider: "google_maps",
           defaultCenter: { lat: 18.5204, lng: 73.8567, city: "Pune", state: "Maharashtra" },
         };
@@ -75,10 +115,11 @@ export async function getGoogleMapsConfig(): Promise<MapsConfigResponse | null> 
       if (res.ok) {
         const json = await res.json();
         const cfg = json.data || json;
+        const serverKey = cleanClientKey(cfg.apiKey);
         return {
-          isConfigured: Boolean(cfg.isConfigured && cfg.apiKey && cfg.apiKey !== "your_google_maps_key"),
-          apiKey: cfg.apiKey || null,
-          provider: cfg.provider || "google_maps",
+          isConfigured: Boolean(cfg.isConfigured && serverKey),
+          apiKey: serverKey,
+          provider: serverKey ? (cfg.provider || "google_maps") : "openstreetmap",
           defaultCenter: cfg.defaultCenter || { lat: 18.5204, lng: 73.8567, city: "Pune", state: "Maharashtra" },
         };
       }
@@ -101,6 +142,11 @@ export async function getGoogleMapsConfig(): Promise<MapsConfigResponse | null> 
  */
 export async function loadGoogleMapsScript(): Promise<boolean> {
   if (typeof window === "undefined") return false;
+  setupAuthFailureHandler();
+
+  if (googleMapsAuthFailed) {
+    return false;
+  }
 
   // Already loaded
   if ((window as any).google && (window as any).google.maps) {
@@ -144,6 +190,8 @@ export async function loadGoogleMapsScript(): Promise<boolean> {
 
       script.onerror = (e) => {
         console.warn("Google Maps JavaScript API script failed to load:", e);
+        googleMapsAuthFailed = true;
+        window.dispatchEvent(new CustomEvent("google-maps-auth-failure"));
         resolve(false);
       };
 

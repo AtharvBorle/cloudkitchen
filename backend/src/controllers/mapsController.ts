@@ -26,11 +26,25 @@ export interface PlaceSuggestion {
 }
 
 const getGoogleMapsApiKey = (): string => {
-    return (
+    const raw = (
         process.env.GOOGLE_MAPS_API_KEY ||
         process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ||
         ""
     ).trim();
+    const cleaned = raw.replace(/^["']|["']$/g, "").trim();
+    const lower = cleaned.toLowerCase();
+    if (
+        !cleaned ||
+        lower === "my key" ||
+        lower === "your_google_maps_key" ||
+        lower.includes("placeholder") ||
+        lower.includes("your_key") ||
+        lower.includes("my_key") ||
+        cleaned.length < 20
+    ) {
+        return "";
+    }
+    return cleaned;
 };
 
 /**

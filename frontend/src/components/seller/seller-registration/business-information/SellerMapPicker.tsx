@@ -246,10 +246,27 @@ export const SellerMapPicker: React.FC<SellerMapPickerProps> = ({
       }
     }
 
+    const handleAuthFailure = () => {
+      if (!isMountedRef.current || !mapContainerRef.current) return;
+      console.warn("[SellerMapPicker] Google Maps auth failure. Switching to Leaflet immediately.");
+      if (googleMapRef.current) {
+        googleMapRef.current = null;
+        googleMarkerRef.current = null;
+      }
+      if (mapContainerRef.current) {
+        mapContainerRef.current.innerHTML = "";
+      }
+      setMapEngine("leaflet");
+      initLeaflet(currentCoords.lat || initialLat, currentCoords.lng || initialLng);
+    };
+
+    window.addEventListener("google-maps-auth-failure", handleAuthFailure);
+
     initMap();
 
     return () => {
       isMountedRef.current = false;
+      window.removeEventListener("google-maps-auth-failure", handleAuthFailure);
       if (leafletMapRef.current) {
         try {
           leafletMapRef.current.off();
@@ -261,7 +278,7 @@ export const SellerMapPicker: React.FC<SellerMapPickerProps> = ({
         delete (mapContainerRef.current as any)._leaflet_id;
       }
     };
-  }, [handleReverseGeocode]);
+  }, [handleReverseGeocode, latitude, longitude]);
 
   // Update marker position if external coordinates change
   useEffect(() => {
