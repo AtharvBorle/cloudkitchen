@@ -85,8 +85,8 @@ function ExploreDesktopContent() {
     }
 
     // 2. Fallback to approved kitchens if no curated reels yet
-    const sourceKitchens = searchQuery ? homeData.allKitchens : homeData.kitchens;
-    const sourceFoodItems = searchQuery ? homeData.allFoodItems : homeData.foodItems;
+    const sourceKitchens = homeData.kitchens;
+    const sourceFoodItems = homeData.foodItems;
     if (!sourceKitchens || sourceKitchens.length === 0) return undefined;
     let list = sourceKitchens;
     if (searchQuery) {
@@ -102,11 +102,11 @@ function ExploreDesktopContent() {
       image: k.imageUrl || "/images/places/place-biryani.png",
       kitchenId: k.trackingId || k.id,
     }));
-  }, [homeData.reels, homeData.kitchens, homeData.allKitchens, homeData.foodItems, homeData.allFoodItems, selectedDiet, searchQuery]);
+  }, [homeData.reels, homeData.kitchens, homeData.foodItems, selectedDiet, searchQuery]);
 
   // Dynamic Featured Collections from food items
   const dynamicCollections = useMemo(() => {
-    const sourceFoodItems = searchQuery ? homeData.allFoodItems : homeData.foodItems;
+    const sourceFoodItems = homeData.foodItems;
     if (!sourceFoodItems || sourceFoodItems.length === 0) return undefined;
     let list = sourceFoodItems;
     if (selectedDiet && selectedDiet !== "all") {
@@ -177,8 +177,8 @@ function ExploreDesktopContent() {
   // Filtered Kitchens if user arrived via search or category filter
   const filteredKitchens = useMemo(() => {
     if (!categoryFilter && !searchQuery) return [];
-    const sourceKitchens = searchQuery || categoryFilter ? homeData.allKitchens : homeData.kitchens;
-    const sourceFoodItems = searchQuery || categoryFilter ? homeData.allFoodItems : homeData.foodItems;
+    const sourceKitchens = homeData.kitchens;
+    const sourceFoodItems = homeData.foodItems;
     let list = sourceKitchens || [];
     if (categoryFilter) {
       list = list.filter((k) => matchesKitchenCategoryFilter(categoryFilter, k, sourceFoodItems));
@@ -190,12 +190,12 @@ function ExploreDesktopContent() {
       list = list.filter((k) => isKitchenMatchingDiet(k, selectedDiet, sourceFoodItems));
     }
     return list;
-  }, [homeData.kitchens, homeData.allKitchens, homeData.foodItems, homeData.allFoodItems, categoryFilter, searchQuery, selectedDiet]);
+  }, [homeData.kitchens, homeData.foodItems, categoryFilter, searchQuery, selectedDiet]);
 
   // Filtered Food Items if user arrived via search, dietary, or category filter
   const filteredFoodItems = useMemo(() => {
     if (!categoryFilter && !searchQuery && selectedDiet === "all") return [];
-    const sourceFoodItems = searchQuery || categoryFilter ? homeData.allFoodItems : homeData.foodItems;
+    const sourceFoodItems = homeData.foodItems;
     let list = sourceFoodItems || [];
     if (categoryFilter) {
       list = list.filter((f) => matchesDishCategory(categoryFilter, f));
@@ -207,7 +207,7 @@ function ExploreDesktopContent() {
       list = list.filter((f) => isDishMatchingDiet(f, selectedDiet));
     }
     return list;
-  }, [homeData.foodItems, homeData.allFoodItems, categoryFilter, searchQuery, selectedDiet]);
+  }, [homeData.foodItems, categoryFilter, searchQuery, selectedDiet]);
 
   // Filtered Rooms if user arrived via search or category filter
   const filteredRooms = useMemo(() => {

@@ -601,6 +601,7 @@ export async function syncNotificationsFromBackend() {
           severity: serverItem.severity,
           actionLabel: serverItem.actionLabel,
           actionHref: serverItem.actionHref,
+          metadata: serverItem.metadata || updated[matchIndex].metadata,
           timestamp: serverItem.timestamp || updated[matchIndex].timestamp,
           timeAgo: serverItem.timeAgo || updated[matchIndex].timeAgo,
           isRead: existingIsRead !== undefined ? existingIsRead : serverItem.isRead,

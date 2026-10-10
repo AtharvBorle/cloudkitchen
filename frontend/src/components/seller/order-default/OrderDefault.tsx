@@ -143,16 +143,22 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
         if (Array.isArray(list) && list.length > 0) {
           let found = null;
           if (rawOrderId) {
-            const clean = rawOrderId.replace("#", "").trim().toLowerCase();
-            found = list.find(
-              (o: any) =>
-                o.id.toLowerCase() === clean ||
-                `#ncr-${o.id.slice(0, 4).toLowerCase()}` === rawOrderId.toLowerCase() ||
-                o.id.toLowerCase().startsWith(clean)
-            );
+            const rawClean = rawOrderId.replace(/^#/, "").trim().toLowerCase();
+            const clean = rawClean.replace(/^(?:ord|ncr)-/i, "").trim();
+            found = list.find((o: any) => {
+              const oId = (o.id || "").toLowerCase();
+              return (
+                oId === rawClean ||
+                oId === clean ||
+                oId.startsWith(clean) ||
+                oId.endsWith(clean) ||
+                `#ncr-${oId.slice(0, 4)}` === rawOrderId.toLowerCase() ||
+                `#ord-${oId.slice(-6)}` === rawOrderId.toLowerCase()
+              );
+            });
           }
-          // Default to found order, or the latest order if no match
-          const target = found || list[0];
+          // Default to found order, or the latest order if no rawOrderId was provided
+          const target = found || (!rawOrderId ? list[0] : list[0]);
 
           if (target) {
             let parsedItems: any[] = [];
@@ -204,7 +210,7 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
 
             setOrder({
               id: target.id,
-              orderId: target.orderId || target.id,
+              orderId: target.orderId || `#ORD-${String(target.id || "").slice(-6).toUpperCase()}`,
               createdAt: target.createdAt,
               placedTime: formatOrderDateTime(target.createdAt),
               cancelledTime: formatOrderDateTime(target.updatedAt || target.createdAt),

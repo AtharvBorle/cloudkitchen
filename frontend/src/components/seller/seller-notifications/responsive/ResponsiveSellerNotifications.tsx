@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
   Menu as MenuIcon,
@@ -83,6 +84,44 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
     clearAllNotifications,
     syncNotifications,
   } = useSellerNotifications();
+  const router = useRouter();
+
+  const resolveOrderTargetHref = (notif: SellerNotificationItem) => {
+    const targetHref = notif.actionHref;
+    if (
+      notif.category === "orders" ||
+      notif.actionLabel === "View Order" ||
+      notif.actionLabel === "Track Delivery" ||
+      notif.actionLabel === "Track Dispatch" ||
+      notif.title?.toLowerCase().includes("order")
+    ) {
+      let orderId = notif.metadata?.orderId;
+      if (!orderId) {
+        const idMatch = notif.id.match(/^(?:notif-order-|notif-deliv-|ord-[a-z]+-)(.+)$/);
+        if (idMatch && idMatch[1]) {
+          orderId = idMatch[1].replace(/^ORD-/i, "");
+        }
+      }
+      if (!orderId && targetHref) {
+        try {
+          const parsed = new URL(targetHref, "http://localhost");
+          const paramId = parsed.searchParams.get("orderId") || parsed.searchParams.get("id");
+          if (paramId) orderId = paramId.replace(/^#/, "").replace(/^ORD-/i, "");
+        } catch {}
+      }
+      if (!orderId) {
+        const titleMatch = notif.title?.match(/#([A-Za-z0-9-]+)/);
+        if (titleMatch && titleMatch[1]) {
+          orderId = titleMatch[1].replace(/^(?:ORD|NCR)-/i, "");
+        }
+      }
+      if (orderId) {
+        return `/seller/orders/details?orderId=${encodeURIComponent(orderId)}`;
+      }
+    }
+    return targetHref || "/seller/orders";
+  };
+
   const [activeTab, setActiveTab] = useState<TabFilter>("all");
   const [searchQuery, setSearchQuery] = useState(searchQueryProp || "");
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
@@ -519,7 +558,16 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
                 <div
                   key={notif.id}
                   className={`${styles.notificationCard} ${!notif.isRead ? styles.unreadCard : ""}`}
-                  onClick={() => toggleExpand(notif.id)}
+                  style={{ cursor: "pointer" }}
+                  onClick={(e) => {
+                    const target = resolveOrderTargetHref(notif);
+                    if (target && target.startsWith("/seller/orders/details")) {
+                      if (!notif.isRead) markAsRead(notif.id);
+                      router.push(target);
+                      return;
+                    }
+                    toggleExpand(notif.id);
+                  }}
                 >
                   <div
                     className={`${styles.iconWrapper} ${getCategoryIconStyle(
@@ -565,20 +613,12 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
                     <div className={styles.cardFooter}>
                       {notif.actionHref && (
                         <Link
-                          href={(() => {
-                            if (notif.actionLabel === "Track Dispatch" && notif.actionHref === "/seller/delivery") {
-                              return "/seller/orders";
-                            }
-                            if (notif.category === "orders") {
-                              const match = notif.title.match(/#([A-Za-z0-9-]+)/) || notif.id.match(/notif-order-([A-Za-z0-9-]+)/);
-                              if (match && (!notif.actionHref || notif.actionHref === "/seller/orders")) {
-                                return `/seller/orders/details?orderId=${encodeURIComponent(match[1])}`;
-                              }
-                            }
-                            return notif.actionHref;
-                          })()}
+                          href={resolveOrderTargetHref(notif)}
                           className={styles.cardActionLink}
-                          onClick={(e) => e.stopPropagation()}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!notif.isRead) markAsRead(notif.id);
+                          }}
                         >
                           {notif.actionLabel || "View"} <ChevronRight size={14} />
                         </Link>

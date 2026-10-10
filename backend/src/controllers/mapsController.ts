@@ -182,6 +182,8 @@ export async function getPlacesAutocomplete(
                         types: p.types || [],
                     }));
                     return { suggestions, provider: "google_places" };
+                } else if (data.status) {
+                    console.warn("[Google Places Autocomplete] API status:", data.status, data.error_message || "");
                 }
             }
         } catch (err) {
@@ -229,7 +231,10 @@ export async function getPlacesAutocomplete(
                 nomQuery
             )}&countrycodes=in&limit=6&addressdetails=1`,
             {
-                headers: { "Accept-Language": "en" },
+                headers: {
+                    "Accept-Language": "en",
+                    "User-Agent": "NeoCloudKitchen/1.0 (contact@neocloudkitchen.com)",
+                },
             }
         );
         if (nomRes.ok) {
@@ -311,6 +316,48 @@ export async function getPlaceDetails(
         }
     }
 
+    // If it was an OSM fallback suggestion
+    if (placeId.startsWith("osm-")) {
+        const osmId = placeId.replace("osm-", "");
+        try {
+            const nomRes = await fetch(
+                `https://nominatim.openstreetmap.org/details?place_id=${encodeURIComponent(
+                    osmId
+                )}&format=json&addressdetails=1`,
+                {
+                    headers: {
+                        "Accept-Language": "en",
+                        "User-Agent": "NeoCloudKitchen/1.0 (contact@neocloudkitchen.com)",
+                    },
+                }
+            );
+            if (nomRes.ok) {
+                const data = await nomRes.json();
+                const addr = data.address || {};
+                const pin = (addr.postcode || "").replace(/\D/g, "").slice(0, 6);
+                const lat = parseFloat(data.centroid?.coordinates?.[1] ?? data.lat ?? 18.5204);
+                const lng = parseFloat(data.centroid?.coordinates?.[0] ?? data.lon ?? 73.8567);
+                return {
+                    details: {
+                        pincode: pin,
+                        street: addr.road || addr.suburb || "",
+                        locality: addr.suburb || addr.neighbourhood || addr.city_district || "Pune Area",
+                        landmark: addr.amenity || addr.shop || "",
+                        houseNumber: addr.house_number || "",
+                        city: addr.city || addr.town || "Pune",
+                        state: addr.state || "Maharashtra",
+                        formattedAddress: data.localname || data.names?.name || "Pune",
+                        lat,
+                        lng,
+                    },
+                    provider: "openstreetmap_details",
+                };
+            }
+        } catch (osmErr) {
+            console.warn("OSM Place Details fallback error:", osmErr);
+        }
+    }
+
     const apiKey = getGoogleMapsApiKey();
 
     if (apiKey && !placeId.startsWith("osm-")) {
@@ -344,6 +391,8 @@ export async function getPlaceDetails(
                         lng
                     );
                     return { details: parsed, provider: "google_places" };
+                } else if (data.status) {
+                    console.warn("[Google Place Details] API status:", data.status, data.error_message || "");
                 }
             }
         } catch (err) {
@@ -382,6 +431,8 @@ export async function reverseGeocode(
                         lng
                     );
                     return { details: parsed, provider: "google_geocoding" };
+                } else if (data.status) {
+                    console.warn("[Google Reverse Geocoding] API status:", data.status, data.error_message || "");
                 }
             }
         } catch (err) {
@@ -406,7 +457,12 @@ export async function reverseGeocode(
     try {
         const nomRes = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
-            { headers: { "Accept-Language": "en" } }
+            {
+                headers: {
+                    "Accept-Language": "en",
+                    "User-Agent": "NeoCloudKitchen/1.0 (contact@neocloudkitchen.com)",
+                },
+            }
         );
         if (nomRes.ok) {
             const data = await nomRes.json();
@@ -469,6 +525,8 @@ export async function geocodeAddress(
                         lng
                     );
                     return { details: parsed, provider: "google_geocoding" };
+                } else if (data.status) {
+                    console.warn("[Google Geocoding] API status:", data.status, data.error_message || "");
                 }
             }
         } catch (err) {
@@ -482,7 +540,12 @@ export async function geocodeAddress(
             `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
                 query
             )}&countrycodes=in&limit=1&addressdetails=1`,
-            { headers: { "Accept-Language": "en" } }
+            {
+                headers: {
+                    "Accept-Language": "en",
+                    "User-Agent": "NeoCloudKitchen/1.0 (contact@neocloudkitchen.com)",
+                },
+            }
         );
         if (nomRes.ok) {
             const data = await nomRes.json();

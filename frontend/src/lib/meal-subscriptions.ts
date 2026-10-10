@@ -75,9 +75,10 @@ export function getTierColors(tier: string) {
 
 export function formatMealPlan(rawPlan: any): MealSubscriptionPlan {
   const colors = getTierColors(rawPlan.tier || "Bronze");
-  const weeklyNum = typeof rawPlan.weeklyPrice === "number"
-    ? rawPlan.weeklyPrice
-    : parseFloat(String(rawPlan.weeklyPrice || "0").replace(/[^\d.]/g, "")) || 0;
+  const rawPriceSource = rawPlan.weeklyPrice || rawPlan.monthlyPrice || "0";
+  const weeklyNum = typeof rawPriceSource === "number"
+    ? rawPriceSource
+    : parseFloat(String(rawPriceSource).replace(/[^\d.]/g, "")) || 0;
 
   const weeklyStr = typeof rawPlan.weeklyPrice === "string" && rawPlan.weeklyPrice.startsWith("₹")
     ? rawPlan.weeklyPrice
@@ -125,7 +126,7 @@ export function formatMealPlan(rawPlan: any): MealSubscriptionPlan {
     : rawPlan.deployedDate || new Date().toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
 
   const subscribersCount = rawPlan.subscribersCount || 0;
-  const monthlyRevenue = `₹${(weeklyNum * 4 * subscribersCount).toLocaleString("en-IN")}`;
+  const monthlyRevenue = `₹${(weeklyNum * subscribersCount).toLocaleString("en-IN")}`;
 
   return {
     id: rawPlan.id || `plan-${Date.now()}`,
@@ -205,20 +206,25 @@ export async function fetchStoredMealPlans(): Promise<{
       });
 
       mappedPlans.forEach((plan) => {
-        const planActiveUsers = new Set<string>();
-        mappedSubscribers.forEach((s) => {
-          if (!isSubActive(s)) return;
-          const matchId = (s.planId && (s.planId === plan.id || s.planId === plan.planId));
-          const matchName = (s.planName && plan.name && s.planName.trim().toLowerCase() === plan.name.trim().toLowerCase());
-          if (matchId || matchName) {
-            const key = s.userId || s.customerEmail || s.customerPhone || s.customerName || s.name || s.id;
-            if (key) planActiveUsers.add(String(key).toLowerCase().trim());
-          }
+        const planActiveSubs = mappedSubscribers.filter((s) => {
+          if (!isSubActive(s)) return false;
+          const matchId = Boolean(s.planId && (s.planId === plan.id || s.planId === plan.planId));
+          const matchName = Boolean(s.planName && plan.name && s.planName.trim().toLowerCase() === plan.name.trim().toLowerCase());
+          return matchId || matchName;
         });
 
-        const activeCount = planActiveUsers.size > 0 ? planActiveUsers.size : (plan.subscribersCount || 0);
+        const planActiveUsers = new Set<string>();
+        planActiveSubs.forEach((s) => {
+          const key = s.userId || s.customerEmail || s.customerPhone || s.customerName || s.name || s.id;
+          if (key) planActiveUsers.add(String(key).toLowerCase().trim());
+        });
+
+        const activeCount = Array.isArray(payload.subscribers) ? planActiveUsers.size : (plan.subscribersCount || 0);
         plan.subscribersCount = activeCount;
-        plan.monthlyRevenue = `₹${((plan.rawWeeklyPrice || 0) * 4 * activeCount).toLocaleString("en-IN")}`;
+        const planRev = planActiveSubs.length > 0
+          ? planActiveSubs.reduce((sum, s) => sum + (s.pricePaid || plan.rawWeeklyPrice || 0), 0)
+          : (plan.rawWeeklyPrice || 0) * activeCount;
+        plan.monthlyRevenue = `₹${planRev.toLocaleString("en-IN")}`;
       });
 
       const activeUserKeys = new Set<string>();
@@ -229,13 +235,27 @@ export async function fetchStoredMealPlans(): Promise<{
         }
       });
 
+      const activeRevTotal = mappedSubscribers
+        .filter(isSubActive)
+        .reduce((sum, s) => {
+          if (s.pricePaid && s.pricePaid > 0) return sum + s.pricePaid;
+          const matchedPlan = mappedPlans.find(
+            (p) =>
+              (s.planId && (s.planId === p.id || s.planId === p.planId)) ||
+              (s.planName && p.name && s.planName.trim().toLowerCase() === p.name.trim().toLowerCase())
+          );
+          return sum + (matchedPlan?.rawWeeklyPrice || 0);
+        }, 0);
+
       const metrics: MealPlanMetrics = payload.metrics ? {
         ...payload.metrics,
-        activeSubscribers: payload.metrics.activeSubscribers !== undefined ? payload.metrics.activeSubscribers : activeUserKeys.size,
+        activeSubscribers: activeUserKeys.size,
+        rawMRR: activeRevTotal,
+        monthlyRecurringRevenue: activeRevTotal > 0 ? `₹${activeRevTotal.toLocaleString("en-IN")}` : "₹0",
       } : {
         activeSubscribers: activeUserKeys.size,
-        monthlyRecurringRevenue: "₹0",
-        rawMRR: 0,
+        monthlyRecurringRevenue: activeRevTotal > 0 ? `₹${activeRevTotal.toLocaleString("en-IN")}` : "₹0",
+        rawMRR: activeRevTotal,
         activePlansCount: mappedPlans.filter((p) => p.status === "Live").length,
         fulfillmentRate: "99.2%",
       };
@@ -257,10 +277,13 @@ export async function fetchStoredMealPlans(): Promise<{
   // Fallback to local cache
   const cachedPlans = getStoredMealPlans();
   const cachedSubscribers = getStoredMealSubscribers();
+  const cachedActiveRev = cachedSubscribers
+    .filter((s) => s.status === "Active")
+    .reduce((sum, s) => sum + (s.pricePaid || parseFloat((s.amount || "").replace(/[^\d.]/g, "")) || 0), 0);
   const metrics: MealPlanMetrics = {
     activeSubscribers: cachedSubscribers.filter((s) => s.status === "Active").length,
-    monthlyRecurringRevenue: "₹0",
-    rawMRR: 0,
+    monthlyRecurringRevenue: cachedActiveRev > 0 ? `₹${cachedActiveRev.toLocaleString("en-IN")}` : "₹0",
+    rawMRR: cachedActiveRev,
     activePlansCount: cachedPlans.filter((p) => p.status === "Live").length,
     fulfillmentRate: "99.2%",
   };
@@ -289,13 +312,13 @@ export async function saveMealPlan(
   }
 ): Promise<MealSubscriptionPlan> {
   const existing = getStoredMealPlans();
-  const priceNum = parseFloat(String(planData.weeklyPrice).replace(/[^\d.]/g, "")) || 0;
+  const priceNum = parseFloat(String(planData.weeklyPrice || planData.monthlyPrice || "0").replace(/[^\d.]/g, "")) || 0;
 
   let createdPlan: MealSubscriptionPlan;
 
   try {
     const isWeekly = (planData.duration || "1 Week").toLowerCase().includes("week");
-    const parsedWeekly = planData.weeklyPrice ? parseFloat(String(planData.weeklyPrice).replace(/[^\d.]/g, "")) : (isWeekly ? priceNum : null);
+    const parsedWeekly = planData.weeklyPrice ? parseFloat(String(planData.weeklyPrice).replace(/[^\d.]/g, "")) : priceNum;
     const parsedMonthly = planData.monthlyPrice ? parseFloat(String(planData.monthlyPrice).replace(/[^\d.]/g, "")) : (!isWeekly ? priceNum : null);
 
     const res = await fetchApi("/api/seller/meal-plans", {

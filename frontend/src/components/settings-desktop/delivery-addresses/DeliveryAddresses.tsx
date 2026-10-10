@@ -965,10 +965,10 @@ export const DeliveryAddresses: React.FC<DeliveryAddressesProps> = ({
                       if (details?.street) {
                         handleFieldChange("street", details.street);
                       }
-                      if (details?.landmark && !landmark) {
+                      if (details?.landmark) {
                         handleFieldChange("landmark", details.landmark);
                       }
-                      if (details?.houseNumber && !houseNumber) {
+                      if (details?.houseNumber) {
                         handleFieldChange("houseNumber", details.houseNumber);
                       }
                     }}

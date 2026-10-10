@@ -5,6 +5,7 @@ import Razorpay from "razorpay";
 import crypto from "crypto";
 import { handleCodOrderDelivered } from "@/lib/delivery-wallet";
 import { emitOrderUpdated } from "@/lib/realtime-events";
+import { addOrderDelayMinutes, enrichOrdersWithEta, enrichOrderWithEta, getOrInitOrderTimer } from "@/lib/order-eta";
 
 export const getDeliveryOrders = async () => {
     const session = await getAuthSession();
@@ -53,7 +54,8 @@ export const getDeliveryOrders = async () => {
         orderBy: { createdAt: 'desc' }
     });
 
-    return { orders };
+    const enrichedOrders = await enrichOrdersWithEta(orders);
+    return { orders: enrichedOrders };
 };
 
 export const initiateDeliveryPayment = async (orderId: string) => {
@@ -159,11 +161,8 @@ export const updateOrderStatus = async (req: Request, orderId: string) => {
         throw new ApiError("Delivery partner profile could not be found.", 404);
     }
 
-    const { status } = await req.json();
-
-    if (!["OUT_FOR_DELIVERY", "DELIVERED"].includes(status)) {
-        throw new ApiError("Invalid status transition for delivery.", 400);
-    }
+    const body = await req.json();
+    const { status, delayMinutes, addDelayMinutes } = body || {};
 
     const order = await db.order.findFirst({
         where: { id: orderId, deliveryPersonId: deliveryProfile.id }
@@ -171,6 +170,32 @@ export const updateOrderStatus = async (req: Request, orderId: string) => {
 
     if (!order) {
         throw new ApiError("This order is not assigned to your delivery account.", 404);
+    }
+
+    // Handle delivery delay minutes addition (+5, +10, +20, or Custom <= 30)
+    const rawDelayToAdd = delayMinutes !== undefined ? delayMinutes : addDelayMinutes;
+    if (rawDelayToAdd !== undefined && !status) {
+        if (order.status !== "OUT_FOR_DELIVERY") {
+            throw new ApiError("Delay time can only be added when the order is out for delivery.", 400);
+        }
+        const timer = await addOrderDelayMinutes(orderId, Number(rawDelayToAdd));
+        const enrichedOrder = {
+            ...order,
+            deliveryTimerStartedAt: timer.startedAt,
+            deliveryDelayMinutes: timer.delayMinutes,
+        };
+
+        try {
+            emitOrderUpdated(enrichedOrder);
+        } catch (e) {
+            console.error("Realtime event emission error in delivery delay update:", e);
+        }
+
+        return { order: enrichedOrder, timer };
+    }
+
+    if (!["OUT_FOR_DELIVERY", "DELIVERED"].includes(status)) {
+        throw new ApiError("Invalid status transition for delivery.", 400);
     }
 
     const updatedOrder = await db.$transaction(async (tx) => {
@@ -189,13 +214,19 @@ export const updateOrderStatus = async (req: Request, orderId: string) => {
         return uo;
     });
 
+    if (status === "OUT_FOR_DELIVERY") {
+        await getOrInitOrderTimer(updatedOrder, true);
+    }
+
+    const enrichedUpdatedOrder = await enrichOrderWithEta(updatedOrder);
+
     try {
-        emitOrderUpdated(updatedOrder);
+        emitOrderUpdated(enrichedUpdatedOrder);
     } catch (e) {
         console.error("Realtime event emission error in delivery update:", e);
     }
 
-    return { order: updatedOrder };
+    return { order: enrichedUpdatedOrder };
 };
 
 export const getDeliveryProfile = async () => {

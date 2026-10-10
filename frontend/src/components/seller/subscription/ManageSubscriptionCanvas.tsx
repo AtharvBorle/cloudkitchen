@@ -31,6 +31,7 @@ import {
   MealPlanMetrics,
 } from "@/lib/meal-subscriptions";
 import { Trash2, Power, Eye, EyeOff } from "lucide-react";
+import PaginationControls from "../common/PaginationControls";
 
 export function formatDeliveryAddressDisplay(rawAddress?: string, roomNo?: string): string {
   if (!rawAddress || rawAddress.trim() === "") {
@@ -207,6 +208,20 @@ export default function ManageSubscriptionCanvas({
     return nameMatch || planMatch || addressMatch || statusMatch || phoneMatch;
   });
 
+  const [subPage, setSubPage] = useState<number>(1);
+  const [subPageSize, setSubPageSize] = useState<number | "All">(5);
+
+  useEffect(() => {
+    setSubPage(1);
+  }, [searchQuery]);
+
+  const paginatedSubscribers = React.useMemo(() => {
+    if (subPageSize === "All") return filteredSubscribers;
+    const numSize = Number(subPageSize) || 5;
+    const startIdx = (subPage - 1) * numSize;
+    return filteredSubscribers.slice(startIdx, startIdx + numSize);
+  }, [filteredSubscribers, subPage, subPageSize]);
+
   const activePlansCount = plans.filter((p) => p.status === "Live").length;
 
   // Helper to determine if a subscriber record represents a currently active subscription
@@ -230,7 +245,23 @@ export default function ManageSubscriptionCanvas({
     }
   });
 
-  const totalSubscribers = activeUserKeys.size > 0
+  const getSubscriberPrice = (s: RecentSubscriber) => {
+    const directPrice = Number(s.pricePaid) || parseFloat((s.amount || "").replace(/[^\d.]/g, "")) || 0;
+    if (directPrice > 0) return directPrice;
+    const matchedPlan = plans.find(
+      (p) =>
+        (s.planId && (s.planId === p.id || s.planId === p.planId)) ||
+        (s.planName && p.name && s.planName.trim().toLowerCase() === p.name.trim().toLowerCase())
+    );
+    if (!matchedPlan) return 0;
+    return (
+      matchedPlan.rawWeeklyPrice ||
+      parseFloat(String(matchedPlan.weeklyPrice || matchedPlan.monthlyPrice || "0").replace(/[^\d.]/g, "")) ||
+      0
+    );
+  };
+
+  const totalSubscribers = subscribers.length > 0
     ? activeUserKeys.size
     : (serverMetrics?.activeSubscribers !== undefined
         ? serverMetrics.activeSubscribers
@@ -239,19 +270,18 @@ export default function ManageSubscriptionCanvas({
   const totalMonthlyRevNum = subscribers.length > 0
     ? subscribers
         .filter(isSubscriberActive)
-        .reduce((sum, s) => {
-          const price = s.pricePaid || parseFloat((s.amount || "").replace(/[^\d.]/g, "")) || 0;
-          const cycle = (s.cycle || "1 Week").toLowerCase();
-          if (cycle.includes("2 week") || cycle === "biweekly") return sum + price * 2;
-          if (cycle.includes("week") || cycle === "weekly" || cycle.includes("1 week")) return sum + price * 4;
-          if (cycle.includes("quarter") || cycle.includes("3 month")) return sum + Math.round(price / 3);
-          if (cycle.includes("6 month") || cycle === "half_yearly") return sum + Math.round(price / 6);
-          if (cycle.includes("year") || cycle === "yearly") return sum + Math.round(price / 12);
-          return sum + price;
-        }, 0)
+        .reduce((sum, s) => sum + getSubscriberPrice(s), 0)
     : (serverMetrics?.rawMRR !== undefined
         ? serverMetrics.rawMRR
-        : plans.reduce((sum, p) => sum + ((p.rawWeeklyPrice || parseFloat((p.weeklyPrice || "").replace(/[^\d.]/g, "")) || 0) * 4 * (p.subscribersCount || 0)), 0));
+        : plans.reduce(
+            (sum, p) =>
+              sum +
+              (p.rawWeeklyPrice ||
+                parseFloat(String(p.weeklyPrice || p.monthlyPrice || "0").replace(/[^\d.]/g, "")) ||
+                0) *
+                (p.subscribersCount || 0),
+            0
+          ));
 
   const totalMonthlyRev = totalMonthlyRevNum > 0 ? `₹${totalMonthlyRevNum.toLocaleString("en-IN")}` : "₹0";
 
@@ -684,28 +714,33 @@ export default function ManageSubscriptionCanvas({
           className="plans-grid"
         >
           {filteredPlans.map((plan) => {
-            const now = new Date();
-            const planActiveUserKeys = new Set<string>();
-            subscribers.forEach((s) => {
-              const statusUpper = String(s.status || "").toUpperCase();
-              const isActive = (statusUpper === "ACTIVE" || statusUpper === "LIVE") && !s.isPaused && (!s.endDate || new Date(s.endDate) >= now);
-              if (!isActive) return;
-              const matchId = (s.planId && (s.planId === plan.id || s.planId === plan.planId));
-              const matchName = (s.planName && plan.name && s.planName.trim().toLowerCase() === plan.name.trim().toLowerCase());
-              if (matchId || matchName) {
-                const key = s.userId || s.customerEmail || s.customerPhone || s.customerName || s.name || s.id;
-                if (key) planActiveUserKeys.add(String(key).toLowerCase().trim());
-              }
+            const planActiveSubs = subscribers.filter((s) => {
+              if (!isSubscriberActive(s)) return false;
+              const matchId = Boolean(s.planId && (s.planId === plan.id || s.planId === plan.planId));
+              const matchName = Boolean(s.planName && plan.name && s.planName.trim().toLowerCase() === plan.name.trim().toLowerCase());
+              return matchId || matchName;
             });
 
-            const currentActiveSubscribers = planActiveUserKeys.size > 0 
-              ? Math.max(planActiveUserKeys.size, plan.subscribersCount || 0)
+            const planActiveUserKeys = new Set<string>();
+            planActiveSubs.forEach((s) => {
+              const key = s.userId || s.customerEmail || s.customerPhone || s.customerName || s.name || s.id;
+              if (key) planActiveUserKeys.add(String(key).toLowerCase().trim());
+            });
+
+            const currentActiveSubscribers = subscribers.length > 0
+              ? planActiveUserKeys.size
               : (plan.subscribersCount || 0);
 
-            const weeklyNum = plan.rawWeeklyPrice || parseFloat(String(plan.weeklyPrice || "0").replace(/[^\d.]/g, "")) || 0;
-            const calculatedMonthlyRev = currentActiveSubscribers > 0 && weeklyNum > 0
-              ? `₹${(weeklyNum * 4 * currentActiveSubscribers).toLocaleString("en-IN")}`
-              : (plan.monthlyRevenue || "₹0");
+            const planBasePrice =
+              plan.rawWeeklyPrice ||
+              parseFloat(String(plan.weeklyPrice || plan.monthlyPrice || "0").replace(/[^\d.]/g, "")) ||
+              0;
+            const planActiveRevenueNum = planActiveSubs.length > 0
+              ? planActiveSubs.reduce((sum, s) => sum + (getSubscriberPrice(s) || planBasePrice), 0)
+              : currentActiveSubscribers * planBasePrice;
+            const calculatedMonthlyRev = planActiveRevenueNum > 0
+              ? `₹${planActiveRevenueNum.toLocaleString("en-IN")}`
+              : "₹0";
 
             return (
           <div
@@ -1059,22 +1094,6 @@ export default function ManageSubscriptionCanvas({
               Live resident assignments and auto-renewals.
             </p>
           </div>
-
-          <Link
-            href="/seller/orders"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "4px",
-              color: "#FF5500",
-              fontSize: "13px",
-              fontWeight: 600,
-              textDecoration: "none",
-            }}
-          >
-            <span>View Orders</span>
-            <ChevronRight size={14} />
-          </Link>
         </div>
 
         {/* Subscribers Table */}
@@ -1084,7 +1103,7 @@ export default function ManageSubscriptionCanvas({
               width: "100%",
               borderCollapse: "collapse",
               textAlign: "left",
-              fontSize: "13px",
+              fontSize: "12.5px",
             }}
           >
             <thead>
@@ -1092,22 +1111,25 @@ export default function ManageSubscriptionCanvas({
                 style={{
                   borderBottom: "1px solid #E2E8F0",
                   backgroundColor: "#F8FAFC",
+                  fontSize: "11.5px",
+                  letterSpacing: "0.02em",
                 }}
               >
-                <th style={{ padding: "12px 16px", color: "#475569", fontWeight: 700 }}>SUBSCRIBER</th>
-                <th style={{ padding: "12px 16px", color: "#475569", fontWeight: 700 }}>DELIVERY ADDRESS</th>
-                <th style={{ padding: "12px 16px", color: "#475569", fontWeight: 700 }}>PLAN PACKAGE</th>
-                <th style={{ padding: "12px 16px", color: "#475569", fontWeight: 700 }}>START DATE</th>
-                <th style={{ padding: "12px 16px", color: "#475569", fontWeight: 700 }}>NEXT RENEWAL</th>
-                <th style={{ padding: "12px 16px", color: "#475569", fontWeight: 700 }}>AMOUNT</th>
-                <th style={{ padding: "12px 16px", color: "#475569", fontWeight: 700 }}>STATUS</th>
+                <th style={{ padding: "11px 12px", color: "#475569", fontWeight: 700, whiteSpace: "nowrap" }}>SUBSCRIBER</th>
+                <th style={{ padding: "11px 12px", color: "#475569", fontWeight: 700, whiteSpace: "nowrap" }}>MOBILE NUMBER</th>
+                <th style={{ padding: "11px 12px", color: "#475569", fontWeight: 700, whiteSpace: "nowrap" }}>DELIVERY ADDRESS</th>
+                <th style={{ padding: "11px 12px", color: "#475569", fontWeight: 700, whiteSpace: "nowrap" }}>PLAN PACKAGE</th>
+                <th style={{ padding: "11px 10px", color: "#475569", fontWeight: 700, whiteSpace: "nowrap" }}>START DATE</th>
+                <th style={{ padding: "11px 10px", color: "#475569", fontWeight: 700, whiteSpace: "nowrap" }}>NEXT RENEWAL</th>
+                <th style={{ padding: "11px 10px", color: "#475569", fontWeight: 700, whiteSpace: "nowrap" }}>AMOUNT</th>
+                <th style={{ padding: "11px 12px", color: "#475569", fontWeight: 700, whiteSpace: "nowrap" }}>STATUS</th>
               </tr>
             </thead>
             <tbody>
               {filteredSubscribers.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     style={{
                       textAlign: "center",
                       padding: "40px 16px",
@@ -1121,59 +1143,94 @@ export default function ManageSubscriptionCanvas({
                   </td>
                 </tr>
               ) : (
-                filteredSubscribers.map((sub) => (
-                  <tr
-                    key={sub.id}
-                    style={{
-                      borderBottom: "1px solid #F1F5F9",
-                      transition: "background-color 0.15s ease",
-                    }}
-                    className="sub-row"
-                  >
-                    <td style={{ padding: "14px 16px", fontWeight: 600, color: "#0F172A" }}>
-                      {sub.customerName || sub.name || "Subscriber"}
-                    </td>
-                    <td style={{ padding: "14px 16px", color: "#475569" }}>
-                      {formatDeliveryAddressDisplay(sub.deliveryAddress, sub.roomNo)}
-                    </td>
-                    <td style={{ padding: "14px 16px", color: "#334155", fontWeight: 500 }}>
-                      {sub.planName}
-                    </td>
-                    <td style={{ padding: "14px 16px", color: "#64748B" }}>{sub.startDate}</td>
-                    <td style={{ padding: "14px 16px", color: "#64748B" }}>{sub.renewalDate}</td>
-                    <td style={{ padding: "14px 16px", fontWeight: 700, color: "#0F172A" }}>
-                      {sub.amount}
-                    </td>
-                    <td style={{ padding: "14px 16px" }}>
-                      <span
+                paginatedSubscribers.map((sub) => {
+                  const formattedAddress = formatDeliveryAddressDisplay(sub.deliveryAddress, sub.roomNo);
+                  return (
+                    <tr
+                      key={sub.id}
+                      style={{
+                        borderBottom: "1px solid #F1F5F9",
+                        transition: "background-color 0.15s ease",
+                      }}
+                      className="sub-row"
+                    >
+                      <td style={{ padding: "12px 12px", fontWeight: 600, color: "#0F172A", whiteSpace: "nowrap" }}>
+                        {sub.customerName || sub.name || "Subscriber"}
+                      </td>
+                      <td style={{ padding: "12px 12px", fontWeight: 600, color: "#334155", whiteSpace: "nowrap" }}>
+                        {sub.customerPhone && sub.customerPhone.trim() ? sub.customerPhone.trim() : "—"}
+                      </td>
+                      <td
                         style={{
-                          padding: "3px 8px",
-                          borderRadius: "5px",
-                          fontSize: "11.5px",
-                          fontWeight: 700,
-                          backgroundColor:
-                            sub.status === "Active"
-                              ? "#DCFCE7"
-                              : sub.status === "Expiring Soon"
-                              ? "#FEF3C7"
-                              : "#F1F5F9",
-                          color:
-                            sub.status === "Active"
-                              ? "#15803D"
-                              : sub.status === "Expiring Soon"
-                              ? "#B45309"
-                              : "#64748B",
+                          padding: "12px 12px",
+                          color: "#475569",
+                          maxWidth: "220px",
+                          minWidth: "160px",
                         }}
+                        title={formattedAddress}
                       >
-                        {sub.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))
+                        <div
+                          style={{
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                            lineHeight: 1.35,
+                            wordBreak: "break-word",
+                          }}
+                        >
+                          {formattedAddress}
+                        </div>
+                      </td>
+                      <td style={{ padding: "12px 12px", color: "#334155", fontWeight: 500, whiteSpace: "nowrap" }}>
+                        {sub.planName}
+                      </td>
+                      <td style={{ padding: "12px 10px", color: "#64748B", whiteSpace: "nowrap" }}>{sub.startDate}</td>
+                      <td style={{ padding: "12px 10px", color: "#64748B", whiteSpace: "nowrap" }}>{sub.renewalDate}</td>
+                      <td style={{ padding: "12px 10px", fontWeight: 700, color: "#0F172A", whiteSpace: "nowrap" }}>
+                        {sub.amount}
+                      </td>
+                      <td style={{ padding: "12px 12px", whiteSpace: "nowrap" }}>
+                        <span
+                          style={{
+                            padding: "3px 8px",
+                            borderRadius: "5px",
+                            fontSize: "11.5px",
+                            fontWeight: 700,
+                            backgroundColor:
+                              sub.status === "Active"
+                                ? "#DCFCE7"
+                                : sub.status === "Expiring Soon"
+                                ? "#FEF3C7"
+                                : "#F1F5F9",
+                            color:
+                              sub.status === "Active"
+                                ? "#15803D"
+                                : sub.status === "Expiring Soon"
+                                ? "#B45309"
+                                : "#64748B",
+                          }}
+                        >
+                          {sub.status}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
+
+        <PaginationControls
+          currentPage={subPage}
+          totalItems={filteredSubscribers.length}
+          pageSize={subPageSize}
+          onPageChange={setSubPage}
+          onPageSizeChange={setSubPageSize}
+          itemLabel="subscribers"
+          pageSizeOptions={[5, 10, 20, "All"]}
+        />
       </div>
 
       {/* Toast Notification Alert */}

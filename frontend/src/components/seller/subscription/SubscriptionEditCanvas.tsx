@@ -135,7 +135,7 @@ export default function SubscriptionEditCanvas({
         setFormData({
           planName: found.name,
           planTier: found.tier,
-          monthlyPrice: found.monthlyPrice,
+          monthlyPrice: found.weeklyPrice || found.monthlyPrice,
           quarterlyPrice: found.quarterlyPrice,
           yearlyPrice: found.yearlyPrice,
           includedFeatures: (found.features || []).map((feat, idx) => ({

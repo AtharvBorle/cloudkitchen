@@ -7,6 +7,7 @@ import crypto from "crypto";
 import { emitOrderCreated, emitOrderCancelled, emitOrderUpdated } from "@/lib/realtime-events";
 import { calculateDistanceKm, getPincodeCoordinates, MAX_DELIVERY_RADIUS_KM } from "@/lib/geo-distance";
 import { cancelExpiredOrder, isOrderExpired } from "@/lib/order-expiry";
+import { enrichOrderWithEta } from "@/lib/order-eta";
 
 export const validateDeliveryCoverage = async ({
     sellerProfile,
@@ -1048,8 +1049,9 @@ export const getOrderDetails = async (id: string) => {
         });
     }
 
+    const enriched = await enrichOrderWithEta(order);
     return {
-        ...order,
+        ...enriched,
         appliedCoupon
     };
 };

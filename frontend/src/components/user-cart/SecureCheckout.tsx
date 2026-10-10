@@ -2638,7 +2638,9 @@ const loadRazorpayScript = (): Promise<boolean> => {
                             }
                             if (details?.street || details?.formattedAddress) {
                               const streetVal = details.street || details.formattedAddress || "";
-                              setStreetAddress((prev) => (prev ? prev : streetVal));
+                              if (streetVal) {
+                                setStreetAddress(streetVal);
+                              }
                               if (errors.streetAddress) {
                                 setErrors((prev) => ({ ...prev, streetAddress: undefined }));
                               }

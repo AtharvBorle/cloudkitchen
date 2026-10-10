@@ -195,8 +195,8 @@ export default function Home() {
 
   // Compute dynamic filter counts from available kitchens & items
   const filterCounts = useMemo(() => {
-    const kitchens = (homeData.allKitchens && homeData.allKitchens.length > 0) ? homeData.allKitchens : homeData.kitchens;
-    const items = (homeData.allFoodItems && homeData.allFoodItems.length > 0) ? homeData.allFoodItems : homeData.foodItems;
+    const kitchens = homeData.kitchens;
+    const items = homeData.foodItems;
     if (!kitchens || kitchens.length === 0) return undefined;
 
     let baseKitchens = kitchens;
@@ -229,12 +229,12 @@ export default function Home() {
       price300plus: baseItems.filter((f) => f.price > 300).length,
       cuisineCounts,
     };
-  }, [homeData.kitchens, homeData.allKitchens, homeData.foodItems, homeData.allFoodItems, availableCuisines, homeSearchQuery, selectedCategory]);
+  }, [homeData.kitchens, homeData.foodItems, availableCuisines, homeSearchQuery, selectedCategory]);
 
   // Dynamic Kitchens / Places (and multi-dimensional filtering)
   const dynamicPlaces = useMemo(() => {
-    const sourceKitchens = (homeData.allKitchens && homeData.allKitchens.length > 0) ? homeData.allKitchens : homeData.kitchens;
-    const sourceFoodItems = (homeData.allFoodItems && homeData.allFoodItems.length > 0) ? homeData.allFoodItems : homeData.foodItems;
+    const sourceKitchens = homeData.kitchens;
+    const sourceFoodItems = homeData.foodItems;
 
     if (!sourceKitchens || sourceKitchens.length === 0) {
       return [];
@@ -331,11 +331,11 @@ export default function Home() {
       isOnline: k.isOnline !== false,
       foodType: k.foodType,
     }));
-  }, [homeData.kitchens, homeData.allKitchens, homeData.foodItems, homeData.allFoodItems, selectedCategory, activeFilters, homeSearchQuery]);
+  }, [homeData.kitchens, homeData.foodItems, selectedCategory, activeFilters, homeSearchQuery]);
 
   // Dynamic Offers for PopularOrders derived from active coupons & all eligible food items
   const dynamicOffers = useMemo(() => {
-    const sourceFoodItems = (homeData.allFoodItems && homeData.allFoodItems.length > 0) ? homeData.allFoodItems : homeData.foodItems;
+    const sourceFoodItems = homeData.foodItems;
     if (!sourceFoodItems || sourceFoodItems.length === 0 || !homeData.coupons || homeData.coupons.length === 0) {
       return [];
     }
@@ -419,11 +419,11 @@ export default function Home() {
     });
 
     return offersList.slice(0, 4);
-  }, [homeData.foodItems, homeData.allFoodItems, homeData.coupons, selectedCategory, activeFilters, homeSearchQuery]);
+  }, [homeData.foodItems, homeData.coupons, selectedCategory, activeFilters, homeSearchQuery]);
 
   // Dynamic Dishes for BestPlaces
   const dynamicDishes = useMemo(() => {
-    const sourceFoodItems = (homeData.allFoodItems && homeData.allFoodItems.length > 0) ? homeData.allFoodItems : homeData.foodItems;
+    const sourceFoodItems = homeData.foodItems;
     if (!sourceFoodItems || sourceFoodItems.length === 0) return [];
     let list = sourceFoodItems;
 
@@ -492,11 +492,11 @@ export default function Home() {
         discount: discountText,
       };
     });
-  }, [homeData.foodItems, homeData.allFoodItems, homeData.coupons, selectedCategory, activeFilters, homeSearchQuery]);
+  }, [homeData.foodItems, homeData.coupons, selectedCategory, activeFilters, homeSearchQuery]);
 
   // Dynamic Top Rated Items for DashboardBody
   const dynamicTopRated = useMemo(() => {
-    const sourceFoodItems = (homeData.allFoodItems && homeData.allFoodItems.length > 0) ? homeData.allFoodItems : homeData.foodItems;
+    const sourceFoodItems = homeData.foodItems;
     if (!sourceFoodItems || sourceFoodItems.length === 0) return [];
     let list = sourceFoodItems;
 
@@ -556,11 +556,11 @@ export default function Home() {
       addons: f.addons,
       variants: f.variants,
     }));
-  }, [homeData.foodItems, homeData.allFoodItems, homeData.coupons, selectedCategory, activeFilters, homeSearchQuery]);
+  }, [homeData.foodItems, homeData.coupons, selectedCategory, activeFilters, homeSearchQuery]);
 
   // Dynamic Recommended Dishes for RecommendedForYou
   const dynamicRecommended = useMemo(() => {
-    const sourceFoodItems = (homeData.allFoodItems && homeData.allFoodItems.length > 0) ? homeData.allFoodItems : homeData.foodItems;
+    const sourceFoodItems = homeData.foodItems;
     if (!sourceFoodItems || sourceFoodItems.length === 0) return [];
     let list = sourceFoodItems;
 
@@ -610,7 +610,7 @@ export default function Home() {
       stockQuantity: f.stockQuantity,
       maxStock: f.maxStock,
     }));
-  }, [homeData.foodItems, homeData.allFoodItems, selectedCategory, activeFilters, homeSearchQuery]);
+  }, [homeData.foodItems, selectedCategory, activeFilters, homeSearchQuery]);
 
   // Dynamic Promo Banner from active coupons or DB promo banners
   const promoProps = useMemo(() => {
@@ -687,8 +687,8 @@ export default function Home() {
       >
         {/* 1. Hero Section (Dynamic Search Autocomplete + Map Picker) */}
         <HeroSection
-          availableItems={homeData.allFoodItems}
-          availableKitchens={homeData.allKitchens}
+          availableItems={homeData.foodItems}
+          availableKitchens={homeData.kitchens}
           availableRooms={homeData.rooms}
           onSearch={handleHomeSearch}
           currentSearchQuery={homeSearchQuery}
@@ -842,8 +842,8 @@ export default function Home() {
         {/* 4. Properties / Best Places Nearby */}
         <Properties
           places={dynamicPlaces}
-          foodItems={(homeData.allFoodItems && homeData.allFoodItems.length > 0) ? homeData.allFoodItems : homeData.foodItems}
-          allKitchens={homeData.allKitchens}
+          foodItems={homeData.foodItems}
+          allKitchens={homeData.kitchens}
           isLoading={homeData.isLoading}
           selectedDietary={
             (activeFilters.dietary as string) === "pure_veg"
