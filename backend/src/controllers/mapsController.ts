@@ -108,11 +108,15 @@ function parseGoogleAddressComponents(
         }
     }
 
-    // Fallback locality/street from formatted address if empty
-    if (!locality && formattedAddress) {
+    // Fallback locality/street from formatted address if empty or redundant with city
+    if ((!locality || locality.toLowerCase() === city.toLowerCase()) && formattedAddress) {
         const parts = formattedAddress.split(",").map((s) => s.trim());
-        if (parts.length > 1) {
-            locality = parts[0];
+        const filtered = parts.filter((p) => {
+            const pl = p.toLowerCase();
+            return pl !== city.toLowerCase() && pl !== "india" && pl !== "maharashtra" && !/^\d{6}$/.test(p);
+        });
+        if (filtered.length > 0) {
+            locality = filtered[0];
         }
     }
 
@@ -471,7 +475,7 @@ export async function reverseGeocode(
             details = {
                 pincode: pin,
                 street: addr.road || addr.suburb || addr.neighbourhood || "",
-                locality: addr.suburb || addr.neighbourhood || addr.city_district || addr.quarter || "Pune Area",
+                locality: addr.residential || addr.suburb || addr.neighbourhood || addr.city_district || addr.quarter || "Pune Area",
                 landmark: addr.amenity || addr.shop || addr.commercial || addr.building || "",
                 houseNumber: addr.house_number || addr.building || "",
                 city: addr.city || addr.town || addr.village || "Pune",

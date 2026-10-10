@@ -120,36 +120,71 @@ export function HouseMapPicker({
                         fullscreenControl: false,
                         zoomControl: true,
                         gestureHandling: "greedy",
+                        mapId: "NEO_CLOUD_KITCHEN_MAP",
                     });
                     googleMapRef.current = map;
 
-                    // Create branded draggable Pin
-                    const marker = new google.maps.Marker({
-                        position: center,
-                        map,
-                        draggable: true,
-                        title: "Selected Delivery Location",
-                        animation: google.maps.Animation.DROP,
-                    });
+                    // Create branded draggable Pin (Using AdvancedMarkerElement when available)
+                    let marker: any = null;
+                    if (google.maps.marker && typeof google.maps.marker.AdvancedMarkerElement === "function") {
+                        try {
+                            marker = new google.maps.marker.AdvancedMarkerElement({
+                                map,
+                                position: center,
+                                gmpDraggable: true,
+                                title: "Selected Delivery Location",
+                            });
+
+                            marker.addListener("dragend", () => {
+                                const pos = marker.position;
+                                if (pos) {
+                                    const curLat = typeof pos.lat === "function" ? pos.lat() : pos.lat;
+                                    const curLng = typeof pos.lng === "function" ? pos.lng() : pos.lng;
+                                    handleReverseGeocode(curLat, curLng);
+                                }
+                            });
+
+                            map.addListener("click", (e: any) => {
+                                if (e.latLng) {
+                                    marker.position = e.latLng;
+                                    const curLat = e.latLng.lat();
+                                    const curLng = e.latLng.lng();
+                                    handleReverseGeocode(curLat, curLng);
+                                }
+                            });
+                        } catch (advErr) {
+                            console.warn("AdvancedMarkerElement init fallback:", advErr);
+                        }
+                    }
+
+                    if (!marker && typeof google.maps.Marker === "function") {
+                        marker = new google.maps.Marker({
+                            position: center,
+                            map,
+                            draggable: true,
+                            title: "Selected Delivery Location",
+                            animation: google.maps.Animation?.DROP,
+                        });
+
+                        marker.addListener("dragend", () => {
+                            const pos = marker.getPosition();
+                            if (pos) {
+                                const curLat = pos.lat();
+                                const curLng = pos.lng();
+                                handleReverseGeocode(curLat, curLng);
+                            }
+                        });
+
+                        map.addListener("click", (e: any) => {
+                            if (e.latLng) {
+                                const curLat = e.latLng.lat();
+                                const curLng = e.latLng.lng();
+                                marker.setPosition(e.latLng);
+                                handleReverseGeocode(curLat, curLng);
+                            }
+                        });
+                    }
                     googleMarkerRef.current = marker;
-
-                    marker.addListener("dragend", () => {
-                        const pos = marker.getPosition();
-                        if (pos) {
-                            const curLat = pos.lat();
-                            const curLng = pos.lng();
-                            handleReverseGeocode(curLat, curLng);
-                        }
-                    });
-
-                    map.addListener("click", (e: any) => {
-                        if (e.latLng) {
-                            const curLat = e.latLng.lat();
-                            const curLng = e.latLng.lng();
-                            marker.setPosition(e.latLng);
-                            handleReverseGeocode(curLat, curLng);
-                        }
-                    });
 
                     if (!skipInitialReverseGeocode && (latitude === null || longitude === null)) {
                         handleReverseGeocode(defaultLat, defaultLng);
@@ -288,7 +323,11 @@ export function HouseMapPicker({
             // 1. Google Maps
             if (googleMapRef.current && googleMarkerRef.current) {
                 const pos = { lat: latitude, lng: longitude };
-                googleMarkerRef.current.setPosition(pos);
+                if (typeof googleMarkerRef.current.setPosition === "function") {
+                    googleMarkerRef.current.setPosition(pos);
+                } else {
+                    googleMarkerRef.current.position = pos;
+                }
                 googleMapRef.current.panTo(pos);
             }
             // 2. Leaflet
@@ -408,7 +447,11 @@ export function HouseMapPicker({
         // Reposition Google Map or Leaflet
         if (googleMapRef.current && googleMarkerRef.current) {
             const pos = { lat: targetLat, lng: targetLng };
-            googleMarkerRef.current.setPosition(pos);
+            if (typeof googleMarkerRef.current.setPosition === "function") {
+                googleMarkerRef.current.setPosition(pos);
+            } else {
+                googleMarkerRef.current.position = pos;
+            }
             googleMapRef.current.panTo(pos);
             googleMapRef.current.setZoom(16);
         } else if (leafletMapRef.current && leafletMarkerRef.current) {

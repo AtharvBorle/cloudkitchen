@@ -145,7 +145,10 @@ async function waitForGoogleMapsMap(maxWaitMs = 6000): Promise<boolean> {
     }
     if (typeof (window as any).google?.maps?.importLibrary === "function") {
       try {
-        await (window as any).google.maps.importLibrary("maps");
+        await Promise.allSettled([
+          (window as any).google.maps.importLibrary("maps"),
+          (window as any).google.maps.importLibrary("marker"),
+        ]);
         if (typeof (window as any).google?.maps?.Map === "function") {
           return true;
         }
@@ -217,7 +220,7 @@ export async function loadGoogleMapsScript(): Promise<boolean> {
       const script = document.createElement("script");
       script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(
         config.apiKey
-      )}&libraries=places,geometry&callback=${callbackName}`;
+      )}&libraries=places,geometry,marker&loading=async&callback=${callbackName}`;
       script.async = true;
       script.defer = true;
 

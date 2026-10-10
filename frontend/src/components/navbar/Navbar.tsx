@@ -35,6 +35,7 @@ import { performLogout } from "@/lib/logout";
 import { MobileSidebar } from "@/components/mobile-sidebar";
 import { CustomerNotificationBell } from "@/components/notifications";
 import { useRoomModule } from "@/context/RoomModuleContext";
+import { formatShortDeliveryLocation } from "@/lib/geo-distance";
 import styles from "./Navbar.module.css";
 import logoImg from "./logo-nav.png";
 import profilePic from "./Rectangle.jpg";
@@ -264,14 +265,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   const liveCartCount = cartItems?.reduce((acc, item) => acc + item.quantity, 0) || 0;
   const currentCartCount = controlledCartCount !== undefined ? controlledCartCount : liveCartCount;
 
-  // Location string: use controlled prop if provided, otherwise use LocationProvider
-  const displayLocation = controlledLocation || (
-    defaultAddress?.locality || defaultAddress?.city
-      ? `${defaultAddress.locality ? defaultAddress.locality + ", " : ""}${defaultAddress.city || defaultAddress.pincode}`
-      : defaultAddress?.pincode
-        ? `PIN: ${defaultAddress.pincode}`
-        : "Select Location"
-  );
+  // Location string: use controlled prop if provided, otherwise format from LocationProvider
+  const displayLocation = controlledLocation || formatShortDeliveryLocation(defaultAddress);
 
   const currentVegOnly = controlledVegOnly !== undefined ? controlledVegOnly : internalVegOnly;
 
