@@ -698,9 +698,6 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
                   >
                     {/* Left Food Image */}
                     <div className={styles.foodImageWrapper}>
-                      <div style={{ position: "absolute", top: "4px", left: "4px", zIndex: 2 }}>
-                        <DietaryTag isVeg={item.isVeg !== false} itemType={(item as any).itemType} size="xs" />
-                      </div>
                       <Image
                         src={item.image || "/images/places/place-pizza.png"}
                         alt={item.title}
@@ -748,6 +745,11 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
                     <div className={styles.foodInfo}>
                       <h3 className={styles.foodTitle} style={{ color: isGrey ? "#64748B" : undefined }}>{item.title}</h3>
                       <p className={styles.foodDesc}>{item.description}</p>
+
+                      {/* Dietary Tag below description */}
+                      <div style={{ display: "flex", alignItems: "center", gap: "4px", margin: "2px 0 6px 0", flexWrap: "wrap" }}>
+                        <DietaryTag isVeg={item.isVeg !== false} itemType={(item as any).itemType} size="xs" />
+                      </div>
 
                       {item.addons && item.addons.length > 0 && (
                         <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", margin: "2px 0 6px 0" }}>

@@ -632,9 +632,6 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                                     filter: isGrey ? 'grayscale(100%)' : 'none',
                                                 }}
                                             />
-                                            <div style={{ position: 'absolute', top: '10px', left: '10px', zIndex: 2 }}>
-                                                <DietaryTag itemType={item.itemType} size="sm" />
-                                            </div>
                                             {isGrey && (
                                                 <div
                                                     style={{
@@ -701,7 +698,10 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                                 </h3>
                                                 <span style={{ color: isGrey ? '#94A3B8' : 'var(--coral)', fontWeight: 'bold', fontSize: '1.15rem' }}>₹{item.price}</span>
                                             </div>
-                                            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', flex: 1, marginBottom: '10px' }}>{item.description}</p>
+                                            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', flex: 1, marginBottom: '6px' }}>{item.description}</p>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '10px', flexWrap: 'wrap' }}>
+                                                <DietaryTag itemType={item.itemType} size="xs" />
+                                            </div>
 
                                             {/* Add-ons available preview */}
                                             {addons.length > 0 && (

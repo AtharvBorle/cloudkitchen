@@ -17,7 +17,7 @@ export interface ActiveHomeFilters {
   fastest?: boolean;
   minRating?: number | null;
   offersOnly?: boolean;
-  dietary?: "all" | "veg" | "non_veg" | "vegan" | "jain";
+  dietary?: "all" | "veg" | "pure_veg" | "non_veg" | "vegan" | "jain";
   priceTier?: "all" | "under-150" | "150-300" | "300-plus" | null;
   cuisines?: string[];
 }
@@ -25,6 +25,7 @@ export interface ActiveHomeFilters {
 export interface FilterCounts {
   all?: number;
   veg?: number;
+  pure_veg?: number;
   non_veg?: number;
   vegan?: number;
   jain?: number;
@@ -133,7 +134,7 @@ export default function FilterRow({
     updateFilters({ offersOnly: !internalFilters.offersOnly });
   };
 
-  const handleSelectDietary = (dietary: "all" | "veg" | "non_veg" | "vegan" | "jain") => {
+  const handleSelectDietary = (dietary: "all" | "veg" | "pure_veg" | "non_veg" | "vegan" | "jain") => {
     updateFilters({ dietary });
     setOpenPopover(null);
   };
@@ -186,16 +187,22 @@ export default function FilterRow({
   };
 
   // Count how many filters are active
+  const isDietaryActive = Boolean(
+    internalFilters.dietary &&
+    internalFilters.dietary !== "all" &&
+    internalFilters.dietary !== "veg"
+  );
+  const isNonVeg = internalFilters.dietary === "non_veg" || (internalFilters.dietary as string) === "non-veg";
+
+  // Count how many filters are active
   const activeCount =
     (internalFilters.fastest ? 1 : 0) +
     (internalFilters.minRating ? 1 : 0) +
     (internalFilters.offersOnly ? 1 : 0) +
-    (internalFilters.dietary && internalFilters.dietary !== "all" ? 1 : 0) +
+    (isDietaryActive ? 1 : 0) +
     (internalFilters.priceTier ? 1 : 0) +
     (internalFilters.cuisines && internalFilters.cuisines.length > 0 ? 1 : 0);
 
-  const isDietaryActive = Boolean(internalFilters.dietary && internalFilters.dietary !== "all");
-  const isNonVeg = internalFilters.dietary === "non_veg" || (internalFilters.dietary as string) === "non-veg";
   const isPriceActive = Boolean(internalFilters.priceTier && internalFilters.priceTier !== "all");
   const isCuisinesActive = Boolean(internalFilters.cuisines && internalFilters.cuisines.length > 0);
 
@@ -426,14 +433,14 @@ export default function FilterRow({
               )}
             </span>
             <span>
-              {internalFilters.dietary === "veg" || (internalFilters.dietary as string) === "pure_veg"
+              {internalFilters.dietary === "pure_veg"
                 ? "Pure Veg 🥦"
                 : internalFilters.dietary === "non_veg" || (internalFilters.dietary as string) === "non-veg"
                 ? "Non-Veg 🍗"
                 : internalFilters.dietary === "vegan"
                 ? "Vegan 🌱"
                 : internalFilters.dietary === "jain"
-                ? "Jain 🌿"
+                ? "Jain 🌾"
                 : "Dietary"}
             </span>
             <span className={`filter-chevron ${openPopover === "dietary" ? "is-open" : ""}`} style={{ display: "inline-flex", alignItems: "center" }}>
@@ -473,7 +480,7 @@ export default function FilterRow({
             >
               {[
                 { id: "all", label: "All Kitchens", count: counts?.all },
-                { id: "veg", label: "Pure Veg 🥦", count: counts?.veg },
+                { id: "pure_veg", label: "Pure Veg 🥦", count: counts?.pure_veg },
                 { id: "non_veg", label: "Non-Veg 🍗", count: counts?.non_veg },
                 { id: "vegan", label: "Vegan 🌱", count: counts?.vegan },
                 { id: "jain", label: "Jain 🌾", count: counts?.jain },
@@ -481,9 +488,7 @@ export default function FilterRow({
                 const isSelected =
                   opt.id === "all"
                     ? !internalFilters.dietary || internalFilters.dietary === "all"
-                    : opt.id === "veg" || (opt.id as string) === "pure_veg"
-                    ? internalFilters.dietary === "veg" || (internalFilters.dietary as string) === "pure_veg"
-                    : opt.id === "non_veg" || (opt.id as string) === "non-veg"
+                    : opt.id === "non_veg" || opt.id === "non-veg"
                     ? internalFilters.dietary === "non_veg" || (internalFilters.dietary as string) === "non-veg"
                     : internalFilters.dietary === opt.id;
                 const isItemNonVeg = opt.id === "non_veg" || opt.id === "non-veg";

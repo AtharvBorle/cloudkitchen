@@ -273,9 +273,6 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
             >
               {/* Square Food Image */}
               <div className={styles.imageWrapper}>
-                <div style={{ position: "absolute", top: "6px", left: "6px", zIndex: 2 }}>
-                  <DietaryTag isVeg={item.isVeg !== false} itemType={(item as any).itemType} size="xs" />
-                </div>
                 <Image
                   src={item.image}
                   alt={item.title}
@@ -356,6 +353,11 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
                   <p className={styles.foodDescription} title={item.description}>
                     {item.description}
                   </p>
+
+                  {/* Dietary Tag below description */}
+                  <div style={{ display: "flex", alignItems: "center", gap: "4px", margin: "2px 0 6px 0", flexWrap: "wrap" }}>
+                    <DietaryTag isVeg={item.isVeg !== false} itemType={(item as any).itemType} size="xs" />
+                  </div>
 
                   {item.addons && item.addons.length > 0 && (
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", margin: "4px 0 6px 0" }}>
