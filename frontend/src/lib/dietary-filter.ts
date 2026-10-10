@@ -3,7 +3,8 @@ export type DietaryOption = "all" | "veg" | "pure_veg" | "non_veg" | "non-veg" |
 export function normalizeDietary(diet?: string | null): DietaryOption {
   if (!diet) return "all";
   const lower = diet.toLowerCase().trim().replace(/[\s-]/g, "_");
-  if (lower === "pure_veg" || lower === "pureveg" || lower === "veg") return "pure_veg";
+  if (lower === "pure_veg" || lower === "pureveg") return "pure_veg";
+  if (lower === "veg") return "veg";
   if (lower === "non_veg" || lower === "nonveg") return "non_veg";
   if (lower === "vegan") return "vegan";
   if (lower === "jain" || lower === "satvik") return "jain";
@@ -328,7 +329,24 @@ export function isKitchenMatchingDiet(
     rawFoodType === "VEG_NON_VEG" ||
     rawFoodType === "VEG_AND_NON_VEG";
 
-  if (norm === "pure_veg" || norm === "veg") {
+  if (norm === "veg") {
+    // When user chooses "veg" from nav, show kitchens serving vegetarian food
+    // (includes pure-veg kitchens as well as kitchens serving both veg and non-veg)
+    if (isDeclaredPureVeg || isBothVegAndNonVeg) {
+      return true;
+    }
+
+    if (kitchenDishes.length > 0) {
+      // Must have at least one vegetarian dish
+      const hasAnyVegDish = kitchenDishes.some((d) => isDishMatchingDiet(d, "veg"));
+      return hasAnyVegDish;
+    }
+
+    // If no dishes loaded, show unless explicitly declared purely non-veg
+    return !isDeclaredNonVeg;
+  }
+
+  if (norm === "pure_veg") {
     // 1. Explicitly Non-Veg or Hybrid BOTH kitchen is NOT 100% Pure Veg
     if (isDeclaredNonVeg || isBothVegAndNonVeg) {
       return false;
