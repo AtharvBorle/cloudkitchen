@@ -234,16 +234,27 @@ export default function ManageSubscriptionCanvas({
     return isStatusActive && notPaused && notExpired;
   };
 
-  // Accurately calculate total unique users who currently have an active subscription
-  const activeUserKeys = new Set<string>();
-  subscribers.forEach((s) => {
-    if (isSubscriberActive(s)) {
-      const userKey = s.userId || s.customerEmail || s.customerPhone || s.customerName || s.name || s.id;
-      if (userKey) {
-        activeUserKeys.add(String(userKey).toLowerCase().trim());
-      }
+  // Accurately calculate unique users who currently have an active subscription
+  const getPlanBasePrice = (p: PlanItem) => {
+    const dur = (p.duration || "1 Week").toLowerCase();
+    if (dur.includes("year") && p.yearlyPrice) {
+      const yr = parseFloat(String(p.yearlyPrice).replace(/[^\d.]/g, ""));
+      if (yr > 0) return yr;
     }
-  });
+    if ((dur.includes("quarter") || dur.includes("3 month")) && p.quarterlyPrice) {
+      const qr = parseFloat(String(p.quarterlyPrice).replace(/[^\d.]/g, ""));
+      if (qr > 0) return qr;
+    }
+    if (dur.includes("month") && p.monthlyPrice) {
+      const mo = parseFloat(String(p.monthlyPrice).replace(/[^\d.]/g, ""));
+      if (mo > 0) return mo;
+    }
+    return (
+      p.rawWeeklyPrice ||
+      parseFloat(String(p.weeklyPrice || p.monthlyPrice || "0").replace(/[^\d.]/g, "")) ||
+      0
+    );
+  };
 
   const getSubscriberPrice = (s: RecentSubscriber) => {
     const directPrice = Number(s.pricePaid) || parseFloat((s.amount || "").replace(/[^\d.]/g, "")) || 0;
@@ -254,32 +265,36 @@ export default function ManageSubscriptionCanvas({
         (s.planName && p.name && s.planName.trim().toLowerCase() === p.name.trim().toLowerCase())
     );
     if (!matchedPlan) return 0;
-    return (
-      matchedPlan.rawWeeklyPrice ||
-      parseFloat(String(matchedPlan.weeklyPrice || matchedPlan.monthlyPrice || "0").replace(/[^\d.]/g, "")) ||
-      0
-    );
+    return getPlanBasePrice(matchedPlan);
   };
 
+  const uniqueActiveSubscribersMap = new Map<string, RecentSubscriber>();
+  subscribers.forEach((s) => {
+    if (isSubscriberActive(s)) {
+      const userKey = String(
+        s.userId || s.customerEmail || s.customerPhone || s.customerName || s.name || s.id
+      )
+        .toLowerCase()
+        .trim();
+      if (userKey && !uniqueActiveSubscribersMap.has(userKey)) {
+        uniqueActiveSubscribersMap.set(userKey, s);
+      }
+    }
+  });
+  const uniqueActiveSubscribers = Array.from(uniqueActiveSubscribersMap.values());
+
   const totalSubscribers = subscribers.length > 0
-    ? activeUserKeys.size
+    ? uniqueActiveSubscribers.length
     : (serverMetrics?.activeSubscribers !== undefined
         ? serverMetrics.activeSubscribers
         : plans.reduce((sum, p) => sum + (p.subscribersCount || 0), 0));
 
   const totalMonthlyRevNum = subscribers.length > 0
-    ? subscribers
-        .filter(isSubscriberActive)
-        .reduce((sum, s) => sum + getSubscriberPrice(s), 0)
+    ? uniqueActiveSubscribers.reduce((sum, s) => sum + getSubscriberPrice(s), 0)
     : (serverMetrics?.rawMRR !== undefined
         ? serverMetrics.rawMRR
         : plans.reduce(
-            (sum, p) =>
-              sum +
-              (p.rawWeeklyPrice ||
-                parseFloat(String(p.weeklyPrice || p.monthlyPrice || "0").replace(/[^\d.]/g, "")) ||
-                0) *
-                (p.subscribersCount || 0),
+            (sum, p) => sum + getPlanBasePrice(p) * (p.subscribersCount || 0),
             0
           ));
 
@@ -721,22 +736,26 @@ export default function ManageSubscriptionCanvas({
               return matchId || matchName;
             });
 
-            const planActiveUserKeys = new Set<string>();
+            const uniquePlanSubsMap = new Map<string, RecentSubscriber>();
             planActiveSubs.forEach((s) => {
-              const key = s.userId || s.customerEmail || s.customerPhone || s.customerName || s.name || s.id;
-              if (key) planActiveUserKeys.add(String(key).toLowerCase().trim());
+              const key = String(
+                s.userId || s.customerEmail || s.customerPhone || s.customerName || s.name || s.id
+              )
+                .toLowerCase()
+                .trim();
+              if (key && !uniquePlanSubsMap.has(key)) {
+                uniquePlanSubsMap.set(key, s);
+              }
             });
+            const uniquePlanActiveSubs = Array.from(uniquePlanSubsMap.values());
 
             const currentActiveSubscribers = subscribers.length > 0
-              ? planActiveUserKeys.size
+              ? uniquePlanActiveSubs.length
               : (plan.subscribersCount || 0);
 
-            const planBasePrice =
-              plan.rawWeeklyPrice ||
-              parseFloat(String(plan.weeklyPrice || plan.monthlyPrice || "0").replace(/[^\d.]/g, "")) ||
-              0;
-            const planActiveRevenueNum = planActiveSubs.length > 0
-              ? planActiveSubs.reduce((sum, s) => sum + (getSubscriberPrice(s) || planBasePrice), 0)
+            const planBasePrice = getPlanBasePrice(plan);
+            const planActiveRevenueNum = uniquePlanActiveSubs.length > 0
+              ? uniquePlanActiveSubs.reduce((sum, s) => sum + (getSubscriberPrice(s) || planBasePrice), 0)
               : currentActiveSubscribers * planBasePrice;
             const calculatedMonthlyRev = planActiveRevenueNum > 0
               ? `₹${planActiveRevenueNum.toLocaleString("en-IN")}`
@@ -834,7 +853,7 @@ export default function ManageSubscriptionCanvas({
               >
                 <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
                   <span style={{ fontSize: "24px", fontWeight: 800, color: "#0F172A" }}>
-                    {plan.weeklyPrice || plan.monthlyPrice}
+                    {planBasePrice > 0 ? `₹${planBasePrice}` : (plan.weeklyPrice || plan.monthlyPrice)}
                   </span>
                   <span style={{ fontSize: "12.5px", color: "#64748B", fontWeight: 500 }}>
                     {plan.duration === "1 Week" ? "/ week" : plan.duration === "2 Weeks" ? "/ 2 weeks" : plan.duration === "1 Month" ? "/ month" : `/${plan.duration || "cycle"}`}

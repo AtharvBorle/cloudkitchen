@@ -229,7 +229,7 @@ export default function SellerOffersClient({
                             <TrendingUp size={18} />
                         </div>
                     </div>
-                    <div style={{ fontSize: "24px", fontWeight: 800, color: "#0F172A" }}>{offers.length} Campaigns</div>
+                    <div style={{ fontSize: "24px", fontWeight: 800, color: "#0F172A" }}>{offers.length} Total Offers</div>
                     <div style={{ fontSize: "12px", color: "#64748B", marginTop: "4px" }}>All-time promotional rules</div>
                 </div>
             </div>

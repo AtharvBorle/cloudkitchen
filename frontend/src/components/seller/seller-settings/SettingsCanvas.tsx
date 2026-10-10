@@ -219,9 +219,10 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
   const searchParams = useSearchParams();
   const seller = useSellerProfile();
   const [activeTab, setActiveTab] = useState<SettingsTab>(() => {
+    const allowedTabs: SettingsTab[] = ["General", "Security"];
     const tabParam = searchParams?.get("tab");
     if (tabParam) {
-      const matched = (["General", "Notifications", "Security", "Preferences"] as SettingsTab[]).find(
+      const matched = allowedTabs.find(
         (t) => t.toLowerCase() === tabParam.toLowerCase()
       );
       if (matched) return matched;
@@ -230,14 +231,14 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
       try {
         const savedTab = localStorage.getItem("seller_settings_active_tab");
         if (savedTab) {
-          const matched = (["General", "Notifications", "Security", "Preferences"] as SettingsTab[]).find(
+          const matched = allowedTabs.find(
             (t) => t.toLowerCase() === savedTab.toLowerCase()
           );
           if (matched) return matched;
         }
       } catch {}
     }
-    return initialTab;
+    return initialTab === "Notifications" || initialTab === "Preferences" ? "General" : initialTab;
   });
 
   const [isEditingGeneral, setIsEditingGeneral] = useState(false);
@@ -351,7 +352,7 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
   useEffect(() => {
     const tabParam = searchParams?.get("tab");
     if (tabParam) {
-      const matched = (["General", "Notifications", "Security", "Preferences"] as SettingsTab[]).find(
+      const matched = (["General", "Security"] as SettingsTab[]).find(
         (t) => t.toLowerCase() === tabParam.toLowerCase()
       );
       if (matched) {
@@ -1020,7 +1021,7 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
 
       {/* 2. Tabs Navigation */}
       <div className={styles.tabsContainer} role="tablist">
-        {(["General", "Notifications", "Security", "Preferences"] as SettingsTab[]).map((tab) => (
+        {(["General", "Security"] as SettingsTab[]).map((tab) => (
           <button
             key={tab}
             type="button"
@@ -2263,29 +2264,22 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
         {/* Tab 3: Security */}
         {activeTab === "Security" && (
           <div className={styles.mainGrid}>
-            <div className={styles.leftColumn} style={{ gridColumn: "1 / -1", maxWidth: "720px" }}>
-              {/* 1. Password Management Card (Matching Reference Image) */}
+            <div className={styles.leftColumn}>
+              {/* 1. Password Management Card */}
               <PasswordManagementCard />
-              {/* 2. Danger Zone: Delete Kitchen Account */}
-              <SellerDeleteAccountCard />
             </div>
-          </div>
-        )}
 
-        {/* Tab 4: Preferences */}
-        {activeTab === "Preferences" && (
-          <div className={styles.mainGrid}>
-            <div className={styles.leftColumn} style={{ gridColumn: "1 / -1", maxWidth: "800px" }}>
+            <div className={styles.rightColumn}>
+              {/* 2. Backup and Archival: Export My Business Data */}
               <div className={styles.card}>
                 <h2 className={styles.cardTitle}>Data &amp; Account Management</h2>
 
-                {/* Backup and Archival */}
                 <div className={styles.backupSection} style={{ marginTop: 0, paddingTop: 0, borderTop: "none" }}>
                   <span className={styles.label} style={{ display: "block", marginBottom: "8px", fontSize: "13px", fontWeight: 700 }}>
                     Backup and Archival
                   </span>
                   <p style={{ fontSize: "13px", color: "#64748B", marginBottom: "16px", lineHeight: "1.5" }}>
-                    Export your complete store profile, menu catalog, operational schedules, and metrics, or permanently delete your seller account.
+                    Export your complete store profile, menu catalog, operational schedules, and metrics.
                   </p>
                   <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
                     <button
@@ -2296,30 +2290,12 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                     >
                       {isExportingData ? "Exporting Business Data..." : "Export My Business Data"}
                     </button>
-                    <button
-                      type="button"
-                      style={{
-                        padding: "9px 16px",
-                        borderRadius: "8px",
-                        border: "none",
-                        backgroundColor: "#FEE2E2",
-                        color: "#DC2626",
-                        fontSize: "13px",
-                        fontWeight: 600,
-                        cursor: "pointer",
-                        fontFamily: "inherit",
-                        transition: "all 0.15s ease",
-                      }}
-                      onClick={() => {
-                        setDeleteConfirmationText("");
-                        setIsDeleteModalOpen(true);
-                      }}
-                    >
-                      Delete Account Permanently
-                    </button>
                   </div>
                 </div>
               </div>
+
+              {/* 3. Danger Zone: Delete Kitchen Account */}
+              <SellerDeleteAccountCard />
             </div>
           </div>
         )}
