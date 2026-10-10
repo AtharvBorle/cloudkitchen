@@ -705,13 +705,17 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   padding: 12px 14px;
   background: #F8FAFC;
   border: 1.5px dashed #CBD5E1;
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+  position: relative;
 }
 
 .offerCard:hover {
@@ -729,24 +733,33 @@
   flex-direction: column;
   gap: 4px;
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .offerCodeRow {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .offerCodeBadge {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 800;
   color: #EA580C;
   background: #FFEDD5;
   border: 1px solid #FDBA74;
-  padding: 2px 8px;
+  padding: 2px 7px;
   border-radius: 6px;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   text-transform: uppercase;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  word-break: break-all;
 }
 
 .offerSaveBadge {
@@ -756,20 +769,24 @@
   background: #DCFCE7;
   padding: 2px 6px;
   border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .offerDescription {
-  font-size: 12.5px;
+  font-size: 12px;
   color: #334155;
   font-weight: 500;
   margin: 0;
   line-height: 1.35;
+  word-break: break-word;
 }
 
 .offerMinCart {
   font-size: 11px;
   font-weight: 600;
   color: #64748B;
+  white-space: nowrap;
 }
 
 .offerMinCartWarning {
@@ -778,6 +795,9 @@
 
 .offerCardRight {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 .offerApplyBtn {
@@ -791,6 +811,7 @@
   cursor: pointer;
   transition: all 0.15s ease;
   font-family: inherit;
+  white-space: nowrap;
 }
 
 .offerApplyBtn:hover:not(:disabled) {
@@ -1124,33 +1145,39 @@
 /* Toast Message */
 .toastMessage {
   position: fixed;
-  bottom: 32px;
+  top: 24px;
+  bottom: auto;
   left: 50%;
   transform: translateX(-50%);
   background: #0F172A;
   color: #FFFFFF;
-  padding: 14px 24px;
-  border-radius: 14px;
-  font-size: 14px;
+  padding: 11px 20px;
+  border-radius: 9999px;
+  font-size: 13.5px;
   font-weight: 600;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
-  display: flex;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(0, 0, 0, 0.08);
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
-  max-width: min(90vw, 480px);
-  word-break: break-word;
-  z-index: 1100;
-  animation: slideUp 0.2s ease-out;
+  width: auto;
+  min-width: 260px;
+  max-width: min(calc(100vw - 32px), 480px);
+  box-sizing: border-box;
+  z-index: 99999;
+  animation: slideToastDown 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  pointer-events: none;
+  backdrop-filter: blur(10px);
 }
 
-@keyframes slideUp {
-  from {
+@keyframes slideToastDown {
+  0% {
     opacity: 0;
-    transform: translate(-50%, 12px);
+    transform: translate(-50%, -18px) scale(0.96);
   }
-  to {
+  100% {
     opacity: 1;
-    transform: translate(-50%, 0);
+    transform: translate(-50%, 0) scale(1);
   }
 }
 
@@ -1254,6 +1281,33 @@
   }
   .applyButton {
     width: 100%;
+  }
+  .offerCard {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  .offerCodeBadge {
+    font-size: 11.5px;
+    padding: 2px 6px;
+    letter-spacing: 0.2px;
+  }
+  .offerApplyBtn {
+    padding: 5px 12px;
+    font-size: 12px;
+  }
+  .offerAppliedBtn {
+    padding: 5px 10px;
+    font-size: 11.5px;
+  }
+  .toastMessage {
+    top: 16px;
+    bottom: auto;
+    padding: 10px 16px;
+    font-size: 12.5px;
+    gap: 8px;
+    min-width: min(240px, calc(100vw - 28px));
+    max-width: calc(100vw - 24px);
+    border-radius: 9999px;
   }
 }
 

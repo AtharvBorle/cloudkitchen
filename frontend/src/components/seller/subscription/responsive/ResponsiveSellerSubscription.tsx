@@ -61,7 +61,6 @@ const STATUS_OPTIONS: { label: string; value: PlanStatus }[] = [
   { label: "All Statuses", value: "All" },
   { label: "Active", value: "Active" },
   { label: "Paused", value: "Paused" },
-  { label: "Draft", value: "Draft" },
 ];
 
 const BASE_TIER_OPTIONS: { label: string; value: PlanTier }[] = [

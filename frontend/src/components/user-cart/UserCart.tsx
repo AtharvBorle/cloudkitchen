@@ -261,13 +261,19 @@ export const UserCart: React.FC<UserCartProps> = ({
     if (defaultAddress) {
       const parts = [defaultAddress.houseNumber, defaultAddress.street, defaultAddress.locality, defaultAddress.landmark].filter(Boolean);
       const line = parts.join(", ");
-      return defaultAddress.pincode ? `${line} - ${defaultAddress.pincode}` : line;
+      if (line && defaultAddress.pincode) {
+        return `${line} - ${defaultAddress.pincode}`;
+      }
+      return line || defaultAddress.pincode || defaultAddressProp || "No address selected";
     }
     if (savedAddresses && savedAddresses.length > 0) {
       const def = savedAddresses.find((a) => a.isDefault) || savedAddresses[0];
       const parts = [def.houseNumber, def.street, def.locality, def.landmark].filter(Boolean);
       const line = parts.join(", ");
-      return def.pincode ? `${line} - ${def.pincode}` : line;
+      if (line && def.pincode) {
+        return `${line} - ${def.pincode}`;
+      }
+      return line || def.pincode || defaultAddressProp || "No address selected";
     }
     return defaultAddressProp || "No address selected";
   }, [defaultAddress, defaultAddressProp, savedAddresses]);
@@ -702,7 +708,7 @@ export const UserCart: React.FC<UserCartProps> = ({
     const isTypeChanged = appliedCoupon.discountType !== latestType;
 
     if (isPctChanged || isAmtChanged || isMaxChanged || isMinChanged || isTypeChanged) {
-      if ((latestType === "FLAT" || (!latestPct && latestAmt)) && latestAmt && latestAmt > subtotal) {
+      if ((latestType === "FLAT" || (!latestPct && latestAmt)) && latestAmt && latestAmt >= subtotal) {
         setAppliedCoupon(null);
         setAppliedPromo(null);
         setDiscountPercent(0);
@@ -722,7 +728,23 @@ export const UserCart: React.FC<UserCartProps> = ({
       if (latestPct > 0) {
         recalculatedDiscount = Math.round((subtotal * latestPct) / 100);
         if (latestMax) recalculatedDiscount = Math.min(recalculatedDiscount, latestMax);
+        if (recalculatedDiscount >= subtotal) {
+          setAppliedCoupon(null);
+          setAppliedPromo(null);
+          setDiscountPercent(0);
+          setPromoCode("");
+          lastAutoAppliedCodeRef.current = null;
+          return;
+        }
       } else if (latestAmt) {
+        if (latestAmt >= subtotal) {
+          setAppliedCoupon(null);
+          setAppliedPromo(null);
+          setDiscountPercent(0);
+          setPromoCode("");
+          lastAutoAppliedCodeRef.current = null;
+          return;
+        }
         recalculatedDiscount = latestAmt;
       }
 
@@ -830,7 +852,10 @@ export const UserCart: React.FC<UserCartProps> = ({
           });
           eligibleSub = matchingItems.reduce((acc, it) => acc + it.price * it.qty, 0);
         }
-        if (flatAmt > eligibleSub) return false;
+        if (flatAmt >= eligibleSub || flatAmt >= subtotal) return false;
+      } else {
+        const pct = Number(offer.discountPercentage || 0);
+        if (pct >= 100) return false;
       }
       return true;
     });
@@ -885,9 +910,10 @@ export const UserCart: React.FC<UserCartProps> = ({
       if (pct > 0) {
         disc = Math.round((targetSub * pct) / 100);
         if (offer.maxDiscountAmount) disc = Math.min(disc, Number(offer.maxDiscountAmount));
+        if (disc >= targetSub || disc >= subtotal) continue;
       } else {
         const flatAmt = Number(offer.discountAmount || offer.discountValue || 0);
-        if (flatAmt > targetSub) continue;
+        if (flatAmt >= targetSub || flatAmt >= subtotal) continue;
         disc = flatAmt;
       }
       if (disc >= maxDiscount) {
@@ -1299,46 +1325,53 @@ export const UserCart: React.FC<UserCartProps> = ({
     );
     if (matchingOffer) {
       const isPct = matchingOffer.discountType === "PERCENTAGE" || (matchingOffer.discountPercentage && !matchingOffer.discountAmount);
-      if (!isPct) {
-        const flatAmt = Number(matchingOffer.discountAmount || (matchingOffer.discountType === "FLAT" ? matchingOffer.discountValue : 0) || 0);
-        let eligibleSub = currentSubtotal;
-        if (matchingOffer.appliesToProductId) {
-          const allowedKeys = String(matchingOffer.appliesToProductId).split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
-          const isCat = matchingOffer.appliesTo === "CATEGORY";
-          const matchingItems = cartItems.filter((it) => {
-            if (isCat) {
-              const catId = String(it.categoryId || it.foodCategoryId || "").toLowerCase();
-              const catName = String(it.categoryName || (it.foodCategory as any)?.name || (it.category as any)?.name || it.category || it.foodCategory || "").toLowerCase().trim();
-              const name = String(it.name || "").toLowerCase().trim();
-              return allowedKeys.some((k) => k === catId || k === catName || (catName && catName.includes(k)) || (k && catName && k.includes(catName)) || (name && name.includes(k)));
-            }
-            const itemId = String(it.id || "").toLowerCase();
-            const foodItemId = String(it.foodItemId || "").toLowerCase();
-            const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+      const flatAmt = Number(matchingOffer.discountAmount || (matchingOffer.discountType === "FLAT" ? matchingOffer.discountValue : 0) || 0);
+      const pct = Number(matchingOffer.discountPercentage || 0);
+      let eligibleSub = currentSubtotal;
+      if (matchingOffer.appliesToProductId) {
+        const allowedKeys = String(matchingOffer.appliesToProductId).split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+        const isCat = matchingOffer.appliesTo === "CATEGORY";
+        const matchingItems = cartItems.filter((it) => {
+          if (isCat) {
+            const catId = String(it.categoryId || it.foodCategoryId || "").toLowerCase();
+            const catName = String(it.categoryName || (it.foodCategory as any)?.name || (it.category as any)?.name || it.category || it.foodCategory || "").toLowerCase().trim();
             const name = String(it.name || "").toLowerCase().trim();
-            return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name || (name && (name.includes(k) || k.includes(name))));
-          });
-          eligibleSub = matchingItems.reduce((acc, it) => acc + it.price * it.qty, 0);
-        }
-        if (flatAmt > eligibleSub) {
-          isSuppressingAutoApplyRef.current = true;
-          setAppliedCoupon(null);
-          setAppliedPromo(null);
-          setDiscountPercent(0);
-          showToast(`Coupon "${matchingOffer.code}" cannot be applied as the discount (₹${flatAmt}) exceeds the eligible item/cart value of ₹${eligibleSub}.`, "error", 4000);
-          setTimeout(() => {
-            isSuppressingAutoApplyRef.current = false;
-            if (previousCoupon && previousPromo && previousCoupon.code?.toUpperCase() !== targetCode) {
-              setAppliedCoupon(previousCoupon);
-              setAppliedPromo(previousPromo);
-              setPromoCode(previousPromo);
-              setDiscountPercent(previousPercent);
-            } else {
-              setPromoCode("");
-            }
-          }, 3000);
-          return;
-        }
+            return allowedKeys.some((k) => k === catId || k === catName || (catName && catName.includes(k)) || (k && catName && k.includes(catName)) || (name && name.includes(k)));
+          }
+          const itemId = String(it.id || "").toLowerCase();
+          const foodItemId = String(it.foodItemId || "").toLowerCase();
+          const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+          const name = String(it.name || "").toLowerCase().trim();
+          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name || (name && (name.includes(k) || k.includes(name))));
+        });
+        eligibleSub = matchingItems.reduce((acc, it) => acc + it.price * it.qty, 0);
+      }
+
+      const calculatedDisc = isPct
+        ? (matchingOffer.maxDiscountAmount ? Math.min(Math.round((eligibleSub * pct) / 100), Number(matchingOffer.maxDiscountAmount)) : Math.round((eligibleSub * pct) / 100))
+        : flatAmt;
+
+      if (calculatedDisc >= eligibleSub || calculatedDisc >= currentSubtotal || (currentSubtotal - calculatedDisc) <= 0) {
+        isSuppressingAutoApplyRef.current = true;
+        setAppliedCoupon(null);
+        setAppliedPromo(null);
+        setDiscountPercent(0);
+        const reason = isPct
+          ? `Coupon "${matchingOffer.code}" cannot be applied as the discount (${pct}%) reduces the payable amount to ₹0.`
+          : `Coupon "${matchingOffer.code}" cannot be applied as the discount (₹${flatAmt}) cannot reduce the payable amount to ₹0. Cart value must exceed ₹${flatAmt}.`;
+        showToast(reason, "error", 4000);
+        setTimeout(() => {
+          isSuppressingAutoApplyRef.current = false;
+          if (previousCoupon && previousPromo && previousCoupon.code?.toUpperCase() !== targetCode) {
+            setAppliedCoupon(previousCoupon);
+            setAppliedPromo(previousPromo);
+            setPromoCode(previousPromo);
+            setDiscountPercent(previousPercent);
+          } else {
+            setPromoCode("");
+          }
+        }, 3000);
+        return;
       }
     }
 
@@ -1543,10 +1576,12 @@ export const UserCart: React.FC<UserCartProps> = ({
     if (appliedCoupon.discountType === "PERCENTAGE" || (appliedCoupon.discountPercentage && !appliedCoupon.discountAmount)) {
       const pct = appliedCoupon.discountPercentage || 0;
       const raw = Math.round((targetSubtotal * pct) / 100);
-      return appliedCoupon.maxDiscountAmount ? Math.min(raw, appliedCoupon.maxDiscountAmount) : raw;
+      const capped = appliedCoupon.maxDiscountAmount ? Math.min(raw, appliedCoupon.maxDiscountAmount) : raw;
+      if (capped >= targetSubtotal || capped >= subtotal) return 0;
+      return capped;
     }
     const flat = appliedCoupon.discountAmount || 0;
-    if (flat > targetSubtotal) return 0;
+    if (flat >= targetSubtotal || flat >= subtotal) return 0;
     return flat;
   }, [appliedCoupon, subtotal, cartItems]);
 
@@ -2116,14 +2151,15 @@ export const UserCart: React.FC<UserCartProps> = ({
                           display: "flex",
                           alignItems: "center",
                           gap: "6px",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap"
+                          flexWrap: "wrap",
+                          minWidth: 0,
                         }}
                       >
-                        <span>{appliedCouponData?.code || appliedPromo}</span>
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%" }}>
+                          {appliedCouponData?.code || appliedPromo}
+                        </span>
                         {(appliedCouponData as any)?.isAutoApply && (
-                          <span style={{ fontSize: "0.68rem", backgroundColor: "#BBF7D0", color: "#15803D", padding: "1px 6px", borderRadius: "4px", fontWeight: "700", flexShrink: 0 }}>
+                          <span style={{ fontSize: "0.68rem", backgroundColor: "#BBF7D0", color: "#15803D", padding: "1px 6px", borderRadius: "4px", fontWeight: "700", flexShrink: 0, whiteSpace: "nowrap" }}>
                             ⚡ AUTO-APPLIED
                           </span>
                         )}
@@ -2258,7 +2294,9 @@ export const UserCart: React.FC<UserCartProps> = ({
                             const minMet = !offer.minimumCartValue || subtotal >= offer.minimumCartValue;
                             const isFlat = offer.discountType === "FLAT" || (!offer.discountPercentage && offer.discountAmount);
                             const flatAmt = Number(offer.discountAmount || (offer.discountType === "FLAT" ? offer.discountValue : 0) || 0);
-                            const exceedsSubtotal = isFlat && flatAmt > subtotal;
+                            const pct = Number(offer.discountPercentage || 0);
+                            const estimatedDiscount = isFlat ? flatAmt : Math.round((subtotal * pct) / 100);
+                            const exceedsSubtotal = subtotal > 0 && (estimatedDiscount >= subtotal || pct >= 100);
 
                             return (
                               <div
@@ -2266,6 +2304,16 @@ export const UserCart: React.FC<UserCartProps> = ({
                                 className={`${styles.offerCard} ${isCurrentApplied ? styles.offerCardApplied : ""}`}
                                 onClick={() => {
                                   if (!isCurrentApplied) {
+                                    if (exceedsSubtotal) {
+                                      showToast(
+                                        isFlat
+                                          ? `Coupon "${offer.code}" cannot be applied as the discount (₹${flatAmt}) cannot reduce the payable amount to ₹0. Cart value must exceed ₹${flatAmt}.`
+                                          : `Coupon "${offer.code}" cannot be applied as the discount cannot reduce the payable amount to ₹0.`,
+                                        "error",
+                                        4000
+                                      );
+                                      return;
+                                    }
                                     handleApplyPromo(offer.code);
                                     setIsCouponDropdownOpen(false);
                                   }
@@ -2290,7 +2338,7 @@ export const UserCart: React.FC<UserCartProps> = ({
                                   )}
                                   {exceedsSubtotal && (
                                     <span className={`${styles.offerMinCart} ${styles.offerMinCartWarning}`}>
-                                      Cart value must exceed ₹{flatAmt}
+                                      {isFlat ? `Cart value must exceed ₹${flatAmt}` : "Cart value must exceed discount"}
                                     </span>
                                   )}
                                 </div>
@@ -2708,9 +2756,6 @@ export const UserCart: React.FC<UserCartProps> = ({
         <div
           className={styles.toastMessage}
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
             backgroundColor:
               toast.type === "error"
                 ? "#FEF2F2"
@@ -2730,14 +2775,17 @@ export const UserCart: React.FC<UserCartProps> = ({
                 ? "#FCD34D"
                 : "#86EFAC"
             }`,
-            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08)",
+            boxShadow: "0 10px 30px -4px rgba(0, 0, 0, 0.16), 0 4px 10px rgba(0, 0, 0, 0.06)",
             zIndex: 99999,
+            pointerEvents: "none",
           }}
         >
-          {toast.type === "error" && <AlertCircle size={20} color="#DC2626" style={{ flexShrink: 0 }} />}
-          {toast.type === "warning" && <AlertTriangle size={20} color="#D97706" style={{ flexShrink: 0 }} />}
-          {(toast.type === "success" || toast.type === "info") && <CheckCircle2 size={20} color="#10B981" style={{ flexShrink: 0 }} />}
-          <span style={{ fontWeight: 600, fontSize: "0.88rem" }}>{toast.message}</span>
+          {toast.type === "error" && <AlertCircle size={18} color="#DC2626" style={{ flexShrink: 0 }} />}
+          {toast.type === "warning" && <AlertTriangle size={18} color="#D97706" style={{ flexShrink: 0 }} />}
+          {(toast.type === "success" || toast.type === "info") && <CheckCircle2 size={18} color="#10B981" style={{ flexShrink: 0 }} />}
+          <span style={{ fontWeight: 600, fontSize: "0.85rem", lineHeight: 1.35, wordBreak: "normal", overflowWrap: "break-word", textAlign: "left" }}>
+            {toast.message}
+          </span>
         </div>
       )}
 

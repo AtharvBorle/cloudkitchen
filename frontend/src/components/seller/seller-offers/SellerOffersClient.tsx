@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Plus, Tag, Percent, ArrowUpRight, TrendingUp, AlertCircle, Edit2, Trash2, CheckCircle2, Search, X } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
+import PaginationControls from "../common/PaginationControls";
 
 interface SellerOffersClientProps {
     sellerId: string;
@@ -23,6 +24,10 @@ export default function SellerOffersClient({
     const [filterStatus, setFilterStatus] = useState<"ALL" | "ACTIVE" | "EXPIRED" | "DRAFT">("ALL");
     const [couponToDelete, setCouponToDelete] = useState<{ id: string; code: string } | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+
+    // Pagination state (default 5 records per page)
+    const [currentPage, setCurrentPage] = useState<number>(1);
+    const [pageSize, setPageSize] = useState<number | "All">(5);
 
     const [localSearchQuery, setLocalSearchQuery] = useState(searchQueryProp || "");
     const searchQuery = searchQueryProp !== undefined ? searchQueryProp : localSearchQuery;
@@ -158,6 +163,27 @@ export default function SellerOffersClient({
             return false;
         });
     }, [offers, filterStatus, searchQuery]);
+
+    // Reset to page 1 whenever filters or search query change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [filterStatus, searchQuery]);
+
+    // Ensure currentPage does not exceed totalPages when list shrinks
+    const totalPages = pageSize === "All" ? 1 : Math.max(1, Math.ceil(filteredOffers.length / (Number(pageSize) || 5)));
+    useEffect(() => {
+        if (currentPage > totalPages) {
+            setCurrentPage(totalPages);
+        }
+    }, [currentPage, totalPages]);
+
+    // Slice records for current page (default 5 records)
+    const paginatedOffers = useMemo(() => {
+        if (pageSize === "All") return filteredOffers;
+        const numSize = Number(pageSize) || 5;
+        const startIndex = (currentPage - 1) * numSize;
+        return filteredOffers.slice(startIndex, startIndex + numSize);
+    }, [filteredOffers, currentPage, pageSize]);
 
     const activeCount = offers.filter(o => o.isActive && !isOfferDraft(o) && (!o.endDate || new Date(o.endDate) >= new Date())).length;
     const draftCount = offers.filter(o => isOfferDraft(o)).length;
@@ -451,7 +477,7 @@ export default function SellerOffersClient({
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredOffers.map(offer => {
+                                {paginatedOffers.map(offer => {
                                     const isExpired = offer.endDate && new Date(offer.endDate) < new Date();
                                     const discountLabel = offer.discountType === "PERCENTAGE" || offer.discountPercentage
                                         ? `${offer.discountPercentage || offer.discountValue}% OFF`
@@ -580,6 +606,22 @@ export default function SellerOffersClient({
                             </tbody>
                         </table>
                     </div>
+
+                    {/* Pagination Controls */}
+                    {filteredOffers.length > 0 && (
+                        <PaginationControls
+                            currentPage={currentPage}
+                            totalItems={filteredOffers.length}
+                            pageSize={pageSize}
+                            onPageChange={setCurrentPage}
+                            onPageSizeChange={(newSize) => {
+                                setPageSize(newSize);
+                                setCurrentPage(1);
+                            }}
+                            itemName="offers"
+                            pageSizeOptions={[5, 10, 20, 50, "All"]}
+                        />
+                    )}
                 </div>
             )}
 
