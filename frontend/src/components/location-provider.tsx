@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { fetchApi } from "@/lib/fetch-api";
 import { useSession } from "next-auth/react";
 import { LocationModal } from "@/components/location-modal/LocationModal";
-import { getPincodeCoordinates } from "@/lib/geo-distance";
+import { getPincodeCoordinates, formatShortDeliveryLocation } from "@/lib/geo-distance";
 import { reverseGeocodeCoords } from "@/lib/google-maps";
 
 export interface Address {
@@ -32,7 +32,15 @@ export interface LocationContextType {
   closeLocationModal: () => void;
   refreshAddress: () => Promise<void>;
   selectAddress: (addressId: string) => Promise<void>;
-  setGuestLocation: (pincode: string, locality?: string, city?: string, latitude?: number | null, longitude?: number | null) => void;
+  setGuestLocation: (
+    pincode: string,
+    locality?: string,
+    city?: string,
+    latitude?: number | null,
+    longitude?: number | null,
+    street?: string,
+    formattedAddress?: string
+  ) => void;
   detectGpsLocation: () => Promise<boolean>;
 }
 
@@ -103,7 +111,10 @@ export function LocationProvider({ children }: LocationProviderProps) {
           try {
             const details = await reverseGeocodeCoords(latitude, longitude);
             const pin = details.pincode || "";
-            const locality = details.locality || details.street || "Current Location";
+            const formattedShort = formatShortDeliveryLocation({ ...details, pincode: pin });
+            const locality = (formattedShort && formattedShort !== "Select Location")
+              ? formattedShort
+              : (details.locality || details.street || "Current Location");
             const city = details.city || "Pune";
 
             if (pin && pin.length === 6) {
@@ -155,12 +166,16 @@ export function LocationProvider({ children }: LocationProviderProps) {
     locality?: string,
     city?: string,
     latitude?: number | null,
-    longitude?: number | null
+    longitude?: number | null,
+    street?: string,
+    formattedAddress?: string
   ) => {
-    const pinInfo = getPincodeCoordinates(pincode);
+    const pinDigits = (pincode || "").replace(/\D/g, "").slice(0, 6);
+    const pinInfo = getPincodeCoordinates(pinDigits);
     const finalLat = (latitude != null && !isNaN(latitude)) ? latitude : (pinInfo?.lat ?? null);
     const finalLng = (longitude != null && !isNaN(longitude)) ? longitude : (pinInfo?.lng ?? null);
-    const finalLocality = locality || pinInfo?.locality || `PIN ${pincode}`;
+    const isGenericLoc = !locality || locality === "Pune" || locality === "Pune, Pune" || locality === "Current Location" || locality === "Pune Area";
+    const finalLocality = !isGenericLoc ? locality : (pinInfo?.locality ? `${pinInfo.locality}` : `PIN ${pinDigits || pincode}`);
     const finalCity = city || pinInfo?.city || "Pune";
 
     if (typeof window !== "undefined") {
@@ -169,6 +184,8 @@ export function LocationProvider({ children }: LocationProviderProps) {
       localStorage.setItem("guest-pincode", pincode);
       if (finalLocality) localStorage.setItem("guest-locality", finalLocality);
       if (finalCity) localStorage.setItem("guest-city", finalCity);
+      if (street) localStorage.setItem("guest-street", street);
+      if (formattedAddress) localStorage.setItem("guest-formatted-address", formattedAddress);
       if (finalLat !== null && !isNaN(finalLat)) localStorage.setItem("guest-lat", String(finalLat));
       else localStorage.removeItem("guest-lat");
       if (finalLng !== null && !isNaN(finalLng)) localStorage.setItem("guest-lng", String(finalLng));
@@ -183,6 +200,8 @@ export function LocationProvider({ children }: LocationProviderProps) {
       pincode: pincode,
       locality: finalLocality,
       city: finalCity,
+      street: street || undefined,
+      formattedAddress: formattedAddress || undefined,
       latitude: finalLat,
       longitude: finalLng,
       isDefault: true,
@@ -205,6 +224,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
           localStorage.setItem("guest-pincode", target.pincode);
           localStorage.setItem("guest-locality", finalLocality);
           localStorage.setItem("guest-city", finalCity);
+          if (target.street) localStorage.setItem("guest-street", target.street);
           if (finalLat !== null && !isNaN(finalLat)) localStorage.setItem("guest-lat", String(finalLat));
           if (finalLng !== null && !isNaN(finalLng)) localStorage.setItem("guest-lng", String(finalLng));
           window.dispatchEvent(new Event("location-changed"));
@@ -242,6 +262,12 @@ export function LocationProvider({ children }: LocationProviderProps) {
       const guestCity = hasExplicitlySelected && typeof window !== "undefined"
         ? localStorage.getItem("guest-city")
         : null;
+      const guestStreet = hasExplicitlySelected && typeof window !== "undefined"
+        ? localStorage.getItem("guest-street")
+        : null;
+      const guestFormattedAddress = hasExplicitlySelected && typeof window !== "undefined"
+        ? localStorage.getItem("guest-formatted-address")
+        : null;
       const rawLat = hasExplicitlySelected && typeof window !== "undefined"
         ? localStorage.getItem("guest-lat")
         : null;
@@ -262,6 +288,8 @@ export function LocationProvider({ children }: LocationProviderProps) {
           pincode: guestPin,
           locality: guestLocality || fallbackCoords?.locality || "Current Location",
           city: guestCity || fallbackCoords?.city || "Pune",
+          street: guestStreet || undefined,
+          formattedAddress: guestFormattedAddress || undefined,
           latitude: resolvedLat,
           longitude: resolvedLng,
           isDefault: true,
@@ -289,6 +317,8 @@ export function LocationProvider({ children }: LocationProviderProps) {
         : null;
       const userLocality = hasExplicitlySelected && typeof window !== "undefined" ? localStorage.getItem("guest-locality") : null;
       const userCity = hasExplicitlySelected && typeof window !== "undefined" ? localStorage.getItem("guest-city") : null;
+      const userStreet = hasExplicitlySelected && typeof window !== "undefined" ? localStorage.getItem("guest-street") : null;
+      const userFormattedAddress = hasExplicitlySelected && typeof window !== "undefined" ? localStorage.getItem("guest-formatted-address") : null;
       const rawLat = hasExplicitlySelected && typeof window !== "undefined" ? localStorage.getItem("guest-lat") : null;
       const rawLng = hasExplicitlySelected && typeof window !== "undefined" ? localStorage.getItem("guest-lng") : null;
       const parsedLat = rawLat ? parseFloat(rawLat) : null;
@@ -318,7 +348,10 @@ export function LocationProvider({ children }: LocationProviderProps) {
           const resolvedLng = (matchedSaved.longitude != null && !isNaN(Number(matchedSaved.longitude)))
             ? Number(matchedSaved.longitude)
             : (parsedLng && !isNaN(parsedLng) ? parsedLng : (pinCoords?.lng ?? null));
-          const resolvedLocality = matchedSaved.locality || matchedSaved.street || userLocality || pinCoords?.locality || `PIN ${userSelectedPin}`;
+          const isGenericSavedLoc = !matchedSaved.locality || matchedSaved.locality === "Pune" || matchedSaved.locality === "Pune, Pune" || matchedSaved.locality === "Current Location";
+          const resolvedLocality = !isGenericSavedLoc
+            ? matchedSaved.locality
+            : (matchedSaved.street || userLocality || pinCoords?.locality || `PIN ${userSelectedPin}`);
           const resolvedCity = matchedSaved.city || userCity || pinCoords?.city || "Pune";
 
           setDefaultAddress({
@@ -333,7 +366,8 @@ export function LocationProvider({ children }: LocationProviderProps) {
           const pinCoords = getPincodeCoordinates(userSelectedPin);
           const resolvedLat = (parsedLat && !isNaN(parsedLat)) ? parsedLat : (pinCoords?.lat ?? null);
           const resolvedLng = (parsedLng && !isNaN(parsedLng)) ? parsedLng : (pinCoords?.lng ?? null);
-          const resolvedLocality = userLocality || pinCoords?.locality || `PIN ${userSelectedPin}`;
+          const isGenericUserLoc = !userLocality || userLocality === "Pune" || userLocality === "Pune, Pune" || userLocality === "Current Location";
+          const resolvedLocality = !isGenericUserLoc ? userLocality : (pinCoords?.locality || `PIN ${userSelectedPin}`);
           const resolvedCity = userCity || pinCoords?.city || "Pune";
 
           setDefaultAddress({
@@ -342,6 +376,8 @@ export function LocationProvider({ children }: LocationProviderProps) {
             pincode: userSelectedPin,
             locality: resolvedLocality,
             city: resolvedCity,
+            street: userStreet || undefined,
+            formattedAddress: userFormattedAddress || undefined,
             latitude: resolvedLat,
             longitude: resolvedLng,
             isDefault: true,
@@ -353,7 +389,8 @@ export function LocationProvider({ children }: LocationProviderProps) {
         const pinCoords = getPincodeCoordinates(def.pincode);
         const resolvedLat = (def.latitude != null && !isNaN(Number(def.latitude))) ? Number(def.latitude) : (pinCoords?.lat ?? null);
         const resolvedLng = (def.longitude != null && !isNaN(Number(def.longitude))) ? Number(def.longitude) : (pinCoords?.lng ?? null);
-        const resolvedLocality = def.locality || def.street || pinCoords?.locality || `PIN ${def.pincode}`;
+        const isGenericDefLoc = !def.locality || def.locality === "Pune" || def.locality === "Pune, Pune" || def.locality === "Current Location";
+        const resolvedLocality = !isGenericDefLoc ? def.locality : (def.street || pinCoords?.locality || `PIN ${def.pincode}`);
         const resolvedCity = def.city || pinCoords?.city || "Pune";
 
         setDefaultAddress({
