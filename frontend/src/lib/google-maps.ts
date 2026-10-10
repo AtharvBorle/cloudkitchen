@@ -334,6 +334,9 @@ async function fetchPlaceSuggestionsClient(
 ): Promise<PlacePredictionItem[] | null> {
   if (typeof window === "undefined") return null;
   if (!(window as any).google?.maps?.places?.AutocompleteService) {
+    await loadGoogleMapsScript();
+  }
+  if (!(window as any).google?.maps?.places?.AutocompleteService) {
     return null;
   }
 
@@ -386,6 +389,9 @@ async function fetchPlaceSuggestionsClient(
  */
 async function fetchPlaceDetailsClient(placeId: string): Promise<NormalizedAddressDetails | null> {
   if (typeof window === "undefined" || !placeId) return null;
+  if (!(window as any).google?.maps?.places?.PlacesService) {
+    await loadGoogleMapsScript();
+  }
   if (!(window as any).google?.maps?.places?.PlacesService) return null;
 
   return new Promise((resolve) => {
@@ -425,6 +431,9 @@ async function fetchPlaceDetailsClient(placeId: string): Promise<NormalizedAddre
  */
 async function reverseGeocodeCoordsClient(lat: number, lng: number): Promise<NormalizedAddressDetails | null> {
   if (typeof window === "undefined") return null;
+  if (!(window as any).google?.maps?.Geocoder) {
+    await loadGoogleMapsScript();
+  }
   if (!(window as any).google?.maps?.Geocoder) return null;
 
   return new Promise((resolve) => {
@@ -456,6 +465,9 @@ async function reverseGeocodeCoordsClient(lat: number, lng: number): Promise<Nor
  */
 async function geocodeAddressQueryClient(address: string): Promise<NormalizedAddressDetails | null> {
   if (typeof window === "undefined" || !address) return null;
+  if (!(window as any).google?.maps?.Geocoder) {
+    await loadGoogleMapsScript();
+  }
   if (!(window as any).google?.maps?.Geocoder) return null;
 
   return new Promise((resolve) => {
