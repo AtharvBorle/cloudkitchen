@@ -22,6 +22,13 @@ import { usePathname } from "next/navigation";
 import { HouseMapPicker } from "@/components/house-map-picker";
 import { getPincodeCoordinates, PINCODE_COORDINATES } from "@/lib/geo-distance";
 import { findDuplicateAddress } from "@/lib/address-validation";
+import {
+  fetchPlaceSuggestions,
+  fetchPlaceDetails,
+  reverseGeocodeCoords,
+  geocodeAddressQuery,
+  PlacePredictionItem,
+} from "@/lib/google-maps";
 import styles from "./LocationModal.module.css";
 
 const POPULAR_AREAS = [
@@ -186,30 +193,18 @@ export const LocationModal: React.FC = () => {
         }
       }
 
-      // 3. Fallback: Online forward geocoding via OpenStreetMap Nominatim
+      // 3. Forward geocoding via Google Maps API (with fallback)
       if (finalLat === null || finalLng === null) {
         setIsSearchingLocation(true);
         try {
-          const searchQuery = cleanPin ? `${cleanPin}, India` : `${raw}, Pune, Maharashtra, India`;
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-              searchQuery
-            )}&countrycodes=in&limit=1`,
-            { headers: { "Accept-Language": "en" } }
-          );
-          if (res.ok) {
-            const results = await res.json();
-            if (results && results.length > 0) {
-              const item = results[0];
-              finalLat = parseFloat(item.lat);
-              finalLng = parseFloat(item.lon);
-              const displayName = item.display_name || raw;
-              const parts = displayName.split(",");
-              localityName = parts.slice(0, 2).join(",").trim() || raw;
-              const matchPin = displayName.match(/\b\d{6}\b/);
-              if (matchPin) {
-                cleanPin = matchPin[0];
-              }
+          const searchQuery = cleanPin ? `${cleanPin}, Pune, India` : `${raw}, Pune, Maharashtra, India`;
+          const geocoded = await geocodeAddressQuery(searchQuery);
+          if (geocoded && geocoded.lat && geocoded.lng) {
+            finalLat = geocoded.lat;
+            finalLng = geocoded.lng;
+            localityName = geocoded.locality || geocoded.street || raw;
+            if (geocoded.pincode && geocoded.pincode.length === 6) {
+              cleanPin = geocoded.pincode;
             }
           }
         } catch (geoErr) {
@@ -322,36 +317,22 @@ export const LocationModal: React.FC = () => {
         setLongitude(lng);
 
         try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
-          );
-          if (res.ok) {
-            const data = await res.json();
-            const addr = data.address || {};
-            const pin = (addr.postcode || "").replace(/\D/g, "").slice(0, 6) || "411001";
-            const locality =
-              addr.suburb ||
-              addr.neighbourhood ||
-              addr.residential ||
-              addr.city_district ||
-              addr.road ||
-              addr.town ||
-              addr.city ||
-              "Current Location";
+          const details = await reverseGeocodeCoords(lat, lng);
+          const pin = details.pincode || "411001";
+          const locality = details.locality || details.street || "Current Location";
 
-            setPincodeInput(pin);
-            setResolvedPincode(pin);
-            setResolvedLocality(locality);
-            setGuestLocation(pin, locality, "Pune", lat, lng);
-            if (session?.user) {
-              fetchApi("/api/user/location", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ pincode: pin, lat, lng }),
-              }).catch(() => {});
-            }
-            showNotification("success", `GPS Location Detected: ${locality} (${pin})`);
+          setPincodeInput(pin);
+          setResolvedPincode(pin);
+          setResolvedLocality(locality);
+          setGuestLocation(pin, locality, details.city || "Pune", lat, lng);
+          if (session?.user) {
+            fetchApi("/api/user/location", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ pincode: pin, lat, lng }),
+            }).catch(() => {});
           }
+          showNotification("success", `GPS Location Detected: ${locality} (${pin})`);
         } catch (err) {
           console.error("GPS Reverse Geocode Error:", err);
           showNotification("error", "Error connecting to location service. You can drag the pin manually.");

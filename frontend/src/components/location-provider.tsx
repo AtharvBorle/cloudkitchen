@@ -6,6 +6,7 @@ import { fetchApi } from "@/lib/fetch-api";
 import { useSession } from "next-auth/react";
 import { LocationModal } from "@/components/location-modal/LocationModal";
 import { getPincodeCoordinates } from "@/lib/geo-distance";
+import { reverseGeocodeCoords } from "@/lib/google-maps";
 
 export interface Address {
   id: string;
@@ -100,54 +101,40 @@ export function LocationProvider({ children }: LocationProviderProps) {
         async (position) => {
           const { latitude, longitude } = position.coords;
           try {
-            const res = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
-            );
-            if (res.ok) {
-              const data = await res.json();
-              const addr = data.address || {};
-              const pin = (addr.postcode || "").replace(/\D/g, "").slice(0, 6);
-              const locality =
-                addr.suburb ||
-                addr.neighbourhood ||
-                addr.residential ||
-                addr.city_district ||
-                addr.road ||
-                addr.town ||
-                addr.city ||
-                "Current Location";
-              const city = addr.city || addr.town || addr.state_district || addr.state || "Pune";
+            const details = await reverseGeocodeCoords(latitude, longitude);
+            const pin = details.pincode || "";
+            const locality = details.locality || details.street || "Current Location";
+            const city = details.city || "Pune";
 
-              if (pin && pin.length === 6) {
-                const detectedAddress: Address = {
-                  id: "gps-location",
-                  type: "Current Location",
-                  pincode: pin,
-                  locality,
-                  city,
-                  latitude,
-                  longitude,
-                  isDefault: true,
-                };
-                setDefaultAddress(detectedAddress);
-                localStorage.setItem("user-has-selected-location", "true");
-                localStorage.setItem("guest-pincode", pin);
-                localStorage.setItem("guest-locality", locality);
-                localStorage.setItem("guest-city", city);
-                localStorage.setItem("guest-lat", String(latitude));
-                localStorage.setItem("guest-lng", String(longitude));
+            if (pin && pin.length === 6) {
+              const detectedAddress: Address = {
+                id: "gps-location",
+                type: "Current Location",
+                pincode: pin,
+                locality,
+                city,
+                latitude,
+                longitude,
+                isDefault: true,
+              };
+              setDefaultAddress(detectedAddress);
+              localStorage.setItem("user-has-selected-location", "true");
+              localStorage.setItem("guest-pincode", pin);
+              localStorage.setItem("guest-locality", locality);
+              localStorage.setItem("guest-city", city);
+              localStorage.setItem("guest-lat", String(latitude));
+              localStorage.setItem("guest-lng", String(longitude));
 
-                if (status === "authenticated") {
-                  fetchApi("/api/user/location", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ pincode: pin, lat: latitude, lng: longitude }),
-                  }).catch(() => {});
-                }
-
-                resolve(true);
-                return;
+              if (status === "authenticated") {
+                fetchApi("/api/user/location", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ pincode: pin, lat: latitude, lng: longitude }),
+                }).catch(() => {});
               }
+
+              resolve(true);
+              return;
             }
           } catch (err) {
             console.error("GPS Reverse Geocoding failed:", err);

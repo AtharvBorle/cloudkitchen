@@ -144,19 +144,6 @@ export default function RecommendedForYou({
                   }}
                   className="rec-img-box"
                 >
-                  <div style={{ position: "absolute", top: "8px", left: "8px", zIndex: 2 }}>
-                    <DietaryTag
-                      itemType={
-                        dish.itemType ||
-                        (dish.name.toLowerCase().includes("chicken") ||
-                        dish.name.toLowerCase().includes("wings") ||
-                        dish.name.toLowerCase().includes("meat")
-                          ? "NON_VEG"
-                          : "VEG")
-                      }
-                      size="xs"
-                    />
-                  </div>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={dish.imageUrl}
@@ -209,7 +196,7 @@ export default function RecommendedForYou({
                     padding: "10px 12px 12px 12px",
                     display: "flex",
                     flexDirection: "column",
-                    gap: "4px",
+                    gap: "6px",
                   }}
                 >
                   <h3
@@ -226,6 +213,24 @@ export default function RecommendedForYou({
                   >
                     {dish.name}
                   </h3>
+
+                  {/* Dietary Tag below Title */}
+                  <div style={{ display: "flex", alignItems: "center", gap: "4px", flexWrap: "wrap" }}>
+                    <DietaryTag
+                      itemType={
+                        dish.itemType ||
+                        (dish.name.toLowerCase().includes("chicken") ||
+                        dish.name.toLowerCase().includes("mutton") ||
+                        dish.name.toLowerCase().includes("fish") ||
+                        dish.name.toLowerCase().includes("wings") ||
+                        dish.name.toLowerCase().includes("meat") ||
+                        dish.name.toLowerCase().includes("biryani")
+                          ? "NON_VEG"
+                          : "VEG")
+                      }
+                      size="xs"
+                    />
+                  </div>
 
                   {/* Price & Delivery Time */}
                   <span

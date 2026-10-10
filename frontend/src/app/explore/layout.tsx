@@ -11,6 +11,12 @@ import { fetchApi } from "@/lib/fetch-api";
 import { useSession } from "next-auth/react";
 import { performLogout } from "@/lib/logout";
 import { Footer } from "@/components/explore-desktop/footer";
+import {
+    reverseGeocodeWithGoogle,
+    geocodeWithGoogle,
+    fetchPlacesAutocomplete,
+    fetchPlaceDetails,
+} from "@/lib/google-maps";
 
 interface MapPickerProps {
     onLocationSelected: (pincode: string) => void;
@@ -31,13 +37,10 @@ function MapPicker({ onLocationSelected }: MapPickerProps) {
     const handleGeocode = async (lat: number, lng: number) => {
         setLoadingGeocode(true);
         try {
-            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
-            if (res.ok) {
-                const data = await res.json();
-                const pincode = data.address?.postcode || "";
-                const displayName = data.display_name || "";
-                setSelectedPincode(pincode);
-                setSelectedAddress(displayName);
+            const geo = await reverseGeocodeWithGoogle(lat, lng);
+            if (geo) {
+                setSelectedPincode(geo.pincode || "");
+                setSelectedAddress(geo.address || "");
             }
         } catch (err) {
             console.error("Reverse geocoding error:", err);
@@ -51,12 +54,28 @@ function MapPicker({ onLocationSelected }: MapPickerProps) {
         if (!searchQuery.trim()) return;
         setSearching(true);
         try {
-            const res = await fetch(
-                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&countrycodes=in&limit=5`
-            );
-            if (res.ok) {
-                const data = await res.json();
-                setSearchResults(data);
+            const predictions = await fetchPlacesAutocomplete(searchQuery);
+            if (predictions && predictions.length > 0) {
+                setSearchResults(
+                    predictions.map((p) => ({
+                        display_name: p.description,
+                        place_id: p.placeId,
+                    }))
+                );
+            } else {
+                const geo = await geocodeWithGoogle(searchQuery);
+                if (geo) {
+                    setSearchResults([
+                        {
+                            display_name: geo.formattedAddress,
+                            lat: geo.lat,
+                            lon: geo.lng,
+                            pincode: geo.pincode,
+                        },
+                    ]);
+                } else {
+                    setSearchResults([]);
+                }
             }
         } catch (err) {
             console.error("Search error:", err);
@@ -65,20 +84,37 @@ function MapPicker({ onLocationSelected }: MapPickerProps) {
         }
     };
 
-    const handleSelectResult = (result: any) => {
-        const lat = parseFloat(result.lat);
-        const lon = parseFloat(result.lon);
-        setCoords({ lat, lng: lon });
+    const handleSelectResult = async (result: any) => {
         setSearchResults([]);
         setSearchQuery("");
-        if (mapRef.current && markerRef.current) {
-            const L = (window as any).L;
-            if (L) {
-                mapRef.current.setView([lat, lon], 16);
-                markerRef.current.setLatLng([lat, lon]);
+        let lat = result.lat;
+        let lon = result.lon;
+        let pin = result.pincode;
+
+        if (result.place_id && (!lat || !lon)) {
+            const details = await fetchPlaceDetails(result.place_id);
+            if (details) {
+                lat = details.lat;
+                lon = details.lng;
+                if (details.pincode) pin = details.pincode;
+                if (details.formattedAddress) setSelectedAddress(details.formattedAddress);
             }
         }
-        handleGeocode(lat, lon);
+
+        if (lat && lon) {
+            setCoords({ lat, lng: lon });
+            if (pin) setSelectedPincode(pin);
+            if (mapRef.current && markerRef.current) {
+                const L = (window as any).L;
+                if (L) {
+                    mapRef.current.setView([lat, lon], 16);
+                    markerRef.current.setLatLng([lat, lon]);
+                }
+            }
+            if (!pin) {
+                handleGeocode(lat, lon);
+            }
+        }
     };
 
     useEffect(() => {
@@ -447,19 +483,15 @@ export function ExploreHeader() {
             async (position) => {
                 const { latitude, longitude } = position.coords;
                 try {
-                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
-                    if (res.ok) {
-                        const data = await res.json();
-                        const pincode = data.address?.postcode;
-                        const displayName = data.display_name;
-                        if (pincode) {
-                            setGpsSuccessPincode(pincode);
-                            setGpsAddress(displayName || "");
-                        } else {
-                            setGpsError("Could not detect a valid pincode at your GPS coordinates.");
-                        }
+                    const geo = await reverseGeocodeWithGoogle(latitude, longitude);
+                    if (geo && geo.pincode) {
+                        setGpsSuccessPincode(geo.pincode);
+                        setGpsAddress(geo.address || "");
+                    } else if (geo && geo.address) {
+                        setGpsAddress(geo.address);
+                        setGpsError("Could not detect a valid 6-digit pincode at your GPS coordinates. Please confirm manually.");
                     } else {
-                        setGpsError("Failed to fetch address from geocoding service.");
+                        setGpsError("Could not detect a valid pincode at your GPS coordinates.");
                     }
                 } catch (err) {
                     setGpsError("Error communicating with reverse-geocoding service.");

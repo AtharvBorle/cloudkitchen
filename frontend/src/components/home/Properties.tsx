@@ -213,7 +213,7 @@ export default function Properties({
     if (typeof window !== "undefined") {
       try {
         const saved = localStorage.getItem("cloudkitchen_diet_preference");
-        if (saved === "veg" || saved === "pure_veg" || saved === "pureveg") return ["pure_veg"];
+        if (saved === "pure_veg" || saved === "pureveg") return ["pure_veg"];
         if (saved === "non-veg" || saved === "non_veg") return ["non-veg"];
         if (saved === "vegan") return ["vegan"];
         if (saved === "jain") return ["jain"];
@@ -231,8 +231,10 @@ export default function Properties({
     const handleDietEvent = (e: any) => {
       const d = e?.detail;
       if (!d) return;
-      if (d === "veg" || d === "pure_veg" || d === "pureveg") {
+      if (d === "pure_veg" || d === "pureveg") {
         setInternalSelectedDietary(["pure_veg"]);
+      } else if (d === "veg") {
+        setInternalSelectedDietary([]);
       } else if (d === "non-veg" || d === "non_veg") {
         setInternalSelectedDietary(["non-veg"]);
       } else if (d === "vegan") {
@@ -325,11 +327,11 @@ export default function Properties({
   };
 
   const toggleDietary = (id: string) => {
-    const isPureVegId = id === "pure_veg" || id === "veg";
+    const isPureVegId = id === "pure_veg";
     const isNonVegId = id === "non-veg" || id === "non_veg";
 
     const isCurrentlyChecked = isPureVegId
-      ? selectedDietary.includes("pure_veg") || selectedDietary.includes("veg")
+      ? selectedDietary.includes("pure_veg")
       : isNonVegId
       ? selectedDietary.includes("non-veg") || selectedDietary.includes("non_veg")
       : selectedDietary.includes(id);
@@ -337,7 +339,7 @@ export default function Properties({
     let next: string[];
     if (isCurrentlyChecked) {
       if (isPureVegId) {
-        next = selectedDietary.filter((item) => item !== "pure_veg" && item !== "veg");
+        next = selectedDietary.filter((item) => item !== "pure_veg");
       } else if (isNonVegId) {
         next = selectedDietary.filter((item) => item !== "non-veg" && item !== "non_veg");
       } else {
@@ -360,7 +362,7 @@ export default function Properties({
 
     if (typeof window !== "undefined") {
       try {
-        const dietVal = next.includes("pure_veg") || next.includes("veg")
+        const dietVal = next.includes("pure_veg")
           ? "pure_veg"
           : next.includes("non-veg") || next.includes("non_veg")
           ? "non-veg"
@@ -442,7 +444,7 @@ export default function Properties({
     const params = new URLSearchParams();
 
     const isPure = isPlacePureVeg(place, foodItems);
-    const isPureVegActive = selectedDietary.includes("pure_veg") || selectedDietary.includes("pure-veg") || selectedDietary.includes("veg");
+    const isPureVegActive = selectedDietary.includes("pure_veg") || selectedDietary.includes("pure-veg");
 
     if (isPure || isPureVegActive) {
       params.set("vegOnly", "true");
@@ -653,7 +655,7 @@ export default function Properties({
               {dynamicDietary.map((item) => {
                 const isChecked =
                   item.id === "pure_veg"
-                    ? selectedDietary.includes("pure_veg") || selectedDietary.includes("veg")
+                    ? selectedDietary.includes("pure_veg") || selectedDietary.includes("pure-veg")
                     : item.id === "non-veg"
                     ? selectedDietary.includes("non-veg") || selectedDietary.includes("non_veg")
                     : selectedDietary.includes(item.id);

@@ -12,6 +12,7 @@ import {
   BedDouble,
   UtensilsCrossed,
   CheckCheck,
+  Check,
   Trash2,
   ChevronRight,
   X,
@@ -72,7 +73,17 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
   const [dynamicOrders, setDynamicOrders] = useState<any[]>([]);
   const [dynamicBookings, setDynamicBookings] = useState<any[]>([]);
   const [dynamicSubscriptions, setDynamicSubscriptions] = useState<any[]>([]);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Reset selection mode whenever popup is closed
+  useEffect(() => {
+    if (!isOpen) {
+      setIsSelectionMode(false);
+      setSelectedIds([]);
+    }
+  }, [isOpen]);
 
   // Load persistent read and cleared IDs from localStorage after mount
   useEffect(() => {
@@ -302,6 +313,55 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
     return allNotifications.filter((n) => !n.isRead).length;
   }, [allNotifications]);
 
+  // Determine if all or some filtered notifications are selected
+  const isAllFilteredSelected = useMemo(() => {
+    if (filteredNotifications.length === 0) return false;
+    return filteredNotifications.every((n) => selectedIds.includes(n.id));
+  }, [filteredNotifications, selectedIds]);
+
+  const isSomeFilteredSelected = useMemo(() => {
+    if (filteredNotifications.length === 0 || isAllFilteredSelected) return false;
+    return filteredNotifications.some((n) => selectedIds.includes(n.id));
+  }, [filteredNotifications, selectedIds, isAllFilteredSelected]);
+
+  // Toggle select all in current filtered list
+  const handleToggleSelectAll = () => {
+    if (isAllFilteredSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !filteredNotifications.some((n) => n.id === id)));
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...filteredNotifications.map((n) => n.id)])));
+    }
+  };
+
+  // Toggle single item selection
+  const handleToggleSelectItem = (id: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  // Delete selected notifications
+  const handleDeleteSelected = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (selectedIds.length === 0) return;
+    const updated = Array.from(new Set([...clearedIds, ...selectedIds]));
+    setClearedIds(updated);
+    try {
+      localStorage.setItem(STORAGE_CLEARED_IDS, JSON.stringify(updated));
+    } catch (err) {
+      console.error("Failed to persist deleted notification IDs:", err);
+    }
+    setSelectedIds([]);
+    setIsSelectionMode(false);
+  };
+
   // Mark all as read
   const handleMarkAllRead = () => {
     const allIds = allNotifications.map((n) => n.id);
@@ -341,6 +401,10 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
 
   // Click individual notification
   const handleItemClick = (item: CustomerNotificationItem) => {
+    if (isSelectionMode) {
+      handleToggleSelectItem(item.id);
+      return;
+    }
     if (!readIds.includes(item.id)) {
       const updated = [...readIds, item.id];
       setReadIds(updated);
@@ -465,43 +529,112 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
           <div className={styles.dropdown} role="dialog" aria-label="Notifications Center">
             {/* Header */}
             <div className={styles.header}>
-              <div className={styles.headerTop}>
-                <div className={styles.headerTitleGroup}>
-                  <div className={styles.headerIconBox}>
-                    <Bell size={16} strokeWidth={2.4} />
+              {isSelectionMode ? (
+                <div className={styles.selectionHeaderTop}>
+                  <div
+                    className={styles.selectAllGroup}
+                    onClick={handleToggleSelectAll}
+                    role="button"
+                    tabIndex={0}
+                    aria-label="Select all notifications"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        handleToggleSelectAll();
+                      }
+                    }}
+                  >
+                    <div
+                      className={`${styles.checkbox} ${
+                        isAllFilteredSelected
+                          ? styles.checkboxChecked
+                          : isSomeFilteredSelected
+                          ? styles.checkboxIndeterminate
+                          : ""
+                      }`}
+                    >
+                      {isAllFilteredSelected && <Check size={12} strokeWidth={3} color="#FFFFFF" />}
+                      {!isAllFilteredSelected && isSomeFilteredSelected && (
+                        <span className={styles.indeterminateBar} />
+                      )}
+                    </div>
+                    <span className={styles.selectAllText}>Select all</span>
+                    {selectedIds.length > 0 && (
+                      <span className={styles.selectedCountPill}>
+                        {selectedIds.length}
+                      </span>
+                    )}
                   </div>
-                  <h3 className={styles.title}>Notifications</h3>
-                  {unreadCount > 0 && (
-                    <span className={styles.unreadCountPill} suppressHydrationWarning>
-                      {unreadCount} New
-                    </span>
-                  )}
-                </div>
 
-                <div className={styles.headerActions}>
-                  {unreadCount > 0 && (
+                  <div className={styles.selectionActions}>
                     <button
                       type="button"
-                      className={styles.markAllReadBtn}
-                      onClick={handleMarkAllRead}
-                      title="Mark all notifications as read"
+                      className={styles.deleteSelectedBtn}
+                      onClick={handleDeleteSelected}
+                      disabled={selectedIds.length === 0}
+                      title={
+                        selectedIds.length > 0
+                          ? `Delete ${selectedIds.length} selected notification${selectedIds.length > 1 ? "s" : ""}`
+                          : "Select notifications to delete"
+                      }
                     >
-                      <CheckCheck size={14} />
-                      <span>Read all</span>
+                      <Trash2 size={13} strokeWidth={2.2} />
+                      <span>Delete{selectedIds.length > 0 ? ` (${selectedIds.length})` : ""}</span>
                     </button>
-                  )}
-                  {allNotifications.length > 0 && (
+
                     <button
                       type="button"
-                      className={styles.clearAllBtn}
-                      onClick={handleClearAll}
-                      title="Clear all notifications"
+                      className={styles.cancelSelectionBtn}
+                      onClick={() => {
+                        setIsSelectionMode(false);
+                        setSelectedIds([]);
+                      }}
+                      title="Cancel selection"
                     >
-                      <Trash2 size={13} />
+                      <X size={14} strokeWidth={2.4} />
+                      <span>Cancel</span>
                     </button>
-                  )}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className={styles.headerTop}>
+                  <div className={styles.headerTitleGroup}>
+                    <div className={styles.headerIconBox}>
+                      <Bell size={16} strokeWidth={2.4} />
+                    </div>
+                    <h3 className={styles.title}>Notifications</h3>
+                    {unreadCount > 0 && (
+                      <span className={styles.unreadCountPill} suppressHydrationWarning>
+                        {unreadCount} New
+                      </span>
+                    )}
+                  </div>
+
+                  <div className={styles.headerActions}>
+                    {unreadCount > 0 && (
+                      <button
+                        type="button"
+                        className={styles.markAllReadBtn}
+                        onClick={handleMarkAllRead}
+                        title="Mark all notifications as read"
+                      >
+                        <CheckCheck size={14} />
+                        <span>Read all</span>
+                      </button>
+                    )}
+                    {allNotifications.length > 0 && (
+                      <button
+                        type="button"
+                        className={styles.clearAllBtn}
+                        onClick={() => setIsSelectionMode(true)}
+                        title="Select & delete notifications"
+                        aria-label="Select and delete notifications"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Filter Tabs */}
               <div className={styles.tabList} role="tablist">
@@ -557,10 +690,14 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
                   </p>
                 </div>
               ) : (
-                filteredNotifications.map((item) => (
+                filteredNotifications.map((item) => {
+                const isItemSelected = selectedIds.includes(item.id);
+                return (
                   <div
                     key={item.id}
-                    className={`${styles.item} ${!item.isRead ? styles.itemUnread : ""}`}
+                    className={`${styles.item} ${!item.isRead ? styles.itemUnread : ""} ${
+                      isItemSelected ? styles.itemSelected : ""
+                    } ${isSelectionMode ? styles.itemInSelectionMode : ""}`}
                     onClick={() => handleItemClick(item)}
                     role="button"
                     tabIndex={0}
@@ -570,6 +707,27 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
                       }
                     }}
                   >
+                    {/* Checkbox on the front side */}
+                    {isSelectionMode && (
+                      <div
+                        className={styles.itemCheckboxWrapper}
+                        onClick={(e) => handleToggleSelectItem(item.id, e)}
+                        role="checkbox"
+                        aria-checked={isItemSelected}
+                        aria-label="Select notification"
+                      >
+                        <div
+                          className={`${styles.checkbox} ${
+                            isItemSelected ? styles.checkboxChecked : ""
+                          }`}
+                        >
+                          {isItemSelected && (
+                            <Check size={12} strokeWidth={3} color="#FFFFFF" />
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     {renderItemIcon(item.type)}
 
                     <div className={styles.itemBody}>
@@ -577,15 +735,17 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
                         <h4 className={styles.itemTitle}>{item.title}</h4>
                         <div className={styles.itemMetaRow}>
                           <span className={styles.itemTime}>{item.relativeTime}</span>
-                          <button
-                            type="button"
-                            className={styles.deleteSingleBtn}
-                            onClick={(e) => handleDeleteNotification(e, item.id)}
-                            title="Delete notification"
-                            aria-label="Delete notification"
-                          >
-                            <Trash2 size={13} strokeWidth={2.2} />
-                          </button>
+                          {!isSelectionMode && (
+                            <button
+                              type="button"
+                              className={styles.deleteSingleBtn}
+                              onClick={(e) => handleDeleteNotification(e, item.id)}
+                              title="Delete notification"
+                              aria-label="Delete notification"
+                            >
+                              <Trash2 size={13} strokeWidth={2.2} />
+                            </button>
+                          )}
                         </div>
                       </div>
 
@@ -609,7 +769,8 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
                       <span className={styles.unreadDot} title="Unread notification" />
                     )}
                   </div>
-                ))
+                );
+              })
               )}
             </div>
 

@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { HouseMapPicker } from "@/components/house-map-picker";
 import { getPincodeCoordinates } from "@/lib/geo-distance";
+import { reverseGeocodeWithGoogle, geocodeWithGoogle } from "@/lib/google-maps";
 import styles from "./RoomSearchFilter.module.css";
 
 export interface LocationStatItem {
@@ -145,7 +146,7 @@ export const RoomSearchFilter: React.FC<RoomSearchFilterProps> = ({
   );
 
   // 1. Handle selection of custom typed area or pincode
-  const handleSelectCustomLocation = (query: string) => {
+  const handleSelectCustomLocation = async (query: string) => {
     const clean = query.trim();
     if (!clean) return;
     const pinMatch = clean.match(/\b\d{6}\b/);
@@ -154,6 +155,16 @@ export const RoomSearchFilter: React.FC<RoomSearchFilterProps> = ({
       const pinCoords = getPincodeCoordinates(pinMatch[0]);
       if (pinCoords) {
         resolvedCoords = { lat: pinCoords.lat, lng: pinCoords.lng };
+      }
+    } else {
+      try {
+        const fullQuery = clean.toLowerCase().includes("pune") ? clean : `${clean}, Pune`;
+        const geocoded = await geocodeWithGoogle(fullQuery);
+        if (geocoded) {
+          resolvedCoords = { lat: geocoded.lat, lng: geocoded.lng };
+        }
+      } catch (err) {
+        console.warn("Geocoding failed for custom location:", err);
       }
     }
     if (onLocationChange) {
@@ -175,27 +186,17 @@ export const RoomSearchFilter: React.FC<RoomSearchFilterProps> = ({
       async (pos) => {
         const { latitude: lat, longitude: lng } = pos.coords;
         try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
-          );
-          if (res.ok) {
-            const data = await res.json();
-            const addr = data.address || {};
-            const suburb =
-              addr.suburb ||
-              addr.neighbourhood ||
-              addr.residential ||
-              addr.city_district ||
-              addr.road ||
-              "Current Location";
-            const city = addr.city || addr.town || addr.state_district || "Pune";
-            const pincode = (addr.postcode || "").replace(/\D/g, "").slice(0, 6);
+          const geo = await reverseGeocodeWithGoogle(lat, lng);
+          if (geo) {
+            const suburb = geo.locality || geo.street || geo.landmark;
+            const city = geo.city || "Pune";
+            const pincode = geo.pincode;
 
             const formatted = suburb
               ? `${suburb}, ${city}`
               : pincode
               ? `PIN: ${pincode}`
-              : "Current Location";
+              : geo.address || "Current Location";
 
             if (onLocationChange) {
               onLocationChange(formatted, { lat, lng });

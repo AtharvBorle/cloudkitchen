@@ -22,6 +22,7 @@ import { useRecentSearches } from "@/lib/useRecentSearches";
 import { HouseMapPicker } from "@/components/house-map-picker";
 import { matchesSearchQuery } from "@/lib/dietary-filter";
 import { useRoomModule } from "@/context/RoomModuleContext";
+import { reverseGeocodeCoords } from "@/lib/google-maps";
 
 interface SuggestionItem {
   id: string;
@@ -287,22 +288,15 @@ export default function HeroSection({
           const lng = position.coords.longitude;
           setMapCoords({ lat, lng });
 
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
-          );
-          if (res.ok) {
-            const data = await res.json();
-            const address = data.address || {};
-            const suburb = address.suburb || address.neighbourhood || address.residential || address.city_district || "";
-            const rawPostcode = (address.postcode || "").replace(/\D/g, "").slice(0, 6);
-            const postcode = rawPostcode || "";
-            const city = address.city || address.town || address.state_district || "Pune";
+          const details = await reverseGeocodeCoords(lat, lng);
+          const suburb = details.locality || details.street || "";
+          const postcode = details.pincode || "";
+          const city = details.city || "Pune";
 
-            const formatted = suburb ? `${suburb}, ${city}` : postcode ? `${city} (${postcode})` : city || "Current Location";
-            setSelectedLocation(formatted);
-            if (postcode) {
-              setGuestLocation(postcode, suburb || formatted, city, lat, lng);
-            }
+          const formatted = suburb ? `${suburb}, ${city}` : postcode ? `${city} (${postcode})` : city || "Current Location";
+          setSelectedLocation(formatted);
+          if (postcode) {
+            setGuestLocation(postcode, suburb || formatted, city, lat, lng);
           }
         } catch {
           setSelectedLocation("Current GPS Location");
