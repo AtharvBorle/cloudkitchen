@@ -323,7 +323,10 @@ export function LocationProvider({ children }: LocationProviderProps) {
           const resolvedLng = (matchedSaved.longitude != null && !isNaN(Number(matchedSaved.longitude)))
             ? Number(matchedSaved.longitude)
             : (parsedLng && !isNaN(parsedLng) ? parsedLng : (pinCoords?.lng ?? null));
-          const resolvedLocality = matchedSaved.locality || matchedSaved.street || userLocality || pinCoords?.locality || `PIN ${userSelectedPin}`;
+          const isGenericSavedLoc = !matchedSaved.locality || matchedSaved.locality === "Pune" || matchedSaved.locality === "Pune, Pune" || matchedSaved.locality === "Current Location";
+          const resolvedLocality = !isGenericSavedLoc
+            ? matchedSaved.locality
+            : (matchedSaved.street || userLocality || pinCoords?.locality || `PIN ${userSelectedPin}`);
           const resolvedCity = matchedSaved.city || userCity || pinCoords?.city || "Pune";
 
           setDefaultAddress({
@@ -338,7 +341,8 @@ export function LocationProvider({ children }: LocationProviderProps) {
           const pinCoords = getPincodeCoordinates(userSelectedPin);
           const resolvedLat = (parsedLat && !isNaN(parsedLat)) ? parsedLat : (pinCoords?.lat ?? null);
           const resolvedLng = (parsedLng && !isNaN(parsedLng)) ? parsedLng : (pinCoords?.lng ?? null);
-          const resolvedLocality = userLocality || pinCoords?.locality || `PIN ${userSelectedPin}`;
+          const isGenericUserLoc = !userLocality || userLocality === "Pune" || userLocality === "Pune, Pune" || userLocality === "Current Location";
+          const resolvedLocality = !isGenericUserLoc ? userLocality : (pinCoords?.locality || `PIN ${userSelectedPin}`);
           const resolvedCity = userCity || pinCoords?.city || "Pune";
 
           setDefaultAddress({
@@ -358,7 +362,8 @@ export function LocationProvider({ children }: LocationProviderProps) {
         const pinCoords = getPincodeCoordinates(def.pincode);
         const resolvedLat = (def.latitude != null && !isNaN(Number(def.latitude))) ? Number(def.latitude) : (pinCoords?.lat ?? null);
         const resolvedLng = (def.longitude != null && !isNaN(Number(def.longitude))) ? Number(def.longitude) : (pinCoords?.lng ?? null);
-        const resolvedLocality = def.locality || def.street || pinCoords?.locality || `PIN ${def.pincode}`;
+        const isGenericDefLoc = !def.locality || def.locality === "Pune" || def.locality === "Pune, Pune" || def.locality === "Current Location";
+        const resolvedLocality = !isGenericDefLoc ? def.locality : (def.street || pinCoords?.locality || `PIN ${def.pincode}`);
         const resolvedCity = def.city || pinCoords?.city || "Pune";
 
         setDefaultAddress({
