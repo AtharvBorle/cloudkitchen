@@ -56,6 +56,8 @@ export interface OrderItemData {
   deliveredLabel?: string;
   deliveredTime?: string;
   arrivingIn?: string;
+  deliveryTimerStartedAt?: string | null;
+  deliveryDelayMinutes?: number;
   imageUrl: string;
   partner?: {
     name: string;
@@ -151,6 +153,32 @@ function getOrderStepIndex(rawStatus: string, partner?: any): number {
   }
 }
 
+function computeLiveArrivingIn(
+  rawStatus: string,
+  timerStartedAt?: string | null,
+  delayMinutes?: number,
+  nowMs: number = Date.now()
+): string {
+  const s = (rawStatus || "PENDING").toUpperCase();
+  if (s === "DELIVERED") return "Delivered";
+  if (s === "CANCELLED" || s === "REJECTED") return "Cancelled";
+
+  const delay = Math.max(0, Number(delayMinutes) || 0);
+  const startedMs = timerStartedAt ? new Date(timerStartedAt).getTime() : nowMs;
+  const elapsedMinutes = !isNaN(startedMs) ? Math.max(0, Math.floor((nowMs - startedMs) / 60000)) : 0;
+
+  // Base window starts at 20-25 mins, automatically reduces every minute, and adds any delivery partner delay
+  const remMin = 20 + delay - elapsedMinutes;
+  const remMax = 25 + delay - elapsedMinutes;
+
+  if (remMin >= 1) {
+    return `${remMin}-${remMax} mins`;
+  }
+
+  const singleRem = Math.max(1, remMax);
+  return `${singleRem} ${singleRem === 1 ? "min" : "mins"}`;
+}
+
 function parseOrderFromDb(o: any): OrderItemData {
   let parsedItems: any[] = [];
   try {
@@ -185,9 +213,12 @@ function parseOrderFromDb(o: any): OrderItemData {
     : null;
 
   const rawStatus = (o.status || "PENDING").toUpperCase();
+  const deliveryTimerStartedAt = o.deliveryTimerStartedAt || o.updatedAt || o.createdAt || new Date().toISOString();
+  const deliveryDelayMinutes = Number(o.deliveryDelayMinutes) || 0;
+
   let status: "ONGOING" | "DELIVERED" | "CANCELLED" = "ONGOING";
   let statusDisplay = "Out for Delivery";
-  let arrivingIn = "15-20 min";
+  let arrivingIn = computeLiveArrivingIn(rawStatus, deliveryTimerStartedAt, deliveryDelayMinutes);
 
   if (rawStatus === "DELIVERED") {
     status = "DELIVERED";
@@ -201,19 +232,14 @@ function parseOrderFromDb(o: any): OrderItemData {
     status = "ONGOING";
     if (rawStatus === "PENDING" || rawStatus === "PLACED") {
       statusDisplay = "Waiting for confirmation by seller";
-      arrivingIn = "25-35 min";
     } else if (rawStatus === "ACCEPTED" || rawStatus === "CONFIRMED") {
       statusDisplay = "Order Confirmed";
-      arrivingIn = "20-30 min";
     } else if (rawStatus === "PREPARING") {
       statusDisplay = partner ? "On the way" : "Preparing Food";
-      arrivingIn = partner ? "10-15 min" : "15-25 min";
     } else if (rawStatus === "PICKED_UP") {
       statusDisplay = "On the way";
-      arrivingIn = "10-15 min";
     } else if (rawStatus === "OUT_FOR_DELIVERY") {
       statusDisplay = "On the way";
-      arrivingIn = "8-12 min";
     }
   }
 
@@ -275,6 +301,8 @@ function parseOrderFromDb(o: any): OrderItemData {
     deliveredLabel: status === "CANCELLED" ? "Seller has not confirmed your order" : "Delivered",
     deliveredTime,
     arrivingIn,
+    deliveryTimerStartedAt,
+    deliveryDelayMinutes,
     imageUrl,
     partner,
     billBreakdown: {
@@ -450,6 +478,14 @@ export default function MyOrdersView() {
   const [selectedBooking, setSelectedBooking] = useState<RoomBookingData | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNowMs(Date.now());
+    }, 15000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.innerWidth <= 960) {
@@ -1439,7 +1475,14 @@ export default function MyOrdersView() {
                             </span>
                             <div className={styles.arrivingBox}>
                               <span className={styles.arrivingLabel}>Arriving in</span>
-                              <span className={styles.arrivingTime}>{order.arrivingIn}</span>
+                              <span className={styles.arrivingTime}>
+                                {computeLiveArrivingIn(
+                                  order.rawStatus,
+                                  order.deliveryTimerStartedAt,
+                                  order.deliveryDelayMinutes,
+                                  nowMs
+                                )}
+                              </span>
                             </div>
                             <div className={styles.chevronBtn}>
                               <ChevronRight size={18} />
@@ -1590,7 +1633,7 @@ export default function MyOrdersView() {
                               }}
                             >
                               <Navigation size={14} strokeWidth={2.5} />
-                              <span>Track Live</span>
+                              <span>View Order</span>
                             </button>
                           </div>
                         </div>
@@ -2066,20 +2109,6 @@ export default function MyOrdersView() {
                   </div>
                 )}
 
-                {/* Live Delivery Map Graphic (Only for active or delivered orders, never on cancelled orders) */}
-                {selectedOrder.status !== "CANCELLED" && selectedOrder.rawStatus !== "CANCELLED" && selectedOrder.rawStatus !== "REJECTED" && (
-                  <div className={styles.mapCard}>
-                    <Image
-                      src="/images/live-delivery-map.png"
-                      alt="Live Delivery Map"
-                      width={340}
-                      height={170}
-                      className={styles.mapImage}
-                      priority
-                    />
-                  </div>
-                )}
-
                 {/* Notification Alert Banner */}
                 <div className={styles.alertBox}>
                   <Bell size={18} color={selectedOrder.status === "CANCELLED" ? "#DC2626" : "#047857"} style={{ flexShrink: 0 }} />
@@ -2102,7 +2131,12 @@ export default function MyOrdersView() {
                         ? "The kitchen partner was unable to confirm this order. Any online payment will be refunded."
                         : selectedOrder.rawStatus === "PENDING" || selectedOrder.rawStatus === "PLACED"
                         ? "The seller will review and accept your order shortly"
-                        : `Expected arrival in ${selectedOrder.arrivingIn || "15-25 minutes"}`}
+                        : `Expected arrival in ${computeLiveArrivingIn(
+                            selectedOrder.rawStatus,
+                            selectedOrder.deliveryTimerStartedAt,
+                            selectedOrder.deliveryDelayMinutes,
+                            nowMs
+                          )}`}
                     </span>
                   </div>
                 </div>

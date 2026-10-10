@@ -171,9 +171,7 @@ export const getSellerMealPlans = async () => {
             }
         });
 
-        const activeSubscribers = planActiveUserKeys.size > 0 
-            ? planActiveUserKeys.size 
-            : (plan.subscribersCount || 0);
+        const activeSubscribers = planActiveUserKeys.size;
 
         const isWeekly = (plan.duration || "1 Week").toLowerCase().includes("week");
         return {
@@ -214,15 +212,14 @@ export const getSellerMealPlans = async () => {
     const mrrTotal = allSubscribers
         .filter(isSubscriptionActive)
         .reduce((sum, s) => {
-            const c = (s.cycle || "1 Week").toLowerCase();
-            if (c.includes("2 week") || c === "biweekly") return sum + ((s.pricePaid || 0) * 2);
-            if (c.includes("week") || c === "weekly" || c.includes("1 week")) return sum + ((s.pricePaid || 0) * 4);
-            if (c.includes("quarter") || c.includes("3 month")) return sum + Math.round((s.pricePaid || 0) / 3);
-            if (c.includes("6 month") || c === "half_yearly") return sum + Math.round((s.pricePaid || 0) / 6);
-            if (c.includes("year") || c === "yearly") return sum + Math.round((s.pricePaid || 0) / 12);
-            return sum + (s.pricePaid || 0);
-        }, 0) ||
-        plans.reduce((acc, p) => acc + (p.rawWeeklyPrice * 4 * (p.subscribersCount || 0)), 0);
+            if (s.pricePaid && s.pricePaid > 0) return sum + s.pricePaid;
+            const matchedPlan = plans.find(
+                (p) =>
+                    (s.planId && (s.planId === p.id || s.planId.toLowerCase() === p.id.toLowerCase())) ||
+                    (s.planName && p.name && s.planName.trim().toLowerCase() === p.name.trim().toLowerCase())
+            );
+            return sum + (matchedPlan?.rawWeeklyPrice || 0);
+        }, 0);
 
     return {
         plans,
@@ -280,7 +277,7 @@ export const getSellerMealPlanById = async (planId: string) => {
             .map((s) => s.user?.id || s.userId || s.id)
             .filter(Boolean)
     );
-    const subCount = activeSubUsers.size > 0 ? activeSubUsers.size : (plan.subscribersCount || 0);
+    const subCount = activeSubUsers.size;
 
     const isWeekly = (plan.duration || "1 Week").toLowerCase().includes("week");
     return {
@@ -433,7 +430,7 @@ export const updateSellerMealPlan = async (req: Request) => {
         updateData.weeklyPrice = num;
         if (!body.monthlyPrice) {
             const isWeekly = (body.duration || existingPlan.duration || "").toLowerCase().includes("week");
-            updateData.monthlyPrice = isWeekly ? num : num * 4;
+            updateData.monthlyPrice = isWeekly ? null : num;
         }
         if (body.quarterlyPrice !== undefined) {
             updateData.quarterlyPrice = body.quarterlyPrice ? parseFloat(String(body.quarterlyPrice).replace(/[^0-9.]/g, "")) : null;
@@ -493,7 +490,7 @@ export const updateSellerMealPlan = async (req: Request) => {
         description: updated.description,
         weeklyPrice: `₹${updated.weeklyPrice.toFixed(0)}`,
         rawWeeklyPrice: updated.weeklyPrice,
-        monthlyPrice: `₹${(updated.monthlyPrice || updated.weeklyPrice * 4).toFixed(0)}`,
+        monthlyPrice: updated.monthlyPrice ? `₹${updated.monthlyPrice.toFixed(0)}` : "",
         duration: updated.duration,
         features: parsedFeatures,
         mealTimings: parsedTimings,

@@ -4,6 +4,7 @@ import { ApiError } from "@/lib/api-error";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { autoCancelExpiredOrders } from "@/lib/order-expiry";
+import { enrichOrdersWithEta } from "@/lib/order-eta";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -54,10 +55,12 @@ export async function GET() {
             });
         }
 
-        const enrichedOrders = orders.map(o => ({
-            ...o,
-            appliedCoupon: o.appliedCouponId ? couponsMap[o.appliedCouponId] || null : null
-        }));
+        const enrichedOrders = await enrichOrdersWithEta(
+            orders.map(o => ({
+                ...o,
+                appliedCoupon: o.appliedCouponId ? couponsMap[o.appliedCouponId] || null : null
+            }))
+        );
 
         return successResponse(enrichedOrders);
     } catch (error: any) {

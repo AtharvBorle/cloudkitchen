@@ -1743,6 +1743,17 @@ export const UserCart: React.FC<UserCartProps> = ({
             <Link href="/" className={styles.breadcrumbLink}>
               Home
             </Link>
+            {cartItems[0]?.sellerId && (
+              <>
+                <span>/</span>
+                <Link
+                  href={`/restaurant/${encodeURIComponent(cartItems[0].sellerId)}`}
+                  className={styles.breadcrumbLink}
+                >
+                  {cartItems[0]?.sellerName || "Kitchen"}
+                </Link>
+              </>
+            )}
             <span>/</span>
             <span className={styles.breadcrumbCurrent}>Cart</span>
           </div>

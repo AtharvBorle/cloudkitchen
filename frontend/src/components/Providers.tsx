@@ -60,9 +60,6 @@ function AuthHistorySecurityLock() {
             return;
         }
 
-        // 2. Establish continuous history barrier
-        window.history.pushState({ authLocked: true }, "", window.location.href);
-
         const handlePopState = () => {
             const isLoggedOutNow = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("logged_out") === "true";
             if (isLoggedOutNow) {
@@ -81,14 +78,10 @@ function AuthHistorySecurityLock() {
                 currentPath === "/auth/login/seller"
             );
 
-            // Prevent going back to previous page links or exiting the authenticated session
-            window.history.pushState({ authLocked: true }, "", targetDashboard);
+            // Only intercept if browser back navigates to a login/auth page while authenticated
             if (isTargetAuth) {
+                window.history.pushState({ authLocked: true }, "", targetDashboard);
                 window.location.replace(targetDashboard);
-                return;
-            }
-            if (window.location.pathname !== targetDashboard) {
-                router.replace(targetDashboard);
             }
         };
 

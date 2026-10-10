@@ -87,22 +87,32 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
   const router = useRouter();
 
   const resolveOrderTargetHref = (notif: SellerNotificationItem) => {
-    let targetHref = notif.actionHref;
-    if (notif.actionLabel === "Track Dispatch" && notif.actionHref === "/seller/delivery") {
-      return "/seller/orders";
-    }
-    if (notif.category === "orders" || notif.title?.toLowerCase().includes("order")) {
+    const targetHref = notif.actionHref;
+    if (
+      notif.category === "orders" ||
+      notif.actionLabel === "View Order" ||
+      notif.actionLabel === "Track Delivery" ||
+      notif.actionLabel === "Track Dispatch" ||
+      notif.title?.toLowerCase().includes("order")
+    ) {
       let orderId = notif.metadata?.orderId;
+      if (!orderId) {
+        const idMatch = notif.id.match(/^(?:notif-order-|notif-deliv-|ord-[a-z]+-)(.+)$/);
+        if (idMatch && idMatch[1]) {
+          orderId = idMatch[1].replace(/^ORD-/i, "");
+        }
+      }
       if (!orderId && targetHref) {
         try {
           const parsed = new URL(targetHref, "http://localhost");
-          orderId = parsed.searchParams.get("orderId") || parsed.searchParams.get("id");
+          const paramId = parsed.searchParams.get("orderId") || parsed.searchParams.get("id");
+          if (paramId) orderId = paramId.replace(/^#/, "").replace(/^ORD-/i, "");
         } catch {}
       }
       if (!orderId) {
-        const match = notif.title.match(/#([A-Za-z0-9-]+)/) || notif.id.match(/(?:notif-order-|ord-[a-z]+-)([A-Za-z0-9-]+)/);
-        if (match) {
-          orderId = match[1].replace(/^ORD-/, "");
+        const titleMatch = notif.title?.match(/#([A-Za-z0-9-]+)/);
+        if (titleMatch && titleMatch[1]) {
+          orderId = titleMatch[1].replace(/^(?:ORD|NCR)-/i, "");
         }
       }
       if (orderId) {

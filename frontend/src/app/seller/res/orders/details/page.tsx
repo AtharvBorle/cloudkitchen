@@ -62,12 +62,15 @@ function DetailsContent() {
           const ordersData = await res.json();
           const list = ordersData.data?.orders || ordersData.orders || ordersData.data || [];
           if (Array.isArray(list)) {
-            const target = cleanId.toLowerCase();
+            const rawTarget = cleanId.trim().toLowerCase();
+            const target = rawTarget.replace(/^(?:ord|ncr)-/i, "").trim();
             const found = list.find((o: any) => {
               const oId = (o.id || "").toLowerCase();
               return (
+                oId === rawTarget ||
                 oId === target ||
                 oId.startsWith(target) ||
+                oId.endsWith(target) ||
                 `#${oId.slice(0, 6)}` === rawId.toLowerCase() ||
                 oId.slice(0, 6) === target
               );
