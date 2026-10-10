@@ -105,7 +105,7 @@ export const SellerMapPicker: React.FC<SellerMapPickerProps> = ({
       // 1. Try Google Maps JS SDK
       const isGoogleLoaded = await loadGoogleMapsScript();
 
-      if (isGoogleLoaded && (window as any).google?.maps && mapContainerRef.current) {
+      if (isGoogleLoaded && typeof (window as any).google?.maps?.Map === "function" && mapContainerRef.current) {
         try {
           const google = (window as any).google;
           setMapEngine("google");
