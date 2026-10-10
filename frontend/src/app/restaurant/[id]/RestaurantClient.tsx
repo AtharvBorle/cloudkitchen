@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Navbar } from "@/components/navbar";
 import { FoodHeroBanner } from "@/components/restaurant-desktop/foodherobanner";
@@ -21,6 +21,8 @@ interface RestaurantClientProps {
 
 export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isVegParam = searchParams?.get("vegOnly") === "true" || searchParams?.get("veg") === "true" || searchParams?.get("diet") === "veg";
   const { data: session } = useSession();
   const { addToCart, decreaseQuantity } = useCart();
   const isStatic = isStaticKitchen(kitchenId);
@@ -28,6 +30,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
   const [isNotFound, setIsNotFound] = useState<boolean>(false);
   const [kitchenData, setKitchenData] = useState<KitchenData>(() => getKitchenById(kitchenId));
   const [isVegOnly, setIsVegOnly] = useState<boolean>(() => {
+    if (isVegParam) return true;
     if (typeof window !== "undefined") {
       try {
         const stored = localStorage.getItem("cloudkitchen_veg_preference");
@@ -369,6 +372,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
             let computedDietType = "Veg & Non-Veg 🍱";
             if (isPureVegKitchen) {
               computedDietType = "Pure Veg 🥦";
+              setIsVegOnly(true);
             } else if (rawFoodType === "NON_VEG" && !hasVegItems) {
               computedDietType = "Non-Veg 🍗";
             } else {
@@ -839,6 +843,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
             isLoading={!isLoaded}
             onAddItem={handleAddItem}
             onDecreaseItem={handleDecreaseItem}
+            onResetFilters={handleClearPriceFilter}
           />
         </main>
         <Footer />

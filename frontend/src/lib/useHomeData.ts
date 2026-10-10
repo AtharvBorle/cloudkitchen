@@ -180,6 +180,7 @@ export interface HomeDataState {
   allFoodItems: DynamicFoodItem[];
   allKitchens: DynamicKitchen[];
   activePincode: string | null;
+  isDirectlyDeliverable?: boolean;
   hasMatchingKitchens: boolean;
   totalKitchensCount: number;
   isLoading: boolean;
@@ -870,18 +871,19 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
         : null;
 
     // 2. Resolve seller coordinates: either direct seller lat/lng OR fallback from seller pincode
+    const effectiveSellerPin = sellerPin || (servedPins && servedPins.length > 0 ? servedPins[0] : undefined);
     const resolvedSellerLat =
       sellerLat != null && !isNaN(Number(sellerLat)) && Number(sellerLat) !== 0
         ? Number(sellerLat)
-        : sellerPin
-        ? getPincodeCoordinates(sellerPin)?.lat ?? null
+        : effectiveSellerPin
+        ? getPincodeCoordinates(effectiveSellerPin)?.lat ?? null
         : null;
 
     const resolvedSellerLng =
       sellerLng != null && !isNaN(Number(sellerLng)) && Number(sellerLng) !== 0
         ? Number(sellerLng)
-        : sellerPin
-        ? getPincodeCoordinates(sellerPin)?.lng ?? null
+        : effectiveSellerPin
+        ? getPincodeCoordinates(effectiveSellerPin)?.lng ?? null
         : null;
 
     // 3. If both user and seller coordinates are resolved, STRICTLY enforce distance <= maxRadius
@@ -908,26 +910,10 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
     return true;
   };
 
-  // Strictly deliverable food items (within configured seller delivery radius)
-  const deliverableFoodItems = useMemo(() => {
-    if (!activePincode && !hasUserCoords) return enrichedFoodItems;
-    return enrichedFoodItems.filter((item) =>
-      isSellerDeliverable(
-        item.sellerLatitude,
-        item.sellerLongitude,
-        item.sellerPincode,
-        item.servedPincodes,
-        item.sellerLocality,
-        item.sellerLandmark,
-        item.sellerDeliveryRadiusKm
-      )
-    );
-  }, [enrichedFoodItems, activePincode, hasUserCoords, activeUserLat, activeUserLng]);
-
-  // Strictly deliverable kitchens (within configured seller delivery radius)
-  const deliverableKitchens = useMemo(() => {
-    if (!activePincode && !hasUserCoords) return enrichedKitchens;
-    return enrichedKitchens.filter((k) =>
+  // Check if at least one kitchen directly serves the user's active location
+  const isDirectlyDeliverable = useMemo(() => {
+    if (!activePincode && !hasUserCoords) return true;
+    return enrichedKitchens.some((k) =>
       isSellerDeliverable(
         k.latitude,
         k.longitude,
@@ -938,6 +924,44 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
         k.deliveryRadiusKm
       )
     );
+  }, [enrichedKitchens, activePincode, hasUserCoords, activeUserLat, activeUserLng]);
+
+  // Deliverable food items: sorts directly deliverable items first, followed by all other
+  // food items so dishes across all active kitchens in Pune are never hidden!
+  const deliverableFoodItems = useMemo(() => {
+    if (!activePincode && !hasUserCoords) return enrichedFoodItems;
+    const deliverable = enrichedFoodItems.filter((item) =>
+      isSellerDeliverable(
+        item.sellerLatitude,
+        item.sellerLongitude,
+        item.sellerPincode,
+        item.servedPincodes,
+        item.sellerLocality,
+        item.sellerLandmark,
+        item.sellerDeliveryRadiusKm
+      )
+    );
+    const nonDeliverable = enrichedFoodItems.filter((item) => !deliverable.some((d) => d.id === item.id));
+    return [...deliverable, ...nonDeliverable];
+  }, [enrichedFoodItems, activePincode, hasUserCoords, activeUserLat, activeUserLng]);
+
+  // Deliverable kitchens: sorts directly deliverable kitchens first, followed by all other
+  // kitchens so all active kitchens in Pune are always visible on the user dashboard!
+  const deliverableKitchens = useMemo(() => {
+    if (!activePincode && !hasUserCoords) return enrichedKitchens;
+    const deliverable = enrichedKitchens.filter((k) =>
+      isSellerDeliverable(
+        k.latitude,
+        k.longitude,
+        k.pincode,
+        k.servedPincodes,
+        k.locality,
+        k.landmark,
+        k.deliveryRadiusKm
+      )
+    );
+    const nonDeliverable = enrichedKitchens.filter((k) => !deliverable.some((d) => d.id === k.id));
+    return [...deliverable, ...nonDeliverable];
   }, [enrichedKitchens, activePincode, hasUserCoords, activeUserLat, activeUserLng]);
 
   // Compute filtered food items based on dynamic distance + filter options
@@ -1042,11 +1066,12 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
     reels,
     filteredFoodItems,
     filteredKitchens,
-    allFoodItems: deliverableFoodItems,
-    allKitchens: deliverableKitchens,
+    allFoodItems: enrichedFoodItems,
+    allKitchens: enrichedKitchens,
     activePincode,
-    hasMatchingKitchens: (activePincode || hasUserCoords) ? filteredKitchens.length > 0 : enrichedKitchens.length > 0,
-    totalKitchensCount: (activePincode || hasUserCoords) ? deliverableKitchens.length : enrichedKitchens.length,
+    isDirectlyDeliverable,
+    hasMatchingKitchens: enrichedKitchens.length > 0,
+    totalKitchensCount: enrichedKitchens.length,
     isLoading,
     error,
     isUsingFallback,

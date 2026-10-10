@@ -51,6 +51,7 @@ export interface ReorderModalProps {
   unavailableItems?: ReorderItemInfo[];
   unavailableAddons?: UnavailableAddonInfo[];
   errorMessage?: string;
+  orderNumber?: string;
   isLoading?: boolean;
   onConfirmReorder?: () => void;
   onConfirmClearAndReorder?: () => void;
@@ -70,6 +71,7 @@ export const ReorderModal: React.FC<ReorderModalProps> = ({
   unavailableItems = [],
   unavailableAddons = [],
   errorMessage,
+  orderNumber,
   isLoading = false,
   onConfirmReorder,
   onConfirmClearAndReorder,
@@ -143,11 +145,11 @@ export const ReorderModal: React.FC<ReorderModalProps> = ({
                 {type === "ERROR" && "Unable to Process Reorder"}
               </h3>
               <p className={styles.modalSubtitle}>
-                {type === "CONFIRM" && (sellerName ? `${sellerName} • Reorder Items` : "Reorder Items")}
-                {type === "OFFLINE" && sellerName}
-                {type === "ALL_UNAVAILABLE" && `${sellerName} • Reorder Update`}
-                {type === "PARTIAL" && `${sellerName} • Partial Availability`}
-                {type === "UNAVAILABLE_ADDONS" && `${sellerName} • Menu Customization Update`}
+                {type === "CONFIRM" && (orderNumber ? `Order #${orderNumber} • ${sellerName}` : (sellerName ? `${sellerName} • Reorder Items` : "Reorder Items"))}
+                {type === "OFFLINE" && (orderNumber ? `Order #${orderNumber} • ${sellerName}` : sellerName)}
+                {type === "ALL_UNAVAILABLE" && (orderNumber ? `Order #${orderNumber} • ${sellerName}` : `${sellerName} • Reorder Update`)}
+                {type === "PARTIAL" && (orderNumber ? `Order #${orderNumber} • ${sellerName}` : `${sellerName} • Partial Availability`)}
+                {type === "UNAVAILABLE_ADDONS" && (orderNumber ? `Order #${orderNumber} • ${sellerName}` : `${sellerName} • Menu Customization Update`)}
                 {type === "CART_CONFLICT" && "Single Kitchen Cart Policy"}
                 {type === "ERROR" && "Order Verification"}
               </p>

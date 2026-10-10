@@ -632,11 +632,46 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
               <div style={{ fontWeight: "700", fontSize: "1rem", color: "#1E293B", marginBottom: "4px" }}>
                 No dishes available.
               </div>
-              <div style={{ fontSize: "0.85rem", color: "#64748B" }}>
+              <div style={{ fontSize: "0.85rem", color: "#64748B", marginBottom: "12px" }}>
                 {baseItems.length === 0
-                  ? "This restaurant currently has no food items listed or published."
+                  ? "No dishes found matching your current filter preferences."
                   : "No items available in this category."}
               </div>
+              {baseItems.length === 0 && onClearPriceFilter ? (
+                <button
+                  type="button"
+                  onClick={onClearPriceFilter}
+                  style={{
+                    backgroundColor: "#FE5000",
+                    color: "#FFFFFF",
+                    border: "none",
+                    borderRadius: "8px",
+                    padding: "7px 16px",
+                    fontWeight: "700",
+                    fontSize: "0.82rem",
+                    cursor: "pointer",
+                  }}
+                >
+                  Show All Dishes
+                </button>
+              ) : activeCategory !== "All" ? (
+                <button
+                  type="button"
+                  onClick={() => setActiveCategory("All")}
+                  style={{
+                    backgroundColor: "#FE5000",
+                    color: "#FFFFFF",
+                    border: "none",
+                    borderRadius: "8px",
+                    padding: "7px 16px",
+                    fontWeight: "700",
+                    fontSize: "0.82rem",
+                    cursor: "pointer",
+                  }}
+                >
+                  View All Categories
+                </button>
+              ) : null}
             </div>
           ) : (
             <div className={styles.foodList}>
@@ -664,7 +699,7 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
                     {/* Left Food Image */}
                     <div className={styles.foodImageWrapper}>
                       <div style={{ position: "absolute", top: "4px", left: "4px", zIndex: 2 }}>
-                        <DietaryTag isVeg={item.isVeg !== false} size="xs" />
+                        <DietaryTag isVeg={item.isVeg !== false} itemType={(item as any).itemType} size="xs" />
                       </div>
                       <Image
                         src={item.image || "/images/places/place-pizza.png"}

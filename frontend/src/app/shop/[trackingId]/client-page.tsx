@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { fetchApi } from "@/lib/fetch-api";
 import Link from "next/link";
 import { AddToCartButton, BookRoomButton } from "@/components/cart-buttons";
@@ -63,12 +64,25 @@ const isCurrentlyOpen = (item: any) => {
 };
 
 export default function PublicShopClient({ trackingId }: { trackingId: string }) {
+    const searchParams = useSearchParams();
+    const isVegOnlyRequested = searchParams?.get("vegOnly") === "true" || searchParams?.get("veg") === "true" || searchParams?.get("diet") === "veg";
+
     const { data: session, status } = useSession();
     const { defaultAddress: userAddress } = useLocation();
     const [loading, setLoading] = useState(true);
     const [seller, setSeller] = useState<any | null>(null);
     const [error, setError] = useState<boolean>(false);
-    const [foodFilter, setFoodFilter] = useState<"ALL" | "VEG" | "NON_VEG" | "JAIN" | "VEGAN">("ALL");
+    const [foodFilter, setFoodFilter] = useState<"ALL" | "VEG" | "NON_VEG" | "JAIN" | "VEGAN">(() => {
+        if (isVegOnlyRequested) return "VEG";
+        if (typeof window !== "undefined") {
+            try {
+                if (localStorage.getItem("cloudkitchen_veg_preference") === "true") {
+                    return "VEG";
+                }
+            } catch {}
+        }
+        return "ALL";
+    });
     const [activeTab, setActiveTab] = useState<"menu" | "reviews">("menu");
 
     const userLat = userAddress?.latitude != null && !isNaN(Number(userAddress.latitude)) ? Number(userAddress.latitude) : null;
@@ -128,7 +142,17 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                 const res = await fetchApi(`/api/public/shop/${encodeURIComponent(trackingId)}`);
                 if (res.ok && isMounted) {
                     const data = await res.json();
-                    setSeller(data.data || data);
+                    const sData = data.data || data;
+                    setSeller(sData);
+                    const rawFoodType = String(sData?.foodType || "").toUpperCase().replace(/[\s-]/g, "_").trim();
+                    const hasNonVeg = (sData?.foodItems || []).some((it: any) => {
+                        const itType = String(it.itemType || "").toUpperCase();
+                        return itType.includes("NON_VEG") || it.isVeg === false;
+                    });
+                    const isPureVegSeller = rawFoodType === "PURE_VEG" || rawFoodType === "VEG" || rawFoodType === "VEG_ONLY" || (!hasNonVeg && (sData?.foodItems || []).length > 0);
+                    if (isPureVegSeller || isVegOnlyRequested) {
+                        setFoodFilter("VEG");
+                    }
                     setError(false);
                 } else if (!isSilent && isMounted) {
                     setError(true);

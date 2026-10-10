@@ -588,50 +588,69 @@ export const createOrder = async (req: Request) => {
         // 5. Flat discount amount vs eligible cart/item value check
         const isPercentage = validatedCoupon.discountType === "PERCENTAGE" || (validatedCoupon.discountPercentage && !validatedCoupon.discountAmount);
         const flatAmt = Number(validatedCoupon.discountAmount || 0);
-        if (!isPercentage && flatAmt > 0) {
-            let eligibleSubtotal = baseTotal;
-            if (validatedCoupon.appliesToProductId) {
-                let matchingSubtotal = 0;
-                const allowedKeys = String(validatedCoupon.appliesToProductId)
-                    .split(",")
-                    .map((s: string) => s.trim().toLowerCase())
-                    .filter(Boolean);
+        let eligibleSubtotal = baseTotal;
+        if (validatedCoupon.appliesToProductId) {
+            let matchingSubtotal = 0;
+            const allowedKeys = String(validatedCoupon.appliesToProductId)
+                .split(",")
+                .map((s: string) => s.trim().toLowerCase())
+                .filter(Boolean);
 
-                if (validatedCoupon.appliesTo === "CATEGORY") {
-                    for (const it of items) {
-                        const itemId = String(it.id || "").toLowerCase();
-                        const foodItemId = String(it.foodItemId || "").toLowerCase();
-                        const catId = String(it.foodCategoryId || it.categoryId || "").toLowerCase();
-                        const catName = String(it.categoryName || it.foodCategory?.name || it.category?.name || it.foodCategory || it.category || "").toLowerCase().trim();
-                        const itemName = String(it.name || "").toLowerCase().trim();
+            if (validatedCoupon.appliesTo === "CATEGORY") {
+                for (const it of items) {
+                    const itemId = String(it.id || "").toLowerCase();
+                    const foodItemId = String(it.foodItemId || "").toLowerCase();
+                    const catId = String(it.foodCategoryId || it.categoryId || "").toLowerCase();
+                    const catName = String(it.categoryName || it.foodCategory?.name || it.category?.name || it.foodCategory || it.category || "").toLowerCase().trim();
+                    const itemName = String(it.name || "").toLowerCase().trim();
 
-                        if (allowedKeys.some((k: string) => k === catId || k === catName || (catName && catName.includes(k)) || (k && catName && k.includes(catName)) || (itemName && itemName.includes(k)))) {
-                            matchingSubtotal += (Number(it.price) || 0) * (Number(it.quantity || it.qty || 1));
-                        }
-                    }
-                } else {
-                    for (const it of items) {
-                        const itemId = String(it.id || "").toLowerCase();
-                        const foodItemId = String(it.foodItemId || "").toLowerCase();
-                        const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
-                        const name = String(it.name || "").toLowerCase().trim();
-
-                        if (allowedKeys.some((k: string) => k === itemId || k === foodItemId || k === baseId || (name && (k === name || name.includes(k) || k.includes(name))))) {
-                            matchingSubtotal += (Number(it.price) || 0) * (Number(it.quantity || it.qty || 1));
-                        }
+                    if (allowedKeys.some((k: string) => k === catId || k === catName || (catName && catName.includes(k)) || (k && catName && k.includes(catName)) || (itemName && itemName.includes(k)))) {
+                        matchingSubtotal += (Number(it.price) || 0) * (Number(it.quantity || it.qty || 1));
                     }
                 }
-                if (matchingSubtotal > 0) {
-                    eligibleSubtotal = matchingSubtotal;
+            } else {
+                for (const it of items) {
+                    const itemId = String(it.id || "").toLowerCase();
+                    const foodItemId = String(it.foodItemId || "").toLowerCase();
+                    const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+                    const name = String(it.name || "").toLowerCase().trim();
+
+                    if (allowedKeys.some((k: string) => k === itemId || k === foodItemId || k === baseId || (name && (k === name || name.includes(k) || k.includes(name))))) {
+                        matchingSubtotal += (Number(it.price) || 0) * (Number(it.quantity || it.qty || 1));
+                    }
                 }
             }
+            if (matchingSubtotal > 0) {
+                eligibleSubtotal = matchingSubtotal;
+            }
+        }
 
-            if (flatAmt > eligibleSubtotal) {
+        if (!isPercentage && flatAmt > 0) {
+            if (flatAmt >= eligibleSubtotal || flatAmt >= baseTotal) {
                 throw new ApiError(
-                    `Coupon "${validatedCoupon.code}" cannot be applied as the discount (₹${flatAmt}) exceeds the eligible item/cart value of ₹${eligibleSubtotal}.`,
+                    `Coupon "${validatedCoupon.code}" cannot be applied as the discount (₹${flatAmt}) cannot reduce the payable amount to ₹0. Cart value must exceed ₹${flatAmt}.`,
                     400
                 );
             }
+        }
+
+        // Comprehensive check: Coupon discount cannot reduce final payable amount to ₹0
+        let effectiveCouponDiscount = 0;
+        if (isPercentage) {
+            const pct = Number(validatedCoupon.discountPercentage || 0);
+            effectiveCouponDiscount = Math.round((eligibleSubtotal * pct) / 100);
+            if (validatedCoupon.maxDiscountAmount && effectiveCouponDiscount > validatedCoupon.maxDiscountAmount) {
+                effectiveCouponDiscount = validatedCoupon.maxDiscountAmount;
+            }
+        } else {
+            effectiveCouponDiscount = flatAmt;
+        }
+
+        if (effectiveCouponDiscount >= baseTotal || (baseTotal - effectiveCouponDiscount) <= 0) {
+            throw new ApiError(
+                `Coupon "${validatedCoupon.code}" cannot be applied as the discount (₹${effectiveCouponDiscount}) cannot reduce the payable amount to ₹0. Cart value must be greater than the discount amount.`,
+                400
+            );
         }
     }
     // --- End Coupon Validation Logic ---

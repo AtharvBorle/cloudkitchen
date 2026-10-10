@@ -85,7 +85,8 @@ export const getPublicExploreData = unstable_cache(
                 parsedKitchenImages = [];
             }
 
-            const defaultCoords = getPincodeCoordinates(seller.user.pincode);
+            const effectiveSellerPincode = seller.user.pincode || seller.servedPincodes?.[0]?.pincode || "";
+            const defaultCoords = effectiveSellerPincode ? getPincodeCoordinates(effectiveSellerPincode) : null;
             const resolvedLat = seller.latitude ?? defaultCoords?.lat ?? null;
             const resolvedLng = seller.longitude ?? defaultCoords?.lng ?? null;
 
@@ -95,7 +96,7 @@ export const getPublicExploreData = unstable_cache(
                 trackingId: seller.trackingId,
                 type: seller.type,
                 city: seller.user.city,
-                pincode: seller.user.pincode,
+                pincode: effectiveSellerPincode,
                 locality: seller.addressLocality,
                 landmark: seller.addressLandmark,
                 latitude: resolvedLat,
@@ -127,7 +128,7 @@ export const getPublicExploreData = unstable_cache(
                     reviewsCount: itemRatingCount > 0 ? itemRatingCount : reviewsCount,
                     sellerName: seller.businessName || seller.user.name,
                     sellerCity: seller.user.city,
-                    sellerPincode: seller.user.pincode,
+                    sellerPincode: effectiveSellerPincode,
                     sellerLocality: seller.addressLocality,
                     sellerLandmark: seller.addressLandmark,
                     sellerTrackingId: seller.trackingId,
@@ -741,14 +742,22 @@ export const validateCouponForCart = async (req: Request) => {
         discountLabel = `${pct}% OFF`;
     } else {
         const flatAmt = coupon.discountAmount || 0;
-        if (flatAmt > baseDiscountSubtotal) {
+        if (flatAmt >= baseDiscountSubtotal || flatAmt >= numSubtotal) {
             throw new ApiError(
-                `Coupon "${coupon.code}" cannot be applied as the discount (₹${flatAmt}) exceeds the eligible item/cart value of ₹${baseDiscountSubtotal}.`,
+                `Coupon "${coupon.code}" cannot be applied as the discount (₹${flatAmt}) cannot reduce the payable amount to ₹0. Cart value must exceed ₹${flatAmt}.`,
                 400
             );
         }
         calculatedDiscount = flatAmt;
         discountLabel = `₹${flatAmt} OFF`;
+    }
+
+    // Ensure coupon discount strictly prevents final payable amount from becoming ₹0
+    if (calculatedDiscount >= baseDiscountSubtotal || (numSubtotal - calculatedDiscount) <= 0) {
+        throw new ApiError(
+            `Coupon "${coupon.code}" cannot be applied as the discount (₹${calculatedDiscount}) cannot reduce the payable amount to ₹0. Cart value must be greater than the discount amount.`,
+            400
+        );
     }
 
     return {

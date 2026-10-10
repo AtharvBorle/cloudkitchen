@@ -54,6 +54,7 @@ export interface PopularFoodProps {
   onCategoryChange?: (category: string) => void;
   onAddItem?: (item: FoodCardItem) => void;
   onDecreaseItem?: (itemId: string) => void;
+  onResetFilters?: () => void;
 }
 
 export const PopularFood: React.FC<PopularFoodProps> = ({
@@ -66,6 +67,7 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
   onCategoryChange,
   onAddItem,
   onDecreaseItem,
+  onResetFilters,
 }) => {
   const { cartItems, addToCart, decreaseQuantity } = useCart();
   const [activeCategory, setActiveCategory] = useState<string>(
@@ -207,11 +209,48 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
           <h3 style={{ margin: "0 0 6px", fontSize: "1.15rem", color: "#1E293B", fontWeight: "700" }}>
             No dishes available.
           </h3>
-          <p style={{ margin: 0, fontSize: "0.92rem", color: "#64748B" }}>
+          <p style={{ margin: "0 0 16px", fontSize: "0.92rem", color: "#64748B" }}>
             {items.length === 0
-              ? "No vegetarian dishes found matching this filter."
+              ? "No dishes found matching your current filter preferences."
               : "No food items currently available in this category."}
           </p>
+          {items.length === 0 && onResetFilters ? (
+            <button
+              type="button"
+              onClick={onResetFilters}
+              style={{
+                backgroundColor: "#FE5000",
+                color: "#FFFFFF",
+                border: "none",
+                borderRadius: "10px",
+                padding: "8px 20px",
+                fontWeight: "700",
+                fontSize: "0.88rem",
+                cursor: "pointer",
+                boxShadow: "0 4px 12px rgba(254, 80, 0, 0.2)",
+              }}
+            >
+              Show All Dishes
+            </button>
+          ) : activeCategory !== "All" && activeCategory !== "Popular" ? (
+            <button
+              type="button"
+              onClick={() => handleTabClick("All")}
+              style={{
+                backgroundColor: "#FE5000",
+                color: "#FFFFFF",
+                border: "none",
+                borderRadius: "10px",
+                padding: "8px 20px",
+                fontWeight: "700",
+                fontSize: "0.88rem",
+                cursor: "pointer",
+                boxShadow: "0 4px 12px rgba(254, 80, 0, 0.2)",
+              }}
+            >
+              View All Categories
+            </button>
+          ) : null}
         </div>
       ) : (
         <div className={styles.foodGrid} role="region" aria-label="Food Items Grid">
@@ -235,7 +274,7 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
               {/* Square Food Image */}
               <div className={styles.imageWrapper}>
                 <div style={{ position: "absolute", top: "6px", left: "6px", zIndex: 2 }}>
-                  <DietaryTag isVeg={item.isVeg !== false} size="xs" />
+                  <DietaryTag isVeg={item.isVeg !== false} itemType={(item as any).itemType} size="xs" />
                 </div>
                 <Image
                   src={item.image}

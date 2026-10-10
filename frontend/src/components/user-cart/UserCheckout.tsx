@@ -79,11 +79,25 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
   const [isLoadingOffers, setIsLoadingOffers] = useState<boolean>(false);
 
   const formattedDefaultAddress = React.useMemo(() => {
-    if (!defaultAddress) return defaultAddressProp || "No address selected";
-    const parts = [defaultAddress.houseNumber, defaultAddress.street, defaultAddress.locality, defaultAddress.landmark].filter(Boolean);
-    const line = parts.join(", ");
-    return defaultAddress.pincode ? `${line} - ${defaultAddress.pincode}` : line;
-  }, [defaultAddress, defaultAddressProp]);
+    if (defaultAddress) {
+      const parts = [defaultAddress.houseNumber, defaultAddress.street, defaultAddress.locality, defaultAddress.landmark].filter(Boolean);
+      const line = parts.join(", ");
+      if (line && defaultAddress.pincode) {
+        return `${line} - ${defaultAddress.pincode}`;
+      }
+      return line || defaultAddress.pincode || defaultAddressProp || "No address selected";
+    }
+    if (savedAddresses && savedAddresses.length > 0) {
+      const def = savedAddresses.find((a) => a.isDefault) || savedAddresses[0];
+      const parts = [def.houseNumber, def.street, def.locality, def.landmark].filter(Boolean);
+      const line = parts.join(", ");
+      if (line && def.pincode) {
+        return `${line} - ${def.pincode}`;
+      }
+      return line || def.pincode || defaultAddressProp || "No address selected";
+    }
+    return defaultAddressProp || "No address selected";
+  }, [defaultAddress, defaultAddressProp, savedAddresses]);
 
   const [currentAddress, setCurrentAddress] = useState<string>(formattedDefaultAddress);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState<boolean>(false);
@@ -95,7 +109,7 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
     }
   }, [defaultAddress, formattedDefaultAddress]);
 
-  const showToast = (msg: string) => {
+  const showToast = (msg: string, _type?: string) => {
     setToastMessage(msg);
     setTimeout(() => {
       setToastMessage(null);
@@ -421,33 +435,44 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
       return;
     }
 
-    // Pre-check for flat coupons from availableOffers if discount exceeds eligible subtotal
+    // Pre-check for coupons from availableOffers if discount equals or exceeds eligible subtotal or cart total
     const matchingOffer = availableOffers.find(
       (o) => (o.code && o.code.toUpperCase() === targetCode) || (o.id && o.id === targetCode)
     );
     if (matchingOffer) {
       const isPct = matchingOffer.discountType === "PERCENTAGE" || (matchingOffer.discountPercentage && !matchingOffer.discountAmount);
-      if (!isPct) {
-        const flatAmt = Number(matchingOffer.discountAmount || (matchingOffer.discountType === "FLAT" ? matchingOffer.discountValue : 0) || 0);
-        let eligibleSub = currentSubtotal;
-        if (matchingOffer.appliesToProductId) {
-          const allowedKeys = String(matchingOffer.appliesToProductId).split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
-          const matchingItems = cartItems.filter((it) => {
-            const itemId = String(it.id || "").toLowerCase();
-            const foodItemId = String(it.foodItemId || "").toLowerCase();
-            const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
-            const name = String(it.name || "").toLowerCase().trim();
-            return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name || (name && (name.includes(k) || k.includes(name))));
-          });
-          eligibleSub = matchingItems.reduce((acc, it) => acc + it.price * it.qty, 0);
+      let eligibleSub = currentSubtotal;
+      if (matchingOffer.appliesToProductId) {
+        const allowedKeys = String(matchingOffer.appliesToProductId).split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+        const matchingItems = cartItems.filter((it) => {
+          const itemId = String(it.id || "").toLowerCase();
+          const foodItemId = String(it.foodItemId || "").toLowerCase();
+          const baseId = itemId.includes("_") ? itemId.split("_")[0] : itemId;
+          const name = String(it.name || "").toLowerCase().trim();
+          return allowedKeys.some((k) => k === itemId || k === foodItemId || k === baseId || k === name || (name && (name.includes(k) || k.includes(name))));
+        });
+        eligibleSub = matchingItems.reduce((acc, it) => acc + it.price * it.qty, 0);
+      }
+
+      let calculatedDisc = 0;
+      if (isPct) {
+        const pct = matchingOffer.discountPercentage || (matchingOffer.discountType === "PERCENTAGE" ? matchingOffer.discountValue || 0 : 0);
+        calculatedDisc = Math.round((eligibleSub * pct) / 100);
+        if (matchingOffer.maxDiscountAmount) {
+          calculatedDisc = Math.min(calculatedDisc, matchingOffer.maxDiscountAmount);
         }
-        if (flatAmt > eligibleSub) {
-          setAppliedCoupon(null);
-          setAppliedPromo(null);
-          setDiscountPercent(0);
-          showToast(`Coupon "${matchingOffer.code}" cannot be applied as the discount (₹${flatAmt}) exceeds the eligible item/cart value of ₹${eligibleSub}.`);
-          return;
-        }
+      } else {
+        calculatedDisc = Number(matchingOffer.discountAmount || (matchingOffer.discountType === "FLAT" ? matchingOffer.discountValue : 0) || 0);
+      }
+
+      if (calculatedDisc >= eligibleSub || calculatedDisc >= currentSubtotal) {
+        setAppliedCoupon(null);
+        setAppliedPromo(null);
+        setDiscountPercent(0);
+        showToast(
+          `Coupon "${matchingOffer.code}" cannot be applied as the discount (₹${calculatedDisc}) cannot reduce the payable amount to ₹0. Cart value must be greater than the discount amount.`
+        );
+        return;
       }
     }
 
@@ -525,10 +550,12 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
     if (appliedCoupon.discountType === "PERCENTAGE" || (appliedCoupon.discountPercentage && !appliedCoupon.discountAmount)) {
       const pct = appliedCoupon.discountPercentage || 0;
       const raw = Math.round((targetSubtotal * pct) / 100);
-      return appliedCoupon.maxDiscountAmount ? Math.min(raw, appliedCoupon.maxDiscountAmount) : raw;
+      const capped = appliedCoupon.maxDiscountAmount ? Math.min(raw, appliedCoupon.maxDiscountAmount) : raw;
+      if (capped >= targetSubtotal || capped >= subtotal) return 0;
+      return capped;
     }
     const flat = appliedCoupon.discountAmount || 0;
-    if (flat > targetSubtotal) return 0;
+    if (flat >= targetSubtotal || flat >= subtotal) return 0;
     return flat;
   }, [appliedCoupon, subtotal, cartItems]);
   const deliveryFee = 0;
@@ -763,14 +790,15 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
                           display: "flex",
                           alignItems: "center",
                           gap: "6px",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap"
+                          flexWrap: "wrap",
+                          minWidth: 0,
                         }}
                       >
-                        <span>{appliedCouponData?.code || appliedPromo}</span>
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%" }}>
+                          {appliedCouponData?.code || appliedPromo}
+                        </span>
                         {(appliedCouponData as any)?.isAutoApply && (
-                          <span style={{ fontSize: "0.68rem", backgroundColor: "#BBF7D0", color: "#15803D", padding: "1px 6px", borderRadius: "4px", fontWeight: "700", flexShrink: 0 }}>
+                          <span style={{ fontSize: "0.68rem", backgroundColor: "#BBF7D0", color: "#15803D", padding: "1px 6px", borderRadius: "4px", fontWeight: "700", flexShrink: 0, whiteSpace: "nowrap" }}>
                             ⚡ AUTO-APPLIED
                           </span>
                         )}
@@ -847,6 +875,15 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
                       const isCurrentApplied = (appliedCouponData?.code || appliedPromo) === offer.code;
                       const minMet = !offer.minimumCartValue || subtotal >= offer.minimumCartValue;
                       const isEligible = offer.isEligible !== false;
+                      const isFlat = !offer.discountPercentage || offer.discountType === "FLAT";
+                      const flatAmt = Number(offer.discountAmount || (offer.discountType === "FLAT" ? offer.discountValue : 0) || 0);
+                      const pct = Number(offer.discountPercentage || 0);
+                      const estimatedDiscount = !isFlat
+                        ? offer.maxDiscountAmount
+                          ? Math.min(Math.round((subtotal * pct) / 100), offer.maxDiscountAmount)
+                          : Math.round((subtotal * pct) / 100)
+                        : flatAmt;
+                      const exceedsSubtotal = estimatedDiscount >= subtotal;
 
                       return (
                         <div
@@ -857,6 +894,15 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
                             if (!isCurrentApplied) {
                               if (!isEligible) {
                                 showToast(offer.ineligibilityReason || `Coupon "${offer.code}" is not applicable to this order.`);
+                                return;
+                              }
+                              if (exceedsSubtotal) {
+                                showToast(
+                                  isFlat
+                                    ? `Coupon "${offer.code}" cannot be applied as the discount (₹${flatAmt}) cannot reduce the payable amount to ₹0. Cart value must exceed ₹${flatAmt}.`
+                                    : `Coupon "${offer.code}" cannot be applied as the discount cannot reduce the payable amount to ₹0.`,
+                                  "error"
+                                );
                                 return;
                               }
                               handleApplyPromo(offer.code);
@@ -889,6 +935,11 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
                                 {minMet ? `Min cart ₹${offer.minimumCartValue}` : `Add ₹${offer.minimumCartValue - subtotal} more to unlock`}
                               </span>
                             ) : null}
+                            {exceedsSubtotal && (
+                              <span className={`${styles.offerMinCart} ${styles.offerMinCartWarning}`}>
+                                {isFlat ? `Cart value must exceed ₹${flatAmt}` : "Cart value must exceed discount"}
+                              </span>
+                            )}
                           </div>
 
                           <div className={styles.offerCardRight}>
@@ -912,6 +963,15 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
                                   e.stopPropagation();
                                   if (!isEligible) {
                                     showToast(offer.ineligibilityReason || `Coupon "${offer.code}" is not applicable to this order.`);
+                                    return;
+                                  }
+                                  if (exceedsSubtotal) {
+                                    showToast(
+                                      isFlat
+                                        ? `Coupon "${offer.code}" cannot be applied as the discount (₹${flatAmt}) cannot reduce the payable amount to ₹0. Cart value must exceed ₹${flatAmt}.`
+                                        : `Coupon "${offer.code}" cannot be applied as the discount cannot reduce the payable amount to ₹0.`,
+                                      "error"
+                                    );
                                     return;
                                   }
                                   handleApplyPromo(offer.code);

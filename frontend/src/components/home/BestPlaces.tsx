@@ -158,20 +158,6 @@ export default function BestPlaces({
                   }}
                   className="dish-img-box"
                 >
-                  <div style={{ position: "absolute", top: "8px", left: "8px", zIndex: 2 }}>
-                    <DietaryTag
-                      itemType={
-                        dish.itemType ||
-                        (dish.name.toLowerCase().includes("chicken") ||
-                        dish.name.toLowerCase().includes("mutton") ||
-                        dish.name.toLowerCase().includes("fish") ||
-                        dish.name.toLowerCase().includes("meat")
-                          ? "NON_VEG"
-                          : "VEG")
-                      }
-                      size="xs"
-                    />
-                  </div>
                   {/* Offer Badge if coupon exists */}
                   {dish.discount && !isClosed && (
                     <div
@@ -271,6 +257,22 @@ export default function BestPlaces({
                         {isSellerClosed ? "CLOSED" : "UNAVAILABLE"}
                       </span>
                     )}
+                  </div>
+
+                  {/* Dietary Tag below Title */}
+                  <div style={{ display: "flex", alignItems: "center", gap: "4px", flexWrap: "wrap" }}>
+                    <DietaryTag
+                      itemType={
+                        dish.itemType ||
+                        (dish.name.toLowerCase().includes("chicken") ||
+                        dish.name.toLowerCase().includes("mutton") ||
+                        dish.name.toLowerCase().includes("fish") ||
+                        dish.name.toLowerCase().includes("meat")
+                          ? "NON_VEG"
+                          : "VEG")
+                      }
+                      size="xs"
+                    />
                   </div>
 
                   {/* Price, Distance & Delivery Time */}

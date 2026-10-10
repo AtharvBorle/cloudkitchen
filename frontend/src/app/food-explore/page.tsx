@@ -143,7 +143,7 @@ function FoodExploreContent() {
 
   // Dynamic filter counts
   const filterCounts = useMemo(() => {
-    const items = searchQuery ? homeData.allFoodItems : homeData.foodItems;
+    const items = (homeData.allFoodItems && homeData.allFoodItems.length > 0) ? homeData.allFoodItems : homeData.foodItems;
     if (!items || items.length === 0) return { all: 0, veg: 0, non_veg: 0, vegan: 0, jain: 0, under150: 0, price150to300: 0, price300plus: 0, cuisineCounts: {} };
 
     const cuisineCounts: Record<string, number> = {};
@@ -162,11 +162,11 @@ function FoodExploreContent() {
       price300plus: items.filter((f) => f.price > 300).length,
       cuisineCounts,
     };
-  }, [homeData.foodItems, homeData.allFoodItems, availableCuisines, searchQuery]);
+  }, [homeData.foodItems, homeData.allFoodItems, availableCuisines]);
 
   // Filter and sort food items
   const filteredFoodItems = useMemo(() => {
-    const sourceItems = searchQuery ? homeData.allFoodItems : homeData.foodItems;
+    const sourceItems = (homeData.allFoodItems && homeData.allFoodItems.length > 0) ? homeData.allFoodItems : homeData.foodItems;
     if (!sourceItems || sourceItems.length === 0) return [];
 
     let list = sourceItems;
@@ -294,8 +294,8 @@ function FoodExploreContent() {
 
   // Filter and sort kitchens
   const filteredKitchens = useMemo(() => {
-    const sourceKitchens = searchQuery ? homeData.allKitchens : homeData.kitchens;
-    const sourceFoodItems = searchQuery ? homeData.allFoodItems : homeData.foodItems;
+    const sourceKitchens = (homeData.allKitchens && homeData.allKitchens.length > 0) ? homeData.allKitchens : homeData.kitchens;
+    const sourceFoodItems = (homeData.allFoodItems && homeData.allFoodItems.length > 0) ? homeData.allFoodItems : homeData.foodItems;
     if (!sourceKitchens || sourceKitchens.length === 0) return [];
 
     let list = sourceKitchens;
@@ -1444,62 +1444,27 @@ function FoodExploreContent() {
                           </Link>
                         </div>
 
-                        {/* Dietary Tag inside Food Menu Description (Shows only the seller-specified category) */}
+                        {/* Dietary Tag inside Food Menu Description (Shows all seller-specified dietary categories horizontally: Veg, Jain, Vegan) */}
                         <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", margin: "2px 0" }}>
                           {(() => {
                             const rawType = String(dish.itemType || "").toUpperCase();
+                            const rawParts = rawType.split(",").map((s) => s.trim());
                             const catName = String(dish.categoryName || (dish as any).category || "").toUpperCase();
                             const nameUpper = String(dish.name || "").toUpperCase();
 
-                            const isExplicitVegan = rawType.includes("VEGAN") || catName.includes("VEGAN") || nameUpper.includes("VEGAN");
-                            const isExplicitJain = rawType.includes("JAIN") || catName.includes("JAIN") || nameUpper.includes("JAIN");
-                            const isNonVeg = !isExplicitVegan && !isExplicitJain && isNonVegDish(dish);
-
-                            if (isExplicitVegan) {
-                              return (
-                                <span
-                                  style={{
-                                    backgroundColor: "#ECFDF5",
-                                    color: "#047857",
-                                    fontSize: "11px",
-                                    fontWeight: "700",
-                                    padding: "2px 8px",
-                                    borderRadius: "6px",
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: "4px",
-                                  }}
-                                >
-                                  <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#10B981" }} />
-                                  Vegan
-                                </span>
-                              );
-                            }
-
-                            if (isExplicitJain) {
-                              return (
-                                <span
-                                  style={{
-                                    backgroundColor: "#ECFDF5",
-                                    color: "#047857",
-                                    fontSize: "11px",
-                                    fontWeight: "700",
-                                    padding: "2px 8px",
-                                    borderRadius: "6px",
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: "4px",
-                                  }}
-                                >
-                                  <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#10B981" }} />
-                                  Jain
-                                </span>
-                              );
-                            }
+                            const isNonVeg =
+                              !rawParts.includes("VEG") &&
+                              !rawParts.includes("VEGAN") &&
+                              !rawParts.includes("JAIN") &&
+                              (rawParts.includes("NON_VEG") ||
+                                rawParts.includes("NON-VEG") ||
+                                rawParts.includes("NON VEG") ||
+                                isNonVegDish(dish));
 
                             if (isNonVeg) {
                               return (
                                 <span
+                                  key="non-veg"
                                   style={{
                                     backgroundColor: "#FEF2F2",
                                     color: "#B91C1C",
@@ -1510,6 +1475,7 @@ function FoodExploreContent() {
                                     display: "inline-flex",
                                     alignItems: "center",
                                     gap: "4px",
+                                    whiteSpace: "nowrap",
                                   }}
                                 >
                                   <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#EF4444" }} />
@@ -1518,8 +1484,31 @@ function FoodExploreContent() {
                               );
                             }
 
-                            return (
+                            const hasVeg =
+                              rawParts.includes("VEG") ||
+                              rawParts.includes("PURE_VEG") ||
+                              (!rawParts.includes("VEGAN") && !rawParts.includes("JAIN"));
+                            const hasJain =
+                              rawParts.includes("JAIN") ||
+                              catName.includes("JAIN") ||
+                              nameUpper.includes("JAIN");
+                            const hasVegan =
+                              rawParts.includes("VEGAN") ||
+                              catName.includes("VEGAN") ||
+                              nameUpper.includes("VEGAN");
+
+                            const tags: Array<{ key: string; label: string }> = [];
+                            if (hasVeg) tags.push({ key: "veg", label: "Veg" });
+                            if (hasJain) tags.push({ key: "jain", label: "Jain" });
+                            if (hasVegan) tags.push({ key: "vegan", label: "Vegan" });
+
+                            if (tags.length === 0) {
+                              tags.push({ key: "veg", label: "Veg" });
+                            }
+
+                            return tags.map((t) => (
                               <span
+                                key={t.key}
                                 style={{
                                   backgroundColor: "#ECFDF5",
                                   color: "#047857",
@@ -1530,12 +1519,13 @@ function FoodExploreContent() {
                                   display: "inline-flex",
                                   alignItems: "center",
                                   gap: "4px",
+                                  whiteSpace: "nowrap",
                                 }}
                               >
                                 <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#10B981" }} />
-                                Veg
+                                {t.label}
                               </span>
-                            );
+                            ));
                           })()}
                         </div>
 

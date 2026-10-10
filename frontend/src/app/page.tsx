@@ -38,7 +38,7 @@ function getInitialDietPreference(): "all" | "veg" | "non_veg" | "vegan" | "jain
       const storedDiet = localStorage.getItem("cloudkitchen_diet_preference");
       if (storedDiet) {
         const lower = storedDiet.toLowerCase().trim();
-        if (lower === "veg") return "veg";
+        if (lower === "veg" || lower === "pure_veg" || lower === "pureveg") return "veg";
         if (lower === "non_veg" || lower === "non-veg") return "non_veg";
         if (lower === "vegan") return "vegan";
         if (lower === "jain") return "jain";
@@ -53,24 +53,30 @@ function getInitialDietPreference(): "all" | "veg" | "non_veg" | "vegan" | "jain
 
 export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState("food");
-  const [activeFilters, setActiveFilters] = useState<ActiveHomeFilters>(() => ({
-    dietary: getInitialDietPreference(),
-  }));
+  const [activeFilters, setActiveFilters] = useState<ActiveHomeFilters>({
+    dietary: "all",
+  });
   const [homeSearchQuery, setHomeSearchQuery] = useState("");
   const { openLocationModal, defaultAddress, setGuestLocation } = useLocation();
   const homeData = useHomeData();
   const isDietInitializedRef = useRef<boolean>(false);
 
-  const persistDietaryPreference = (dietVal: "all" | "veg" | "non_veg" | "vegan" | "jain") => {
-    if (typeof window === "undefined") return;
-    try {
-      const storageVal = dietVal === "non_veg" ? "non-veg" : dietVal;
-      localStorage.setItem("cloudkitchen_diet_preference", storageVal);
-      const isVeg = dietVal === "veg" || dietVal === "vegan" || dietVal === "jain";
-      localStorage.setItem("cloudkitchen_veg_preference", String(isVeg));
-      window.dispatchEvent(new CustomEvent("cloudkitchen_diet_preference_changed", { detail: storageVal }));
-      window.dispatchEvent(new CustomEvent("cloudkitchen_veg_preference_changed", { detail: isVeg }));
-    } catch {}
+  const persistDietaryPreference = (dietVal: "all" | "veg" | "pure_veg" | "non_veg" | "non-veg" | "vegan" | "jain") => {
+    if (typeof window !== "undefined") {
+      try {
+        const storageVal =
+          dietVal === "non_veg" || dietVal === "non-veg"
+            ? "non-veg"
+            : dietVal === "veg" || dietVal === "pure_veg"
+            ? "pure_veg"
+            : dietVal;
+        localStorage.setItem("cloudkitchen_diet_preference", storageVal);
+        const isVeg = storageVal === "pure_veg" || storageVal === "vegan" || storageVal === "jain";
+        localStorage.setItem("cloudkitchen_veg_preference", String(isVeg));
+        window.dispatchEvent(new CustomEvent("cloudkitchen_diet_preference_changed", { detail: storageVal }));
+        window.dispatchEvent(new CustomEvent("cloudkitchen_veg_preference_changed", { detail: isVeg }));
+      } catch {}
+    }
   };
 
   // Restore and sync dietary preference with localStorage and across tabs/components
@@ -90,7 +96,7 @@ export default function Home() {
           ? "vegan"
           : d === "jain"
           ? "jain"
-          : d === "veg"
+          : d === "veg" || d === "pure_veg" || d === "pureveg"
           ? "veg"
           : "all";
       setActiveFilters((prev) => (prev.dietary === norm ? prev : { ...prev, dietary: norm }));
@@ -160,33 +166,47 @@ export default function Home() {
     return Array.from(set);
   }, [homeData.categories, homeData.foodItems]);
 
-  // Compute dynamic filter counts from available items
+  // Compute dynamic filter counts from available kitchens & items
   const filterCounts = useMemo(() => {
-    const items = homeSearchQuery ? homeData.allFoodItems : homeData.foodItems;
-    if (!items || items.length === 0) return undefined;
+    const kitchens = (homeData.allKitchens && homeData.allKitchens.length > 0) ? homeData.allKitchens : homeData.kitchens;
+    const items = (homeData.allFoodItems && homeData.allFoodItems.length > 0) ? homeData.allFoodItems : homeData.foodItems;
+    if (!kitchens || kitchens.length === 0) return undefined;
+
+    let baseKitchens = kitchens;
+    let baseItems = items || [];
+
+    if (homeSearchQuery) {
+      baseKitchens = baseKitchens.filter((k) => matchesKitchenOrDishSearch(homeSearchQuery, k, baseItems));
+      baseItems = baseItems.filter((f) => matchesDishSearch(homeSearchQuery, f));
+    }
+
+    if (selectedCategory && selectedCategory !== "food" && selectedCategory !== "rooms") {
+      baseKitchens = baseKitchens.filter((k) => matchesKitchenCategoryFilter(selectedCategory, k, baseItems));
+      baseItems = baseItems.filter((f) => matchesDishCategory(selectedCategory, f));
+    }
 
     const cuisineCounts: Record<string, number> = {};
     availableCuisines.forEach((c) => {
-      cuisineCounts[c] = items.filter((f) => isDishMatchingCuisine(c, f)).length;
+      cuisineCounts[c] = baseKitchens.filter((k) => isKitchenServingCuisine(c, k, baseItems)).length;
     });
 
     return {
-      all: items.length,
-      veg: items.filter((f) => isDishMatchingDiet(f, "veg")).length,
-      non_veg: items.filter((f) => isDishMatchingDiet(f, "non_veg")).length,
-      vegan: items.filter((f) => isDishMatchingDiet(f, "vegan")).length,
-      jain: items.filter((f) => isDishMatchingDiet(f, "jain")).length,
-      under150: items.filter((f) => f.price <= 150).length,
-      price150to300: items.filter((f) => f.price > 150 && f.price <= 300).length,
-      price300plus: items.filter((f) => f.price > 300).length,
+      all: baseKitchens.length,
+      veg: baseKitchens.filter((k) => isKitchenMatchingDiet(k, "veg", baseItems)).length,
+      non_veg: baseKitchens.filter((k) => isKitchenMatchingDiet(k, "non_veg", baseItems)).length,
+      vegan: baseKitchens.filter((k) => isKitchenMatchingDiet(k, "vegan", baseItems)).length,
+      jain: baseKitchens.filter((k) => isKitchenMatchingDiet(k, "jain", baseItems)).length,
+      under150: baseItems.filter((f) => f.price <= 150).length,
+      price150to300: baseItems.filter((f) => f.price > 150 && f.price <= 300).length,
+      price300plus: baseItems.filter((f) => f.price > 300).length,
       cuisineCounts,
     };
-  }, [homeData.foodItems, homeData.allFoodItems, availableCuisines, homeSearchQuery]);
+  }, [homeData.kitchens, homeData.allKitchens, homeData.foodItems, homeData.allFoodItems, availableCuisines, homeSearchQuery, selectedCategory]);
 
   // Dynamic Kitchens / Places (and multi-dimensional filtering)
   const dynamicPlaces = useMemo(() => {
-    const sourceKitchens = homeSearchQuery ? homeData.allKitchens : homeData.kitchens;
-    const sourceFoodItems = homeSearchQuery ? homeData.allFoodItems : homeData.foodItems;
+    const sourceKitchens = (homeData.allKitchens && homeData.allKitchens.length > 0) ? homeData.allKitchens : homeData.kitchens;
+    const sourceFoodItems = (homeData.allFoodItems && homeData.allFoodItems.length > 0) ? homeData.allFoodItems : homeData.foodItems;
 
     if (!sourceKitchens || sourceKitchens.length === 0) {
       return [];
@@ -287,7 +307,7 @@ export default function Home() {
 
   // Dynamic Offers for PopularOrders derived from active coupons & all eligible food items
   const dynamicOffers = useMemo(() => {
-    const sourceFoodItems = homeSearchQuery ? homeData.allFoodItems : homeData.foodItems;
+    const sourceFoodItems = (homeData.allFoodItems && homeData.allFoodItems.length > 0) ? homeData.allFoodItems : homeData.foodItems;
     if (!sourceFoodItems || sourceFoodItems.length === 0 || !homeData.coupons || homeData.coupons.length === 0) {
       return [];
     }
@@ -375,7 +395,7 @@ export default function Home() {
 
   // Dynamic Dishes for BestPlaces
   const dynamicDishes = useMemo(() => {
-    const sourceFoodItems = homeSearchQuery ? homeData.allFoodItems : homeData.foodItems;
+    const sourceFoodItems = (homeData.allFoodItems && homeData.allFoodItems.length > 0) ? homeData.allFoodItems : homeData.foodItems;
     if (!sourceFoodItems || sourceFoodItems.length === 0) return [];
     let list = sourceFoodItems;
 
@@ -446,7 +466,7 @@ export default function Home() {
 
   // Dynamic Top Rated Items for DashboardBody
   const dynamicTopRated = useMemo(() => {
-    const sourceFoodItems = homeSearchQuery ? homeData.allFoodItems : homeData.foodItems;
+    const sourceFoodItems = (homeData.allFoodItems && homeData.allFoodItems.length > 0) ? homeData.allFoodItems : homeData.foodItems;
     if (!sourceFoodItems || sourceFoodItems.length === 0) return [];
     let list = sourceFoodItems;
 
@@ -510,7 +530,7 @@ export default function Home() {
 
   // Dynamic Recommended Dishes for RecommendedForYou
   const dynamicRecommended = useMemo(() => {
-    const sourceFoodItems = homeSearchQuery ? homeData.allFoodItems : homeData.foodItems;
+    const sourceFoodItems = (homeData.allFoodItems && homeData.allFoodItems.length > 0) ? homeData.allFoodItems : homeData.foodItems;
     if (!sourceFoodItems || sourceFoodItems.length === 0) return [];
     let list = sourceFoodItems;
 
@@ -711,16 +731,15 @@ export default function Home() {
           activeFilters={activeFilters}
           onFilterChange={(newFilters) => {
             setActiveFilters(newFilters);
-            if (newFilters.dietary) {
-              persistDietaryPreference(newFilters.dietary);
-            }
+            const dietVal = newFilters.dietary || "all";
+            persistDietaryPreference(dietVal);
           }}
           availableCuisines={availableCuisines}
           counts={filterCounts}
         />
 
         {/* Out of Service Area Alert Banner (only shown during location browsing, not during name search) */}
-        {!homeSearchQuery && homeData.activePincode && !homeData.isLoading && homeData.kitchens.length === 0 && (
+        {!homeSearchQuery && homeData.activePincode && !homeData.isLoading && !homeData.isDirectlyDeliverable && (
           <div
             style={{
               width: "100%",
@@ -755,10 +774,10 @@ export default function Home() {
               </div>
               <div>
                 <h3 style={{ margin: "0 0 2px 0", fontSize: "1rem", fontWeight: "700", color: "#0F172A" }}>
-                  No Cloud Kitchens Delivering to PIN {homeData.activePincode}
+                  Direct Delivery Limited for PIN {homeData.activePincode}
                 </h3>
                 <p style={{ margin: 0, fontSize: "0.85rem", color: "#64748B" }}>
-                  We haven&apos;t expanded to this specific pincode yet. Choose a nearby area like Kothrud (411038), Baner (411045), or Aundh (411007) to explore delicious dishes.
+                  Showing all active cloud kitchens in Pune. Choose an area like Kothrud (411038 / 411052) or Shivajinagar (411004) for direct doorstep delivery.
                 </p>
               </div>
             </div>
@@ -791,9 +810,38 @@ export default function Home() {
         {/* 4. Properties / Best Places Nearby */}
         <Properties
           places={dynamicPlaces}
-          foodItems={homeSearchQuery ? homeData.allFoodItems : homeData.foodItems}
+          foodItems={(homeData.allFoodItems && homeData.allFoodItems.length > 0) ? homeData.allFoodItems : homeData.foodItems}
           allKitchens={homeData.allKitchens}
           isLoading={homeData.isLoading}
+          selectedDietary={
+            activeFilters.dietary === "veg" || (activeFilters.dietary as string) === "pure_veg"
+              ? ["pure_veg"]
+              : activeFilters.dietary === "non_veg" || (activeFilters.dietary as string) === "non-veg"
+              ? ["non-veg"]
+              : activeFilters.dietary === "vegan"
+              ? ["vegan"]
+              : activeFilters.dietary === "jain"
+              ? ["jain"]
+              : []
+          }
+          onDietaryChange={(newDietary) => {
+            const nextDiet: "all" | "veg" | "non_veg" | "vegan" | "jain" =
+              newDietary.includes("pure_veg") || newDietary.includes("veg")
+                ? "veg"
+                : newDietary.includes("non-veg") || newDietary.includes("non_veg")
+                ? "non_veg"
+                : newDietary.includes("vegan")
+                ? "vegan"
+                : newDietary.includes("jain")
+                ? "jain"
+                : "all";
+
+            setActiveFilters((prev) => ({
+              ...prev,
+              dietary: nextDiet,
+            }));
+            persistDietaryPreference(nextDiet);
+          }}
         />
 
         {/* 6. Popular Orders / Today's Special Offers */}

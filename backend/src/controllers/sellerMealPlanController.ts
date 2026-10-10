@@ -66,6 +66,69 @@ export const getSellerMealPlans = async () => {
         orderBy: { createdAt: "desc" }
     });
 
+    // Also fetch all user meal subscriptions linked to this seller directly
+    const directSubs = await db.userMealSubscription.findMany({
+        where: { sellerId: sellerProfile.id },
+        include: {
+            user: {
+                select: {
+                    id: true,
+                    name: true,
+                    phone: true,
+                    email: true,
+                }
+            },
+            plan: true
+        },
+        orderBy: { createdAt: "desc" }
+    });
+
+    const now = new Date();
+    const isSubscriptionActive = (sub: any) => {
+        const statusStr = String(sub.status || "").toUpperCase().trim();
+        const isStatusActive = statusStr === "ACTIVE" || statusStr === "LIVE";
+        const notPaused = !sub.isPaused;
+        const notExpired = !sub.endDate || new Date(sub.endDate) >= now;
+        return isStatusActive && notPaused && notExpired;
+    };
+
+    // Extract all subscribers across seller's plans and direct subscriptions without duplicates
+    const allSubscribers: any[] = [];
+    const seenSubIds = new Set<string>();
+
+    const appendSub = (sub: any, planName?: string, planTier?: string, planId?: string) => {
+        if (!sub?.id || seenSubIds.has(sub.id)) return;
+        seenSubIds.add(sub.id);
+        allSubscribers.push({
+            id: sub.id,
+            userId: sub.user?.id || sub.userId || "",
+            planId: planId || sub.planId || "",
+            planName: planName || sub.plan?.name || "Meal Plan",
+            tier: sub.tier || planTier || sub.plan?.tier || "Bronze",
+            customerName: sub.user?.name || "Customer",
+            customerPhone: sub.contactPhone || sub.user?.phone || "",
+            customerEmail: sub.user?.email || "",
+            deliveryAddress: sub.deliveryAddress || "",
+            status: isSubscriptionActive(sub) ? "ACTIVE" : (sub.isPaused ? "PAUSED" : (sub.endDate && new Date(sub.endDate) < now ? "EXPIRED" : sub.status)),
+            rawStatus: sub.status,
+            isPaused: Boolean(sub.isPaused),
+            cycle: sub.cycle || "Weekly",
+            startDate: sub.startDate instanceof Date ? sub.startDate.toISOString() : String(sub.startDate),
+            endDate: sub.endDate ? (sub.endDate instanceof Date ? sub.endDate.toISOString() : String(sub.endDate)) : null,
+            pricePaid: Number(sub.pricePaid) || 0,
+        });
+    };
+
+    dbPlans.forEach((plan) => {
+        plan.userSubscriptions.forEach((sub) => {
+            appendSub(sub, plan.name, plan.tier, plan.id);
+        });
+    });
+
+    directSubs.forEach((sub) => {
+        appendSub(sub, sub.plan?.name, sub.plan?.tier, sub.planId);
+    });
+
     // Format plans for frontend consumption
     const plans = dbPlans.map((plan) => {
         let parsedFeatures: string[] = [];
@@ -82,7 +145,35 @@ export const getSellerMealPlans = async () => {
             parsedTimings = [];
         }
 
-        const activeSubscribers = plan.userSubscriptions.filter((s) => s.status === "ACTIVE" && !s.isPaused).length;
+        // Count distinct active users subscribed to this specific plan
+        const planActiveUserKeys = new Set<string>();
+
+        // 1. Direct Prisma userSubscriptions relations
+        (plan.userSubscriptions || []).forEach((s) => {
+            if (isSubscriptionActive(s)) {
+                const userKey = s.user?.id || s.userId || s.id;
+                if (userKey) planActiveUserKeys.add(String(userKey).toLowerCase().trim());
+            }
+        });
+
+        // 2. Cross-match against allSubscribers (catches directSubs, name matching, ID matching)
+        allSubscribers.forEach((s) => {
+            const statusUpper = String(s.status || "").toUpperCase();
+            const isActive = (statusUpper === "ACTIVE" || statusUpper === "LIVE") && !s.isPaused;
+            if (!isActive) return;
+
+            const matchesPlanId = s.planId && (s.planId === plan.id || s.planId.toLowerCase() === plan.id.toLowerCase());
+            const matchesPlanName = s.planName && plan.name && s.planName.trim().toLowerCase() === plan.name.trim().toLowerCase();
+
+            if (matchesPlanId || matchesPlanName) {
+                const userKey = s.userId || s.customerEmail || s.customerPhone || s.customerName || s.id;
+                if (userKey) planActiveUserKeys.add(String(userKey).toLowerCase().trim());
+            }
+        });
+
+        const activeSubscribers = planActiveUserKeys.size > 0 
+            ? planActiveUserKeys.size 
+            : (plan.subscribersCount || 0);
 
         const isWeekly = (plan.duration || "1 Week").toLowerCase().includes("week");
         return {
@@ -107,33 +198,21 @@ export const getSellerMealPlans = async () => {
         };
     });
 
-    // Extract all subscribers across seller's plans
-    const allSubscribers: any[] = [];
-    dbPlans.forEach((plan) => {
-        plan.userSubscriptions.forEach((sub) => {
-            allSubscribers.push({
-                id: sub.id,
-                planId: plan.id,
-                planName: plan.name,
-                tier: sub.tier || plan.tier,
-                customerName: sub.user?.name || "Customer",
-                customerPhone: sub.contactPhone || sub.user?.phone || "",
-                customerEmail: sub.user?.email || "",
-                deliveryAddress: sub.deliveryAddress || "",
-                status: sub.status,
-                isPaused: sub.isPaused,
-                cycle: sub.cycle,
-                startDate: sub.startDate.toISOString(),
-                endDate: sub.endDate ? sub.endDate.toISOString() : null,
-                pricePaid: sub.pricePaid,
-            });
-        });
+    // Count the total number of distinct users who currently have an active subscription
+    const activeUserKeys = new Set<string>();
+    allSubscribers.forEach((s) => {
+        if (isSubscriptionActive(s)) {
+            const userKey = s.userId || s.customerEmail || s.customerPhone || s.customerName || s.id;
+            if (userKey) {
+                activeUserKeys.add(String(userKey).toLowerCase().trim());
+            }
+        }
     });
 
-    const activeSubscribersCount = allSubscribers.filter((s) => s.status === "ACTIVE" && !s.isPaused).length;
+    const activeSubscribersCount = activeUserKeys.size;
     const activePlansCount = plans.filter((p) => p.status === "Live").length;
     const mrrTotal = allSubscribers
-        .filter((s) => s.status === "ACTIVE" && !s.isPaused)
+        .filter(isSubscriptionActive)
         .reduce((sum, s) => {
             const c = (s.cycle || "1 Week").toLowerCase();
             if (c.includes("2 week") || c === "biweekly") return sum + ((s.pricePaid || 0) * 2);
@@ -190,6 +269,19 @@ export const getSellerMealPlanById = async (planId: string) => {
         parsedTimings = [];
     }
 
+    const activeSubUsers = new Set(
+        (plan.userSubscriptions || [])
+            .filter((s) => {
+                const statusStr = String(s.status || "").toUpperCase().trim();
+                const notPaused = !s.isPaused;
+                const notExpired = !s.endDate || new Date(s.endDate) >= new Date();
+                return (statusStr === "ACTIVE" || statusStr === "LIVE") && notPaused && notExpired;
+            })
+            .map((s) => s.user?.id || s.userId || s.id)
+            .filter(Boolean)
+    );
+    const subCount = activeSubUsers.size > 0 ? activeSubUsers.size : (plan.subscribersCount || 0);
+
     const isWeekly = (plan.duration || "1 Week").toLowerCase().includes("week");
     return {
         id: plan.id,
@@ -207,7 +299,7 @@ export const getSellerMealPlanById = async (planId: string) => {
         status: plan.status,
         allowCancel: plan.allowCancel,
         pauseBillingPeriod: plan.pauseBillingPeriod,
-        subscribersCount: plan.userSubscriptions?.filter((s) => s.status === "ACTIVE" && !s.isPaused).length || 0,
+        subscribersCount: subCount,
         createdAt: plan.createdAt.toISOString(),
         updatedAt: plan.updatedAt.toISOString(),
     };

@@ -27,6 +27,7 @@ export interface MealSubscriptionPlan {
 
 export interface MealSubscriber {
   id: string;
+  userId?: string;
   name?: string;
   customerName?: string;
   roomNo?: string;
@@ -167,30 +168,72 @@ export async function fetchStoredMealPlans(): Promise<{
       const payload = json.data || json;
       const rawPlans = Array.isArray(payload.plans) ? payload.plans : Array.isArray(payload) ? payload : [];
       const mappedPlans: MealSubscriptionPlan[] = rawPlans.map(formatMealPlan);
-      const rawSubscribers = Array.isArray(payload.subscribers) ? payload.subscribers : [];
-      const mappedSubscribers: MealSubscriber[] = rawSubscribers.map((s: any) => ({
-        id: s.id,
-        name: s.customerName || s.name || "Customer",
-        customerName: s.customerName || s.name || "Customer",
-        roomNo: s.deliveryAddress || "Delivery",
-        planId: s.planId,
-        planName: s.planName || "Meal Plan",
-        tier: s.tier || "Bronze",
-        customerPhone: s.customerPhone || "",
-        customerEmail: s.customerEmail || "",
-        deliveryAddress: s.deliveryAddress || "",
-        startDate: s.startDate ? new Date(s.startDate).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }) : "Today",
-        renewalDate: s.endDate ? new Date(s.endDate).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }) : "Auto-renew",
-        endDate: s.endDate,
-        amount: s.pricePaid ? `₹${s.pricePaid.toFixed(0)}` : "₹0",
-        pricePaid: s.pricePaid || 0,
-        cycle: s.cycle || "Weekly",
-        status: s.isPaused ? "Paused" : s.status === "ACTIVE" ? "Active" : s.status || "Active",
-        isPaused: s.isPaused,
-      }));
+      const now = new Date();
+      const isSubActive = (s: any) => {
+        const statusStr = String(s.status || "").toUpperCase().trim();
+        const isStatusActive = statusStr === "ACTIVE" || statusStr === "LIVE";
+        const notPaused = !s.isPaused;
+        const notExpired = !s.endDate || new Date(s.endDate) >= now;
+        return isStatusActive && notPaused && notExpired;
+      };
 
-      const metrics: MealPlanMetrics = payload.metrics || {
-        activeSubscribers: mappedSubscribers.filter((s) => s.status === "Active").length,
+      const rawSubscribers = Array.isArray(payload.subscribers) ? payload.subscribers : [];
+      const mappedSubscribers: MealSubscriber[] = rawSubscribers.map((s: any) => {
+        const active = isSubActive(s);
+        const expired = s.endDate && new Date(s.endDate) < now;
+        return {
+          id: s.id,
+          userId: s.userId || s.user?.id || "",
+          name: s.customerName || s.name || "Customer",
+          customerName: s.customerName || s.name || "Customer",
+          roomNo: s.deliveryAddress || "Delivery",
+          planId: s.planId,
+          planName: s.planName || "Meal Plan",
+          tier: s.tier || "Bronze",
+          customerPhone: s.customerPhone || "",
+          customerEmail: s.customerEmail || "",
+          deliveryAddress: s.deliveryAddress || "",
+          startDate: s.startDate ? new Date(s.startDate).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }) : "Today",
+          renewalDate: s.endDate ? new Date(s.endDate).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" }) : "Auto-renew",
+          endDate: s.endDate,
+          amount: s.pricePaid ? `₹${Number(s.pricePaid).toFixed(0)}` : "₹0",
+          pricePaid: Number(s.pricePaid) || 0,
+          cycle: s.cycle || "Weekly",
+          status: s.isPaused ? "Paused" : (expired ? "Expired" : (active ? "Active" : s.status || "Active")),
+          isPaused: Boolean(s.isPaused),
+        };
+      });
+
+      mappedPlans.forEach((plan) => {
+        const planActiveUsers = new Set<string>();
+        mappedSubscribers.forEach((s) => {
+          if (!isSubActive(s)) return;
+          const matchId = (s.planId && (s.planId === plan.id || s.planId === plan.planId));
+          const matchName = (s.planName && plan.name && s.planName.trim().toLowerCase() === plan.name.trim().toLowerCase());
+          if (matchId || matchName) {
+            const key = s.userId || s.customerEmail || s.customerPhone || s.customerName || s.name || s.id;
+            if (key) planActiveUsers.add(String(key).toLowerCase().trim());
+          }
+        });
+
+        const activeCount = planActiveUsers.size > 0 ? planActiveUsers.size : (plan.subscribersCount || 0);
+        plan.subscribersCount = activeCount;
+        plan.monthlyRevenue = `₹${((plan.rawWeeklyPrice || 0) * 4 * activeCount).toLocaleString("en-IN")}`;
+      });
+
+      const activeUserKeys = new Set<string>();
+      mappedSubscribers.forEach((s) => {
+        if (isSubActive(s)) {
+          const key = s.userId || s.customerEmail || s.customerPhone || s.customerName || s.id;
+          if (key) activeUserKeys.add(String(key).toLowerCase().trim());
+        }
+      });
+
+      const metrics: MealPlanMetrics = payload.metrics ? {
+        ...payload.metrics,
+        activeSubscribers: payload.metrics.activeSubscribers !== undefined ? payload.metrics.activeSubscribers : activeUserKeys.size,
+      } : {
+        activeSubscribers: activeUserKeys.size,
         monthlyRecurringRevenue: "₹0",
         rawMRR: 0,
         activePlansCount: mappedPlans.filter((p) => p.status === "Live").length,
