@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { SellerOrders, SellerResponsiveWrapper } from "@/components/seller";
 import ResponsiveSellerOrdersPage from "@/app/seller/res/orders/page";
@@ -9,9 +10,11 @@ export const metadata: Metadata = {
 
 export default function SellerOrdersPage() {
   return (
-    <SellerResponsiveWrapper
-      desktop={<SellerOrders />}
-      mobile={<ResponsiveSellerOrdersPage />}
-    />
+    <Suspense fallback={null}>
+      <SellerResponsiveWrapper
+        desktop={<SellerOrders />}
+        mobile={<ResponsiveSellerOrdersPage />}
+      />
+    </Suspense>
   );
 }

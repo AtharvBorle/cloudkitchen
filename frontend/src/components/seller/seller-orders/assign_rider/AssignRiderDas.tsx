@@ -22,6 +22,7 @@ import ConsoleSidebar from "../../sidebar/Sidebar";
 import Topbar from "../../nav/Topbar";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
 import { broadcastDeliveryAlert } from "@/hooks/useSellerNotifications";
+import { formatOrderDeliveryAddress } from "../SellerOrders";
 import { fetchApi } from "@/lib/fetch-api";
 import styles from "./AssignRiderDas.module.css";
 
@@ -284,7 +285,7 @@ function AssignRiderContent() {
                     <div className={styles.infoContent}>
                       <span className={styles.infoLabel}>Delivery Destination</span>
                       <span className={styles.infoSub}>
-                        {order.deliveryAddress || "Customer Address"}
+                        {formatOrderDeliveryAddress(order.deliveryAddress, order.room?.title)}
                       </span>
                     </div>
                   </div>

@@ -80,17 +80,6 @@ function EditMenuInner({
   const [modalActionType, setModalActionType] = useState<'add' | 'edit'>('add');
   const [savedDishName, setSavedDishName] = useState('');
 
-  // Day-wise Operational Hours
-  const [schedules, setSchedules] = useState<DaySchedule[]>([
-    { day: 'Monday', openTime: '', closeTime: '', isOpen: true },
-    { day: 'Tuesday', openTime: '', closeTime: '', isOpen: true },
-    { day: 'Wednesday', openTime: '', closeTime: '', isOpen: true },
-    { day: 'Thursday', openTime: '', closeTime: '', isOpen: true },
-    { day: 'Friday', openTime: '', closeTime: '', isOpen: true },
-    { day: 'Saturday', openTime: '', closeTime: '', isOpen: true },
-    { day: 'Sunday', openTime: '', closeTime: '', isOpen: true },
-  ]);
-
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [existingImageUrl, setExistingImageUrl] = useState<string>('');
 
@@ -134,15 +123,6 @@ function EditMenuInner({
                 }
               } else {
                 setSelectedFoodTypes([]);
-              }
-
-              if (found.operationalHours) {
-                try {
-                  const parsed = typeof found.operationalHours === 'string' ? JSON.parse(found.operationalHours) : found.operationalHours;
-                  if (Array.isArray(parsed) && parsed.length > 0) {
-                    setSchedules(parsed);
-                  }
-                } catch {}
               }
 
               const rawAddonsData = found.addons || found.variants;
@@ -215,18 +195,6 @@ function EditMenuInner({
 
   const handleRemoveVariant = (id: string) => {
     setVariants(variants.filter((v) => v.id !== id));
-  };
-
-  const handleToggleDay = (day: string) => {
-    setSchedules(
-      schedules.map((s) => (s.day === day ? { ...s, isOpen: !s.isOpen } : s))
-    );
-  };
-
-  const handleTimeChange = (day: string, field: 'openTime' | 'closeTime', val: string) => {
-    setSchedules(
-      schedules.map((s) => (s.day === day ? { ...s, [field]: val } : s))
-    );
   };
 
   const handleAddAnother = () => {
@@ -328,7 +296,6 @@ function EditMenuInner({
       const cleanStock = stockQty.trim() !== '' && !isNaN(parseInt(stockQty, 10)) ? Math.max(0, parseInt(stockQty, 10)) : 0;
       formData.append('stockQuantity', String(cleanStock));
       formData.append('isAvailable', String(cleanStock > 0));
-      formData.append('operationalHours', JSON.stringify(schedules));
 
       const validVariants = variants
         .filter(v => v.name.trim().length > 0)
@@ -719,32 +686,6 @@ function EditMenuInner({
                 <Plus size={15} strokeWidth={2.6} />
                 <span>Add Add-on</span>
               </button>
-            </div>
-
-            {/* Day-wise Operational Hours */}
-            <div className={styles.subSection}>
-              <label className={styles.subSectionTitle}>Day-wise Operational Hours</label>
-              <div className={styles.scheduleList}>
-                {schedules.map((schedule) => (
-                  <div key={schedule.day} className={styles.scheduleRow}>
-                    <span className={styles.scheduleDay}>{schedule.day}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleToggleDay(schedule.day)}
-                      className={`${styles.toggleSwitch} ${
-                        schedule.isOpen ? styles.toggleSwitchActive : ''
-                      }`}
-                      aria-label={`Toggle ${schedule.day} hours`}
-                    >
-                      <span
-                        className={`${styles.toggleThumb} ${
-                          schedule.isOpen ? styles.toggleThumbActive : ''
-                        }`}
-                      />
-                    </button>
-                  </div>
-                ))}
-              </div>
             </div>
 
             {/* Dish Image Representation */}

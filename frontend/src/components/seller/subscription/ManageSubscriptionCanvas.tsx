@@ -184,7 +184,7 @@ export default function ManageSubscriptionCanvas({
 
     const nameMatch = (plan.name || "").toLowerCase().includes(q);
     const tierMatch = (plan.tier || "").toLowerCase().includes(q);
-    const idMatch = (plan.id || "").toLowerCase().includes(q) || (plan.planId || "").toLowerCase().includes(q);
+    const idMatch = (plan.planId || "").toLowerCase().includes(q);
     const durationMatch = (plan.duration || "").toLowerCase().includes(q);
     const statusMatch = (plan.status || "").toLowerCase().includes(q);
     const priceMatch =
@@ -192,10 +192,8 @@ export default function ManageSubscriptionCanvas({
       (plan.monthlyPrice || "").toLowerCase().includes(q) ||
       (plan.quarterlyPrice || "").toLowerCase().includes(q) ||
       (plan.yearlyPrice || "").toLowerCase().includes(q);
-    const featuresMatch = Array.isArray(plan.features) && plan.features.some((f) => (f || "").toLowerCase().includes(q));
-    const mealTimingsMatch = Array.isArray(plan.mealTimings) && plan.mealTimings.some((m) => (m || "").toLowerCase().includes(q));
 
-    return nameMatch || tierMatch || idMatch || durationMatch || statusMatch || priceMatch || featuresMatch || mealTimingsMatch;
+    return nameMatch || tierMatch || idMatch || durationMatch || statusMatch || priceMatch;
   });
 
   const filteredSubscribers = subscribers.filter((sub) => {
@@ -583,60 +581,6 @@ export default function ManageSubscriptionCanvas({
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-          {/* In-page quick search bar */}
-          <div
-            style={{
-              position: "relative",
-              display: "flex",
-              alignItems: "center",
-              backgroundColor: "#FFFFFF",
-              borderRadius: "8px",
-              border: "1px solid #CBD5E1",
-              padding: "6px 12px",
-              gap: "8px",
-              minWidth: "260px",
-            }}
-          >
-            <Search size={15} color="#94A3B8" />
-            <input
-              type="text"
-              placeholder="Search plans by name, tier, meal..."
-              value={searchQuery}
-              onChange={(e) => {
-                const val = e.target.value;
-                setLocalSearchQuery(val);
-                if (onSearchChange) onSearchChange(val);
-              }}
-              style={{
-                border: "none",
-                outline: "none",
-                fontSize: "13px",
-                width: "100%",
-                backgroundColor: "transparent",
-                color: "#1E293B",
-              }}
-              aria-label="Search subscription plans"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={handleClearSearch}
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  color: "#94A3B8",
-                  padding: "0 2px",
-                  display: "flex",
-                  alignItems: "center",
-                }}
-                aria-label="Clear search"
-              >
-                <X size={14} />
-              </button>
-            )}
-          </div>
-
           <span style={{ fontSize: "13px", color: "#64748B", fontWeight: 500 }}>
             Showing {filteredPlans.length} {filteredPlans.length === 1 ? "subscription package" : "subscription packages"}
           </span>
