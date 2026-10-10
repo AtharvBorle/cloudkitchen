@@ -926,8 +926,7 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
     );
   }, [enrichedKitchens, activePincode, hasUserCoords, activeUserLat, activeUserLng]);
 
-  // Deliverable food items: sorts directly deliverable items first, followed by all other
-  // food items so dishes across all active kitchens in Pune are never hidden!
+  // Filter food items strictly by delivery radius when user location/pincode is active
   const deliverableFoodItems = useMemo(() => {
     if (!activePincode && !hasUserCoords) return enrichedFoodItems;
     const deliverable = enrichedFoodItems.filter((item) =>
@@ -941,12 +940,10 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
         item.sellerDeliveryRadiusKm
       )
     );
-    const nonDeliverable = enrichedFoodItems.filter((item) => !deliverable.some((d) => d.id === item.id));
-    return [...deliverable, ...nonDeliverable];
+    return deliverable;
   }, [enrichedFoodItems, activePincode, hasUserCoords, activeUserLat, activeUserLng]);
 
-  // Deliverable kitchens: sorts directly deliverable kitchens first, followed by all other
-  // kitchens so all active kitchens in Pune are always visible on the user dashboard!
+  // Filter kitchens strictly by delivery radius when user location/pincode is active
   const deliverableKitchens = useMemo(() => {
     if (!activePincode && !hasUserCoords) return enrichedKitchens;
     const deliverable = enrichedKitchens.filter((k) =>
@@ -960,8 +957,7 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
         k.deliveryRadiusKm
       )
     );
-    const nonDeliverable = enrichedKitchens.filter((k) => !deliverable.some((d) => d.id === k.id));
-    return [...deliverable, ...nonDeliverable];
+    return deliverable;
   }, [enrichedKitchens, activePincode, hasUserCoords, activeUserLat, activeUserLng]);
 
   // Compute filtered food items based on dynamic distance + filter options

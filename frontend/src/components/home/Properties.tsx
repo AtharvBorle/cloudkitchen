@@ -255,7 +255,7 @@ export default function Properties({
     }
   }, []);
 
-  const basePlaces = (places && places.length > 0) ? places : (allKitchens && allKitchens.length > 0 ? allKitchens : []);
+  const basePlaces = Array.isArray(places) ? places : (allKitchens && allKitchens.length > 0 ? allKitchens : []);
 
   // Compute dynamic cuisine counts from available places & dishes
   const dynamicCuisines = React.useMemo(() => {
@@ -272,7 +272,7 @@ export default function Properties({
 
   // Compute dynamic dietary counts
   const dynamicDietary = React.useMemo(() => {
-    const countSource = (allKitchens && allKitchens.length > 0) ? allKitchens : basePlaces;
+    const countSource = basePlaces;
     return DIETARY.map((d) => {
       const matchCount = countSource.filter((p) =>
         isKitchenMatchingDiet(
@@ -286,7 +286,7 @@ export default function Properties({
         count: matchCount,
       };
     });
-  }, [basePlaces, allKitchens, foodItems]);
+  }, [basePlaces, foodItems]);
 
   // Dynamically filter places
   const filteredPlaces = React.useMemo(() => {

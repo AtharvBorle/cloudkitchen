@@ -78,6 +78,13 @@ export const LocationModal: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
+  // Suggestions state
+  const [suggestions, setSuggestions] = useState<PlacePredictionItem[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false);
+  const searchDebounceRef = React.useRef<NodeJS.Timeout | null>(null);
+  const searchInputWrapperRef = React.useRef<HTMLDivElement>(null);
+
   // Add Address Form State
   const [addressType, setAddressType] = useState<"Home" | "Work" | "Other">("Home");
   const [houseNumber, setHouseNumber] = useState("");
@@ -86,6 +93,17 @@ export const LocationModal: React.FC = () => {
   const [formPincode, setFormPincode] = useState("");
   const [latitude, setLatitude] = useState<number | null>(18.5204);
   const [longitude, setLongitude] = useState<number | null>(73.8567);
+
+  // Close suggestions on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchInputWrapperRef.current && !searchInputWrapperRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (isLocationModalOpen) {
@@ -116,6 +134,8 @@ export const LocationModal: React.FC = () => {
       setShowAddForm(false);
       setFeedback(null);
       setIsApplying(false);
+      setSuggestions([]);
+      setShowSuggestions(false);
     }
   }, [isLocationModalOpen, defaultAddress]);
 
@@ -126,6 +146,123 @@ export const LocationModal: React.FC = () => {
     setTimeout(() => {
       setFeedback(null);
     }, 4000);
+  };
+
+  // Live autocomplete debouncer as user types
+  const handlePincodeInputChange = (val: string) => {
+    setPincodeInput(val);
+    const cleanDigits = val.replace(/\D/g, "");
+    const matchedByPin = cleanDigits.length === 6 ? POPULAR_AREAS.find((a) => a.pincode === cleanDigits) : null;
+    const matchedByName = POPULAR_AREAS.find((a) =>
+      val.trim().length >= 3 && a.name.toLowerCase().includes(val.trim().toLowerCase())
+    );
+    setSelectedAreaInfo(matchedByPin || matchedByName || null);
+
+    if (cleanDigits.length === 6) {
+      setResolvedPincode(cleanDigits);
+      const pinInfo = getPincodeCoordinates(cleanDigits);
+      const loc = matchedByPin?.name || (pinInfo ? `${pinInfo.locality}, ${pinInfo.city}` : "");
+      if (loc) setResolvedLocality(loc);
+      const lat = matchedByPin?.lat ?? pinInfo?.lat;
+      const lng = matchedByPin?.lng ?? pinInfo?.lng;
+      if (lat && lng) {
+        setMapLat(lat);
+        setMapLng(lng);
+        setLatitude(lat);
+        setLongitude(lng);
+      }
+    }
+
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+
+    const trimmed = val.trim();
+    if (trimmed.length < 2) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    searchDebounceRef.current = setTimeout(async () => {
+      setIsFetchingSuggestions(true);
+      try {
+        const results = await fetchPlaceSuggestions(trimmed, { lat: mapLat, lng: mapLng });
+        setSuggestions(results);
+        setShowSuggestions(results.length > 0);
+      } catch (err) {
+        console.warn("Place suggestions fetch error:", err);
+      } finally {
+        setIsFetchingSuggestions(false);
+      }
+    }, 250);
+  };
+
+  // Handle clicking a suggestion from dropdown
+  const handleSelectSuggestion = async (item: PlacePredictionItem) => {
+    setShowSuggestions(false);
+    setSuggestions([]);
+
+    let targetLat = item.lat;
+    let targetLng = item.lng;
+    let details: Partial<NormalizedAddressDetails> | undefined = item.details;
+
+    if (item.placeId && (!targetLat || !targetLng)) {
+      setIsSearchingLocation(true);
+      const fetched = await fetchPlaceDetails(item.placeId);
+      setIsSearchingLocation(false);
+      if (fetched) {
+        targetLat = fetched.lat;
+        targetLng = fetched.lng;
+        details = fetched;
+      }
+    }
+
+    if (targetLat === undefined || targetLng === undefined) {
+      setIsSearchingLocation(true);
+      const geocoded = await geocodeAddressQuery(item.description);
+      setIsSearchingLocation(false);
+      if (geocoded) {
+        targetLat = geocoded.lat;
+        targetLng = geocoded.lng;
+        details = geocoded;
+      }
+    }
+
+    const finalLat = targetLat ?? 18.5204;
+    const finalLng = targetLng ?? 73.8567;
+    const pin = (details?.pincode || "").replace(/\D/g, "").slice(0, 6) || resolvedPincode || "411051";
+    const locality = details?.locality || details?.street || item.mainText || item.description.split(",")[0] || "Pune Area";
+
+    setPincodeInput(pin || locality);
+    setResolvedPincode(pin);
+    setResolvedLocality(locality);
+    setMapLat(finalLat);
+    setMapLng(finalLng);
+    setLatitude(finalLat);
+    setLongitude(finalLng);
+
+    // Autofill address fields for add-address form
+    if (details) {
+      if (details.pincode) setFormPincode(details.pincode.replace(/\D/g, "").slice(0, 6));
+      if (details.street) setStreet(details.street);
+      if (details.landmark) setLandmark(details.landmark);
+      if (details.houseNumber) setHouseNumber(details.houseNumber);
+    }
+
+    // Persist active location
+    setGuestLocation(pin, locality, "Pune", finalLat, finalLng);
+    if (session?.user) {
+      fetchApi("/api/user/location", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pincode: pin, lat: finalLat, lng: finalLng }),
+      })
+        .then(() => refreshAddress())
+        .catch(() => {});
+    }
+
+    showNotification("success", `Location selected: ${locality} (${pin})`);
   };
 
   // 1. Handle Pincode / Area Selection (Centers Map on Area & Updates Pin)
@@ -542,40 +679,21 @@ export const LocationModal: React.FC = () => {
           <div className={styles.searchSection}>
             <span className={styles.sectionLabel}>Search by Pincode or Area</span>
             <div className={styles.pincodeInputRow}>
-              <div className={styles.pincodeInputWrapper}>
+              <div ref={searchInputWrapperRef} className={styles.pincodeInputWrapper}>
                 <Search size={18} className={styles.pincodeIcon} />
                 <input
                   type="text"
-                  maxLength={30}
-                  placeholder="Enter Pincode or Area (e.g. 411038, Baner)"
+                  maxLength={50}
+                  placeholder="Enter Pincode or Area (e.g. 411038, Baner, Kothrud)"
                   value={pincodeInput}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setPincodeInput(val);
-                    const cleanDigits = val.replace(/\D/g, "");
-                    const matchedByPin = cleanDigits.length === 6 ? POPULAR_AREAS.find((a) => a.pincode === cleanDigits) : null;
-                    const matchedByName = POPULAR_AREAS.find((a) =>
-                      val.trim().length >= 3 && a.name.toLowerCase().includes(val.trim().toLowerCase())
-                    );
-                    setSelectedAreaInfo(matchedByPin || matchedByName || null);
-                    if (cleanDigits.length === 6) {
-                      setResolvedPincode(cleanDigits);
-                      const pinInfo = getPincodeCoordinates(cleanDigits);
-                      const loc = matchedByPin?.name || (pinInfo ? `${pinInfo.locality}, ${pinInfo.city}` : "");
-                      if (loc) setResolvedLocality(loc);
-                      const lat = matchedByPin?.lat ?? pinInfo?.lat;
-                      const lng = matchedByPin?.lng ?? pinInfo?.lng;
-                      if (lat && lng) {
-                        setMapLat(lat);
-                        setMapLng(lng);
-                        setLatitude(lat);
-                        setLongitude(lng);
-                      }
-                    }
+                  onChange={(e) => handlePincodeInputChange(e.target.value)}
+                  onFocus={() => {
+                    if (suggestions.length > 0) setShowSuggestions(true);
                   }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
+                      setShowSuggestions(false);
                       if (pincodeInput.trim()) {
                         const cleanDigits = pincodeInput.replace(/\D/g, "");
                         handleSelectAreaOrPin(pincodeInput, selectedAreaInfo, cleanDigits.length === 6);
@@ -584,12 +702,36 @@ export const LocationModal: React.FC = () => {
                   }}
                   className={styles.pincodeInput}
                 />
+                {isFetchingSuggestions && (
+                  <Loader2 size={16} className={`animate-spin ${styles.searchSpinner}`} />
+                )}
+
+                {/* Suggestions Dropdown */}
+                {showSuggestions && suggestions.length > 0 && (
+                  <div className={styles.suggestionsDropdown}>
+                    {suggestions.map((s, idx) => (
+                      <button
+                        key={`${s.placeId || idx}-${s.description}`}
+                        type="button"
+                        className={styles.suggestionItem}
+                        onClick={() => handleSelectSuggestion(s)}
+                      >
+                        <MapPin size={16} className={styles.suggestionIcon} />
+                        <div className={styles.suggestionTextWrapper}>
+                          <div className={styles.suggestionMainText}>{s.mainText || s.description.split(",")[0]}</div>
+                          <div className={styles.suggestionSubText}>{s.secondaryText || s.description}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               <button
                 type="button"
                 className={styles.applyBtn}
                 disabled={!pincodeInput.trim() || isSearchingLocation}
                 onClick={() => {
+                  setShowSuggestions(false);
                   const cleanDigits = pincodeInput.replace(/\D/g, "");
                   handleSelectAreaOrPin(pincodeInput, selectedAreaInfo, cleanDigits.length === 6);
                 }}
@@ -798,16 +940,16 @@ export const LocationModal: React.FC = () => {
                       onChange={(newLat, newLng, details) => {
                         setLatitude(newLat);
                         setLongitude(newLng);
-                        if (details?.pincode && !formPincode) {
+                        if (details?.pincode) {
                           setFormPincode(details.pincode.replace(/\D/g, "").slice(0, 6));
                         }
-                        if (details?.street && !street) {
+                        if (details?.street) {
                           setStreet(details.street);
                         }
-                        if (details?.landmark && !landmark) {
+                        if (details?.landmark) {
                           setLandmark(details.landmark);
                         }
-                        if (details?.houseNumber && !houseNumber) {
+                        if (details?.houseNumber) {
                           setHouseNumber(details.houseNumber);
                         }
                       }}

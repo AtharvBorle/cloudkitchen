@@ -197,8 +197,8 @@ export const ExploreMobileView: React.FC = () => {
   // Filtered Kitchens
   const filteredKitchens = React.useMemo(() => {
     if (!categoryFilter && !queryParam) return [];
-    const sourceKitchens = categoryFilter || queryParam ? (homeData.allKitchens?.length ? homeData.allKitchens : (homeData.kitchens || [])) : (homeData.kitchens || []);
-    const sourceFoodItems = categoryFilter || queryParam ? (homeData.allFoodItems?.length ? homeData.allFoodItems : (homeData.foodItems || [])) : (homeData.foodItems || []);
+    const sourceKitchens = homeData.kitchens || [];
+    const sourceFoodItems = homeData.foodItems || [];
     let list = sourceKitchens;
     if (categoryFilter) {
       list = list.filter((k) => matchesKitchenCategoryFilter(categoryFilter, k, sourceFoodItems));
@@ -207,12 +207,12 @@ export const ExploreMobileView: React.FC = () => {
       list = list.filter((k) => matchesKitchenOrDishSearch(queryParam, k, sourceFoodItems));
     }
     return list;
-  }, [homeData.kitchens, homeData.allKitchens, homeData.foodItems, homeData.allFoodItems, categoryFilter, queryParam]);
+  }, [homeData.kitchens, homeData.foodItems, categoryFilter, queryParam]);
 
   // Filtered Food Items
   const filteredFoodItems = React.useMemo(() => {
     if (!categoryFilter && !queryParam) return [];
-    const sourceFoodItems = categoryFilter || queryParam ? (homeData.allFoodItems?.length ? homeData.allFoodItems : (homeData.foodItems || [])) : (homeData.foodItems || []);
+    const sourceFoodItems = homeData.foodItems || [];
     let list = sourceFoodItems;
     if (categoryFilter) {
       list = list.filter((f) => matchesDishCategory(categoryFilter, f));
@@ -221,7 +221,7 @@ export const ExploreMobileView: React.FC = () => {
       list = list.filter((f) => matchesDishSearch(queryParam, f));
     }
     return list;
-  }, [homeData.foodItems, homeData.allFoodItems, categoryFilter, queryParam]);
+  }, [homeData.foodItems, categoryFilter, queryParam]);
 
   // Filtered Rooms
   const filteredRooms = React.useMemo(() => {

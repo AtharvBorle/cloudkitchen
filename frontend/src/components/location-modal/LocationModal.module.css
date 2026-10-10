@@ -241,6 +241,76 @@
   box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.12);
 }
 
+.searchSpinner {
+  position: absolute;
+  right: 14px;
+  color: #ff6b00;
+  pointer-events: none;
+}
+
+.suggestionsDropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  max-height: 250px;
+  overflow-y: auto;
+  z-index: 100;
+  padding: 4px;
+}
+
+.suggestionItem {
+  width: 100%;
+  padding: 10px 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.15s ease;
+  font-family: inherit;
+}
+
+.suggestionItem:hover {
+  background-color: #fff7ed;
+}
+
+.suggestionIcon {
+  color: #ea580c;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.suggestionTextWrapper {
+  flex: 1;
+  min-width: 0;
+}
+
+.suggestionMainText {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.suggestionSubText {
+  font-size: 0.76rem;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+
 .applyBtn {
   height: 44px;
   padding: 0 20px;
