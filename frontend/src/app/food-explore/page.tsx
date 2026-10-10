@@ -42,6 +42,7 @@ import {
   isKitchenHavingOffers,
   isDishHavingOffers,
   getDishOfferBadge,
+  resolveDishDietaryTypes,
 } from "@/lib/dietary-filter";
 import Link from "next/link";
 import filterStyles from "./FoodExploreFilter.module.css";
@@ -1447,7 +1448,7 @@ function FoodExploreContent() {
                         {/* Dietary Tag inside Food Menu Description (Shows all seller-specified dietary categories horizontally: Veg, Jain, Vegan) */}
                         <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", margin: "2px 0" }}>
                           {(() => {
-                            const rawType = String(dish.itemType || "").toUpperCase();
+                            const rawType = resolveDishDietaryTypes(dish).toUpperCase();
                             const rawParts = rawType.split(",").map((s) => s.trim());
                             const catName = String(dish.categoryName || (dish as any).category || "").toUpperCase();
                             const nameUpper = String(dish.name || "").toUpperCase();

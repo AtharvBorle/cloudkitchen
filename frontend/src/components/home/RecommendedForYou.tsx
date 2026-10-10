@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { DietaryTag } from "@/components/common/DietaryTag";
+import { resolveDishDietaryTypes } from "@/lib/dietary-filter";
 
 export interface RecommendedDish {
   id: string;
@@ -11,6 +12,8 @@ export interface RecommendedDish {
   imageUrl: string;
   link?: string;
   itemType?: string;
+  categoryName?: string;
+  description?: string;
   sellerIsOnline?: boolean;
   isAvailable?: boolean;
   stockQuantity?: number;
@@ -217,17 +220,7 @@ export default function RecommendedForYou({
                   {/* Dietary Tag below Title */}
                   <div style={{ display: "flex", alignItems: "center", gap: "4px", flexWrap: "wrap" }}>
                     <DietaryTag
-                      itemType={
-                        dish.itemType ||
-                        (dish.name.toLowerCase().includes("chicken") ||
-                        dish.name.toLowerCase().includes("mutton") ||
-                        dish.name.toLowerCase().includes("fish") ||
-                        dish.name.toLowerCase().includes("wings") ||
-                        dish.name.toLowerCase().includes("meat") ||
-                        dish.name.toLowerCase().includes("biryani")
-                          ? "NON_VEG"
-                          : "VEG")
-                      }
+                      itemType={resolveDishDietaryTypes(dish)}
                       size="xs"
                     />
                   </div>

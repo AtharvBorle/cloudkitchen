@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import ResponsiveSellerOrdersDetails from "@/components/seller/seller-orders/responsive/ResponsiveSellerOrdersDetails";
+import { formatOrderDeliveryAddress } from "@/components/seller/seller-orders/SellerOrders";
 import { fetchApi } from "@/lib/fetch-api";
 
 function DetailsContent() {
@@ -178,7 +179,7 @@ function DetailsContent() {
       orderId={order ? `#${order.id.slice(0, 6).toUpperCase()}` : rawId}
       customerName={order?.user?.name || order?.customerName || "Customer"}
       customerPhone={order?.customerPhone || order?.user?.phone || ""}
-      deliveryAddress={order?.deliveryAddress || order?.room?.title || ""}
+      deliveryAddress={formatOrderDeliveryAddress(order?.deliveryAddress, order?.room?.title)}
       riderName={order?.deliveryPerson?.name || ""}
       riderInitials={
         order?.deliveryPerson?.name

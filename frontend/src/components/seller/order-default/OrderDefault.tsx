@@ -9,7 +9,7 @@ import Topbar from "../nav/Topbar";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
 import { useRealtimeStream } from "@/hooks/useRealtimeStream";
 import { fetchApi } from "@/lib/fetch-api";
-import { getRemainingSeconds } from "../seller-orders/SellerOrders";
+import { getRemainingSeconds, formatOrderDeliveryAddress } from "../seller-orders/SellerOrders";
 import RejectOrderModal from "../seller-orders/RejectOrderModal";
 import ToastNotification from "../seller-orders/ToastNotification";
 import styles from "./OrderDefault.module.css";
@@ -213,8 +213,8 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
               customerName: target.user?.name || "Customer",
               customerPhone: target.customerPhone || target.user?.phone || "+91 98765 43210",
               contactNumber: target.customerPhone || target.user?.phone || "+91 98765 43210",
-              deliveryAddress: target.deliveryAddress || "Powai, Mumbai",
-              roomAssigned: target.deliveryAddress ? target.deliveryAddress.split(",")[0] : "Room 101",
+              deliveryAddress: formatOrderDeliveryAddress(target.deliveryAddress, target.room?.title),
+              roomAssigned: formatOrderDeliveryAddress(target.deliveryAddress, target.room?.title),
               items: formattedItems,
               subtotal: `₹${subtotalNum}`,
               discount: discountNum > 0 ? `₹${discountNum}` : undefined,

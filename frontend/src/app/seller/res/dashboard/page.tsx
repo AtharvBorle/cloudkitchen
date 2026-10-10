@@ -10,6 +10,7 @@ import { fetchApi } from "@/lib/fetch-api";
 import { useRealtimeStream } from "@/hooks/useRealtimeStream";
 import { addSellerNotification } from "@/hooks/useSellerNotifications";
 import { playNewOrderChime } from "@/lib/audio-chime";
+import { formatOrderDeliveryAddress } from "@/components/seller/seller-orders/SellerOrders";
 
 export default function ResponsiveSellerDashboardPage() {
   const [overviewData, setOverviewData] = useState<any | null>(null);
@@ -57,7 +58,8 @@ export default function ResponsiveSellerDashboardPage() {
                 itemsText = "Kitchen Items";
               }
               const customerPhone = o.customerPhone || o.user?.phone || "";
-              const address = o.room?.title || o.deliveryAddress || "";
+              const cleanedAddr = formatOrderDeliveryAddress(o.deliveryAddress, o.room?.title);
+              const address = cleanedAddr !== "N/A" ? cleanedAddr : "";
               addSellerNotification({
                 id: `notif-order-${o.id}`,
                 category: "orders",
@@ -106,7 +108,8 @@ export default function ResponsiveSellerDashboardPage() {
           }
           const orderId = o.id || payload.orderId || `ORD-${Date.now().toString().slice(-4)}`;
           const customerPhone = o.customerPhone || o.user?.phone || "";
-          const address = o.room?.title || o.deliveryAddress || "";
+          const cleanedAddr = formatOrderDeliveryAddress(o.deliveryAddress, o.room?.title);
+          const address = cleanedAddr !== "N/A" ? cleanedAddr : "";
           addSellerNotification({
             id: `notif-order-${orderId}`,
             category: "orders",
