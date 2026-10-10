@@ -112,7 +112,7 @@ export interface LocationAddressInput {
  * for the top navigation bar (e.g. "Paud Road, Kothrud, Pune", "Karve Nagar, Pune", "Baner Road, Pune").
  * Strictly prevents redundant city repeats like "Pune, Pune" or "Kothrud, Pune, Pune".
  */
-export function formatShortDeliveryLocation(addr?: LocationAddressInput | null): string {
+export function formatShortDeliveryLocation(addr?: LocationAddressInput | null, maxWords = 5): string {
   if (!addr) return "Select Location";
 
   const pin = (addr.pincode || "").replace(/\D/g, "").slice(0, 6);
@@ -120,12 +120,14 @@ export function formatShortDeliveryLocation(addr?: LocationAddressInput | null):
 
   let city = (addr.city || pinLookup?.city || "Pune").trim();
   const cityLower = city.toLowerCase();
+  const cityRegex = new RegExp(`\\b${city}\\b`, "gi");
 
   const isGeneric = (str?: string | null) => {
     if (!str) return true;
     const l = str.toLowerCase().trim();
     return (
       l === "pune" ||
+      l === "pune, pune" ||
       l === "current location" ||
       l === "pune area" ||
       l === "select location" ||
@@ -135,40 +137,43 @@ export function formatShortDeliveryLocation(addr?: LocationAddressInput | null):
   };
 
   let locality = (addr.locality || "").trim();
+  let street = (addr.street || "").trim();
+  let landmark = (addr.landmark || "").trim();
+
+  // If locality is generic, resolve from pincode directory
   if (isGeneric(locality)) {
     locality = pinLookup?.locality || "";
   }
 
-  let street = (addr.street || "").trim();
-  if (isGeneric(street)) {
-    street = "";
-  }
-
-  // If both locality and street are still empty or generic, try extracting from formattedAddress
-  if ((!locality || isGeneric(locality)) && (!street || isGeneric(street)) && addr.formattedAddress) {
+  // Extract from formattedAddress if street or locality is missing
+  if ((!street || !locality) && addr.formattedAddress) {
     const rawParts = addr.formattedAddress.split(",").map((s) => s.trim()).filter(Boolean);
     const meaningful = rawParts.filter((p) => {
       const l = p.toLowerCase();
       if (
-        l === "india" ||
-        l === "maharashtra" ||
+        l.includes("india") ||
+        l.includes("maharashtra") ||
         l === cityLower ||
-        /^\d{6}$/.test(p) ||
+        /\b\d{6}\b/.test(p) ||
         l.includes("district")
       ) {
         return false;
       }
-      if (/^(shop|flat|house|plot|room|bldg|building|h\.?\s*no|f\.?\s*no)\b/i.test(l) || /^[#\d\-\/\s]+$/.test(p)) {
+      if (/^(flat|plot|room|bldg|building|h\.?\s*no|f\.?\s*no)\s*\d*$/i.test(l) || /^[#\d\-\/\s]+$/.test(p)) {
         return false;
       }
       return true;
     });
+
     if (meaningful.length > 0) {
-      if (meaningful.length >= 2) {
-        street = meaningful[0];
-        locality = meaningful[1];
-      } else {
+      if (!locality && meaningful.length >= 2) {
+        locality = meaningful[meaningful.length - 1];
+        if (!street) street = meaningful[meaningful.length - 2];
+      } else if (!locality) {
         locality = meaningful[0];
+      } else if (!street && meaningful.length >= 1) {
+        const other = meaningful.find((m) => !m.toLowerCase().includes(locality.toLowerCase()));
+        if (other) street = other;
       }
     }
   }
@@ -178,57 +183,86 @@ export function formatShortDeliveryLocation(addr?: LocationAddressInput | null):
     locality = pinLookup.locality;
   }
 
-  // Clean locality and street: remove trailing/leading commas, remove duplicate city occurrences
-  const cleanPart = (str: string) => {
-    if (!str) return "";
-    return str
-      .replace(new RegExp(`\\b${city}\\b`, "gi"), "")
+  // Clean strings: completely remove city name and country/state from street, landmark, and locality
+  const stripNoise = (s: string) =>
+    s
+      .replace(cityRegex, "")
+      .replace(/\b(india|maharashtra)\b/gi, "")
       .replace(/,\s*,/g, ",")
       .replace(/^[\s,]+|[\s,]+$/g, "")
       .trim();
-  };
 
-  locality = cleanPart(locality);
-  street = cleanPart(street);
+  locality = stripNoise(locality);
+  street = stripNoise(street);
+  landmark = stripNoise(landmark);
 
-  // If street contains locality or vice versa, avoid redundancy
-  if (street && locality) {
-    if (street.toLowerCase().includes(locality.toLowerCase())) {
-      locality = "";
-    } else if (locality.toLowerCase().includes(street.toLowerCase())) {
-      street = "";
-    }
+  // If street already contains locality, clean it
+  if (street && locality && street.toLowerCase().includes(locality.toLowerCase())) {
+    street = street
+      .replace(new RegExp(`\\b${locality}\\b`, "gi"), "")
+      .replace(/,\s*,/g, ",")
+      .replace(/^[\s,]+|[\s,]+$/g, "")
+      .trim();
   }
 
-  const parts: string[] = [];
-  if (street) {
-    // Simplify street if too long (e.g. "Shop 12, Paud Road" -> "Paud Road")
-    const subParts = street.split(",").map((s) => s.trim()).filter(Boolean);
-    const bestStreet =
-      subParts.find((s) => /\b(road|rd|chowk|lane|nagar|colony|gali|highway|bypass|corner)\b/i.test(s)) ||
+  // Build candidate segments in order of specificity: [street or landmark], [locality], [city]
+  const candidateSegments: string[] = [];
+
+  const specific = street || landmark;
+  if (specific && specific.toLowerCase() !== locality.toLowerCase()) {
+    const subParts = specific.split(",").map((s) => s.trim()).filter(Boolean);
+    const best =
+      subParts.find((s) =>
+        /\b(road|rd|ave|avenue|chowk|lane|nagar|colony|gali|highway|bypass|corner|soc|society|park)\b/i.test(s)
+      ) ||
       subParts[subParts.length - 1] ||
-      street;
-    parts.push(bestStreet);
-  }
-  if (locality && !parts.some((p) => p.toLowerCase().includes(locality.toLowerCase()))) {
-    // If locality has multiple slashes e.g. "Dattawadi / Karve Nagar", pick primary/first
-    const locClean = locality.split(/[\/,]/)[0].trim();
-    parts.push(locClean);
-  }
-
-  if (city) {
-    parts.push(city);
-  }
-
-  // Deduplicate parts case-insensitively
-  const unique: string[] = [];
-  for (const p of parts) {
-    if (p && !unique.some((u) => u.toLowerCase() === p.toLowerCase())) {
-      unique.push(p);
+      specific;
+    if (best && best.toLowerCase() !== locality.toLowerCase()) {
+      candidateSegments.push(best);
     }
   }
 
-  // Limit to at most 3 segments (e.g. "Paud Road, Kothrud, Pune")
-  const result = unique.slice(0, 3).join(", ");
-  return result || (pin ? `PIN ${pin}` : "Select Location");
+  if (locality) {
+    if (!specific && locality.includes(",")) {
+      const locParts = locality.split(",").map((s) => s.trim()).filter(Boolean);
+      for (const lp of locParts) {
+        if (lp && !candidateSegments.some((c) => c.toLowerCase().includes(lp.toLowerCase()))) {
+          candidateSegments.push(lp);
+        }
+      }
+    } else {
+      const locClean = locality.split(/[\/,]/)[0].trim();
+      if (locClean && !candidateSegments.some((c) => c.toLowerCase().includes(locClean.toLowerCase()))) {
+        candidateSegments.push(locClean);
+      }
+    }
+  }
+
+  // Always end with City once
+  candidateSegments.push(city);
+
+  // Deduplicate segments case-insensitively
+  const uniqueSegments: string[] = [];
+  for (const seg of candidateSegments) {
+    if (seg && !uniqueSegments.some((u) => u.toLowerCase() === seg.toLowerCase())) {
+      uniqueSegments.push(seg);
+    }
+  }
+
+  let finalStr = uniqueSegments.join(", ");
+
+  // Enforce 4-5 words maximum
+  const words = finalStr.split(/\s+/).filter(Boolean);
+  if (words.length > maxWords) {
+    if (uniqueSegments.length > 2) {
+      // Drop the street and keep [locality, city]
+      finalStr = uniqueSegments.slice(1).join(", ");
+    }
+    const reWords = finalStr.split(/\s+/).filter(Boolean);
+    if (reWords.length > maxWords) {
+      finalStr = reWords.slice(0, maxWords).join(" ");
+    }
+  }
+
+  return finalStr || (pin ? `PIN ${pin}` : "Select Location");
 }
