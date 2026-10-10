@@ -1033,7 +1033,13 @@ export function getDishOfferBadge(
   const dishPrice = Number(dish.price) || 0;
   const dishOrigPrice = Number(dish.originalPrice) || 0;
   const dName = String(dish.name || "").toLowerCase();
-  const dCategory = String(dish.categoryName || (dish as any).category || "").toLowerCase();
+  const dCategory = String(
+    dish.categoryName ||
+    (dish as any).foodCategory?.name ||
+    (dish as any).category?.name ||
+    (dish as any).category ||
+    ""
+  ).toLowerCase();
   const dId = String(dish.id || "").toLowerCase().trim();
   const dSeller = String(dish.sellerId || "").toLowerCase().trim();
   const dTrack = String(dish.sellerTrackingId || "").toLowerCase().trim();
@@ -1074,7 +1080,7 @@ export function getDishOfferBadge(
     });
   }
 
-  // 4. Item-specific Coupons
+  // 4. Item-specific and Store/Global Coupons
   if (coupons && coupons.length > 0) {
     for (const cp of coupons) {
       if (cp.isActive === false) continue;
@@ -1089,52 +1095,73 @@ export function getDishOfferBadge(
       const cpCatId = String((cp as any).appliesToCategoryId || "").toLowerCase().trim();
       const cpProdList = cpProd.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
       const cpCatList = cpCatId.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
-      const dCatId = String((dish as any).categoryId || "").toLowerCase().trim();
+      const dCatId = String((dish as any).categoryId || (dish as any).foodCategoryId || "").toLowerCase().trim();
 
       // Check direct product ID or dish name match (single or comma-separated or appliesTo=ITEMS)
-      const isProductMatch = (cpProd && dId && (cpProd === dId || cpProdList.includes(dId))) ||
-        (cpAppliesTo === "ITEMS" && (cpProdList.includes(dId) || cpProdList.includes(dName) || (dName && cpProdList.some(p => p === dName || dName.includes(p) || p.includes(dName))))) ||
-        (cpProdList.includes(dName) || (dName && cpProdList.some(p => p === dName || dName.includes(p) || p.includes(dName))));
+      const isProductMatch =
+        (cpProd && dId && (cpProd === dId || cpProdList.includes(dId))) ||
+        (cpAppliesTo === "ITEMS" &&
+          (cpProdList.includes(dId) ||
+            cpProdList.includes(dName) ||
+            (dName && cpProdList.some((p) => p === dName || dName.includes(p) || p.includes(dName))))) ||
+        cpProdList.includes(dName) ||
+        (dName && cpProdList.some((p) => p === dName || dName.includes(p) || p.includes(dName)));
 
       // Check direct category match (appliesTo=CATEGORY or categoryId/categoryName match)
       const isCategoryCouponMatch =
         (cpAppliesTo === "CATEGORY" || cpCatList.length > 0) &&
-        (
-          (dCatId && cpCatList.includes(dCatId)) ||
+        ((dCatId && cpCatList.includes(dCatId)) ||
           (dCategory && cpCatList.includes(dCategory)) ||
-          (cpProdList.length > 0 && (cpProdList.includes(dCatId) || cpProdList.includes(dCategory)))
-        );
+          (cpProdList.length > 0 && (cpProdList.includes(dCatId) || cpProdList.includes(dCategory))));
 
       // Check seller match
-      const isSellerMatch = cpSeller && cpSeller !== "global" && cpSeller !== "all" && (
-        (dSeller && cpSeller === dSeller) ||
-        (dTrack && cpSeller === dTrack)
-      );
+      const isGlobalCoupon = !cpSeller || cpSeller === "global" || cpSeller === "all";
+      const isSellerMatch =
+        !isGlobalCoupon &&
+        ((dSeller && cpSeller === dSeller) || (dTrack && cpSeller === dTrack));
+
+      // If coupon belongs to a specific other seller, it cannot apply to this dish
+      if (!isGlobalCoupon && !isSellerMatch) {
+        continue;
+      }
 
       // Check if coupon specifically targets food item categories / keywords (e.g. burger, pizza, biryani, cake, etc.)
       const specificKeywords = [
         "burger", "burgers", "pizza", "pizzas", "biryani", "cake", "cakes", "pastry",
         "dosa", "thali", "rice", "wrap", "salad", "shake", "coffee", "tea",
-        "paneer", "chicken", "mutton", "fish", "dessert"
+        "paneer", "chicken", "mutton", "fish", "dessert",
       ];
       const matchedKeywords = specificKeywords.filter((kw) => {
         const root = kw.endsWith("s") ? kw.slice(0, -1) : kw;
         return cpCleanCode.includes(root) || new RegExp(`\\b${root}(s|es)?\\b`, "i").test(cpDesc);
       });
 
-      const isKeywordItemMatch = matchedKeywords.length > 0 && matchedKeywords.some((kw) => {
-        const root = kw.endsWith("s") ? kw.slice(0, -1) : kw;
-        return dName.includes(root) || dCategory.includes(root);
-      });
+      const isKeywordItemMatch =
+        matchedKeywords.length > 0 &&
+        matchedKeywords.some((kw) => {
+          const root = kw.endsWith("s") ? kw.slice(0, -1) : kw;
+          return dName.includes(root) || dCategory.includes(root);
+        });
 
-      // ONLY match coupons that are specifically attached to this product OR specifically target this item category!
-      // (Do NOT slap general store/cart coupons onto random dishes)
-      if (!isProductMatch && !isCategoryCouponMatch && !isKeywordItemMatch) {
-        continue;
-      }
+      // Seller-wide coupon: applies to all items in seller's kitchen
+      const isSellerAllItemsMatch =
+        isSellerMatch &&
+        (cpAppliesTo === "ALL" || (!cpAppliesTo && cpProdList.length === 0 && cpCatList.length === 0)) &&
+        matchedKeywords.length === 0;
 
-      // If coupon belongs to a different seller and is not global, skip
-      if (cpSeller && cpSeller !== "global" && cpSeller !== "all" && !isSellerMatch) {
+      // Global platform-wide coupon: applies to all items across the platform
+      const isGlobalAllItemsMatch =
+        isGlobalCoupon &&
+        (cpAppliesTo === "ALL" || (!cpAppliesTo && cpProdList.length === 0 && cpCatList.length === 0)) &&
+        matchedKeywords.length === 0;
+
+      if (
+        !isProductMatch &&
+        !isCategoryCouponMatch &&
+        !isKeywordItemMatch &&
+        !isSellerAllItemsMatch &&
+        !isGlobalAllItemsMatch
+      ) {
         continue;
       }
 
@@ -1159,13 +1186,25 @@ export function getDishOfferBadge(
       }
 
       if (effectiveAmt > 0 || effectivePct > 0) {
-        const badgeText = effectivePct > 0 ? `${Math.round(effectivePct)}% OFF` : `₹${Math.round(effectiveAmt)} OFF`;
+        const badgeText =
+          cp.discountPercentage && Number(cp.discountPercentage) > 0
+            ? `${Math.round(Number(cp.discountPercentage))}% OFF`
+            : `FLAT ₹${Math.round(effectiveAmt)} OFF`;
+
+        const priority = isProductMatch
+          ? 10
+          : isCategoryCouponMatch || isKeywordItemMatch
+          ? 9
+          : isSellerAllItemsMatch
+          ? 8
+          : 7;
+
         candidates.push({
           type: "COUPON",
           pct: effectivePct,
           amount: effectiveAmt,
           badgeText,
-          priority: isProductMatch ? 10 : 9,
+          priority,
         });
       }
     }
@@ -1175,11 +1214,12 @@ export function getDishOfferBadge(
     return { hasOffer: false, badgeText: null, discountPercentage: 0, discountAmount: 0 };
   }
 
-  // Sort candidates to find the BEST (highest discount savings amount and percentage)
+  // Sort candidates to find the BEST offer (prioritizing specific item/keyword matches, then highest savings)
   candidates.sort((a, b) => {
-    if (b.amount !== a.amount) return b.amount - a.amount;
+    if ((b.priority || 0) !== (a.priority || 0)) return (b.priority || 0) - (a.priority || 0);
     if (b.pct !== a.pct) return b.pct - a.pct;
-    return (b.priority || 0) - (a.priority || 0);
+    if (b.amount !== a.amount) return b.amount - a.amount;
+    return 0;
   });
 
   const best = candidates[0];
@@ -1197,6 +1237,8 @@ export function getDishOfferBadge(
 export function isDishHavingOffers(
   dish: {
     id?: string | null;
+    name?: string | null;
+    categoryName?: string | null;
     sellerId?: string | null;
     sellerTrackingId?: string | null;
     price?: number;
@@ -1207,11 +1249,14 @@ export function isDishHavingOffers(
   coupons: Array<{
     id?: string | null;
     code?: string | null;
+    description?: string | null;
     appliesToSellerId?: string | null;
     appliesToProductId?: string | null;
     sellerId?: string | null;
     discountPercentage?: number | null;
     discountAmount?: number | null;
+    minimumCartValue?: number | null;
+    maxDiscountAmount?: number | null;
     isActive?: boolean;
   }> = []
 ): boolean {
@@ -1309,6 +1354,63 @@ export function isKitchenHavingOffers(
   }
 
   return false;
+}
+
+export function resolveDishDietaryTypes(dish: {
+  itemType?: string | null;
+  name?: string | null;
+  description?: string | null;
+  categoryName?: string | null;
+}): string {
+  const raw = String(dish.itemType || "").trim().toUpperCase();
+  const parts = raw.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean);
+
+  if (isNonVegDish(dish)) {
+    return "NON_VEG";
+  }
+
+  const result: string[] = ["VEG"];
+  const text = `${dish.name || ""} ${dish.description || ""} ${dish.categoryName || ""}`.toLowerCase();
+
+  // 1. Vegan check
+  const isExplicitVegan = parts.includes("VEGAN");
+  const hasDairy = NON_VEGAN_WORDS.some((w) => {
+    const regex = new RegExp(`\\b${w}\\b`, "i");
+    return regex.test(text);
+  });
+  const isVeganPositive =
+    isExplicitVegan ||
+    (!hasDairy &&
+      (VEGAN_POSITIVE_WORDS.some((w) => text.includes(w)) ||
+       text.includes("vegan") ||
+       text.includes("plant-based") ||
+       text.includes("plant based") ||
+       /\b(dosa|idli|lemon rice|jeera rice|poha|sabudana|upma|dal khichdi|fruit salad|sprouts)\b/i.test(text)));
+
+  if (isVeganPositive && !result.includes("VEGAN")) {
+    result.push("VEGAN");
+  }
+
+  // 2. Jain check
+  const isExplicitJain = parts.includes("JAIN") || parts.includes("SATVIK");
+  const hasRoots = NON_JAIN_ROOTS.some((w) => {
+    const regex = new RegExp(`\\b${w}\\b`, "i");
+    return regex.test(text);
+  });
+  const isJainPositive =
+    isExplicitJain ||
+    (!hasRoots &&
+      (JAIN_POSITIVE_WORDS.some((w) => text.includes(w)) ||
+       text.includes("jain") ||
+       text.includes("satvik") ||
+       text.includes("swaminarayan") ||
+       /\b(dosa|idli|lemon rice|jeera rice|dal khichdi|paneer quinoa bowl|fruit salad)\b/i.test(text)));
+
+  if (isJainPositive && !result.includes("JAIN")) {
+    result.push("JAIN");
+  }
+
+  return result.join(",");
 }
 
 

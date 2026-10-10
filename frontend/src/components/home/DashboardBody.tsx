@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { Star, Minus, Plus, Check } from "lucide-react";
 import { DietaryTag } from "@/components/common/DietaryTag";
+import { resolveDishDietaryTypes } from "@/lib/dietary-filter";
 import { useCart, generateCartItemId, AddonItem } from "@/context/CartContext";
 import { AddonCustomizationModal } from "@/components/cart/AddonCustomizationModal";
 
@@ -18,6 +19,7 @@ export interface TopRatedItem {
   imageUrl: string;
   link?: string;
   itemType?: string;
+  categoryName?: string;
   distanceText?: string;
   sellerId?: string;
   sellerName?: string;
@@ -425,14 +427,12 @@ export default function DashboardBody({
                       {item.name}
                     </h3>
                     <DietaryTag
-                      itemType={
-                        item.itemType ||
-                        (item.name.toLowerCase().includes("chicken") ||
-                        (item.name.toLowerCase().includes("burger") &&
-                          !item.name.toLowerCase().includes("veg"))
-                          ? "NON_VEG"
-                          : "VEG")
-                      }
+                      itemType={resolveDishDietaryTypes({
+                        itemType: item.itemType,
+                        name: item.name,
+                        categoryName: item.categoryName || item.category,
+                        description: item.description,
+                      })}
                       size="xs"
                     />
                     <div

@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { Star } from "lucide-react";
 import { DietaryTag } from "@/components/common/DietaryTag";
+import { resolveDishDietaryTypes } from "@/lib/dietary-filter";
 
 export interface DishItem {
   id: string;
@@ -13,6 +14,8 @@ export interface DishItem {
   imageUrl: string;
   link?: string;
   itemType?: string;
+  categoryName?: string;
+  description?: string;
   sellerIsOnline?: boolean;
   isOnline?: boolean;
   isAvailable?: boolean;
@@ -262,15 +265,7 @@ export default function BestPlaces({
                   {/* Dietary Tag below Title */}
                   <div style={{ display: "flex", alignItems: "center", gap: "4px", flexWrap: "wrap" }}>
                     <DietaryTag
-                      itemType={
-                        dish.itemType ||
-                        (dish.name.toLowerCase().includes("chicken") ||
-                        dish.name.toLowerCase().includes("mutton") ||
-                        dish.name.toLowerCase().includes("fish") ||
-                        dish.name.toLowerCase().includes("meat")
-                          ? "NON_VEG"
-                          : "VEG")
-                      }
+                      itemType={resolveDishDietaryTypes(dish)}
                       size="xs"
                     />
                   </div>

@@ -547,7 +547,7 @@ function setupGlobalNotificationListeners() {
       const orderId = o.id || payload.orderId || `ORD-${Date.now().toString().slice(-4)}`;
       const customer = o.user?.name || o.customerName || "Customer";
       const phone = o.customerPhone || o.user?.phone || "";
-      const address = o.room?.title || o.deliveryAddress || "";
+      const address = o.deliveryAddress || "";
 
       addSellerNotification({
         id: `notif-order-${orderId}`,

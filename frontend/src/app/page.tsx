@@ -30,6 +30,7 @@ import {
   isKitchenServingCuisine,
   isKitchenHavingOffers,
   isDishHavingOffers,
+  resolveDishDietaryTypes,
 } from "@/lib/dietary-filter";
 
 function getInitialDietPreference(): "all" | "veg" | "pure_veg" | "non_veg" | "vegan" | "jain" {
@@ -480,7 +481,9 @@ export default function Home() {
         time: f.deliveryTime || "20-30 min",
         imageUrl: f.imageUrl || "/images/places/place-biryani.png",
         link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/food-explore`,
-        itemType: f.itemType || "VEG",
+        itemType: resolveDishDietaryTypes(f),
+        categoryName: f.categoryName,
+        description: f.description,
         sellerIsOnline: f.sellerIsOnline !== false,
         isAvailable: f.isAvailable !== false,
         stockQuantity: typeof f.stockQuantity === "number" ? f.stockQuantity : -1,
@@ -541,7 +544,7 @@ export default function Home() {
       time: f.deliveryTime || "20-30 min",
       imageUrl: f.imageUrl || "/images/places/place-pizza.png",
       link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/food-explore`,
-      itemType: f.itemType || "VEG",
+      itemType: resolveDishDietaryTypes(f),
       sellerId: f.sellerId,
       sellerName: f.sellerName,
       sellerIsOnline: f.sellerIsOnline !== false,
@@ -599,7 +602,9 @@ export default function Home() {
       time: `₹${f.price} • ${f.deliveryTime || "20-25 min"}`,
       imageUrl: f.imageUrl || "/images/places/place-biryani.png",
       link: f.sellerTrackingId ? `/shop/${f.sellerTrackingId}` : `/food-explore?item=${f.id}`,
-      itemType: f.itemType || "VEG",
+      itemType: resolveDishDietaryTypes(f),
+      categoryName: f.categoryName,
+      description: f.description,
       sellerIsOnline: f.sellerIsOnline !== false,
       isAvailable: f.isAvailable !== false,
       stockQuantity: f.stockQuantity,

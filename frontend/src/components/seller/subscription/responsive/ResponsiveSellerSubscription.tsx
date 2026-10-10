@@ -205,20 +205,14 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
           const query = searchQuery.toLowerCase().trim();
           const title = (plan.title || "").toLowerCase();
           const tier = (plan.tier || "").toLowerCase();
-          const id = (plan.id || "").toLowerCase();
           const price = (plan.price || "").toLowerCase();
-          const desc = (plan.description || "").toLowerCase();
           const billing = (plan.billingCycle || "").toLowerCase();
-          const mealTypes = Array.isArray(plan.mealTypes) ? plan.mealTypes.join(" ").toLowerCase() : "";
 
           const matches =
             title.includes(query) ||
             tier.includes(query) ||
-            id.includes(query) ||
             price.includes(query) ||
-            desc.includes(query) ||
-            billing.includes(query) ||
-            mealTypes.includes(query);
+            billing.includes(query);
 
           if (!matches) return false;
         }

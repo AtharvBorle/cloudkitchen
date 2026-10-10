@@ -7,6 +7,7 @@ import { Ticket } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { fetchApi } from "@/lib/fetch-api";
 import { DietaryTag } from "@/components/common/DietaryTag";
+import { resolveDishDietaryTypes } from "@/lib/dietary-filter";
 
 export interface OfferCardData {
   id: string;
@@ -29,6 +30,7 @@ export interface OfferCardData {
   category?: any;
   foodCategory?: any;
   categoryName?: string;
+  description?: string;
   addons?: any;
 }
 
@@ -351,13 +353,12 @@ export default function PopularOrders({
                 </h3>
                 <div style={{ display: "flex", alignItems: "center", gap: "4px", margin: "2px 0", flexWrap: "wrap" }}>
                   <DietaryTag
-                    itemType={
-                      offer.itemType ||
-                      (offer.title.toLowerCase().includes("biryani") ||
-                      offer.title.toLowerCase().includes("chicken")
-                        ? "NON_VEG"
-                        : "VEG")
-                    }
+                    itemType={resolveDishDietaryTypes({
+                      itemType: offer.itemType,
+                      name: offer.title,
+                      description: offer.description,
+                      categoryName: offer.categoryName || offer.category,
+                    })}
                     size="xs"
                   />
                 </div>

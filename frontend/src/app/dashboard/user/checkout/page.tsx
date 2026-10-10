@@ -963,10 +963,12 @@ function CheckoutContent() {
                 const selectedAddress = addresses.find((a: any) => a.id === addressId);
                 let finalAddressText = "";
                 if (selectedAddress) {
-                    finalAddressText = `[${selectedAddress.type}] ${selectedAddress.houseNumber}, ${selectedAddress.street}${selectedAddress.landmark ? `, ${selectedAddress.landmark}` : ''}, ${selectedAddress.pincode}`;
-                    if (selectedAddress.latitude !== undefined && selectedAddress.latitude !== null && selectedAddress.longitude !== undefined && selectedAddress.longitude !== null) {
-                        finalAddressText += ` | Loc: ${selectedAddress.latitude},${selectedAddress.longitude}`;
-                    }
+                    const addressParts = [
+                        selectedAddress.street,
+                        selectedAddress.landmark ? `Near ${selectedAddress.landmark}` : "",
+                        selectedAddress.city || "Pune",
+                    ].filter(Boolean);
+                    finalAddressText = `${addressParts.join(", ")}${selectedAddress.pincode ? ` - ${selectedAddress.pincode}` : ""}`;
                 }
 
                 const baseTotal = isRoomBooking

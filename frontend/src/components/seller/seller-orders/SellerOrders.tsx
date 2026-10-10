@@ -91,6 +91,62 @@ const formatOrderTime = (isoString?: string): string => {
   }
 };
 
+export const formatOrderDeliveryAddress = (
+  rawAddress?: string | null,
+  roomTitle?: string | null
+): string => {
+  if (!rawAddress) return "N/A";
+  let cleaned = String(rawAddress).trim();
+
+  // Strip coordinate metadata suffix e.g. "| Loc: 18.5002,73.8210"
+  cleaned = cleaned.replace(/\s*\|\s*Loc:\s*[-0-9.,\s]+/gi, "").trim();
+
+  // Strip bracketed address type prefix e.g. "[Home] "
+  cleaned = cleaned.replace(/^\[[^\]]+\]\s*/i, "").trim();
+
+  // Strip explicit room title if present at the start of the address
+  if (roomTitle && roomTitle.trim()) {
+    const escapedRoom = roomTitle.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    cleaned = cleaned.replace(new RegExp(`^${escapedRoom}\\s*,\\s*`, "i"), "").trim();
+  }
+
+  // Split by comma to remove leading room/building name prefix and deduplicate consecutive segments
+  const parts = cleaned
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  if (parts.length > 1) {
+    const firstLower = parts[0].toLowerCase();
+    const isRoomPrefix =
+      /^room\s*\d+/i.test(firstLower) ||
+      /^testing(\s+room)?(\s*\d+)?$/i.test(firstLower) ||
+      firstLower === "myroom" ||
+      firstLower.includes("deluxe room") ||
+      firstLower.includes("neopace infotech") ||
+      firstLower.includes("neoopace infotech") ||
+      firstLower === "dfsf" ||
+      firstLower === "dfsfdfsf";
+
+    if (isRoomPrefix) {
+      parts.shift();
+    }
+  }
+
+  // Deduplicate consecutive identical segments (e.g. "khotrud, khotrud")
+  const deduped: string[] = [];
+  for (const part of parts) {
+    if (
+      deduped.length === 0 ||
+      deduped[deduped.length - 1].toLowerCase() !== part.toLowerCase()
+    ) {
+      deduped.push(part);
+    }
+  }
+
+  return deduped.join(", ") || "N/A";
+};
+
 export interface SellerOrdersProps {
   ownerName?: string;
   partnerRole?: string;
@@ -231,7 +287,7 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
               id: o.id,
               orderId: `#NCR-${o.id.slice(0, 4).toUpperCase()}`,
               customer: o.user?.name || "Customer",
-              room: o.room?.title || o.deliveryAddress || "Room 101",
+              room: formatOrderDeliveryAddress(o.deliveryAddress, o.room?.title),
               items: itemsSummary || "1x Dish Item",
               rawTotal: Number(o.totalAmount) || 0,
               total: `₹${o.totalAmount || 0}`,
@@ -287,7 +343,7 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
             id: o.id,
             orderId: `#NCR-${o.id.slice(0, 4).toUpperCase()}`,
             customer: o.user?.name || "Customer",
-            room: o.deliveryAddress || "Room 101",
+            room: formatOrderDeliveryAddress(o.deliveryAddress, o.room?.title),
             items: itemsSummary || "1x Dish Item",
             rawTotal: Number(o.totalAmount) || 0,
             total: `₹${o.totalAmount || 0}`,

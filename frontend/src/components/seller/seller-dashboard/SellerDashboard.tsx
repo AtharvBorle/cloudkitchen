@@ -26,7 +26,7 @@ import { useRealtimeStream } from "@/hooks/useRealtimeStream";
 import { useSellerNotifications, addSellerNotification } from "@/hooks/useSellerNotifications";
 import { playNewOrderChime } from "@/lib/audio-chime";
 import { performLogout } from "@/lib/logout";
-import { getRemainingSeconds } from "../seller-orders/SellerOrders";
+import { getRemainingSeconds, formatOrderDeliveryAddress } from "../seller-orders/SellerOrders";
 import { useRoomModule } from "@/context/RoomModuleContext";
 import styles from "./SellerDashboard.module.css";
 
@@ -283,7 +283,8 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
               if (statusVal === "Pending" || statusVal === "Preparing") {
                 try {
                   const customerPhone = o.customerPhone || o.user?.phone || "";
-                  const address = o.room?.title || o.deliveryAddress || "";
+                  const cleanedAddr = formatOrderDeliveryAddress(o.deliveryAddress, o.room?.title);
+                  const address = cleanedAddr !== "N/A" ? cleanedAddr : "";
                   addSellerNotification({
                     id: `notif-order-${o.id}`,
                     category: "orders",
@@ -303,7 +304,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                 id: o.id,
                 orderId: `#NCR-${o.id.slice(0, 4).toUpperCase()}`,
                 customer: o.user?.name || o.customerName || "Customer",
-                roomNo: o.room?.title || o.deliveryAddress || "Room 101",
+                roomNo: formatOrderDeliveryAddress(o.deliveryAddress, o.room?.title),
                 items: itemsSummary || "1x Food Item",
                 total: `₹${o.totalAmount || 0}`,
                 status: statusVal,
@@ -346,7 +347,8 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
           }
           const orderId = o.id || payload.orderId || `ORD-${Date.now().toString().slice(-4)}`;
           const customerPhone = o.customerPhone || o.user?.phone || "";
-          const address = o.room?.title || o.deliveryAddress || "";
+          const cleanedAddr = formatOrderDeliveryAddress(o.deliveryAddress, o.room?.title);
+          const address = cleanedAddr !== "N/A" ? cleanedAddr : "";
           addSellerNotification({
             id: `notif-order-${orderId}`,
             category: "orders",
@@ -394,7 +396,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                 id: o.id,
                 orderId: `#NCR-${o.id.slice(0, 4).toUpperCase()}`,
                 customer: o.user?.name || o.customerName || "Customer",
-                roomNo: o.room?.title || o.deliveryAddress || "Room 101",
+                roomNo: formatOrderDeliveryAddress(o.deliveryAddress, o.room?.title),
                 items: itemsSummary || "1x Food Item",
                 total: `₹${o.totalAmount || 0}`,
                 status: statusVal,
