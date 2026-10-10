@@ -248,10 +248,27 @@ export function HouseMapPicker({
             }
         }
 
+        const handleAuthFailure = () => {
+            if (!isMountedRef.current || !mapContainerRef.current) return;
+            console.warn("[HouseMapPicker] Google Maps auth failure. Switching to Leaflet immediately.");
+            if (googleMapRef.current) {
+                googleMapRef.current = null;
+                googleMarkerRef.current = null;
+            }
+            if (mapContainerRef.current) {
+                mapContainerRef.current.innerHTML = "";
+            }
+            setMapEngine("leaflet");
+            initLeaflet(defaultLat, defaultLng);
+        };
+
+        window.addEventListener("google-maps-auth-failure", handleAuthFailure);
+
         setupMap();
 
         return () => {
             isMountedRef.current = false;
+            window.removeEventListener("google-maps-auth-failure", handleAuthFailure);
             if (leafletMapRef.current) {
                 try {
                     leafletMapRef.current.off();
@@ -263,7 +280,7 @@ export function HouseMapPicker({
                 delete (mapContainerRef.current as any)._leaflet_id;
             }
         };
-    }, [handleReverseGeocode, skipInitialReverseGeocode]);
+    }, [handleReverseGeocode, skipInitialReverseGeocode, latitude, longitude]);
 
     // Update marker position and center map when latitude/longitude change from parent
     useEffect(() => {
