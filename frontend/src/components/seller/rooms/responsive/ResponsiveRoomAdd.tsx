@@ -15,6 +15,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { getPincodeCoordinates } from "@/lib/geo-distance";
+import { reverseGeocodeWithGoogle, geocodeWithGoogle } from "@/lib/google-maps";
 import styles from "./ResponsiveRoomAdd.module.css";
 
 export interface ResponsiveAmenity {
@@ -273,19 +274,13 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
         setLatitude(lat);
         setLongitude(lng);
         try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
-          );
-          if (res.ok) {
-            const data = await res.json();
-            const addr = data.address || {};
-            if (addr.postcode) setPincode(addr.postcode);
-            if (addr.suburb || addr.neighbourhood || addr.city_district) {
-              setLocality(addr.suburb || addr.neighbourhood || addr.city_district);
-            }
-            if (addr.road) setLandmark(addr.road);
-            if (addr.city || addr.town) setCity(addr.city || addr.town);
-            if (addr.house_number) setHouseNumber(addr.house_number);
+          const geo = await reverseGeocodeWithGoogle(lat, lng);
+          if (geo) {
+            if (geo.pincode) setPincode(geo.pincode);
+            if (geo.locality) setLocality(geo.locality);
+            if (geo.landmark || geo.street) setLandmark(geo.landmark || geo.street || "");
+            if (geo.city) setCity(geo.city);
+            if (geo.houseNumber) setHouseNumber(geo.houseNumber);
           }
         } catch (e) {
           console.error("GPS reverse geocode error:", e);
@@ -309,25 +304,16 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
     setIsSearchingLoc(true);
     try {
       const fullQuery = q.toLowerCase().includes("pune") ? q : `${q}, Pune, Maharashtra`;
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-          fullQuery
-        )}&limit=1&addressdetails=1`
-      );
-      if (res.ok) {
-        const results = await res.json();
-        if (results && results.length > 0) {
-          const first = results[0];
-          setLatitude(parseFloat(first.lat));
-          setLongitude(parseFloat(first.lon));
-          const addr = first.address || {};
-          if (addr.postcode) setPincode(addr.postcode);
-          const cleanLoc = addr.suburb || addr.neighbourhood || addr.city_district || q.split(",")[0].trim();
-          setLocality(cleanLoc);
-          if (addr.city || addr.town) setCity(addr.city || addr.town);
-        } else {
-          alert(`No area found for "${q}".`);
-        }
+      const res = await geocodeWithGoogle(fullQuery);
+      if (res) {
+        setLatitude(res.lat);
+        setLongitude(res.lng);
+        if (res.pincode) setPincode(res.pincode);
+        if (res.locality) setLocality(res.locality);
+        else setLocality(q.split(",")[0].trim());
+        if (res.city) setCity(res.city);
+      } else {
+        alert(`No area found for "${q}".`);
       }
     } catch (e) {
       console.error("Area search error:", e);

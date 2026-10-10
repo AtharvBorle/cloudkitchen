@@ -100,6 +100,10 @@ export const swaggerSpec = {
     {
       "name": "App-Feedback",
       "description": "Mobile and web customer app ratings and feedback"
+    },
+    {
+      "name": "Google-Maps-Location",
+      "description": "Google Maps Places Autocomplete, Geocoding, Reverse Geocoding, and map configuration"
     }
   ],
   "components": {
@@ -11249,6 +11253,161 @@ export const swaggerSpec = {
                     "data": {
                       "type": "object"
                     }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/public/maps/config": {
+      "get": {
+        "tags": [
+          "Google-Maps-Location"
+        ],
+        "summary": "Get Google Maps Configuration Status",
+        "description": "Checks if the server environment has a configured Google Maps API key, provides key status, and fallback map providers.",
+        "responses": {
+          "200": {
+            "description": "Google Maps configuration status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "isConfigured": { "type": "boolean", "example": true },
+                        "apiKey": { "type": "string", "nullable": true },
+                        "provider": { "type": "string", "example": "google_maps" },
+                        "defaultCenter": { "type": "object" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/public/maps/autocomplete": {
+      "get": {
+        "tags": [
+          "Google-Maps-Location"
+        ],
+        "summary": "Google Places Autocomplete Suggestions",
+        "description": "Searches addresses, societies, buildings, and landmarks in real-time with India/Pune location bias. Falls back to OpenStreetMap Nominatim and Pune PIN directory if key is unconfigured.",
+        "parameters": [
+          { "name": "input", "in": "query", "required": true, "schema": { "type": "string" }, "description": "Search query or address prefix" },
+          { "name": "sessionToken", "in": "query", "required": false, "schema": { "type": "string" }, "description": "Optional session token for Places billing grouping" },
+          { "name": "lat", "in": "query", "required": false, "schema": { "type": "number" }, "description": "Center latitude for location bias (default: 18.5204 Pune)" },
+          { "name": "lng", "in": "query", "required": false, "schema": { "type": "number" }, "description": "Center longitude for location bias (default: 73.8567 Pune)" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Places suggestions list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "suggestions": { "type": "array" },
+                        "provider": { "type": "string", "example": "google_places" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/public/maps/place-details": {
+      "get": {
+        "tags": [
+          "Google-Maps-Location"
+        ],
+        "summary": "Google Place Details",
+        "description": "Retrieves exact coordinates, formatted address, and parsed address components (pincode, street, locality, city) for a given place_id.",
+        "parameters": [
+          { "name": "placeId", "in": "query", "required": true, "schema": { "type": "string" }, "description": "Google Place ID returned by autocomplete" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detailed address and coordinate info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "type": "object" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/public/maps/reverse-geocode": {
+      "get": {
+        "tags": [
+          "Google-Maps-Location"
+        ],
+        "summary": "Google Maps Reverse Geocoding",
+        "description": "Converts latitude and longitude GPS coordinates into normalized street, locality, landmark, house number, city, and 6-digit postal code.",
+        "parameters": [
+          { "name": "lat", "in": "query", "required": true, "schema": { "type": "number" }, "description": "Latitude" },
+          { "name": "lng", "in": "query", "required": true, "schema": { "type": "number" }, "description": "Longitude" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resolved address details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "type": "object" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/public/maps/geocode": {
+      "get": {
+        "tags": [
+          "Google-Maps-Location"
+        ],
+        "summary": "Google Maps Forward Geocoding",
+        "description": "Converts a human-readable address query into latitude, longitude, and structured components.",
+        "parameters": [
+          { "name": "address", "in": "query", "required": true, "schema": { "type": "string" }, "description": "Address or area text" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resolved coordinates and components",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "type": "object" }
                   }
                 }
               }
