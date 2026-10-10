@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Bell,
   CheckCircle2,
@@ -52,6 +53,43 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
     clearAllNotifications,
     syncNotifications,
   } = useSellerNotifications();
+  const router = useRouter();
+
+  const resolveOrderTargetHref = (item: SellerNotificationItem) => {
+    const targetHref = item.actionHref;
+    if (
+      item.category === "orders" ||
+      item.actionLabel === "View Order" ||
+      item.actionLabel === "Track Delivery" ||
+      item.actionLabel === "Track Dispatch" ||
+      item.title?.toLowerCase().includes("order")
+    ) {
+      let orderId = item.metadata?.orderId;
+      if (!orderId) {
+        const idMatch = item.id.match(/^(?:notif-order-|notif-deliv-|ord-[a-z]+-)(.+)$/);
+        if (idMatch && idMatch[1]) {
+          orderId = idMatch[1].replace(/^ORD-/i, "");
+        }
+      }
+      if (!orderId && targetHref) {
+        try {
+          const parsed = new URL(targetHref, "http://localhost");
+          const paramId = parsed.searchParams.get("orderId") || parsed.searchParams.get("id");
+          if (paramId) orderId = paramId.replace(/^#/, "").replace(/^ORD-/i, "");
+        } catch {}
+      }
+      if (!orderId) {
+        const titleMatch = item.title?.match(/#([A-Za-z0-9-]+)/);
+        if (titleMatch && titleMatch[1]) {
+          orderId = titleMatch[1].replace(/^(?:ORD|NCR)-/i, "");
+        }
+      }
+      if (orderId) {
+        return `/seller/orders/details?orderId=${encodeURIComponent(orderId)}`;
+      }
+    }
+    return targetHref || "/seller/orders";
+  };
 
   const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -517,9 +555,12 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
               <div
                 key={item.id}
                 className={`${styles.notificationCard} ${!item.isRead ? styles.unreadCard : ""}`}
+                style={{ cursor: "pointer" }}
                 onClick={() => {
-                  if (activeFilter !== "unread") {
-                    handleMarkAsRead(item.id);
+                  handleMarkAsRead(item.id);
+                  const target = resolveOrderTargetHref(item);
+                  if (target) {
+                    router.push(target);
                   }
                 }}
               >
@@ -563,18 +604,7 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
                   <div className={styles.cardFooter}>
                     {item.actionLabel && item.actionHref ? (
                       <Link
-                        href={(() => {
-                          if (item.actionLabel === "Track Dispatch" && item.actionHref === "/seller/delivery") {
-                            return "/seller/orders";
-                          }
-                          if (item.category === "orders") {
-                            const match = item.title.match(/#([A-Za-z0-9-]+)/) || item.id.match(/notif-order-([A-Za-z0-9-]+)/);
-                            if (match && (!item.actionHref || item.actionHref === "/seller/orders")) {
-                              return `/seller/orders/details?orderId=${encodeURIComponent(match[1])}`;
-                            }
-                          }
-                          return item.actionHref;
-                        })()}
+                        href={resolveOrderTargetHref(item)}
                         className={styles.cardActionLink}
                         onClick={(e) => {
                           e.stopPropagation();

@@ -3,41 +3,14 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Calendar, Bell, ArrowRight, UtensilsCrossed } from "lucide-react";
+import { Calendar, ArrowRight, UtensilsCrossed } from "lucide-react";
 import styles from "./ActiveSubscriptionsNotifications.module.css";
 import { fetchUserMealSubscriptions, UserActiveMealSubscription } from "@/lib/meal-subscriptions";
-import {
-  getNotificationsSummaryPreferences,
-  saveNotificationsSummaryPreferences,
-  NotificationsSummaryPreferences,
-  NOTIFICATION_PREFERENCES_EVENT,
-  DEFAULT_NOTIFICATIONS_SUMMARY,
-} from "@/lib/user-notification-preferences";
 
 export const ActiveSubscriptionsNotifications: React.FC = () => {
   const router = useRouter();
   const [subscriptions, setSubscriptions] = useState<UserActiveMealSubscription[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [notifStates, setNotifStates] = useState<NotificationsSummaryPreferences>(
-    DEFAULT_NOTIFICATIONS_SUMMARY
-  );
-
-  // Sync with persistent storage on client mount after initial hydration and listen for updates
-  useEffect(() => {
-    setNotifStates(getNotificationsSummaryPreferences());
-
-    const handlePrefChange = () => {
-      setNotifStates(getNotificationsSummaryPreferences());
-    };
-
-    window.addEventListener(NOTIFICATION_PREFERENCES_EVENT, handlePrefChange);
-    window.addEventListener("storage", handlePrefChange);
-
-    return () => {
-      window.removeEventListener(NOTIFICATION_PREFERENCES_EVENT, handlePrefChange);
-      window.removeEventListener("storage", handlePrefChange);
-    };
-  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -69,17 +42,11 @@ export const ActiveSubscriptionsNotifications: React.FC = () => {
     };
   }, []);
 
-  const toggleNotif = (key: keyof NotificationsSummaryPreferences) => {
-    const nextVal = !notifStates[key];
-    setNotifStates((prev) => ({ ...prev, [key]: nextVal }));
-    saveNotificationsSummaryPreferences({ [key]: nextVal });
-  };
-
   const activeSubscriptions = subscriptions.filter((s) => s.status === "ACTIVE");
 
   return (
     <div className={styles.sectionContainer}>
-      {/* 1. Left Card: Active Subscriptions */}
+      {/* Active Subscriptions Card */}
       <div className={styles.summaryCard}>
         <div className={styles.cardHeader}>
           <div className={styles.headerLeft}>
@@ -212,120 +179,6 @@ export const ActiveSubscriptionsNotifications: React.FC = () => {
             </Link>
           </div>
         )}
-      </div>
-
-      {/* 2. Right Card: Notifications Summary */}
-      <div className={styles.summaryCard}>
-        <div className={styles.cardHeader}>
-          <div className={styles.headerLeft}>
-            <div className={styles.iconBox}>
-              <Bell size={18} strokeWidth={2.4} />
-            </div>
-            <h2 className={styles.cardTitle}>Notifications Summary</h2>
-          </div>
-        </div>
-
-        <div className={styles.notifList}>
-          {/* Row 1: Order Updates */}
-          <div className={styles.notifRow}>
-            <div className={styles.notifInfo}>
-              <h3 className={styles.notifTitle}>Order Updates</h3>
-              <p className={styles.notifDesc}>Status tracking & dispatch alerts</p>
-            </div>
-            <div
-              className={`${styles.switchTrack} ${
-                notifStates.orderUpdates ? styles.switchTrackActive : ""
-              }`}
-              onClick={() => toggleNotif("orderUpdates")}
-              role="switch"
-              aria-checked={notifStates.orderUpdates}
-              tabIndex={0}
-              suppressHydrationWarning
-            >
-              <div
-                className={`${styles.switchThumb} ${
-                  notifStates.orderUpdates ? styles.switchThumbActive : ""
-                }`}
-                suppressHydrationWarning
-              />
-            </div>
-          </div>
-
-          {/* Row 2: Promotional Offers */}
-          <div className={styles.notifRow}>
-            <div className={styles.notifInfo}>
-              <h3 className={styles.notifTitle}>Promotional Offers</h3>
-              <p className={styles.notifDesc}>Flash sales & personalized discounts</p>
-            </div>
-            <div
-              className={`${styles.switchTrack} ${
-                notifStates.promoOffers ? styles.switchTrackActive : ""
-              }`}
-              onClick={() => toggleNotif("promoOffers")}
-              role="switch"
-              aria-checked={notifStates.promoOffers}
-              tabIndex={0}
-              suppressHydrationWarning
-            >
-              <div
-                className={`${styles.switchThumb} ${
-                  notifStates.promoOffers ? styles.switchThumbActive : ""
-                }`}
-                suppressHydrationWarning
-              />
-            </div>
-          </div>
-
-          {/* Row 3: New Menu Arrivals */}
-          <div className={styles.notifRow}>
-            <div className={styles.notifInfo}>
-              <h3 className={styles.notifTitle}>New Menu Arrivals</h3>
-              <p className={styles.notifDesc}>Instant notifications of new bakery items</p>
-            </div>
-            <div
-              className={`${styles.switchTrack} ${
-                notifStates.newMenu ? styles.switchTrackActive : ""
-              }`}
-              onClick={() => toggleNotif("newMenu")}
-              role="switch"
-              aria-checked={notifStates.newMenu}
-              tabIndex={0}
-              suppressHydrationWarning
-            >
-              <div
-                className={`${styles.switchThumb} ${
-                  notifStates.newMenu ? styles.switchThumbActive : ""
-                }`}
-                suppressHydrationWarning
-              />
-            </div>
-          </div>
-
-          {/* Row 4: Delivery Alerts */}
-          <div className={styles.notifRow}>
-            <div className={styles.notifInfo}>
-              <h3 className={styles.notifTitle}>Delivery Alerts</h3>
-              <p className={styles.notifDesc}>Alerts when agent is near your home</p>
-            </div>
-            <div
-              className={`${styles.switchTrack} ${
-                notifStates.deliveryAlerts ? styles.switchTrackActive : ""
-              }`}
-              onClick={() => toggleNotif("deliveryAlerts")}
-              role="switch"
-              aria-checked={notifStates.deliveryAlerts}
-              tabIndex={0}
-              suppressHydrationWarning
-            >
-              <div
-                className={`${styles.switchThumb} ${
-                  notifStates.deliveryAlerts ? styles.switchThumbActive : ""
-                }`}
-                suppressHydrationWarning
-              />
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

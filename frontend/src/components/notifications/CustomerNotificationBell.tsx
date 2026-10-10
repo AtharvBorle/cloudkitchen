@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
@@ -524,7 +523,7 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
 
       {/* 3. Popover Menu & Backdrop */}
       {isOpen && (
-        <>
+        <div key="customer-notification-popover">
           <div className={styles.backdrop} onClick={() => setIsOpen(false)} />
           <div className={styles.dropdown} role="dialog" aria-label="Notifications Center">
             {/* Header */}
@@ -773,20 +772,8 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
               })
               )}
             </div>
-
-            {/* Footer View All / Settings Link */}
-            <div className={styles.footer}>
-              <Link
-                href="/settings-desktop"
-                className={styles.viewAllLink}
-                onClick={() => setIsOpen(false)}
-              >
-                <span>Manage Notification Preferences</span>
-                <ChevronRight size={14} strokeWidth={2.2} />
-              </Link>
-            </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

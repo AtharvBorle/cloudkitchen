@@ -4,6 +4,7 @@ import { ApiError } from "@/lib/api-error";
 import { handleCodOrderDelivered } from "@/lib/delivery-wallet";
 import { emitOrderUpdated, emitSellerDashboardRefresh } from "@/lib/realtime-events";
 import { autoCancelExpiredOrders, cancelExpiredOrder, isOrderExpired } from "@/lib/order-expiry";
+import { enrichOrderWithEta, getOrInitOrderTimer } from "@/lib/order-eta";
 import { revalidateTag } from "next/cache";
 
 export const getSellerOrders = async () => {
@@ -281,8 +282,14 @@ export const updateSellerOrder = async (req: Request, orderId: string) => {
         return uo;
     });
 
+    if (status === "PREPARING" || status === "OUT_FOR_DELIVERY") {
+        await getOrInitOrderTimer(updatedOrder, true);
+    }
+
+    const enrichedUpdatedOrder = await enrichOrderWithEta(updatedOrder);
+
     try {
-        emitOrderUpdated(updatedOrder);
+        emitOrderUpdated(enrichedUpdatedOrder);
         emitSellerDashboardRefresh(sellerProfile.id);
     } catch (e) {
         console.error("Realtime event emission error in seller update:", e);
@@ -293,5 +300,5 @@ export const updateSellerOrder = async (req: Request, orderId: string) => {
         revalidateTag("public-explore-data", {});
     } catch (e) {}
 
-    return { order: updatedOrder };
+    return { order: enrichedUpdatedOrder };
 };

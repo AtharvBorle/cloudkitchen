@@ -11,7 +11,7 @@ export interface NotificationsSummaryPreferences {
 
 export const DEFAULT_NOTIFICATIONS_SUMMARY: NotificationsSummaryPreferences = {
   orderUpdates: true,
-  promoOffers: false,
+  promoOffers: true,
   newMenu: true,
   deliveryAlerts: true,
 };
@@ -80,57 +80,8 @@ const extractBool = (...vals: any[]): boolean | undefined => {
   return undefined;
 };
 
-/**
- * Load user's notification summary preferences from localStorage/cookie with fallback to defaults.
- */
 export function getNotificationsSummaryPreferences(): NotificationsSummaryPreferences {
-  if (typeof window === "undefined") {
-    return { ...DEFAULT_NOTIFICATIONS_SUMMARY };
-  }
-
-  const parsedSummary = safeGetStorage(STORAGE_KEY_SUMMARY);
-  const parsedPush = safeGetStorage(STORAGE_KEY_PUSH);
-
-  const orderUpdates = extractBool(
-    parsedSummary?.orderUpdates,
-    parsedSummary?.["order-updates"],
-    parsedPush?.["order-updates"],
-    parsedPush?.orderUpdates
-  );
-
-  const promoOffers = extractBool(
-    parsedSummary?.promoOffers,
-    parsedSummary?.promotionalOffers,
-    parsedSummary?.["promotional-offers"],
-    parsedSummary?.["promo-offers"],
-    parsedSummary?.["promotional_offers"],
-    parsedSummary?.["promo_offers"],
-    parsedPush?.["promotional-offers"],
-    parsedPush?.promoOffers,
-    parsedPush?.promotionalOffers
-  );
-
-  const newMenu = extractBool(
-    parsedSummary?.newMenu,
-    parsedSummary?.["new-arrivals"],
-    parsedSummary?.["new-menu"],
-    parsedPush?.["new-arrivals"],
-    parsedPush?.newMenu
-  );
-
-  const deliveryAlerts = extractBool(
-    parsedSummary?.deliveryAlerts,
-    parsedSummary?.["delivery-alerts"],
-    parsedPush?.["delivery-alerts"],
-    parsedPush?.deliveryAlerts
-  );
-
-  return {
-    orderUpdates: orderUpdates !== undefined ? orderUpdates : DEFAULT_NOTIFICATIONS_SUMMARY.orderUpdates,
-    promoOffers: promoOffers !== undefined ? promoOffers : DEFAULT_NOTIFICATIONS_SUMMARY.promoOffers,
-    newMenu: newMenu !== undefined ? newMenu : DEFAULT_NOTIFICATIONS_SUMMARY.newMenu,
-    deliveryAlerts: deliveryAlerts !== undefined ? deliveryAlerts : DEFAULT_NOTIFICATIONS_SUMMARY.deliveryAlerts,
-  };
+  return { ...DEFAULT_NOTIFICATIONS_SUMMARY };
 }
 
 /**

@@ -126,6 +126,31 @@ const SwipeAction = ({ onSwipeSuccess, text = "Swipe to Deliver" }: { onSwipeSuc
     );
 };
 
+const computeDeliveryEta = (
+    status?: string,
+    timerStartedAt?: string | null,
+    delayMinutes?: number,
+    nowMs: number = Date.now()
+): string => {
+    const s = (status || "PENDING").toUpperCase();
+    if (s === "DELIVERED") return "Delivered";
+    if (s === "CANCELLED" || s === "REJECTED") return "Cancelled";
+
+    const delay = Math.max(0, Number(delayMinutes) || 0);
+    const startedMs = timerStartedAt ? new Date(timerStartedAt).getTime() : nowMs;
+    const elapsedMinutes = !isNaN(startedMs) ? Math.max(0, Math.floor((nowMs - startedMs) / 60000)) : 0;
+
+    const remMin = 20 + delay - elapsedMinutes;
+    const remMax = 25 + delay - elapsedMinutes;
+
+    if (remMin >= 1) {
+        return `${remMin}-${remMax} mins`;
+    }
+
+    const singleRem = Math.max(1, remMax);
+    return `${singleRem} ${singleRem === 1 ? "min" : "mins"}`;
+};
+
 export default function DeliveryDashboard() {
     const [orders, setOrders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -137,6 +162,19 @@ export default function DeliveryDashboard() {
     const [searchQuery, setSearchQuery] = useState("");
     const [activeStatusFilter, setActiveStatusFilter] = useState<'ALL' | 'PICKUP' | 'OUT_FOR_DELIVERY'>('ALL');
     const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'amount_high' | 'amount_low'>('newest');
+    const [nowMs, setNowMs] = useState<number>(() => Date.now());
+    const [customDelayOpenFor, setCustomDelayOpenFor] = useState<string | null>(null);
+    const [customDelayInput, setCustomDelayInput] = useState<Record<string, string>>({});
+    const [customDelayError, setCustomDelayError] = useState<Record<string, string>>({});
+    const [addingDelayOrderId, setAddingDelayOrderId] = useState<string | null>(null);
+    const [delayFeedback, setDelayFeedback] = useState<Record<string, string>>({});
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setNowMs(Date.now());
+        }, 15000);
+        return () => clearInterval(timer);
+    }, []);
 
     const fetchOrders = async (showLoading = false) => {
         if (showLoading) setLoading(true);
@@ -296,6 +334,77 @@ export default function DeliveryDashboard() {
         } catch (error) {
             console.error("Update error", error);
         }
+    };
+
+    const handleAddDelay = async (orderId: string, minutesToAdd: number) => {
+        const mins = Math.round(Number(minutesToAdd));
+        if (!Number.isFinite(mins) || mins < 1) {
+            setCustomDelayError((prev) => ({ ...prev, [orderId]: "Please enter at least 1 minute." }));
+            return;
+        }
+        if (mins > 30) {
+            setCustomDelayError((prev) => ({ ...prev, [orderId]: "Custom delay cannot exceed 30 minutes." }));
+            return;
+        }
+
+        setCustomDelayError((prev) => ({ ...prev, [orderId]: "" }));
+        setAddingDelayOrderId(orderId);
+
+        try {
+            const res = await fetchApi(`/api/delivery/orders/${orderId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ delayMinutes: mins }),
+            });
+            const data = await res.json().catch(() => null);
+            if (res.ok) {
+                const updatedTimer = data?.data?.timer || data?.timer;
+                setOrders((prev) =>
+                    prev.map((o) =>
+                        o.id === orderId
+                            ? {
+                                  ...o,
+                                  deliveryTimerStartedAt:
+                                      updatedTimer?.startedAt || o.deliveryTimerStartedAt || new Date().toISOString(),
+                                  deliveryDelayMinutes:
+                                      updatedTimer?.delayMinutes !== undefined
+                                          ? Number(updatedTimer.delayMinutes)
+                                          : (Number(o.deliveryDelayMinutes) || 0) + mins,
+                              }
+                            : o
+                    )
+                );
+                setCustomDelayOpenFor((prev) => (prev === orderId ? null : prev));
+                setCustomDelayInput((prev) => ({ ...prev, [orderId]: "" }));
+                setDelayFeedback((prev) => ({ ...prev, [orderId]: `+${mins} min added to customer timer` }));
+                setTimeout(() => {
+                    setDelayFeedback((prev) => ({ ...prev, [orderId]: "" }));
+                }, 3500);
+                fetchOrders(false);
+            } else {
+                const errMsg = data?.message || data?.error || "Failed to add delay minutes.";
+                setCustomDelayError((prev) => ({ ...prev, [orderId]: errMsg }));
+            }
+        } catch (err) {
+            console.error("Add delay error:", err);
+            setCustomDelayError((prev) => ({ ...prev, [orderId]: "Failed to add delay minutes." }));
+        } finally {
+            setAddingDelayOrderId(null);
+        }
+    };
+
+    const handleCustomDelaySubmit = (orderId: string) => {
+        const rawVal = (customDelayInput[orderId] || "").trim();
+        const parsed = Number(rawVal);
+        if (!rawVal || !Number.isFinite(parsed) || parsed < 1) {
+            setCustomDelayError((prev) => ({ ...prev, [orderId]: "Enter valid minutes (1–30)." }));
+            return;
+        }
+        if (parsed > 30) {
+            setCustomDelayError((prev) => ({ ...prev, [orderId]: "Custom delay cannot be more than 30 minutes." }));
+            return;
+        }
+        handleAddDelay(orderId, Math.round(parsed));
     };
 
     const handleCollectOnline = async (orderId: string) => {
@@ -673,6 +782,149 @@ export default function DeliveryDashboard() {
                                             <p style={{ color: '#718096', fontSize: '0.95rem', marginLeft: '26px' }}>{order.paymentMethod} {order.isPaid ? '(Paid)' : '(Unpaid)'}</p>
                                         </div>
                                     </div>
+
+                                    {order.status === 'OUT_FOR_DELIVERY' && (
+                                        <div style={{ marginTop: '18px', padding: '14px 16px', backgroundColor: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '10px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                                    <Clock size={16} color="#059669" />
+                                                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1E293B' }}>
+                                                        Customer Arrival Timer:
+                                                    </span>
+                                                    <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#059669', backgroundColor: '#DCFCE7', padding: '2px 10px', borderRadius: '999px' }}>
+                                                        {computeDeliveryEta(
+                                                            order.status,
+                                                            order.deliveryTimerStartedAt || order.updatedAt || order.createdAt,
+                                                            order.deliveryDelayMinutes,
+                                                            nowMs
+                                                        )}
+                                                    </span>
+                                                    {Number(order.deliveryDelayMinutes) > 0 && (
+                                                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#D97706', backgroundColor: '#FEF3C7', padding: '2px 8px', borderRadius: '999px', border: '1px solid #FDE68A' }}>
+                                                            +{order.deliveryDelayMinutes} min delayed
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                {delayFeedback[order.id] && (
+                                                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#059669' }}>
+                                                        ✓ {delayFeedback[order.id]}
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748B', marginRight: '4px' }}>
+                                                    Add Delay Minutes:
+                                                </span>
+                                                {[5, 10, 20].map((mins) => (
+                                                    <button
+                                                        key={mins}
+                                                        type="button"
+                                                        disabled={addingDelayOrderId === order.id}
+                                                        onClick={() => handleAddDelay(order.id, mins)}
+                                                        style={{
+                                                            padding: '6px 12px',
+                                                            borderRadius: '8px',
+                                                            border: '1px solid #CBD5E1',
+                                                            backgroundColor: 'white',
+                                                            color: '#1E293B',
+                                                            fontSize: '0.82rem',
+                                                            fontWeight: 700,
+                                                            cursor: addingDelayOrderId === order.id ? 'not-allowed' : 'pointer',
+                                                            transition: 'all 0.15s',
+                                                        }}
+                                                    >
+                                                        +{mins} min
+                                                    </button>
+                                                ))}
+                                                <button
+                                                    type="button"
+                                                    disabled={addingDelayOrderId === order.id}
+                                                    onClick={() => {
+                                                        setCustomDelayError((prev) => ({ ...prev, [order.id]: "" }));
+                                                        setCustomDelayOpenFor((prev) => (prev === order.id ? null : order.id));
+                                                    }}
+                                                    style={{
+                                                        padding: '6px 12px',
+                                                        borderRadius: '8px',
+                                                        border: customDelayOpenFor === order.id ? '1px solid #3182CE' : '1px solid #CBD5E1',
+                                                        backgroundColor: customDelayOpenFor === order.id ? '#EBF8FF' : 'white',
+                                                        color: customDelayOpenFor === order.id ? '#2B6CB0' : '#1E293B',
+                                                        fontSize: '0.82rem',
+                                                        fontWeight: 700,
+                                                        cursor: addingDelayOrderId === order.id ? 'not-allowed' : 'pointer',
+                                                        transition: 'all 0.15s',
+                                                    }}
+                                                >
+                                                    Custom
+                                                </button>
+
+                                                {customDelayOpenFor === order.id && (
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                                        <input
+                                                            type="number"
+                                                            min={1}
+                                                            max={30}
+                                                            placeholder="1-30 mins"
+                                                            value={customDelayInput[order.id] || ""}
+                                                            onChange={(e) => {
+                                                                const val = e.target.value;
+                                                                setCustomDelayInput((prev) => ({ ...prev, [order.id]: val }));
+                                                                const num = Number(val);
+                                                                if (val && num > 30) {
+                                                                    setCustomDelayError((prev) => ({
+                                                                        ...prev,
+                                                                        [order.id]: "Custom delay cannot be more than 30 minutes.",
+                                                                    }));
+                                                                } else {
+                                                                    setCustomDelayError((prev) => ({ ...prev, [order.id]: "" }));
+                                                                }
+                                                            }}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter') {
+                                                                    e.preventDefault();
+                                                                    handleCustomDelaySubmit(order.id);
+                                                                }
+                                                            }}
+                                                            style={{
+                                                                width: '105px',
+                                                                padding: '6px 10px',
+                                                                borderRadius: '8px',
+                                                                border: customDelayError[order.id] ? '1px solid #EF4444' : '1px solid #CBD5E1',
+                                                                fontSize: '0.82rem',
+                                                                outline: 'none',
+                                                                backgroundColor: 'white',
+                                                            }}
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            disabled={addingDelayOrderId === order.id}
+                                                            onClick={() => handleCustomDelaySubmit(order.id)}
+                                                            style={{
+                                                                padding: '6px 12px',
+                                                                borderRadius: '8px',
+                                                                border: 'none',
+                                                                backgroundColor: '#059669',
+                                                                color: 'white',
+                                                                fontSize: '0.82rem',
+                                                                fontWeight: 700,
+                                                                cursor: addingDelayOrderId === order.id ? 'not-allowed' : 'pointer',
+                                                            }}
+                                                        >
+                                                            Add
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {customDelayError[order.id] && (
+                                                <div style={{ marginTop: '6px', fontSize: '0.78rem', fontWeight: 600, color: '#DC2626' }}>
+                                                    {customDelayError[order.id]}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div style={{ marginLeft: '30px', display: 'flex', flexDirection: 'column', gap: '10px', minWidth: '180px' }}>

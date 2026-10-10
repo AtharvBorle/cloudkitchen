@@ -166,8 +166,8 @@ export const ActiveOrders: React.FC<ActiveOrdersProps> = ({
                         View Invoice
                       </Link>
                     ) : (
-                      <Link href={`/order-confirmation?orderId=${order.id}`} className={styles.actionBtn} style={{ textDecoration: "none" }}>
-                        Track Order
+                      <Link href={`/orders-desktop?orderId=${order.id}`} className={styles.actionBtn} style={{ textDecoration: "none" }}>
+                        View Order
                       </Link>
                     )}
                   </div>

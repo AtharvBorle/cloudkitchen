@@ -391,10 +391,35 @@ export default function Topbar({
                         markAsRead(item.id);
                         setIsDropdownOpen(false);
                         let targetHref = item.actionHref;
-                        if (item.category === "orders") {
-                          const match = item.title.match(/#([A-Za-z0-9-]+)/) || item.id.match(/notif-order-([A-Za-z0-9-]+)/);
-                          if (match && (!targetHref || targetHref === "/seller/orders")) {
-                            targetHref = `/seller/orders/details?orderId=${encodeURIComponent(match[1])}`;
+                        if (
+                          item.category === "orders" ||
+                          item.actionLabel === "View Order" ||
+                          item.actionLabel === "Track Delivery" ||
+                          item.actionLabel === "Track Dispatch" ||
+                          item.title?.toLowerCase().includes("order")
+                        ) {
+                          let orderId = item.metadata?.orderId;
+                          if (!orderId) {
+                            const idMatch = item.id.match(/^(?:notif-order-|notif-deliv-|ord-[a-z]+-)(.+)$/);
+                            if (idMatch && idMatch[1]) {
+                              orderId = idMatch[1].replace(/^ORD-/i, "");
+                            }
+                          }
+                          if (!orderId && targetHref) {
+                            try {
+                              const parsed = new URL(targetHref, "http://localhost");
+                              const paramId = parsed.searchParams.get("orderId") || parsed.searchParams.get("id");
+                              if (paramId) orderId = paramId.replace(/^#/, "").replace(/^ORD-/i, "");
+                            } catch {}
+                          }
+                          if (!orderId) {
+                            const match = item.title?.match(/#([A-Za-z0-9-]+)/);
+                            if (match && match[1]) {
+                              orderId = match[1].replace(/^(?:ORD|NCR)-/i, "");
+                            }
+                          }
+                          if (orderId) {
+                            targetHref = `/seller/orders/details?orderId=${encodeURIComponent(orderId)}`;
                           }
                         }
                         if (targetHref) {

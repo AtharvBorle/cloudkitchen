@@ -244,7 +244,10 @@ export default function FloatingCartBar() {
           <button
             type="button"
             className="cart-view-btn"
-            onClick={handleBarClick}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleBarClick();
+            }}
             aria-label="View Cart and Proceed to Order"
             style={{
               backgroundColor: "#FFFFFF",

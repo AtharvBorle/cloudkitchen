@@ -33,14 +33,14 @@ export default function SettingsDesktopPage() {
           {/* Right Column: Modular Settings Content Sections */}
           <div className={styles.contentWrapper}>
             {session?.user ? (
-              <>
+              <div key="authenticated-settings">
                 {/* 2. General Settings Header with mobile hamburger */}
                 <SettingsHeader />
 
                 {/* 3. Personal Profile Card */}
                 <PersonalProfile />
 
-                {/* 4. Active Subscriptions & Notifications Summary Grid */}
+                {/* 4. Active Subscriptions Overview */}
                 <ActiveSubscriptionsNotifications />
 
                 {/* 5. Delivery Addresses Section */}
@@ -48,9 +48,11 @@ export default function SettingsDesktopPage() {
 
                 {/* 6. Payment Methods Section (Disabled via comment - uncomment to re-enable in future) */}
                 {/* <PaymentMethods /> */}
-              </>
+              </div>
             ) : (
-              <GuestSettingsView />
+              <div key="guest-settings">
+                <GuestSettingsView />
+              </div>
             )}
           </div>
         </div>
