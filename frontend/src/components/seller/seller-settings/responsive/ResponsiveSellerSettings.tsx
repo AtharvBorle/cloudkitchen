@@ -243,9 +243,10 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
       : seller.ownerName;
 
   const [activeTab, setActiveTab] = useState<SettingsTabType>(() => {
+    const allowedTabs: SettingsTabType[] = ["General", "Security"];
     const tabParam = searchParams?.get("tab");
     if (tabParam) {
-      const matched = (["General", "Notifications", "Security", "Preferences"] as SettingsTabType[]).find(
+      const matched = allowedTabs.find(
         (t) => t.toLowerCase() === tabParam.toLowerCase()
       );
       if (matched) return matched;
@@ -254,14 +255,14 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
       try {
         const savedTab = localStorage.getItem("seller_settings_active_tab");
         if (savedTab) {
-          const matched = (["General", "Notifications", "Security", "Preferences"] as SettingsTabType[]).find(
+          const matched = allowedTabs.find(
             (t) => t.toLowerCase() === savedTab.toLowerCase()
           );
           if (matched) return matched;
         }
       } catch {}
     }
-    return initialTab;
+    return initialTab === "Notifications" || initialTab === "Preferences" ? "General" : initialTab;
   });
 
   const [isEditingGeneral, setIsEditingGeneral] = useState(false);
@@ -385,7 +386,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
   useEffect(() => {
     const tabParam = searchParams?.get("tab");
     if (tabParam) {
-      const matched = (["General", "Notifications", "Security", "Preferences"] as SettingsTabType[]).find(
+      const matched = (["General", "Security"] as SettingsTabType[]).find(
         (t) => t.toLowerCase() === tabParam.toLowerCase()
       );
       if (matched) {
@@ -705,7 +706,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
     return () => clearTimeout(timer);
   }, [toastData]);
 
-  const tabs: SettingsTabType[] = ["General", "Notifications", "Security", "Preferences"];
+  const tabs: SettingsTabType[] = ["General", "Security"];
 
   const handleInputChange = (field: keyof ResponsiveSellerSettingsData, value: any) => {
     setFormData((prev) => {
@@ -2324,128 +2325,17 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
             <>
               {/* 1. Password Management Card (Matching Reference Image) */}
               <PasswordManagementCard />
-              {/* 2. Danger Zone: Delete Kitchen Account */}
-              <SellerDeleteAccountCard />
 
-              {/* 2. Security & Access Card (Disabled via comment - uncomment to re-enable) */}
-              {/*
-              <div className={styles.card}>
-                <div className={styles.cardHeaderRow}>
-                  <Shield size={17} className={styles.cardHeaderIcon} />
-                  <h2 className={styles.cardTitle}>Authentication &amp; Access Control</h2>
-                </div>
-
-                <div className={styles.hoursRow}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                    <span className={styles.label}>Two-Factor Authentication (2FA)</span>
-                    <span style={{ fontSize: "12px", color: "#64748B" }}>Require OTP verification on login</span>
-                  </div>
-                  <div className={styles.switchWrapper}>
-                    <label className={styles.toggleSwitch}>
-                      <input
-                        type="checkbox"
-                        checked={formData.twoFactorAuth}
-                        onChange={(e) => handleInputChange("twoFactorAuth", e.target.checked)}
-                      />
-                      <span className={styles.toggleSlider} />
-                    </label>
-                  </div>
-                </div>
-
-                <div className={styles.hoursRow}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                    <span className={styles.label}>Require PIN for Refunds &amp; Voids</span>
-                    <span style={{ fontSize: "12px", color: "#64748B" }}>Manager code needed before refunding</span>
-                  </div>
-                  <div className={styles.switchWrapper}>
-                    <label className={styles.toggleSwitch}>
-                      <input
-                        type="checkbox"
-                        checked={formData.requirePinForRefund}
-                        onChange={(e) => handleInputChange("requirePinForRefund", e.target.checked)}
-                      />
-                      <span className={styles.toggleSlider} />
-                    </label>
-                  </div>
-                </div>
-
-                <div className={styles.hoursRow}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                    <span className={styles.label}>Auto Session Timeout (30 Mins)</span>
-                    <span style={{ fontSize: "12px", color: "#64748B" }}>Auto-lock dashboard when inactive</span>
-                  </div>
-                  <div className={styles.switchWrapper}>
-                    <label className={styles.toggleSwitch}>
-                      <input
-                        type="checkbox"
-                        checked={formData.sessionTimeout}
-                        onChange={(e) => handleInputChange("sessionTimeout", e.target.checked)}
-                      />
-                      <span className={styles.toggleSlider} />
-                    </label>
-                  </div>
-                </div>
-              </div>
-              */}
-
-
-
-              {/* 4. Login & Recovery Controls Card (Disabled via comment - uncomment to re-enable) */}
-              {/*
-              <div className={styles.card}>
-                <h2 className={styles.cardTitle}>Login &amp; Recovery Controls</h2>
-
-                <div className={styles.hoursRow}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                    <span className={styles.label}>Unfamiliar Login Alerts</span>
-                    <span style={{ fontSize: "12px", color: "#64748B" }}>Send instant email alerts upon logins from new browsers/locations.</span>
-                  </div>
-                  <div className={styles.switchWrapper}>
-                    <label className={styles.toggleSwitch}>
-                      <input
-                        type="checkbox"
-                        checked={formData.unfamiliarLoginAlerts}
-                        onChange={(e) => handleInputChange("unfamiliarLoginAlerts", e.target.checked)}
-                      />
-                      <span className={styles.toggleSlider} />
-                    </label>
-                  </div>
-                </div>
-
-                <div className={styles.hoursRow}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                    <span className={styles.label}>Password Reset Safety Check</span>
-                    <span style={{ fontSize: "12px", color: "#64748B" }}>Require recovery email confirmation before allowing password resets.</span>
-                  </div>
-                  <div className={styles.switchWrapper}>
-                    <label className={styles.toggleSwitch}>
-                      <input
-                        type="checkbox"
-                        checked={formData.passwordResetSafetyCheck}
-                        onChange={(e) => handleInputChange("passwordResetSafetyCheck", e.target.checked)}
-                      />
-                      <span className={styles.toggleSlider} />
-                    </label>
-                  </div>
-                </div>
-              </div>
-              */}
-            </>
-          )}
-
-          {activeTab === "Preferences" && (
-            <>
-              {/* Data & Account Management */}
+              {/* 2. Data & Account Management: Export My Business Data */}
               <div className={styles.card}>
                 <h2 className={styles.cardTitle}>Data &amp; Account Management</h2>
 
-                {/* Backup and Archival */}
                 <div style={{ marginTop: "4px" }}>
                   <span className={styles.label} style={{ display: "block", marginBottom: "6px", fontSize: "12.5px", fontWeight: 700 }}>
                     Backup and Archival
                   </span>
                   <p style={{ fontSize: "12px", color: "#64748B", marginBottom: "12px", lineHeight: "1.4" }}>
-                    Export your complete store profile, menu catalog, operational schedules, and metrics, or permanently delete your seller account.
+                    Export your complete store profile, menu catalog, operational schedules, and metrics.
                   </p>
                   <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                     <button
@@ -2468,30 +2358,12 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                     >
                       {isExportingData ? "Exporting Business Data..." : "Export My Business Data"}
                     </button>
-                    <button
-                      type="button"
-                      style={{
-                        padding: "10px 14px",
-                        borderRadius: "8px",
-                        border: "none",
-                        backgroundColor: "#FEE2E2",
-                        color: "#DC2626",
-                        fontSize: "13px",
-                        fontWeight: 600,
-                        cursor: "pointer",
-                        fontFamily: "inherit",
-                        width: "100%",
-                      }}
-                      onClick={() => {
-                        setDeleteConfirmationText("");
-                        setIsDeleteModalOpen(true);
-                      }}
-                    >
-                      Delete Account Permanently
-                    </button>
                   </div>
                 </div>
               </div>
+
+              {/* 3. Danger Zone: Delete Kitchen Account */}
+              <SellerDeleteAccountCard />
             </>
           )}
         </main>
