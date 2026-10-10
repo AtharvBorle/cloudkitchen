@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { fetchApi } from "@/lib/fetch-api";
 import { useSession } from "next-auth/react";
 import { LocationModal } from "@/components/location-modal/LocationModal";
-import { getPincodeCoordinates } from "@/lib/geo-distance";
+import { getPincodeCoordinates, formatShortDeliveryLocation } from "@/lib/geo-distance";
 import { reverseGeocodeCoords } from "@/lib/google-maps";
 
 export interface Address {
@@ -103,7 +103,10 @@ export function LocationProvider({ children }: LocationProviderProps) {
           try {
             const details = await reverseGeocodeCoords(latitude, longitude);
             const pin = details.pincode || "";
-            const locality = details.locality || details.street || "Current Location";
+            const formattedShort = formatShortDeliveryLocation({ ...details, pincode: pin });
+            const locality = (formattedShort && formattedShort !== "Select Location")
+              ? formattedShort
+              : (details.locality || details.street || "Current Location");
             const city = details.city || "Pune";
 
             if (pin && pin.length === 6) {
@@ -157,10 +160,12 @@ export function LocationProvider({ children }: LocationProviderProps) {
     latitude?: number | null,
     longitude?: number | null
   ) => {
-    const pinInfo = getPincodeCoordinates(pincode);
+    const pinDigits = (pincode || "").replace(/\D/g, "").slice(0, 6);
+    const pinInfo = getPincodeCoordinates(pinDigits);
     const finalLat = (latitude != null && !isNaN(latitude)) ? latitude : (pinInfo?.lat ?? null);
     const finalLng = (longitude != null && !isNaN(longitude)) ? longitude : (pinInfo?.lng ?? null);
-    const finalLocality = locality || pinInfo?.locality || `PIN ${pincode}`;
+    const isGenericLoc = !locality || locality === "Pune" || locality === "Pune, Pune" || locality === "Current Location" || locality === "Pune Area";
+    const finalLocality = !isGenericLoc ? locality : (pinInfo?.locality ? `${pinInfo.locality}` : `PIN ${pinDigits || pincode}`);
     const finalCity = city || pinInfo?.city || "Pune";
 
     if (typeof window !== "undefined") {

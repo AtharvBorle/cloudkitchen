@@ -20,7 +20,7 @@ import { useLocation } from "@/components/location-provider";
 import { fetchApi } from "@/lib/fetch-api";
 import { usePathname } from "next/navigation";
 import { HouseMapPicker } from "@/components/house-map-picker";
-import { getPincodeCoordinates, PINCODE_COORDINATES } from "@/lib/geo-distance";
+import { getPincodeCoordinates, PINCODE_COORDINATES, formatShortDeliveryLocation } from "@/lib/geo-distance";
 import { findDuplicateAddress } from "@/lib/address-validation";
 import {
   fetchPlaceSuggestions,
@@ -232,9 +232,12 @@ export const LocationModal: React.FC = () => {
     const finalLat = targetLat ?? 18.5204;
     const finalLng = targetLng ?? 73.8567;
     const pin = (details?.pincode || "").replace(/\D/g, "").slice(0, 6) || resolvedPincode || "411051";
-    const locality = details?.locality || details?.street || item.mainText || item.description.split(",")[0] || "Pune Area";
+    const formattedShort = formatShortDeliveryLocation({ ...details, pincode: pin });
+    const locality = (formattedShort && formattedShort !== "Select Location")
+      ? formattedShort
+      : (details?.locality || details?.street || item.mainText || item.description.split(",")[0] || "Pune");
 
-    setPincodeInput(pin || locality);
+    setPincodeInput(pin);
     setResolvedPincode(pin);
     setResolvedLocality(locality);
     setMapLat(finalLat);
@@ -406,7 +409,9 @@ export const LocationModal: React.FC = () => {
     const typedPin = (pincodeInput || "").replace(/\D/g, "").slice(0, 6);
     const cleanPin = typedPin.length === 6 ? typedPin : ((resolvedPincode || typedPin || "").replace(/\D/g, "").slice(0, 6) || "411051");
     const pinInfo = getPincodeCoordinates(cleanPin);
-    const locName = resolvedLocality || (selectedAreaInfo?.name ?? (pinInfo ? `${pinInfo.locality}, ${pinInfo.city}` : `PIN ${cleanPin}`));
+    const locName = (resolvedLocality && resolvedLocality !== "Pune, Pune" && resolvedLocality !== "Pune Area" && resolvedLocality !== "Pune")
+      ? resolvedLocality
+      : (selectedAreaInfo?.name ?? (pinInfo ? `${pinInfo.locality}, ${pinInfo.city}` : `PIN ${cleanPin}`));
     const city = "Pune";
     const finalLat = mapLat;
     const finalLng = mapLng;
@@ -456,7 +461,10 @@ export const LocationModal: React.FC = () => {
         try {
           const details = await reverseGeocodeCoords(lat, lng);
           const pin = details.pincode || "411001";
-          const locality = details.locality || details.street || "Current Location";
+          const formattedShort = formatShortDeliveryLocation({ ...details, pincode: pin });
+          const locality = (formattedShort && formattedShort !== "Select Location")
+            ? formattedShort
+            : (details.locality || details.street || "Current Location");
 
           setPincodeInput(pin);
           setResolvedPincode(pin);
@@ -798,11 +806,16 @@ export const LocationModal: React.FC = () => {
                     setPincodeInput(p);
                   }
                 }
-                const street = details?.street;
-                const suburb = (details as any)?.suburb;
-                const locality = (details as any)?.locality || (details as any)?.city;
-                const loc = street || suburb || locality || "";
-                if (loc) setResolvedLocality(loc);
+                const shortFormatted = formatShortDeliveryLocation(details as any);
+                if (shortFormatted && shortFormatted !== "Select Location") {
+                  setResolvedLocality(shortFormatted);
+                } else {
+                  const street = details?.street;
+                  const suburb = (details as any)?.suburb;
+                  const locality = (details as any)?.locality || (details as any)?.city;
+                  const loc = street || suburb || locality || "";
+                  if (loc) setResolvedLocality(loc);
+                }
               }}
             />
 
