@@ -112,10 +112,12 @@ export const LocationModal: React.FC = () => {
         (typeof window !== "undefined"
           ? localStorage.getItem("active-selected-pincode") || localStorage.getItem("guest-pincode") || "411051"
           : "411051");
-      setPincodeInput(pin);
+      const matched = POPULAR_AREAS.find((a) => a.pincode === pin) || null;
+      const pinCoords = getPincodeCoordinates(pin);
+      const displayLoc = defaultAddress?.locality || defaultAddress?.street || matched?.name?.split(",")?.[0] || pinCoords?.locality || `PIN ${pin}`;
+      setPincodeInput(displayLoc);
       setResolvedPincode(pin);
 
-      const pinCoords = getPincodeCoordinates(pin);
       const initialLat = defaultAddress?.latitude != null && !isNaN(Number(defaultAddress.latitude))
         ? Number(defaultAddress.latitude)
         : (pinCoords?.lat ?? 18.5016);
@@ -128,7 +130,6 @@ export const LocationModal: React.FC = () => {
       setLatitude(initialLat);
       setLongitude(initialLng);
 
-      const matched = POPULAR_AREAS.find((a) => a.pincode === pin) || null;
       setSelectedAreaInfo(matched);
       setResolvedLocality(defaultAddress?.locality || defaultAddress?.street || matched?.name || pinCoords?.locality || "Pune Area");
       setShowAddForm(false);
@@ -368,7 +369,7 @@ export const LocationModal: React.FC = () => {
 
     const effectivePin = cleanPin || resolvedPincode || "411051";
     const effectiveLocality = localityName || `PIN ${effectivePin}`;
-    setPincodeInput(effectivePin);
+    setPincodeInput(effectiveLocality.split(",")?.[0]?.trim() || effectivePin);
     setResolvedPincode(effectivePin);
     setResolvedLocality(effectiveLocality);
     setMapLat(finalLat);

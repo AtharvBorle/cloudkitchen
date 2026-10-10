@@ -169,7 +169,11 @@ export async function getPlacesAutocomplete(
             }
 
             const res = await fetch(url.toString(), {
-                headers: { "Accept": "application/json" },
+                headers: {
+                    "Accept": "application/json",
+                    "Referer": "https://dev.neocloudbites.com/",
+                    "Origin": "https://dev.neocloudbites.com",
+                },
                 next: { revalidate: 60 },
             });
 
@@ -378,7 +382,11 @@ export async function getPlaceDetails(
             }
 
             const res = await fetch(url.toString(), {
-                headers: { "Accept": "application/json" },
+                headers: {
+                    "Accept": "application/json",
+                    "Referer": "https://dev.neocloudbites.com/",
+                    "Origin": "https://dev.neocloudbites.com",
+                },
                 next: { revalidate: 3600 },
             });
 
@@ -420,7 +428,11 @@ export async function reverseGeocode(
         try {
             const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}`;
             const res = await fetch(url, {
-                headers: { "Accept": "application/json" },
+                headers: {
+                    "Accept": "application/json",
+                    "Referer": "https://dev.neocloudbites.com/",
+                    "Origin": "https://dev.neocloudbites.com",
+                },
                 next: { revalidate: 300 },
             });
 
@@ -512,7 +524,11 @@ export async function geocodeAddress(
                 query
             )}&components=country:in&key=${apiKey}`;
             const res = await fetch(url, {
-                headers: { "Accept": "application/json" },
+                headers: {
+                    "Accept": "application/json",
+                    "Referer": "https://dev.neocloudbites.com/",
+                    "Origin": "https://dev.neocloudbites.com",
+                },
                 next: { revalidate: 3600 },
             });
 
