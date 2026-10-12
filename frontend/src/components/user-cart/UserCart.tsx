@@ -321,6 +321,8 @@ export const UserCart: React.FC<UserCartProps> = ({
           setAppliedPromo(null);
           setDiscountPercent(0);
           setPromoCode("");
+          setUserDismissedPromo(false);
+          sessionStorage.removeItem("user_dismissed_promo");
           sessionStorage.removeItem("appliedCoupon");
           sessionStorage.removeItem("applied_cart_coupon");
           localStorage.removeItem("appliedCoupon");
@@ -382,9 +384,6 @@ export const UserCart: React.FC<UserCartProps> = ({
     }
     checkSellerStatus();
 
-    // Real-time polling every 3 seconds to immediately detect superadmin disable/status changes without manual page reload
-    const pollInterval = setInterval(checkSellerStatus, 3000);
-
     const handleFocus = () => {
       checkSellerStatus();
     };
@@ -398,7 +397,6 @@ export const UserCart: React.FC<UserCartProps> = ({
 
     return () => {
       isMounted = false;
-      clearInterval(pollInterval);
       window.removeEventListener("focus", handleFocus);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
@@ -603,7 +601,16 @@ export const UserCart: React.FC<UserCartProps> = ({
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
 
   // Fetch available public coupons for the seller / platform
-  const [userDismissedPromo, setUserDismissedPromo] = useState<boolean>(false);
+  const [userDismissedPromo, setUserDismissedPromo] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        return sessionStorage.getItem("user_dismissed_promo") === "true";
+      } catch (e) {
+        return false;
+      }
+    }
+    return false;
+  });
   const activeSellerId = cartItems.find((ci) => ci.sellerId)?.sellerId || null;
 
   React.useEffect(() => {
@@ -640,9 +647,6 @@ export const UserCart: React.FC<UserCartProps> = ({
     setIsLoadingOffers(true);
     fetchOffers();
 
-    // Real-time polling every 3 seconds for instant seller changes revalidation
-    const pollInterval = setInterval(fetchOffers, 3000);
-
     const handleFocus = () => {
       fetchOffers();
     };
@@ -656,7 +660,6 @@ export const UserCart: React.FC<UserCartProps> = ({
 
     return () => {
       isMounted = false;
-      clearInterval(pollInterval);
       window.removeEventListener("focus", handleFocus);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
@@ -778,7 +781,8 @@ export const UserCart: React.FC<UserCartProps> = ({
 
   // Auto-apply eligible coupon when conditions are met
   React.useEffect(() => {
-    if (userDismissedPromo || isValidatingPromo || isSuppressingAutoApplyRef.current) {
+    const isDismissed = userDismissedPromo || (typeof window !== "undefined" && sessionStorage.getItem("user_dismissed_promo") === "true");
+    if (isDismissed || isValidatingPromo || isSuppressingAutoApplyRef.current) {
       return;
     }
 
@@ -1267,6 +1271,7 @@ export const UserCart: React.FC<UserCartProps> = ({
     setPromoCode("");
     if (typeof window !== "undefined") {
       try {
+        sessionStorage.setItem("user_dismissed_promo", "true");
         sessionStorage.removeItem("applied_cart_coupon");
         sessionStorage.removeItem("appliedCoupon");
         localStorage.removeItem("appliedCoupon");
@@ -1282,6 +1287,13 @@ export const UserCart: React.FC<UserCartProps> = ({
     if (appliedPromo && appliedPromo === targetCode) {
       handleRemovePromo();
       return;
+    }
+
+    setUserDismissedPromo(false);
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.removeItem("user_dismissed_promo");
+      } catch (e) {}
     }
 
     if (!targetCode) {
