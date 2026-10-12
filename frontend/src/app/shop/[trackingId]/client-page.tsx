@@ -12,6 +12,7 @@ import { ExploreHeader } from "@/app/explore/layout";
 import { useLocation } from "@/components/location-provider";
 import { Star, MessageSquare, Utensils, MapPin } from "lucide-react";
 import { DietaryTag } from "@/components/common/DietaryTag";
+import { isDishMatchingDiet, resolveDishDietaryTypes } from "@/lib/dietary-filter";
 import {
   calculateDistanceKm,
   MAX_DELIVERY_RADIUS_KM,
@@ -65,7 +66,8 @@ const isCurrentlyOpen = (item: any) => {
 
 export default function PublicShopClient({ trackingId }: { trackingId: string }) {
     const searchParams = useSearchParams();
-    const isVegOnlyRequested = searchParams?.get("vegOnly") === "true" || searchParams?.get("veg") === "true" || searchParams?.get("diet") === "veg";
+    const dietParam = (searchParams?.get("diet") || "").toLowerCase();
+    const isVegOnlyRequested = searchParams?.get("vegOnly") === "true" || searchParams?.get("veg") === "true" || dietParam === "veg" || dietParam === "pure-veg" || dietParam === "pure_veg";
 
     const { data: session, status } = useSession();
     const { defaultAddress: userAddress } = useLocation();
@@ -73,10 +75,17 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
     const [seller, setSeller] = useState<any | null>(null);
     const [error, setError] = useState<boolean>(false);
     const [foodFilter, setFoodFilter] = useState<"ALL" | "VEG" | "NON_VEG" | "JAIN" | "VEGAN">(() => {
+        if (dietParam === "vegan") return "VEGAN";
+        if (dietParam === "jain") return "JAIN";
+        if (dietParam === "non-veg" || dietParam === "non_veg") return "NON_VEG";
         if (isVegOnlyRequested) return "VEG";
         if (typeof window !== "undefined") {
             try {
-                if (localStorage.getItem("cloudkitchen_veg_preference") === "true") {
+                const storedDiet = (localStorage.getItem("cloudkitchen_diet_preference") || "").toLowerCase();
+                if (storedDiet === "vegan") return "VEGAN";
+                if (storedDiet === "jain") return "JAIN";
+                if (storedDiet === "non-veg" || storedDiet === "non_veg") return "NON_VEG";
+                if (storedDiet === "veg" || storedDiet === "pure-veg" || storedDiet === "pure_veg" || localStorage.getItem("cloudkitchen_veg_preference") === "true") {
                     return "VEG";
                 }
             } catch {}
@@ -150,7 +159,13 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                         return itType.includes("NON_VEG") || it.isVeg === false;
                     });
                     const isPureVegSeller = rawFoodType === "PURE_VEG" || rawFoodType === "VEG" || rawFoodType === "VEG_ONLY" || (!hasNonVeg && (sData?.foodItems || []).length > 0);
-                    if (isPureVegSeller || isVegOnlyRequested) {
+                    if (dietParam === "vegan") {
+                        setFoodFilter("VEGAN");
+                    } else if (dietParam === "jain") {
+                        setFoodFilter("JAIN");
+                    } else if (dietParam === "non-veg" || dietParam === "non_veg") {
+                        setFoodFilter("NON_VEG");
+                    } else if (isPureVegSeller || isVegOnlyRequested) {
                         setFoodFilter("VEG");
                     }
                     setError(false);
@@ -463,8 +478,8 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                 if (!isVegOnlyKitchen) {
                                     availableFilters.push("NON_VEG");
                                 }
-                                const hasJain = (seller.foodItems || []).some((it: any) => String(it.itemType || "").toUpperCase().includes("JAIN"));
-                                const hasVegan = (seller.foodItems || []).some((it: any) => String(it.itemType || "").toUpperCase().includes("VEGAN"));
+                                const hasJain = (seller.foodItems || []).some((it: any) => isDishMatchingDiet(it, "jain"));
+                                const hasVegan = (seller.foodItems || []).some((it: any) => isDishMatchingDiet(it, "vegan"));
                                 if (hasJain) availableFilters.push("JAIN");
                                 if (hasVegan) availableFilters.push("VEGAN");
 
@@ -509,11 +524,10 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                             const filteredFoodItems = seller.foodItems
                                 .filter((item: any) => isCurrentlyOpen(item))
                                 .filter((item: any) => {
-                                    const raw = String(item.itemType || "VEG").toUpperCase();
-                                    if (foodFilter === "VEG") return raw.includes("VEG") && !raw.includes("NON_VEG");
-                                    if (foodFilter === "NON_VEG") return raw.includes("NON_VEG");
-                                    if (foodFilter === "JAIN") return raw.includes("JAIN");
-                                    if (foodFilter === "VEGAN") return raw.includes("VEGAN");
+                                    if (foodFilter === "VEG") return isDishMatchingDiet(item, "veg");
+                                    if (foodFilter === "NON_VEG") return isDishMatchingDiet(item, "non-veg");
+                                    if (foodFilter === "JAIN") return isDishMatchingDiet(item, "jain");
+                                    if (foodFilter === "VEGAN") return isDishMatchingDiet(item, "vegan");
                                     return true;
                                 });
 

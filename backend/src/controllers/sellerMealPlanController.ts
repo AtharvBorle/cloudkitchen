@@ -86,19 +86,35 @@ export const getSellerMealPlans = async () => {
     const now = new Date();
     const isSubscriptionActive = (sub: any) => {
         const statusStr = String(sub.status || "").toUpperCase().trim();
-        const isStatusActive = statusStr === "ACTIVE" || statusStr === "LIVE";
+        if (statusStr === "EXPIRED" || statusStr === "CANCELLED" || statusStr === "PAUSED") return false;
+        const isStatusActive = statusStr === "ACTIVE" || statusStr === "LIVE" || statusStr === "EXPIRING SOON";
         const notPaused = !sub.isPaused;
         const notExpired = !sub.endDate || new Date(sub.endDate) >= now;
         return isStatusActive && notPaused && notExpired;
+    };
+
+    const getPlanBasePrice = (plan: any) => {
+        const dur = String(plan?.duration || "1 Week").toLowerCase();
+        if (dur.includes("year") && plan?.yearlyPrice && Number(plan.yearlyPrice) > 0) {
+            return Number(plan.yearlyPrice);
+        }
+        if ((dur.includes("quarter") || dur.includes("3 month")) && plan?.quarterlyPrice && Number(plan.quarterlyPrice) > 0) {
+            return Number(plan.quarterlyPrice);
+        }
+        if (dur.includes("month") && plan?.monthlyPrice && Number(plan.monthlyPrice) > 0) {
+            return Number(plan.monthlyPrice);
+        }
+        return Number(plan?.weeklyPrice) || Number(plan?.rawWeeklyPrice) || Number(plan?.monthlyPrice) || 0;
     };
 
     // Extract all subscribers across seller's plans and direct subscriptions without duplicates
     const allSubscribers: any[] = [];
     const seenSubIds = new Set<string>();
 
-    const appendSub = (sub: any, planName?: string, planTier?: string, planId?: string) => {
+    const appendSub = (sub: any, planName?: string, planTier?: string, planId?: string, planObj?: any) => {
         if (!sub?.id || seenSubIds.has(sub.id)) return;
         seenSubIds.add(sub.id);
+        const resolvedPrice = Number(sub.pricePaid) > 0 ? Number(sub.pricePaid) : getPlanBasePrice(planObj || sub.plan);
         allSubscribers.push({
             id: sub.id,
             userId: sub.user?.id || sub.userId || "",
@@ -115,18 +131,18 @@ export const getSellerMealPlans = async () => {
             cycle: sub.cycle || "Weekly",
             startDate: sub.startDate instanceof Date ? sub.startDate.toISOString() : String(sub.startDate),
             endDate: sub.endDate ? (sub.endDate instanceof Date ? sub.endDate.toISOString() : String(sub.endDate)) : null,
-            pricePaid: Number(sub.pricePaid) || 0,
+            pricePaid: resolvedPrice,
         });
     };
 
     dbPlans.forEach((plan) => {
         plan.userSubscriptions.forEach((sub) => {
-            appendSub(sub, plan.name, plan.tier, plan.id);
+            appendSub(sub, plan.name, plan.tier, plan.id, plan);
         });
     });
 
     directSubs.forEach((sub) => {
-        appendSub(sub, sub.plan?.name, sub.plan?.tier, sub.planId);
+        appendSub(sub, sub.plan?.name, sub.plan?.tier, sub.planId, sub.plan);
     });
 
     // Format plans for frontend consumption
@@ -145,42 +161,37 @@ export const getSellerMealPlans = async () => {
             parsedTimings = [];
         }
 
-        // Count distinct active users subscribed to this specific plan
-        const planActiveUserKeys = new Set<string>();
+        // Count active subscriptions for this specific plan (deduplicated by subscription ID)
+        const planActiveSubIds = new Set<string>();
 
         // 1. Direct Prisma userSubscriptions relations
         (plan.userSubscriptions || []).forEach((s) => {
-            if (isSubscriptionActive(s)) {
-                const userKey = s.user?.id || s.userId || s.id;
-                if (userKey) planActiveUserKeys.add(String(userKey).toLowerCase().trim());
+            if (isSubscriptionActive(s) && s.id) {
+                planActiveSubIds.add(String(s.id).toLowerCase().trim());
             }
         });
 
         // 2. Cross-match against allSubscribers (catches directSubs, name matching, ID matching)
         allSubscribers.forEach((s) => {
-            const statusUpper = String(s.status || "").toUpperCase();
-            const isActive = (statusUpper === "ACTIVE" || statusUpper === "LIVE") && !s.isPaused;
-            if (!isActive) return;
+            if (!isSubscriptionActive(s)) return;
 
             const matchesPlanId = s.planId && (s.planId === plan.id || s.planId.toLowerCase() === plan.id.toLowerCase());
             const matchesPlanName = s.planName && plan.name && s.planName.trim().toLowerCase() === plan.name.trim().toLowerCase();
 
-            if (matchesPlanId || matchesPlanName) {
-                const userKey = s.userId || s.customerEmail || s.customerPhone || s.customerName || s.id;
-                if (userKey) planActiveUserKeys.add(String(userKey).toLowerCase().trim());
+            if ((matchesPlanId || matchesPlanName) && s.id) {
+                planActiveSubIds.add(String(s.id).toLowerCase().trim());
             }
         });
 
-        const activeSubscribers = planActiveUserKeys.size;
+        const activeSubscribers = planActiveSubIds.size;
 
-        const isWeekly = (plan.duration || "1 Week").toLowerCase().includes("week");
         return {
             id: plan.id,
             name: plan.name,
             tier: plan.tier,
             description: plan.description || "",
             weeklyPrice: `₹${plan.weeklyPrice.toFixed(0)}`,
-            rawWeeklyPrice: plan.weeklyPrice,
+            rawWeeklyPrice: getPlanBasePrice(plan),
             monthlyPrice: plan.monthlyPrice ? `₹${plan.monthlyPrice.toFixed(0)}` : "",
             quarterlyPrice: plan.quarterlyPrice ? `₹${plan.quarterlyPrice.toFixed(0)}` : "",
             yearlyPrice: plan.yearlyPrice ? `₹${plan.yearlyPrice.toFixed(0)}` : "",
@@ -196,30 +207,18 @@ export const getSellerMealPlans = async () => {
         };
     });
 
-    // Count the total number of distinct users who currently have an active subscription
-    const activeUserKeys = new Set<string>();
-    allSubscribers.forEach((s) => {
-        if (isSubscriptionActive(s)) {
-            const userKey = s.userId || s.customerEmail || s.customerPhone || s.customerName || s.id;
-            if (userKey) {
-                activeUserKeys.add(String(userKey).toLowerCase().trim());
-            }
-        }
-    });
-
-    const activeSubscribersCount = activeUserKeys.size;
+    const activeSubscriptionsList = allSubscribers.filter(isSubscriptionActive);
+    const activeSubscribersCount = activeSubscriptionsList.length;
     const activePlansCount = plans.filter((p) => p.status === "Live").length;
-    const mrrTotal = allSubscribers
-        .filter(isSubscriptionActive)
-        .reduce((sum, s) => {
-            if (s.pricePaid && s.pricePaid > 0) return sum + s.pricePaid;
-            const matchedPlan = plans.find(
-                (p) =>
-                    (s.planId && (s.planId === p.id || s.planId.toLowerCase() === p.id.toLowerCase())) ||
-                    (s.planName && p.name && s.planName.trim().toLowerCase() === p.name.trim().toLowerCase())
-            );
-            return sum + (matchedPlan?.rawWeeklyPrice || 0);
-        }, 0);
+    const mrrTotal = activeSubscriptionsList.reduce((sum, s) => {
+        if (s.pricePaid && Number(s.pricePaid) > 0) return sum + Number(s.pricePaid);
+        const matchedPlan = plans.find(
+            (p) =>
+                (s.planId && (s.planId === p.id || s.planId.toLowerCase() === p.id.toLowerCase())) ||
+                (s.planName && p.name && s.planName.trim().toLowerCase() === p.name.trim().toLowerCase())
+        );
+        return sum + (matchedPlan?.rawWeeklyPrice || 0);
+    }, 0);
 
     return {
         plans,
@@ -234,11 +233,26 @@ export const getSellerMealPlans = async () => {
     };
 };
 
+const buildPlanIdWhereClause = (sellerId: string, rawPlanId: string) => {
+    const clean = String(rawPlanId || "").trim();
+    const prefix = clean.toUpperCase().startsWith("PLN-") ? clean.slice(4).trim() : "";
+    if (prefix && prefix.length >= 3) {
+        return {
+            sellerId,
+            OR: [
+                { id: clean },
+                { id: { startsWith: prefix, mode: "insensitive" as const } },
+            ],
+        };
+    }
+    return { id: clean, sellerId };
+};
+
 export const getSellerMealPlanById = async (planId: string) => {
     const { sellerProfile } = await getAuthenticatedSellerProfile();
 
     const plan = await db.sellerMealPlan.findFirst({
-        where: { id: planId, sellerId: sellerProfile.id },
+        where: buildPlanIdWhereClause(sellerProfile.id, planId),
         include: {
             userSubscriptions: {
                 include: {
@@ -319,7 +333,7 @@ export const createSellerMealPlan = async (req: Request) => {
         mealTimings = [],
         status = "Live",
         allowCancel = false,
-        pauseBillingPeriod = "Monthly",
+        pauseBillingPeriod = "30 Days",
     } = body;
 
     if (!name || typeof name !== "string" || !name.trim()) {
@@ -363,7 +377,7 @@ export const createSellerMealPlan = async (req: Request) => {
             mealTimings: JSON.stringify(Array.isArray(mealTimings) ? mealTimings : []),
             status: status || "Live",
             allowCancel: allowCancel !== undefined ? Boolean(allowCancel) : false,
-            pauseBillingPeriod: (body.allowPause === false || body.allowPauseBilling === false) ? "None" : (pauseBillingPeriod || "Monthly"),
+            pauseBillingPeriod: (body.allowPause === false || body.allowPauseBilling === false) ? "None" : (pauseBillingPeriod || "30 Days"),
         }
     });
 
@@ -401,7 +415,7 @@ export const updateSellerMealPlan = async (req: Request) => {
     }
 
     const existingPlan = await db.sellerMealPlan.findFirst({
-        where: { id: planId, sellerId: sellerProfile.id }
+        where: buildPlanIdWhereClause(sellerProfile.id, planId)
     });
 
     if (!existingPlan) {
@@ -458,16 +472,36 @@ export const updateSellerMealPlan = async (req: Request) => {
     if (body.allowCancel !== undefined) {
         updateData.allowCancel = Boolean(body.allowCancel);
     }
-    if (body.pauseBillingPeriod !== undefined) {
-        updateData.pauseBillingPeriod = body.pauseBillingPeriod;
-    } else if (body.allowPause === false || body.allowPauseBilling === false) {
+    if (body.allowPause === false || body.allowPauseBilling === false) {
         updateData.pauseBillingPeriod = "None";
+    } else if (body.pauseBillingPeriod !== undefined) {
+        updateData.pauseBillingPeriod = body.pauseBillingPeriod;
     }
 
     const updated = await db.sellerMealPlan.update({
-        where: { id: planId },
+        where: { id: existingPlan.id },
         data: updateData
     });
+
+    if (updateData.weeklyPrice !== undefined || updateData.monthlyPrice !== undefined) {
+        const updatedBasePrice = updated.monthlyPrice && !(updated.duration || "").toLowerCase().includes("week")
+            ? updated.monthlyPrice
+            : updated.weeklyPrice;
+        if (updatedBasePrice && updatedBasePrice > 0) {
+            await db.userMealSubscription.updateMany({
+                where: { planId: existingPlan.id, status: "ACTIVE" },
+                data: { pricePaid: updatedBasePrice }
+            });
+        }
+    }
+
+    const updatedPauseLower = String(updated.pauseBillingPeriod || "").trim().toLowerCase();
+    if (updatedPauseLower === "none" || updatedPauseLower === "disabled" || updatedPauseLower === "false") {
+        await db.userMealSubscription.updateMany({
+            where: { planId: existingPlan.id, isPaused: true },
+            data: { isPaused: false, status: "ACTIVE" }
+        });
+    }
 
     let parsedFeatures: string[] = [];
     try {
@@ -521,7 +555,7 @@ export const toggleSellerMealPlanStatus = async (req: Request, paramId?: string)
     }
 
     const existingPlan = await db.sellerMealPlan.findFirst({
-        where: { id: planId, sellerId: sellerProfile.id }
+        where: buildPlanIdWhereClause(sellerProfile.id, planId)
     });
 
     if (!existingPlan) {
@@ -539,7 +573,7 @@ export const toggleSellerMealPlanStatus = async (req: Request, paramId?: string)
     }
 
     const updated = await db.sellerMealPlan.update({
-        where: { id: planId },
+        where: { id: existingPlan.id },
         data: { status: newStatus }
     });
 
@@ -565,7 +599,7 @@ export const deleteSellerMealPlan = async (req: Request, paramId?: string) => {
     }
 
     const existingPlan = await db.sellerMealPlan.findFirst({
-        where: { id: planId, sellerId: sellerProfile.id },
+        where: buildPlanIdWhereClause(sellerProfile.id, planId),
         include: {
             userSubscriptions: {
                 where: {
@@ -592,7 +626,7 @@ export const deleteSellerMealPlan = async (req: Request, paramId?: string) => {
     }
 
     await db.sellerMealPlan.delete({
-        where: { id: planId }
+        where: { id: existingPlan.id }
     });
 
     return { success: true, message: "Meal subscription plan deleted successfully" };

@@ -425,6 +425,32 @@
   transform: scale(0.92);
 }
 
+.markReadSingleBtn {
+  background: none;
+  border: none;
+  color: #10b981;
+  cursor: pointer;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  padding: 0;
+  outline: none;
+}
+
+.markReadSingleBtn:hover {
+  color: #059669;
+  background-color: #ecfdf5;
+  transform: scale(1.1);
+}
+
+.markReadSingleBtn:active {
+  transform: scale(0.92);
+}
+
 .itemTime {
   font-size: 11px;
   color: #94a3b8;

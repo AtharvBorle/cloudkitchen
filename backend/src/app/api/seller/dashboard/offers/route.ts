@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { successResponse, errorResponse } from "@/lib/api-response";
 import { ApiError } from "@/lib/api-error";
 import { createCoupon, updateCoupon, deleteCoupon } from "@/controllers/couponController";
+import { autoCancelExpiredOrders } from "@/lib/order-expiry";
 
 export async function GET() {
     try {
@@ -26,12 +27,29 @@ export async function GET() {
             throw new ApiError("Seller profile could not be found. Please complete your registration.", 404);
         }
 
-        const coupons = await db.coupon.findMany({
+        // Ensure any expired pending orders for this seller are auto-cancelled first
+        await autoCancelExpiredOrders({ sellerId: sellerProfile.id });
+
+        // Heal any legacy negative usage counts in the database so counts never remain below 0
+        await db.coupon.updateMany({
+            where: {
+                appliesToSellerId: sellerProfile.id,
+                currentUsersCount: { lt: 0 }
+            },
+            data: { currentUsersCount: 0 }
+        });
+
+        const rawCoupons = await db.coupon.findMany({
             where: {
                 appliesToSellerId: sellerProfile.id
             },
             orderBy: { createdAt: "desc" }
         });
+
+        const coupons = rawCoupons.map(c => ({
+            ...c,
+            currentUsersCount: Math.max(0, Number(c.currentUsersCount) || 0)
+        }));
 
         const products = [
             ...sellerProfile.foodItems.map(item => ({ id: item.id, name: item.name, type: 'FOOD' })),

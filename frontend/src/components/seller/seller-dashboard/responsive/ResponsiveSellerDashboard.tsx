@@ -316,7 +316,7 @@ export const ResponsiveSellerDashboard: React.FC<ResponsiveSellerDashboardProps>
               </p>
             </div>
 
-            {/* 2. Orders Today */}
+            {/* 2. Completed Orders Today */}
             <div className={styles.metricCard}>
               <div className={styles.metricIconWrapper}>
                 <ShoppingBag size={22} strokeWidth={2.3} />
@@ -326,8 +326,8 @@ export const ResponsiveSellerDashboard: React.FC<ResponsiveSellerDashboardProps>
               </h3>
               <p className={styles.metricLabel}>
                 {!selectedDate || selectedDate === new Date().toLocaleDateString("en-CA")
-                  ? "Orders Today"
-                  : `Orders (${selectedDate})`}
+                  ? "Completed Orders Today"
+                  : `Completed Orders (${selectedDate})`}
               </p>
             </div>
 
