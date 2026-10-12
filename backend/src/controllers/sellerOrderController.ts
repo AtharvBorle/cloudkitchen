@@ -3,7 +3,7 @@ import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { handleCodOrderDelivered } from "@/lib/delivery-wallet";
 import { emitOrderUpdated, emitSellerDashboardRefresh } from "@/lib/realtime-events";
-import { autoCancelExpiredOrders, cancelExpiredOrder, isOrderExpired } from "@/lib/order-expiry";
+import { autoCancelExpiredOrders, cancelExpiredOrder, isOrderExpired, revertCouponUsageFloorZero } from "@/lib/order-expiry";
 import { enrichOrderWithEta, getOrInitOrderTimer } from "@/lib/order-eta";
 import { revalidateTag } from "next/cache";
 
@@ -186,52 +186,101 @@ export const updateSellerOrder = async (req: Request, orderId: string) => {
         }
     }
 
-    // Restore inventory if cancelling
-    if (status === "CANCELLED" && existingOrder.status !== "CANCELLED" && existingOrder.items) {
-        try {
-            const itemsList = typeof existingOrder.items === "string" ? JSON.parse(existingOrder.items) : existingOrder.items;
-            if (Array.isArray(itemsList)) {
-                for (const item of itemsList) {
-                    const itemId = item.foodItemId || item.id;
-                    const qty = Number(item.quantity) || 1;
-                    if (itemId) {
-                        const foodItem = await db.foodItem.findUnique({ where: { id: itemId } });
-                        if (foodItem && foodItem.stockQuantity !== -1) {
-                            await db.foodItem.update({
-                                where: { id: itemId },
-                                data: {
-                                    stockQuantity: foodItem.stockQuantity + qty,
-                                    isAvailable: true
-                                }
-                            });
-                        }
-                    }
-                }
-            }
-        } catch (error) {
-            console.error("Failed to restore inventory on seller cancelOrder:", error);
-        }
-
-        if (existingOrder.appliedCouponId) {
-            try {
-                await db.coupon.update({
-                    where: { id: existingOrder.appliedCouponId },
-                    data: { currentUsersCount: { decrement: 1 } }
-                });
-            } catch (couponErr) {
-                console.error("Failed to revert coupon usage on seller cancelOrder:", couponErr);
-            }
-        }
-    }
+    const targetOrderId = existingOrder.id;
 
     const updatedOrder = await db.$transaction(async (tx) => {
-        const uo = await tx.order.update({
-            where: { id: orderId },
-            data: {
-                status: status || existingOrder.status,
-                isPaid: typeof isPaid === 'boolean' ? isPaid : existingOrder.isPaid,
-                deliveryPersonId: deliveryPersonId !== undefined ? deliveryPersonId : existingOrder.deliveryPersonId
-            },
+        let newlyCancelled = false;
+
+        if (status === "CANCELLED") {
+            const claim = await tx.order.updateMany({
+                where: {
+                    id: targetOrderId,
+                    status: { notIn: ["CANCELLED", "DELIVERED"] }
+                },
+                data: {
+                    status: "CANCELLED",
+                    isPaid: typeof isPaid === "boolean" ? isPaid : existingOrder.isPaid,
+                    deliveryPersonId: deliveryPersonId !== undefined ? deliveryPersonId : existingOrder.deliveryPersonId
+                }
+            });
+            newlyCancelled = claim.count > 0;
+        } else {
+            await tx.order.update({
+                where: { id: targetOrderId },
+                data: {
+                    status: status || existingOrder.status,
+                    isPaid: typeof isPaid === "boolean" ? isPaid : existingOrder.isPaid,
+                    deliveryPersonId: deliveryPersonId !== undefined ? deliveryPersonId : existingOrder.deliveryPersonId
+                }
+            });
+        }
+
+        if (newlyCancelled) {
+            // Restore inventory only on the single winning transition to CANCELLED
+            if (existingOrder.items) {
+                try {
+                    const itemsList = typeof existingOrder.items === "string" ? JSON.parse(existingOrder.items) : existingOrder.items;
+                    if (Array.isArray(itemsList)) {
+                        for (const item of itemsList) {
+                            const itemId = item.foodItemId || item.id;
+                            const qty = Number(item.quantity) || 1;
+                            if (itemId) {
+                                const foodItem = await tx.foodItem.findUnique({ where: { id: itemId } });
+                                if (foodItem && foodItem.stockQuantity !== -1) {
+                                    await tx.foodItem.update({
+                                        where: { id: itemId },
+                                        data: {
+                                            stockQuantity: foodItem.stockQuantity + qty,
+                                            isAvailable: true
+                                        }
+                                    });
+                                }
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error("Failed to restore inventory on seller cancelOrder:", error);
+                }
+            }
+
+            // Revert coupon usage by 1 (floored at 0)
+            if (existingOrder.appliedCouponId) {
+                try {
+                    await revertCouponUsageFloorZero(tx, existingOrder.appliedCouponId);
+                } catch (couponErr) {
+                    console.error("Failed to revert coupon usage on seller cancelOrder:", couponErr);
+                }
+            }
+
+            if (existingOrder.isPaid || existingOrder.totalAmount === 0) {
+                const existingRefund = await tx.refund.findUnique({ where: { orderId: targetOrderId } });
+                if (!existingRefund) {
+                    const refundAmount = Number(existingOrder.totalAmount ?? 0);
+                    let reason = `Order #${targetOrderId} was rejected / cancelled by the kitchen partner.`;
+                    if (refundAmount === 0) {
+                        reason += ` 100% discount coupon applied (₹0 paid by customer). No refund required.`;
+                    } else {
+                        reason += ` Auto-submitted for refund processing.`;
+                    }
+                    await tx.refund.create({
+                        data: {
+                            userId: existingOrder.userId,
+                            orderId: targetOrderId,
+                            amount: refundAmount,
+                            reason,
+                            status: refundAmount === 0 ? "PROCESSED" : "PENDING"
+                        }
+                    });
+                }
+            }
+        }
+
+        if (status === "DELIVERED" && existingOrder.status !== "DELIVERED") {
+            await handleCodOrderDelivered(tx, targetOrderId);
+        }
+
+        const uo = await tx.order.findUnique({
+            where: { id: targetOrderId },
             include: {
                 user: {
                     select: {
@@ -253,33 +302,7 @@ export const updateSellerOrder = async (req: Request, orderId: string) => {
             }
         });
 
-        if (status === "DELIVERED" && existingOrder.status !== "DELIVERED") {
-            await handleCodOrderDelivered(tx, orderId);
-        }
-
-        if (status === "CANCELLED" && (existingOrder.isPaid || existingOrder.totalAmount === 0)) {
-            const existingRefund = await tx.refund.findUnique({ where: { orderId } });
-            if (!existingRefund) {
-                const refundAmount = Number(existingOrder.totalAmount ?? 0);
-                let reason = `Order #${orderId} was rejected / cancelled by the kitchen partner.`;
-                if (refundAmount === 0) {
-                    reason += ` 100% discount coupon applied (₹0 paid by customer). No refund required.`;
-                } else {
-                    reason += ` Auto-submitted for refund processing.`;
-                }
-                await tx.refund.create({
-                    data: {
-                        userId: existingOrder.userId,
-                        orderId,
-                        amount: refundAmount,
-                        reason,
-                        status: refundAmount === 0 ? "PROCESSED" : "PENDING"
-                    }
-                });
-            }
-        }
-
-        return uo;
+        return uo!;
     });
 
     if (status === "PREPARING" || status === "OUT_FOR_DELIVERY") {

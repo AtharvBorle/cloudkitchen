@@ -30,6 +30,7 @@ import {
   isKitchenServingCuisine,
   isKitchenHavingOffers,
   isDishHavingOffers,
+  getDishOfferBadge,
   resolveDishDietaryTypes,
 } from "@/lib/dietary-filter";
 
@@ -112,29 +113,42 @@ export default function Home() {
       if (e?.detail !== undefined) {
         const isVeg = Boolean(e.detail);
         setActiveFilters((prev) => {
-          if (!isVeg && (prev.dietary === "veg" || prev.dietary === "pure_veg")) {
-            return { ...prev, dietary: "all" };
-          }
-          if (
-            isVeg &&
-            prev.dietary !== "veg" &&
-            prev.dietary !== "pure_veg" &&
-            prev.dietary !== "vegan" &&
-            prev.dietary !== "jain"
-          ) {
-            const currentDiet =
-              typeof window !== "undefined"
-                ? localStorage.getItem("cloudkitchen_diet_preference")
-                : null;
-            if (
-              currentDiet === "pure_veg" ||
-              currentDiet === "pureveg" ||
-              currentDiet === "vegan" ||
-              currentDiet === "jain"
-            ) {
-              return prev;
+          const currentDiet =
+            typeof window !== "undefined"
+              ? localStorage.getItem("cloudkitchen_diet_preference")
+              : null;
+          if (!isVeg) {
+            if (currentDiet === "non-veg" || currentDiet === "non_veg") {
+              return prev.dietary === "non_veg" ? prev : { ...prev, dietary: "non_veg" };
             }
-            return { ...prev, dietary: "veg" };
+            if (
+              prev.dietary === "veg" ||
+              prev.dietary === "pure_veg" ||
+              prev.dietary === "vegan" ||
+              prev.dietary === "jain"
+            ) {
+              return { ...prev, dietary: "all" };
+            }
+            return prev;
+          }
+          if (isVeg) {
+            if (currentDiet === "pure_veg" || currentDiet === "pureveg") {
+              return prev.dietary === "pure_veg" ? prev : { ...prev, dietary: "pure_veg" };
+            }
+            if (currentDiet === "vegan") {
+              return prev.dietary === "vegan" ? prev : { ...prev, dietary: "vegan" };
+            }
+            if (currentDiet === "jain") {
+              return prev.dietary === "jain" ? prev : { ...prev, dietary: "jain" };
+            }
+            if (
+              prev.dietary !== "veg" &&
+              prev.dietary !== "pure_veg" &&
+              prev.dietary !== "vegan" &&
+              prev.dietary !== "jain"
+            ) {
+              return { ...prev, dietary: "veg" };
+            }
           }
           return prev;
         });
@@ -187,7 +201,8 @@ export default function Home() {
         set.add(c.name);
       }
     });
-    homeData.foodItems.forEach((f) => {
+    const sourceItems = homeData.foodItems;
+    sourceItems.forEach((f) => {
       if (f.categoryName) set.add(f.categoryName);
     });
     return Array.from(set);
@@ -331,12 +346,12 @@ export default function Home() {
       isOnline: k.isOnline !== false,
       foodType: k.foodType,
     }));
-  }, [homeData.kitchens, homeData.foodItems, selectedCategory, activeFilters, homeSearchQuery]);
+  }, [homeData.kitchens, homeData.foodItems, homeData.coupons, selectedCategory, activeFilters, homeSearchQuery]);
 
-  // Dynamic Offers for PopularOrders derived from active coupons & all eligible food items
+  // Dynamic Offers for PopularOrders derived from active coupons & deliverable food items
   const dynamicOffers = useMemo(() => {
     const sourceFoodItems = homeData.foodItems;
-    if (!sourceFoodItems || sourceFoodItems.length === 0 || !homeData.coupons || homeData.coupons.length === 0) {
+    if (!sourceFoodItems || sourceFoodItems.length === 0) {
       return [];
     }
 
@@ -370,39 +385,32 @@ export default function Home() {
 
     if (list.length === 0) return [];
 
-    // Pair all eligible food items with active coupons
+    // Pair all eligible food items with active offers using the unified offer resolver
     const offersList: any[] = [];
-    list.forEach((matchedItem, idx) => {
-      // Find applicable coupon matching seller or global
-      const sellerCoupons = homeData.coupons.filter(
-        (c: any) => !c.appliesToSellerId || c.appliesToSellerId === matchedItem.sellerId
-      );
-      const cp = sellerCoupons.length > 0
-        ? sellerCoupons[idx % sellerCoupons.length]
-        : homeData.coupons[idx % homeData.coupons.length];
-
-      if (cp) {
-        const discountText = cp.discountPercentage
-          ? `${cp.discountPercentage}% OFF`
-          : cp.discountAmount
-          ? `FLAT ₹${cp.discountAmount} OFF`
-          : "SPECIAL OFFER";
-
+    list.forEach((matchedItem) => {
+      const offerInfo = getDishOfferBadge(matchedItem, homeData.coupons, sourceFoodItems);
+      if (offerInfo.hasOffer && offerInfo.badgeText) {
         const rawStock = matchedItem.stockQuantity !== undefined && matchedItem.stockQuantity !== null
           ? Number(matchedItem.stockQuantity)
           : (matchedItem.maxStock !== undefined && matchedItem.maxStock !== null ? Number(matchedItem.maxStock) : -1);
 
         offersList.push({
-          id: `offer-${cp.id}-${matchedItem.id}`,
+          id: `offer-${matchedItem.id}`,
           foodItemId: matchedItem.id,
-          discount: discountText,
+          discount: offerInfo.badgeText,
           title: matchedItem.name,
-          code: `Use code: ${cp.code}`,
+          code: offerInfo.couponCode
+            ? `Use code: ${offerInfo.couponCode}`
+            : offerInfo.couponDescription || "Special Offer",
+          description: matchedItem.description || "",
           imageUrl: matchedItem.imageUrl || "/images/places/place-biryani.png",
           link: matchedItem.sellerTrackingId ? `/shop/${matchedItem.sellerTrackingId}` : `/food-explore?item=${matchedItem.id}`,
           price: matchedItem.price || 0,
+          rating: matchedItem.rating || 5.0,
+          deliveryTime: matchedItem.deliveryTime || "20-30 min",
           sellerId: matchedItem.sellerId || "",
           sellerName: matchedItem.sellerName || "Cloud Kitchen",
+          sellerTrackingId: matchedItem.sellerTrackingId || "",
           sellerIsOnline: matchedItem.sellerIsOnline !== false,
           isAvailable: matchedItem.isAvailable !== false && rawStock !== 0,
           itemType: matchedItem.itemType || "VEG",
@@ -455,7 +463,7 @@ export default function Home() {
     }
 
     if (activeFilters.offersOnly) {
-      list = list.filter((f) => isDishHavingOffers(f, homeData.coupons));
+      list = list.filter((f) => isDishHavingOffers(f, homeData.coupons, sourceFoodItems));
     }
 
     if (activeFilters.minRating) {
@@ -463,16 +471,8 @@ export default function Home() {
     }
 
     return list.slice(0, 4).map((f) => {
-      const matchedCoupon = homeData.coupons.find(
-        (cp: any) => !cp.appliesToSellerId || cp.appliesToSellerId === f.sellerId
-      );
-      const discountText = matchedCoupon
-        ? matchedCoupon.discountPercentage
-          ? `${matchedCoupon.discountPercentage}% OFF`
-          : matchedCoupon.discountAmount
-          ? `₹${matchedCoupon.discountAmount} OFF`
-          : "OFFER"
-        : undefined;
+      const offerInfo = getDishOfferBadge(f, homeData.coupons, sourceFoodItems);
+      const discountText = offerInfo.hasOffer && offerInfo.badgeText ? offerInfo.badgeText : undefined;
 
       return {
         id: f.id,
@@ -527,7 +527,7 @@ export default function Home() {
     }
 
     if (activeFilters.offersOnly) {
-      list = list.filter((f) => isDishHavingOffers(f, homeData.coupons));
+      list = list.filter((f) => isDishHavingOffers(f, homeData.coupons, sourceFoodItems));
     }
 
     if (activeFilters.minRating) {
@@ -591,7 +591,7 @@ export default function Home() {
     }
 
     if (activeFilters.offersOnly) {
-      list = list.filter((f) => isDishHavingOffers(f, homeData.coupons));
+      list = list.filter((f) => isDishHavingOffers(f, homeData.coupons, sourceFoodItems));
     }
 
     const items = list.length > 4 ? [...list].reverse() : list;
@@ -610,7 +610,7 @@ export default function Home() {
       stockQuantity: f.stockQuantity,
       maxStock: f.maxStock,
     }));
-  }, [homeData.foodItems, selectedCategory, activeFilters, homeSearchQuery]);
+  }, [homeData.foodItems, homeData.coupons, selectedCategory, activeFilters, homeSearchQuery]);
 
   // Dynamic Promo Banner from active coupons or DB promo banners
   const promoProps = useMemo(() => {
@@ -806,10 +806,10 @@ export default function Home() {
               </div>
               <div>
                 <h3 style={{ margin: "0 0 2px 0", fontSize: "1rem", fontWeight: "700", color: "#0F172A" }}>
-                  Direct Delivery Limited for PIN {homeData.activePincode}
+                  No Kitchens Within 5 km of PIN {homeData.activePincode}
                 </h3>
                 <p style={{ margin: 0, fontSize: "0.85rem", color: "#64748B" }}>
-                  Showing all active cloud kitchens in Pune. Choose an area like Kothrud (411038 / 411052) or Shivajinagar (411004) for direct doorstep delivery.
+                  No cloud kitchens are within the 5 km delivery radius of your selected location. Choose an area like Kothrud (411038 / 411052), Shivajinagar (411004), or Hinjawadi (411057) for doorstep delivery.
                 </p>
               </div>
             </div>
@@ -857,16 +857,17 @@ export default function Home() {
               : []
           }
           onDietaryChange={(newDietary) => {
+            const lastSelected = newDietary.length > 0 ? newDietary[newDietary.length - 1] : "all";
             const nextDiet: "all" | "veg" | "pure_veg" | "non_veg" | "vegan" | "jain" =
-              newDietary.includes("pure_veg")
+              lastSelected === "pure_veg" || lastSelected === "pure-veg"
                 ? "pure_veg"
-                : newDietary.includes("veg")
+                : lastSelected === "veg"
                 ? "veg"
-                : newDietary.includes("non-veg") || newDietary.includes("non_veg")
+                : lastSelected === "non-veg" || lastSelected === "non_veg"
                 ? "non_veg"
-                : newDietary.includes("vegan")
+                : lastSelected === "vegan"
                 ? "vegan"
-                : newDietary.includes("jain")
+                : lastSelected === "jain"
                 ? "jain"
                 : "all";
 

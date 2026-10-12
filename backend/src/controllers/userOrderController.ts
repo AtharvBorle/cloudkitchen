@@ -6,7 +6,7 @@ import Razorpay from "razorpay";
 import crypto from "crypto";
 import { emitOrderCreated, emitOrderCancelled, emitOrderUpdated } from "@/lib/realtime-events";
 import { calculateDistanceKm, getPincodeCoordinates, MAX_DELIVERY_RADIUS_KM } from "@/lib/geo-distance";
-import { cancelExpiredOrder, isOrderExpired } from "@/lib/order-expiry";
+import { cancelExpiredOrder, isOrderExpired, revertCouponUsageFloorZero } from "@/lib/order-expiry";
 import { enrichOrderWithEta } from "@/lib/order-eta";
 
 export const validateDeliveryCoverage = async ({
@@ -744,10 +744,13 @@ export const createOrder = async (req: Request) => {
 
     const couponRecordId = validatedCoupon ? validatedCoupon.id : appliedCouponId;
     if (couponRecordId) {
+        const baseCount = validatedCoupon ? Number(validatedCoupon.currentUsersCount) || 0 : 0;
         transactionOperations.push(
             db.coupon.update({
                 where: { id: couponRecordId },
-                data: { currentUsersCount: { increment: 1 } }
+                data: baseCount < 0
+                    ? { currentUsersCount: 1 }
+                    : { currentUsersCount: { increment: 1 } }
             })
         );
     }
@@ -813,89 +816,106 @@ export const cancelOrder = async (id: string, ticketId?: string) => {
         throw new ApiError("Order has already been confirmed or processed by the seller and cannot be cancelled", 400);
     }
 
+    const txResult = await db.$transaction(async (tx) => {
+        const claim = await tx.order.updateMany({
+            where: {
+                id: id,
+                status: { notIn: ["CANCELLED", "DELIVERED"] }
+            },
+            data: { status: "CANCELLED" }
+        });
 
-    // Restore inventory stock for food items in the order
-    if (order.items) {
-        try {
-            const itemsList = JSON.parse(order.items);
-            if (Array.isArray(itemsList)) {
-                for (const item of itemsList) {
-                    const itemId = item.foodItemId || item.id;
-                    if (itemId && item.quantity) {
-                        const foodItem = await db.foodItem.findUnique({
-                            where: { id: itemId }
-                        });
-                        if (foodItem && foodItem.stockQuantity !== -1) {
-                            const newStock = foodItem.stockQuantity + item.quantity;
-                            await db.foodItem.update({
-                                where: { id: itemId },
-                                data: {
-                                    stockQuantity: newStock,
-                                    isAvailable: true // Ensure item is marked available again
+        const newlyCancelled = claim.count > 0;
+
+        if (newlyCancelled) {
+            // Restore inventory stock for food items in the order
+            if (order.items) {
+                try {
+                    const itemsList = typeof order.items === "string" ? JSON.parse(order.items) : order.items;
+                    if (Array.isArray(itemsList)) {
+                        for (const item of itemsList) {
+                            const itemId = item.foodItemId || item.id;
+                            if (itemId && item.quantity) {
+                                const foodItem = await tx.foodItem.findUnique({
+                                    where: { id: itemId }
+                                });
+                                if (foodItem && foodItem.stockQuantity !== -1) {
+                                    const newStock = foodItem.stockQuantity + Number(item.quantity);
+                                    await tx.foodItem.update({
+                                        where: { id: itemId },
+                                        data: {
+                                            stockQuantity: newStock,
+                                            isAvailable: true
+                                        }
+                                    });
                                 }
-                            });
+                            }
                         }
                     }
+                } catch (error) {
+                    console.error("Failed to restore inventory on cancelOrder:", error);
                 }
             }
-        } catch (error) {
-            console.error("Failed to restore inventory on cancelOrder:", error);
-        }
-    }
 
-    // Revert coupon usage count if coupon was applied
-    if (order.appliedCouponId) {
-        try {
-            await db.coupon.update({
-                where: { id: order.appliedCouponId },
-                data: { currentUsersCount: { decrement: 1 } }
+            // Revert coupon usage count by 1 (floored at 0) if coupon was applied
+            if (order.appliedCouponId) {
+                try {
+                    await revertCouponUsageFloorZero(tx, order.appliedCouponId);
+                } catch (err) {
+                    console.error("Failed to decrement coupon usage on cancelOrder:", err);
+                }
+            }
+        }
+
+        let refundRecord = null;
+        if (order.isPaid || order.totalAmount === 0) {
+            const existingRefund = await tx.refund.findUnique({
+                where: { orderId: id }
             });
-        } catch (err) {
-            console.error("Failed to decrement coupon usage on cancelOrder:", err);
-        }
-    }
+            const refundAmount = Number(order.totalAmount ?? 0);
+            let baseReason = isAdmin 
+                ? `Order #${id} was cancelled by Admin/Superadmin prior to preparation.` 
+                : `Order #${id} was cancelled by customer prior to preparation.`;
+            if (refundAmount === 0) {
+                baseReason += ` 100% discount coupon applied (₹0 paid by customer). No refund required.`;
+            } else {
+                baseReason += ` Auto-submitted for refund processing.`;
+            }
+            if (ticketId) {
+                baseReason = `[Ticket Ref: #${ticketId}] ${baseReason}`;
+            }
 
-    const cancelledOrder = await db.order.update({
-        where: { id: id },
-        data: { status: "CANCELLED" }
+            if (!existingRefund) {
+                refundRecord = await tx.refund.create({
+                    data: {
+                        userId: order.userId,
+                        orderId: id,
+                        amount: refundAmount,
+                        reason: baseReason,
+                        status: refundAmount === 0 ? "PROCESSED" : "PENDING"
+                    }
+                });
+            } else {
+                refundRecord = existingRefund;
+            }
+        }
+
+        const cancelledOrder = await tx.order.findUnique({
+            where: { id: id }
+        });
+
+        return {
+            cancelledOrder: cancelledOrder!,
+            refundRecord,
+            newlyCancelled
+        };
     });
 
-    try {
-        emitOrderCancelled(cancelledOrder);
-    } catch (e) {
-        console.error("Realtime event emission error:", e);
-    }
-
-    let refundRecord = null;
-    if (order.isPaid || order.totalAmount === 0) {
-        const existingRefund = await db.refund.findUnique({
-            where: { orderId: id }
-        });
-        const refundAmount = Number(order.totalAmount ?? 0);
-        let baseReason = isAdmin 
-            ? `Order #${id} was cancelled by Admin/Superadmin prior to preparation.` 
-            : `Order #${id} was cancelled by customer prior to preparation.`;
-        if (refundAmount === 0) {
-            baseReason += ` 100% discount coupon applied (₹0 paid by customer). No refund required.`;
-        } else {
-            baseReason += ` Auto-submitted for refund processing.`;
-        }
-        if (ticketId) {
-            baseReason = `[Ticket Ref: #${ticketId}] ${baseReason}`;
-        }
-
-        if (!existingRefund) {
-            refundRecord = await db.refund.create({
-                data: {
-                    userId: order.userId,
-                    orderId: id,
-                    amount: refundAmount,
-                    reason: baseReason,
-                    status: refundAmount === 0 ? "PROCESSED" : "PENDING"
-                }
-            });
-        } else {
-            refundRecord = existingRefund;
+    if (txResult.newlyCancelled) {
+        try {
+            emitOrderCancelled(txResult.cancelledOrder);
+        } catch (e) {
+            console.error("Realtime event emission error:", e);
         }
     }
 
@@ -905,8 +925,8 @@ export const cancelOrder = async (id: string, ticketId?: string) => {
     } catch (e) {}
 
     return {
-        ...cancelledOrder,
-        refund: refundRecord
+        ...txResult.cancelledOrder,
+        refund: txResult.refundRecord
     };
 };
 

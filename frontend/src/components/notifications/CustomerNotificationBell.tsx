@@ -38,6 +38,20 @@ export interface CustomerNotificationItem {
 
 const STORAGE_READ_IDS = "customer_read_notification_ids";
 const STORAGE_CLEARED_IDS = "customer_cleared_notification_ids";
+const NOTIFICATION_SYNC_EVENT = "customer-notifications-bell-sync";
+const BROADCAST_CHANNEL_NAME = "customer_notifications_sync_channel";
+
+const getStoredIds = (key: string): string[] => {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
 
 const getRelativeTime = (dateStr: string): string => {
   try {
@@ -75,6 +89,41 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const syncChannelRef = useRef<BroadcastChannel | null>(null);
+
+  // Helper to persist and broadcast read notifications across components & tabs
+  const persistAndBroadcastReadIds = (ids: string[]) => {
+    try {
+      localStorage.setItem(STORAGE_READ_IDS, JSON.stringify(ids));
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent(NOTIFICATION_SYNC_EVENT, { detail: { readIds: ids } })
+        );
+      }
+      if (syncChannelRef.current) {
+        syncChannelRef.current.postMessage({ type: "SYNC_READ_IDS", readIds: ids });
+      }
+    } catch (e) {
+      console.error("Failed to persist read notifications:", e);
+    }
+  };
+
+  // Helper to persist and broadcast cleared notifications across components & tabs
+  const persistAndBroadcastClearedIds = (ids: string[]) => {
+    try {
+      localStorage.setItem(STORAGE_CLEARED_IDS, JSON.stringify(ids));
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent(NOTIFICATION_SYNC_EVENT, { detail: { clearedIds: ids } })
+        );
+      }
+      if (syncChannelRef.current) {
+        syncChannelRef.current.postMessage({ type: "SYNC_CLEARED_IDS", clearedIds: ids });
+      }
+    } catch (e) {
+      console.error("Failed to persist cleared notifications:", e);
+    }
+  };
 
   // Reset selection mode whenever popup is closed
   useEffect(() => {
@@ -84,17 +133,67 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
     }
   }, [isOpen]);
 
-  // Load persistent read and cleared IDs from localStorage after mount
+  // Load persistent read and cleared IDs from localStorage after mount & setup cross-instance synchronization
   useEffect(() => {
-    try {
-      const savedRead = localStorage.getItem(STORAGE_READ_IDS);
-      if (savedRead) setReadIds(JSON.parse(savedRead));
+    // 1. Initial load from localStorage
+    setReadIds(getStoredIds(STORAGE_READ_IDS));
+    setClearedIds(getStoredIds(STORAGE_CLEARED_IDS));
 
-      const savedCleared = localStorage.getItem(STORAGE_CLEARED_IDS);
-      if (savedCleared) setClearedIds(JSON.parse(savedCleared));
-    } catch (e) {
-      console.error("Failed to load read notification IDs:", e);
+    // 2. Setup BroadcastChannel if available for instant tab-to-tab sync
+    if (typeof window !== "undefined" && typeof BroadcastChannel !== "undefined") {
+      try {
+        const channel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
+        syncChannelRef.current = channel;
+        channel.onmessage = (event) => {
+          if (event.data?.type === "SYNC_READ_IDS" && Array.isArray(event.data.readIds)) {
+            setReadIds(event.data.readIds);
+          } else if (event.data?.type === "SYNC_CLEARED_IDS" && Array.isArray(event.data.clearedIds)) {
+            setClearedIds(event.data.clearedIds);
+          }
+        };
+      } catch (err) {
+        console.warn("BroadcastChannel not supported or failed:", err);
+      }
     }
+
+    // 3. Setup window event listener for in-app sync between multiple navbars/bells
+    const handleSyncEvent = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.readIds && Array.isArray(customEvent.detail.readIds)) {
+        setReadIds(customEvent.detail.readIds);
+      }
+      if (customEvent.detail?.clearedIds && Array.isArray(customEvent.detail.clearedIds)) {
+        setClearedIds(customEvent.detail.clearedIds);
+      }
+    };
+
+    // 4. Setup storage event listener for cross-tab sync fallback
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === STORAGE_READ_IDS && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) setReadIds(parsed);
+        } catch {}
+      }
+      if (e.key === STORAGE_CLEARED_IDS && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) setClearedIds(parsed);
+        } catch {}
+      }
+    };
+
+    window.addEventListener(NOTIFICATION_SYNC_EVENT, handleSyncEvent);
+    window.addEventListener("storage", handleStorage);
+
+    return () => {
+      window.removeEventListener(NOTIFICATION_SYNC_EVENT, handleSyncEvent);
+      window.removeEventListener("storage", handleStorage);
+      if (syncChannelRef.current) {
+        syncChannelRef.current.close();
+        syncChannelRef.current = null;
+      }
+    };
   }, []);
 
   // Fetch recent user orders, bookings, and subscriptions dynamically if logged in
@@ -111,42 +210,42 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
         return;
       }
 
-      // 1. Fetch Orders
+      // 1. Fetch Orders (limited to 10 most recent)
       try {
         const res = await fetchApi("/api/user/orders?limit=10");
         if (res.ok && isMounted) {
           const data = await res.json();
           const list = Array.isArray(data) ? data : data?.orders || data?.data || [];
           if (Array.isArray(list)) {
-            setDynamicOrders(list);
+            setDynamicOrders(list.slice(0, 10));
           }
         }
       } catch {
         // Ignore network errors
       }
 
-      // 2. Fetch Bookings
+      // 2. Fetch Bookings (limited to 10 most recent)
       try {
         const res = await fetchApi("/api/user/bookings");
         if (res.ok && isMounted) {
           const data = await res.json();
           const list = Array.isArray(data) ? data : data?.bookings || data?.data || [];
           if (Array.isArray(list)) {
-            setDynamicBookings(list);
+            setDynamicBookings(list.slice(0, 10));
           }
         }
       } catch {
         // Ignore
       }
 
-      // 3. Fetch Meal Subscriptions
+      // 3. Fetch Meal Subscriptions (limited to 10 most recent)
       try {
         const res = await fetchApi("/api/user/meal-subscriptions");
         if (res.ok && isMounted) {
           const data = await res.json();
           const list = Array.isArray(data) ? data : data?.subscriptions || data?.data || [];
           if (Array.isArray(list)) {
-            setDynamicSubscriptions(list);
+            setDynamicSubscriptions(list.slice(0, 10));
           }
         }
       } catch {
@@ -162,11 +261,15 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
 
     window.addEventListener("order-placed", handleOrderEvent);
     window.addEventListener("cart-updated", handleOrderEvent);
+    window.addEventListener("customer-notifications-updated", handleOrderEvent);
+    window.addEventListener("order-status-changed", handleOrderEvent);
 
     return () => {
       isMounted = false;
       window.removeEventListener("order-placed", handleOrderEvent);
       window.removeEventListener("cart-updated", handleOrderEvent);
+      window.removeEventListener("customer-notifications-updated", handleOrderEvent);
+      window.removeEventListener("order-status-changed", handleOrderEvent);
     };
   }, [session]);
 
@@ -352,11 +455,7 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
     if (selectedIds.length === 0) return;
     const updated = Array.from(new Set([...clearedIds, ...selectedIds]));
     setClearedIds(updated);
-    try {
-      localStorage.setItem(STORAGE_CLEARED_IDS, JSON.stringify(updated));
-    } catch (err) {
-      console.error("Failed to persist deleted notification IDs:", err);
-    }
+    persistAndBroadcastClearedIds(updated);
     setSelectedIds([]);
     setIsSelectionMode(false);
   };
@@ -366,11 +465,7 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
     const allIds = allNotifications.map((n) => n.id);
     const updated = Array.from(new Set([...readIds, ...allIds]));
     setReadIds(updated);
-    try {
-      localStorage.setItem(STORAGE_READ_IDS, JSON.stringify(updated));
-    } catch (e) {
-      console.error("Failed to persist mark all as read:", e);
-    }
+    persistAndBroadcastReadIds(updated);
   };
 
   // Clear all notifications
@@ -378,11 +473,7 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
     const allIds = allNotifications.map((n) => n.id);
     const updated = Array.from(new Set([...clearedIds, ...allIds]));
     setClearedIds(updated);
-    try {
-      localStorage.setItem(STORAGE_CLEARED_IDS, JSON.stringify(updated));
-    } catch (e) {
-      console.error("Failed to persist clear notifications:", e);
-    }
+    persistAndBroadcastClearedIds(updated);
   };
 
   // Delete individual notification
@@ -391,27 +482,30 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
     e.stopPropagation();
     const updated = Array.from(new Set([...clearedIds, id]));
     setClearedIds(updated);
-    try {
-      localStorage.setItem(STORAGE_CLEARED_IDS, JSON.stringify(updated));
-    } catch (err) {
-      console.error("Failed to persist deleted notification ID:", err);
+    persistAndBroadcastClearedIds(updated);
+  };
+
+  // Mark individual notification as read without navigating
+  const handleMarkItemRead = (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!readIds.includes(id)) {
+      const updated = Array.from(new Set([...readIds, id]));
+      setReadIds(updated);
+      persistAndBroadcastReadIds(updated);
     }
   };
 
-  // Click individual notification
+  // Click individual notification: mark as read and navigate if link exists
   const handleItemClick = (item: CustomerNotificationItem) => {
     if (isSelectionMode) {
       handleToggleSelectItem(item.id);
       return;
     }
     if (!readIds.includes(item.id)) {
-      const updated = [...readIds, item.id];
+      const updated = Array.from(new Set([...readIds, item.id]));
       setReadIds(updated);
-      try {
-        localStorage.setItem(STORAGE_READ_IDS, JSON.stringify(updated));
-      } catch (e) {
-        console.error("Failed to persist item read status:", e);
-      }
+      persistAndBroadcastReadIds(updated);
     }
     setIsOpen(false);
     if (item.link) {
@@ -499,7 +593,7 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
         <Bell size={22} strokeWidth={2.2} />
         {unreadCount > 0 && (
           <span className={styles.badge} suppressHydrationWarning>
-            {unreadCount > 9 ? "9+" : unreadCount}
+            {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
       </button>
@@ -516,7 +610,7 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
         <Bell size={20} strokeWidth={2} />
         {unreadCount > 0 && (
           <span className={styles.badge} suppressHydrationWarning>
-            {unreadCount > 9 ? "9+" : unreadCount}
+            {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
       </button>
@@ -735,15 +829,28 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
                         <div className={styles.itemMetaRow}>
                           <span className={styles.itemTime}>{item.relativeTime}</span>
                           {!isSelectionMode && (
-                            <button
-                              type="button"
-                              className={styles.deleteSingleBtn}
-                              onClick={(e) => handleDeleteNotification(e, item.id)}
-                              title="Delete notification"
-                              aria-label="Delete notification"
-                            >
-                              <Trash2 size={13} strokeWidth={2.2} />
-                            </button>
+                            <>
+                              {!item.isRead && (
+                                <button
+                                  type="button"
+                                  className={styles.markReadSingleBtn}
+                                  onClick={(e) => handleMarkItemRead(e, item.id)}
+                                  title="Mark as read"
+                                  aria-label="Mark as read"
+                                >
+                                  <Check size={13} strokeWidth={2.4} />
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                className={styles.deleteSingleBtn}
+                                onClick={(e) => handleDeleteNotification(e, item.id)}
+                                title="Delete notification"
+                                aria-label="Delete notification"
+                              >
+                                <Trash2 size={13} strokeWidth={2.2} />
+                              </button>
+                            </>
                           )}
                         </div>
                       </div>

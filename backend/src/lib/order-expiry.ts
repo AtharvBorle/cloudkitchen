@@ -27,10 +27,43 @@ export const getOrderRemainingMs = (createdAt: Date | string): number => {
 };
 
 /**
+ * Safely restores coupon usage count by 1 (floored at 0 so it never becomes negative).
+ */
+export const revertCouponUsageFloorZero = async (
+    txOrDb: any,
+    appliedCouponId: string | null | undefined
+): Promise<void> => {
+    if (!appliedCouponId) return;
+    const cleanKey = String(appliedCouponId).trim();
+    if (!cleanKey) return;
+
+    const coupon = await txOrDb.coupon.findFirst({
+        where: {
+            OR: [
+                { id: cleanKey },
+                { code: { equals: cleanKey, mode: "insensitive" } }
+            ]
+        }
+    });
+
+    if (!coupon) return;
+
+    const currentCount = Number(coupon.currentUsersCount) || 0;
+    const nextCount = Math.max(0, currentCount - 1);
+
+    if (coupon.currentUsersCount !== nextCount) {
+        await txOrDb.coupon.update({
+            where: { id: coupon.id },
+            data: { currentUsersCount: nextCount }
+        });
+    }
+};
+
+/**
  * Automatically cancels an expired order:
- * 1. Updates order status to CANCELLED.
- * 2. Restores inventory stock for food items.
- * 3. Reverts coupon usage count if a coupon was used.
+ * 1. Atomically updates order status to CANCELLED only if not already CANCELLED/DELIVERED.
+ * 2. Restores inventory stock for food items (at most once).
+ * 3. Reverts coupon usage count by 1 (floored at 0) if a coupon was used.
  * 4. Generates a refund record if the order was paid or ₹0 coupon.
  * 5. Emits real-time SSE events so dashboards update instantly.
  */
@@ -40,17 +73,34 @@ export const cancelExpiredOrder = async (order: any): Promise<any> => {
     }
 
     try {
-        const cancelledOrder = await db.$transaction(async (tx) => {
-            // 1. Update status
-            const updated = await tx.order.update({
-                where: { id: order.id },
+        const txResult = await db.$transaction(async (tx) => {
+            // 1. Atomically claim cancellation in DB so concurrent requests never double-process
+            const claim = await tx.order.updateMany({
+                where: {
+                    id: order.id,
+                    status: { notIn: ["CANCELLED", "DELIVERED"] }
+                },
                 data: { status: "CANCELLED" }
             });
 
+            const currentOrder = await tx.order.findUnique({
+                where: { id: order.id }
+            });
+
+            if (claim.count === 0) {
+                return {
+                    order: currentOrder || { ...order, status: "CANCELLED" },
+                    newlyCancelled: false
+                };
+            }
+
+            const updated = currentOrder || { ...order, status: "CANCELLED" };
+
             // 2. Restore stock for food items
-            if (order.items) {
+            const itemsRaw = updated.items ?? order.items;
+            if (itemsRaw) {
                 try {
-                    const itemsList = typeof order.items === "string" ? JSON.parse(order.items) : order.items;
+                    const itemsList = typeof itemsRaw === "string" ? JSON.parse(itemsRaw) : itemsRaw;
                     if (Array.isArray(itemsList)) {
                         for (const item of itemsList) {
                             const itemId = item.foodItemId || item.id;
@@ -74,23 +124,21 @@ export const cancelExpiredOrder = async (order: any): Promise<any> => {
                 }
             }
 
-            // 3. Decrement coupon usage if applied
-            if (order.appliedCouponId) {
+            // 3. Decrement coupon usage by 1 (floored at 0) if applied
+            const couponKey = updated.appliedCouponId ?? order.appliedCouponId;
+            if (couponKey) {
                 try {
-                    await tx.coupon.update({
-                        where: { id: order.appliedCouponId },
-                        data: { currentUsersCount: { decrement: 1 } }
-                    });
+                    await revertCouponUsageFloorZero(tx, couponKey);
                 } catch (couponErr) {
                     console.error(`[OrderExpiry] Coupon usage revert failed for order #${order.id}:`, couponErr);
                 }
             }
 
             // 4. Auto-submit refund if paid or ₹0 coupon order
-            if (order.isPaid || order.totalAmount === 0) {
+            if (updated.isPaid || updated.totalAmount === 0) {
                 const existingRefund = await tx.refund.findUnique({ where: { orderId: order.id } });
                 if (!existingRefund) {
-                    const refundAmount = Number(order.totalAmount ?? 0);
+                    const refundAmount = Number(updated.totalAmount ?? 0);
                     let reason = `Order #${order.id} was automatically cancelled: Kitchen partner did not accept within the 5-minute window.`;
                     if (refundAmount === 0) {
                         reason += ` 100% discount coupon applied (₹0 paid by customer). No refund required.`;
@@ -99,7 +147,7 @@ export const cancelExpiredOrder = async (order: any): Promise<any> => {
                     }
                     await tx.refund.create({
                         data: {
-                            userId: order.userId,
+                            userId: updated.userId,
                             orderId: order.id,
                             amount: refundAmount,
                             reason,
@@ -109,24 +157,31 @@ export const cancelExpiredOrder = async (order: any): Promise<any> => {
                 }
             }
 
-            return updated;
+            return {
+                order: updated,
+                newlyCancelled: true
+            };
         });
 
-        // 5. Emit real-time updates
-        try {
-            emitOrderCancelled(cancelledOrder);
-            emitOrderUpdated(cancelledOrder);
-            if (order.sellerId) {
-                emitSellerDashboardRefresh(order.sellerId);
-            }
-        } catch (eventErr) {
-            console.error(`[OrderExpiry] Event emission error for order #${order.id}:`, eventErr);
-        }
+        const cancelledOrder = txResult.order;
 
-        try {
-            revalidateTag("explore", {});
-            revalidateTag("public-explore-data", {});
-        } catch {}
+        if (txResult.newlyCancelled) {
+            // 5. Emit real-time updates only on the first transition to CANCELLED
+            try {
+                emitOrderCancelled(cancelledOrder);
+                emitOrderUpdated(cancelledOrder);
+                if (order.sellerId) {
+                    emitSellerDashboardRefresh(order.sellerId);
+                }
+            } catch (eventErr) {
+                console.error(`[OrderExpiry] Event emission error for order #${order.id}:`, eventErr);
+            }
+
+            try {
+                revalidateTag("explore", {});
+                revalidateTag("public-explore-data", {});
+            } catch {}
+        }
 
         return cancelledOrder;
     } catch (error) {

@@ -370,7 +370,7 @@ export const getPublicCoupons = async (sellerId: string | null, userId?: string 
                 appliesToProductId: c.appliesToProductId || null,
                 maxUsagesPerUser: c.maxUsagesPerUser || c.perUserLimit || 1,
                 maxUsers: c.maxUsers || c.usageLimit || null,
-                currentUsersCount: c.currentUsersCount,
+                currentUsersCount: Math.max(0, Number(c.currentUsersCount) || 0),
                 noExpiry: c.noExpiry,
                 validUntil: c.validUntil,
                 isAutoApply: Boolean(c.isAutoApply),

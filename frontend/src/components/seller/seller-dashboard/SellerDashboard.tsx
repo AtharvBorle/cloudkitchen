@@ -326,10 +326,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
   useRealtimeStream({
     url: "/api/seller/orders/stream",
     onConnected: () => {
-      fetchApi("/api/seller/dashboard/overview")
-        .then((r) => r.ok && r.json())
-        .then((d) => d && setOverview(d.data || d))
-        .catch(() => {});
+      loadDashboardForDate(selectedDate);
     },
     onOrder: (payload) => {
       if (payload.event === "ORDER_CREATED") {
@@ -363,10 +360,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
         }
       }
       // Instant reload of metrics & recent orders upon new order or status change
-      fetchApi("/api/seller/dashboard/overview")
-        .then((r) => r.ok && r.json())
-        .then((d) => d && setOverview(d.data || d))
-        .catch(() => {});
+      loadDashboardForDate(selectedDate);
 
       fetchApi("/api/seller/orders")
         .then((r) => r.ok && r.json())
@@ -707,11 +701,11 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                   </div>
                 </div>
 
-                {/* Card 2: Orders Today / Selected Date */}
+                {/* Card 2: Completed Orders Today / Selected Date */}
                 <div className={styles.statCard}>
                   <div className={styles.cardHeader}>
                     <span className={styles.cardLabel}>
-                      {isViewingToday ? "Orders Today" : `Orders (${formattedSelectedDate})`}
+                      {isViewingToday ? "Completed Orders Today" : `Completed Orders (${formattedSelectedDate})`}
                     </span>
                     <div className={styles.iconBadge}>
                       <Truck size={18} strokeWidth={2.4} />
@@ -720,10 +714,6 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                   <h2 className={styles.cardValue}>
                     {overview?.todayOrdersCount !== undefined ? overview.todayOrdersCount : 0}
                   </h2>
-                  <div className={styles.cardFooter}>
-                    <span className={styles.badgeOrange}>{isViewingToday ? "Active" : "Archived"}</span>
-                    <span className={styles.footerMuted}>{isViewingToday ? "orders today" : "orders on day"}</span>
-                  </div>
                 </div>
 
                 {isRoomEnabled && (
@@ -748,7 +738,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                 <div className={styles.statCard}>
                   <div className={styles.cardHeader}>
                     <span className={styles.cardLabel}>
-                      {isViewingToday ? "COD Outstanding" : `COD (${formattedSelectedDate})`}
+                      {isViewingToday ? "COD Outstanding" : `COD Outstanding (${formattedSelectedDate})`}
                     </span>
                     <div className={styles.iconBadge}>
                       <CreditCard size={18} strokeWidth={2.4} />
@@ -762,8 +752,8 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                   <div className={styles.cardFooter}>
                     <span className={styles.badgeOrange}>{isViewingToday ? "Rider COD" : "Day COD"}</span>
                     <span className={styles.footerMuted}>
-                      {overview?.riderTotalCodOutstanding && overview.riderTotalCodOutstanding > 0
-                        ? `₹${overview.riderTotalCodOutstanding.toLocaleString("en-IN")} rider cash`
+                      {((overview?.codOutstanding !== undefined ? overview.codOutstanding : overview?.riderTotalCodOutstanding) || 0) > 0
+                        ? `₹${((overview?.codOutstanding !== undefined ? overview.codOutstanding : overview?.riderTotalCodOutstanding) || 0).toLocaleString("en-IN")} rider cash`
                         : "All settled (₹0)"}
                     </span>
                   </div>
