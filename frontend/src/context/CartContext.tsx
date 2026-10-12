@@ -251,7 +251,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         }
     }, []);
 
-    // Sync prices and availability on focus, visibility change, or interval polling
+    // Sync prices and availability on focus, visibility change, or manual refresh event
     useEffect(() => {
         const handleSync = () => {
             syncCartWithLiveMenu();
@@ -267,21 +267,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 }
             });
 
-            // Poll every 4s when there are items in the cart to detect deletions in real-time
-            const interval = setInterval(() => {
-                if (cartItems.length > 0) {
-                    handleSync();
-                }
-            }, 4000);
-
             return () => {
                 window.removeEventListener("focus", handleSync);
                 window.removeEventListener("seller-menu-updated", handleSync);
                 window.removeEventListener("cart-sync-requested", handleSync);
-                clearInterval(interval);
             };
         }
-    }, [syncCartWithLiveMenu, cartItems.length]);
+    }, [syncCartWithLiveMenu]);
 
     // Save to local storage on change
     useEffect(() => {

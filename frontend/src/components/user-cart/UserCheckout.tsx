@@ -137,7 +137,16 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
     showToast(`Removed "${name}" from cart`);
   };
 
-  const [userDismissedPromo, setUserDismissedPromo] = useState<boolean>(false);
+  const [userDismissedPromo, setUserDismissedPromo] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        return sessionStorage.getItem("user_dismissed_promo") === "true";
+      } catch (e) {
+        return false;
+      }
+    }
+    return false;
+  });
   const activeSellerId = cartItems.find((ci) => ci.sellerId)?.sellerId || null;
 
   // Fetch available public coupons
@@ -176,7 +185,8 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
 
   // Auto-apply eligible coupon when conditions are met
   React.useEffect(() => {
-    if (userDismissedPromo || isValidatingPromo) {
+    const isDismissed = userDismissedPromo || (typeof window !== "undefined" && sessionStorage.getItem("user_dismissed_promo") === "true");
+    if (isDismissed || isValidatingPromo) {
       return;
     }
 
@@ -400,6 +410,14 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
     setAppliedPromo(null);
     setDiscountPercent(0);
     setPromoCode("");
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.setItem("user_dismissed_promo", "true");
+        sessionStorage.removeItem("applied_cart_coupon");
+        sessionStorage.removeItem("appliedCoupon");
+        localStorage.removeItem("appliedCoupon");
+      } catch (e) {}
+    }
     showToast("Coupon removed");
   };
 
@@ -418,6 +436,11 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
     }
 
     setUserDismissedPromo(false);
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.removeItem("user_dismissed_promo");
+      } catch (e) {}
+    }
     if (targetCode.length > 20) {
       showToast("Coupon code cannot exceed 20 characters");
       return;

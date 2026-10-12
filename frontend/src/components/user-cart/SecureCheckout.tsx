@@ -609,6 +609,14 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
   useEffect(() => {
     try {
       if (typeof window !== "undefined") {
+        if (sessionStorage.getItem("user_dismissed_promo") === "true") {
+          setUserDismissedPromo(true);
+          setIsPromoApplied(false);
+          setAppliedCoupon(null);
+          setPromoCode("");
+          setDiscountPercent(0);
+          return;
+        }
         const saved = sessionStorage.getItem("applied_cart_coupon") || sessionStorage.getItem("appliedCoupon") || localStorage.getItem("appliedCoupon");
         if (saved) {
           const parsed = JSON.parse(saved);
@@ -769,6 +777,7 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
           localStorage.removeItem("pending_order_transaction");
           sessionStorage.removeItem("applied_cart_coupon");
           sessionStorage.removeItem("appliedCoupon");
+          sessionStorage.removeItem("user_dismissed_promo");
           localStorage.removeItem("appliedCoupon");
         } catch (e) {
           console.error("Failed to save confirmed order to storage:", e);
@@ -973,7 +982,16 @@ const loadRazorpayScript = (): Promise<boolean> => {
   const taxesAndCharges = 0;
   const grandTotal = Math.max(0, subtotal - discountAmount);
 
-  const [userDismissedPromo, setUserDismissedPromo] = useState<boolean>(false);
+  const [userDismissedPromo, setUserDismissedPromo] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        return sessionStorage.getItem("user_dismissed_promo") === "true";
+      } catch (e) {
+        return false;
+      }
+    }
+    return false;
+  });
   const activeSellerId = cartItems[0]?.sellerId || (checkoutItems[0] as any)?.sellerId || null;
 
   // Fetch available public coupons for the seller / platform with real-time sync
@@ -1012,9 +1030,6 @@ const loadRazorpayScript = (): Promise<boolean> => {
     setIsLoadingOffers(true);
     fetchOffers();
 
-    // Polling every 3 seconds for instant seller changes revalidation
-    const pollInterval = setInterval(fetchOffers, 3000);
-
     const handleFocus = () => {
       fetchOffers();
     };
@@ -1028,7 +1043,6 @@ const loadRazorpayScript = (): Promise<boolean> => {
 
     return () => {
       isMounted = false;
-      clearInterval(pollInterval);
       window.removeEventListener("focus", handleFocus);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
@@ -1120,7 +1134,8 @@ const loadRazorpayScript = (): Promise<boolean> => {
 
   // Auto-apply eligible coupon when conditions are met
   useEffect(() => {
-    if (userDismissedPromo || isValidatingPromo || availableOffers.length === 0) {
+    const isDismissed = userDismissedPromo || (typeof window !== "undefined" && sessionStorage.getItem("user_dismissed_promo") === "true");
+    if (isDismissed || isValidatingPromo || availableOffers.length === 0) {
       return;
     }
 
@@ -1339,6 +1354,14 @@ const loadRazorpayScript = (): Promise<boolean> => {
     setDiscountPercent(0);
     setAppliedCoupon(null);
     setPromoCode("");
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.setItem("user_dismissed_promo", "true");
+        sessionStorage.removeItem("applied_cart_coupon");
+        sessionStorage.removeItem("appliedCoupon");
+        localStorage.removeItem("appliedCoupon");
+      } catch (e) {}
+    }
     showToast("Promo code removed", "info");
   };
 
@@ -1398,6 +1421,11 @@ const loadRazorpayScript = (): Promise<boolean> => {
     }
 
     setUserDismissedPromo(false);
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.removeItem("user_dismissed_promo");
+      } catch (e) {}
+    }
     setPromoCode(clean);
     setIsValidatingPromo(true);
     const currentSellerId = (checkoutItems[0] as any)?.sellerId || cartItems[0]?.sellerId;
@@ -1733,6 +1761,8 @@ const loadRazorpayScript = (): Promise<boolean> => {
                   localStorage.setItem("latestConfirmedOrder", JSON.stringify(confirmedOrderPayload));
                   localStorage.removeItem("pending_order_transaction");
                   sessionStorage.removeItem("appliedCoupon");
+                  sessionStorage.removeItem("applied_cart_coupon");
+                  sessionStorage.removeItem("user_dismissed_promo");
                   localStorage.removeItem("appliedCoupon");
                 } catch (e) {
                   console.error("Failed to save confirmed order to session storage:", e);
@@ -1896,6 +1926,8 @@ const loadRazorpayScript = (): Promise<boolean> => {
           localStorage.setItem("latestConfirmedOrder", JSON.stringify(confirmedOrderPayload));
           localStorage.removeItem("pending_order_transaction");
           sessionStorage.removeItem("appliedCoupon");
+          sessionStorage.removeItem("applied_cart_coupon");
+          sessionStorage.removeItem("user_dismissed_promo");
           localStorage.removeItem("appliedCoupon");
         } catch (e) {
           console.error("Failed to save confirmed order to session storage:", e);
