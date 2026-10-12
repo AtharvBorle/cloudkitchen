@@ -220,7 +220,7 @@ export async function loadGoogleMapsScript(): Promise<boolean> {
       const script = document.createElement("script");
       script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(
         config.apiKey
-      )}&libraries=places,geometry,marker&loading=async&callback=${callbackName}`;
+      )}&libraries=places,geometry,marker&loading=async&callback=${callbackName}&v=weekly`;
       script.async = true;
       script.defer = true;
 
@@ -275,7 +275,8 @@ function parseGoogleAddressComponentsClient(
 
   for (const comp of components) {
     const types: string[] = comp.types || [];
-    const val: string = comp.long_name || comp.short_name || "";
+    // Support Places API (New) longText/shortText and legacy long_name/short_name
+    const val: string = comp.longText || comp.long_name || comp.shortText || comp.short_name || "";
 
     if (types.includes("postal_code")) {
       pincode = val.replace(/\D/g, "").slice(0, 6);
@@ -325,105 +326,222 @@ function parseGoogleAddressComponentsClient(
 }
 
 /**
- * Client-side Google Places AutocompleteService
- * Runs directly in the browser, perfectly respecting HTTP referrer restrictions (*.neocloudbites.com).
+ * Client-side Google Places Autocomplete:
+ * 1. Tries modern Places API (New) AutocompleteSuggestion (required by Google for projects created after March 2025).
+ * 2. Falls back to legacy AutocompleteService for backwards compatibility.
+ * Runs directly in browser, respecting HTTP referrer restrictions (*.neocloudbites.com).
  */
 async function fetchPlaceSuggestionsClient(
   query: string,
   options?: { lat?: number; lng?: number }
 ): Promise<PlacePredictionItem[] | null> {
-  if (typeof window === "undefined") return null;
-  if (!(window as any).google?.maps?.places?.AutocompleteService) {
+  if (typeof window === "undefined" || !query) return null;
+
+  if (!(window as any).google?.maps) {
     await loadGoogleMapsScript();
   }
-  if (!(window as any).google?.maps?.places?.AutocompleteService) {
+  if (!(window as any).google?.maps) {
     return null;
   }
 
-  return new Promise((resolve) => {
-    try {
-      const service = new (window as any).google.maps.places.AutocompleteService();
-      const request: any = {
-        input: query,
-        componentRestrictions: { country: "in" },
-      };
+  // 1. Modern Places API (New): AutocompleteSuggestion.fetchAutocompleteSuggestions
+  try {
+    let placesLib: any = (window as any).google?.maps?.places;
+    if (typeof (window as any).google?.maps?.importLibrary === "function") {
+      placesLib = await (window as any).google.maps.importLibrary("places");
+    }
 
+    if (placesLib?.AutocompleteSuggestion && typeof placesLib.AutocompleteSuggestion.fetchAutocompleteSuggestions === "function") {
       const centerLat = options?.lat ?? 18.5204;
       const centerLng = options?.lng ?? 73.8567;
-      if ((window as any).google?.maps?.LatLng && (window as any).google?.maps?.Circle) {
-        request.locationBias = new (window as any).google.maps.Circle({
+
+      const req: any = {
+        input: query,
+        includedRegionCodes: ["in"],
+      };
+
+      if ((window as any).google?.maps?.Circle && (window as any).google?.maps?.LatLng) {
+        req.locationBias = new (window as any).google.maps.Circle({
           center: new (window as any).google.maps.LatLng(centerLat, centerLng),
           radius: 50000,
         });
       }
 
-      service.getPlacePredictions(request, (predictions: any[], status: any) => {
-        if (
-          status === (window as any).google.maps.places.PlacesServiceStatus?.OK &&
-          Array.isArray(predictions) &&
-          predictions.length > 0
-        ) {
-          const list: PlacePredictionItem[] = predictions.map((p) => ({
-            placeId: p.place_id,
-            description: p.description,
-            mainText: p.structured_formatting?.main_text || p.description.split(",")[0],
-            secondaryText:
-              p.structured_formatting?.secondary_text ||
-              p.description.split(",").slice(1).join(", ").trim(),
-            types: p.types || [],
-          }));
-          resolve(list);
-        } else {
-          resolve(null);
+      const res = await placesLib.AutocompleteSuggestion.fetchAutocompleteSuggestions(req);
+      const suggestions = res?.suggestions;
+
+      if (Array.isArray(suggestions) && suggestions.length > 0) {
+        const list: PlacePredictionItem[] = [];
+        for (const s of suggestions) {
+          const pred = s.placePrediction;
+          if (!pred) continue;
+
+          const placeId = pred.placeId || (pred.toPlace ? pred.toPlace()?.id : "");
+          const description =
+            typeof pred.text?.toString === "function" ? pred.text.toString() : String(pred.text || "");
+          const mainText =
+            typeof pred.mainText?.toString === "function"
+              ? pred.mainText.toString()
+              : String(pred.mainText || description.split(",")[0]?.trim() || "");
+          const secondaryText =
+            typeof pred.secondaryText?.toString === "function"
+              ? pred.secondaryText.toString()
+              : String(pred.secondaryText || description.split(",").slice(1).join(", ").trim());
+
+          if (placeId && description) {
+            list.push({
+              placeId,
+              description,
+              mainText,
+              secondaryText,
+              types: pred.types || [],
+            });
+          }
         }
-      });
-    } catch (err) {
-      console.warn("Client-side AutocompleteService failed:", err);
-      resolve(null);
+
+        if (list.length > 0) {
+          return list;
+        }
+      }
     }
-  });
-}
-
-/**
- * Client-side Google PlacesService for detailed coordinates & address components
- */
-async function fetchPlaceDetailsClient(placeId: string): Promise<NormalizedAddressDetails | null> {
-  if (typeof window === "undefined" || !placeId) return null;
-  if (!(window as any).google?.maps?.places?.PlacesService) {
-    await loadGoogleMapsScript();
+  } catch (newErr) {
+    console.warn("Places API (New) AutocompleteSuggestion failed, falling back to legacy:", newErr);
   }
-  if (!(window as any).google?.maps?.places?.PlacesService) return null;
 
-  return new Promise((resolve) => {
-    try {
-      const dummy = document.createElement("div");
-      const service = new (window as any).google.maps.places.PlacesService(dummy);
-      service.getDetails(
-        {
-          placeId,
-          fields: ["address_components", "formatted_address", "geometry", "name"],
-        },
-        (place: any, status: any) => {
-          if (status === (window as any).google.maps.places.PlacesServiceStatus?.OK && place) {
-            const lat = typeof place.geometry?.location?.lat === "function" ? place.geometry.location.lat() : place.geometry?.location?.lat;
-            const lng = typeof place.geometry?.location?.lng === "function" ? place.geometry.location.lng() : place.geometry?.location?.lng;
-            const parsed = parseGoogleAddressComponentsClient(
-              place.address_components || [],
-              place.formatted_address || place.name || "",
-              lat,
-              lng
-            );
-            resolve(parsed);
+  // 2. Legacy AutocompleteService fallback
+  if ((window as any).google?.maps?.places?.AutocompleteService) {
+    return new Promise((resolve) => {
+      try {
+        const service = new (window as any).google.maps.places.AutocompleteService();
+        const request: any = {
+          input: query,
+          componentRestrictions: { country: "in" },
+        };
+
+        const centerLat = options?.lat ?? 18.5204;
+        const centerLng = options?.lng ?? 73.8567;
+        if ((window as any).google?.maps?.LatLng && (window as any).google?.maps?.Circle) {
+          request.locationBias = new (window as any).google.maps.Circle({
+            center: new (window as any).google.maps.LatLng(centerLat, centerLng),
+            radius: 50000,
+          });
+        }
+
+        service.getPlacePredictions(request, (predictions: any[], status: any) => {
+          if (
+            status === (window as any).google.maps.places.PlacesServiceStatus?.OK &&
+            Array.isArray(predictions) &&
+            predictions.length > 0
+          ) {
+            const list: PlacePredictionItem[] = predictions.map((p) => ({
+              placeId: p.place_id,
+              description: p.description,
+              mainText: p.structured_formatting?.main_text || p.description.split(",")[0],
+              secondaryText:
+                p.structured_formatting?.secondary_text ||
+                p.description.split(",").slice(1).join(", ").trim(),
+              types: p.types || [],
+            }));
+            resolve(list);
           } else {
             resolve(null);
           }
-        }
-      );
-    } catch (err) {
-      console.warn("Client-side PlacesService.getDetails failed:", err);
-      resolve(null);
+        });
+      } catch (err) {
+        console.warn("Client-side AutocompleteService failed:", err);
+        resolve(null);
+      }
+    });
+  }
+
+  return null;
+}
+
+/**
+ * Client-side Google Places details:
+ * 1. Tries modern Places API (New) Place.fetchFields.
+ * 2. Falls back to legacy PlacesService.getDetails.
+ */
+async function fetchPlaceDetailsClient(placeId: string): Promise<NormalizedAddressDetails | null> {
+  if (typeof window === "undefined" || !placeId) return null;
+
+  if (!(window as any).google?.maps) {
+    await loadGoogleMapsScript();
+  }
+  if (!(window as any).google?.maps) return null;
+
+  // 1. Modern Places API (New): Place.fetchFields
+  try {
+    let placesLib: any = (window as any).google?.maps?.places;
+    if (typeof (window as any).google?.maps?.importLibrary === "function") {
+      placesLib = await (window as any).google.maps.importLibrary("places");
     }
-  });
+
+    if (typeof placesLib?.Place === "function") {
+      const place = new placesLib.Place({ id: placeId });
+      await place.fetchFields({
+        fields: ["displayName", "formattedAddress", "location", "addressComponents"],
+      });
+
+      if (place.location || place.formattedAddress) {
+        const lat =
+          typeof place.location?.lat === "function" ? place.location.lat() : place.location?.lat;
+        const lng =
+          typeof place.location?.lng === "function" ? place.location.lng() : place.location?.lng;
+        const displayName =
+          typeof place.displayName === "string"
+            ? place.displayName
+            : place.displayName?.text || place.displayName?.toString?.() || "";
+        const formattedAddress = place.formattedAddress || displayName || "";
+
+        const parsed = parseGoogleAddressComponentsClient(
+          place.addressComponents || [],
+          formattedAddress,
+          lat,
+          lng
+        );
+        if (parsed) return parsed;
+      }
+    }
+  } catch (newPlaceErr) {
+    console.warn("Places API (New) Place.fetchFields failed, falling back to legacy:", newPlaceErr);
+  }
+
+  // 2. Legacy PlacesService fallback
+  if ((window as any).google?.maps?.places?.PlacesService) {
+    return new Promise((resolve) => {
+      try {
+        const dummy = document.createElement("div");
+        const service = new (window as any).google.maps.places.PlacesService(dummy);
+        service.getDetails(
+          {
+            placeId,
+            fields: ["address_components", "formatted_address", "geometry", "name"],
+          },
+          (place: any, status: any) => {
+            if (status === (window as any).google.maps.places.PlacesServiceStatus?.OK && place) {
+              const lat = typeof place.geometry?.location?.lat === "function" ? place.geometry.location.lat() : place.geometry?.location?.lat;
+              const lng = typeof place.geometry?.location?.lng === "function" ? place.geometry.location.lng() : place.geometry?.location?.lng;
+              const parsed = parseGoogleAddressComponentsClient(
+                place.address_components || [],
+                place.formatted_address || place.name || "",
+                lat,
+                lng
+              );
+              resolve(parsed);
+            } else {
+              resolve(null);
+            }
+          }
+        );
+      } catch (err) {
+        console.warn("Client-side PlacesService.getDetails failed:", err);
+        resolve(null);
+      }
+    });
+  }
+
+  return null;
 }
 
 /**
