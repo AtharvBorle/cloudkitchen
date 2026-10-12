@@ -312,6 +312,8 @@ export default function SubscriptionEditCanvas({
         features: formData.includedFeatures.filter((f) => f.checked !== false).map((f) => f.label),
         mealTimings: formData.mealTimings.map((m) => `${m.mealName}: ${m.timing}`),
         allowCancel: false,
+        allowPause: formData.allowPauseBilling,
+        allowPauseBilling: formData.allowPauseBilling,
         pauseBillingPeriod: formData.allowPauseBilling ? (formData.pauseBillingPeriod || "30 Days") : "None",
       });
     }

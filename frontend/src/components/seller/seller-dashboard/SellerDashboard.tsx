@@ -18,6 +18,7 @@ import {
   Search,
   Clock,
   RotateCcw,
+  DollarSign,
 } from "lucide-react";
 import { SellerCalendarModal, formatDateToYMD } from "./SellerCalendarModal";
 import { fetchApi } from "@/lib/fetch-api";
@@ -622,7 +623,9 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                 <div className={styles.headerGroup}>
                   <h1 className={styles.title}>Operations Dashboard</h1>
                   <p className={styles.subtitle}>
-                    Real-time tracking of Neo Cloud Room revenue, order volume, and rider COD metrics.
+                    {isRoomEnabled
+                      ? "Real-time tracking of Neo Cloud Room & Kitchen revenue, order volume, and rider COD metrics."
+                      : "Real-time tracking of cloud kitchen revenue, order volume, and rider COD metrics."}
                   </p>
                 </div>
 
@@ -692,7 +695,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                   </div>
                   <h2 className={styles.cardValue}>
                     {overview
-                      ? `₹${(overview.todayRevenue !== undefined ? overview.todayRevenue : overview.totalRevenue || 0).toLocaleString("en-IN")}`
+                      ? `₹${(overview.todayRevenue !== undefined ? overview.todayRevenue : 0).toLocaleString("en-IN")}`
                       : "₹0"}
                   </h2>
                   <div className={styles.cardFooter}>
@@ -714,9 +717,18 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                   <h2 className={styles.cardValue}>
                     {overview?.todayOrdersCount !== undefined ? overview.todayOrdersCount : 0}
                   </h2>
+                  <div className={styles.cardFooter}>
+                    <span className={styles.badgeOrange}>{isViewingToday ? "Delivered" : "Archived"}</span>
+                    <span className={styles.footerMuted}>
+                      {isViewingToday
+                        ? `${overview?.allTimeOrdersCount ?? overview?.totalOrdersCount ?? orders.length} all-time orders`
+                        : "completed on day"}
+                    </span>
+                  </div>
                 </div>
 
-                {isRoomEnabled && (
+                {/* Card 3: Rooms & Bookings (if rooms enabled) OR Lifetime Total Revenue (if pure food kitchen) */}
+                {isRoomEnabled ? (
                   <div className={styles.statCard}>
                     <div className={styles.cardHeader}>
                       <span className={styles.cardLabel}>Rooms &amp; Bookings</span>
@@ -728,8 +740,30 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                       {overview?.roomsCount !== undefined ? `${overview.roomsCount} Rooms` : "0 Rooms"}
                     </h2>
                     <div className={styles.cardFooter}>
-                      <span className={styles.badgeOrange}>Inventory</span>
-                      <span className={styles.footerMuted}>configured units</span>
+                      <span className={styles.badgeOrange}>Bookings</span>
+                      <span className={styles.footerMuted}>
+                        {overview?.pendingBookingsCount !== undefined
+                          ? `${overview.pendingBookingsCount} pending booking${overview.pendingBookingsCount === 1 ? "" : "s"}`
+                          : "0 pending bookings"}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className={styles.statCard}>
+                    <div className={styles.cardHeader}>
+                      <span className={styles.cardLabel}>Lifetime Total Revenue</span>
+                      <div className={styles.iconBadge}>
+                        <DollarSign size={18} strokeWidth={2.4} />
+                      </div>
+                    </div>
+                    <h2 className={styles.cardValue}>
+                      {overview
+                        ? `₹${(overview.allTimeRevenue !== undefined ? overview.allTimeRevenue : overview.totalRevenue || 0).toLocaleString("en-IN")}`
+                        : "₹0"}
+                    </h2>
+                    <div className={styles.cardFooter}>
+                      <span className={styles.badgeOrange}>All-Time</span>
+                      <span className={styles.footerMuted}>lifetime completed sales</span>
                     </div>
                   </div>
                 )}
@@ -786,7 +820,11 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
               <div className={styles.tableCard}>
                 <div className={styles.tableHeader}>
                   <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-                    <h3 className={styles.tableTitle}>{isRoomEnabled ? "Recent Food & Room Orders" : "Recent Food Orders"}</h3>
+                    <h3 className={styles.tableTitle}>
+                      {isViewingToday
+                        ? (isRoomEnabled ? "Recent Food & Room Orders" : "Recent Food Orders")
+                        : (isRoomEnabled ? `Food & Room Orders (${formattedSelectedDate})` : `Food Orders (${formattedSelectedDate})`)}
+                    </h3>
                     {searchQuery.trim() && (
                       <span
                         style={{
@@ -852,12 +890,16 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                               <p style={{ margin: 0, fontWeight: 600, color: "#1E293B", fontSize: "14px" }}>
                                 {searchQuery.trim()
                                   ? `No orders found matching "${searchQuery}"`
-                                  : "No recent orders received yet today."}
+                                  : isViewingToday
+                                  ? "No recent orders received yet today."
+                                  : `No orders recorded for ${formattedSelectedDate}.`}
                               </p>
                               <p style={{ margin: 0, color: "#94A3B8", fontSize: "12px" }}>
                                 {searchQuery.trim()
                                   ? "Try searching by customer name or order ID."
-                                  : "New orders from customers will appear here."}
+                                  : isViewingToday
+                                  ? "New orders from customers will appear here."
+                                  : "Try picking another date from the operations calendar."}
                               </p>
                               {searchQuery.trim() && (
                                 <button

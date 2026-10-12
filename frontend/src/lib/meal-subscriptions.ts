@@ -23,6 +23,8 @@ export interface MealSubscriptionPlan {
   deployedDate: string;
   allowCancel?: boolean;
   pauseBillingPeriod?: string;
+  allowPause?: boolean;
+  allowPauseBilling?: boolean;
 }
 
 export interface MealSubscriber {
@@ -148,7 +150,27 @@ export function formatMealPlan(rawPlan: any): MealSubscriptionPlan {
     status: rawPlan.status || "Live",
     deployedDate,
     allowCancel: rawPlan.allowCancel ?? false,
-    pauseBillingPeriod: (rawPlan.allowPause === false || rawPlan.allowPauseBilling === false)
+    allowPause: !(
+      rawPlan.allowPause === false ||
+      rawPlan.allowPauseBilling === false ||
+      String(rawPlan.pauseBillingPeriod || "").trim().toLowerCase() === "none" ||
+      String(rawPlan.pauseBillingPeriod || "").trim().toLowerCase() === "disabled" ||
+      String(rawPlan.pauseBillingPeriod || "").trim().toLowerCase() === "false"
+    ),
+    allowPauseBilling: !(
+      rawPlan.allowPause === false ||
+      rawPlan.allowPauseBilling === false ||
+      String(rawPlan.pauseBillingPeriod || "").trim().toLowerCase() === "none" ||
+      String(rawPlan.pauseBillingPeriod || "").trim().toLowerCase() === "disabled" ||
+      String(rawPlan.pauseBillingPeriod || "").trim().toLowerCase() === "false"
+    ),
+    pauseBillingPeriod: (
+      rawPlan.allowPause === false ||
+      rawPlan.allowPauseBilling === false ||
+      String(rawPlan.pauseBillingPeriod || "").trim().toLowerCase() === "none" ||
+      String(rawPlan.pauseBillingPeriod || "").trim().toLowerCase() === "disabled" ||
+      String(rawPlan.pauseBillingPeriod || "").trim().toLowerCase() === "false"
+    )
       ? "None"
       : (rawPlan.pauseBillingPeriod !== undefined
           ? (String(rawPlan.pauseBillingPeriod).trim().toLowerCase() === "monthly" ? "30 Days" : rawPlan.pauseBillingPeriod)
@@ -344,7 +366,11 @@ export async function saveMealPlan(
         mealTimings: planData.mealTimings || [],
         status: planData.status || "Live",
         allowCancel: planData.allowCancel ?? false,
-        pauseBillingPeriod: planData.pauseBillingPeriod || "30 Days",
+        allowPause: planData.allowPause ?? (planData.pauseBillingPeriod !== "None"),
+        allowPauseBilling: planData.allowPauseBilling ?? (planData.pauseBillingPeriod !== "None"),
+        pauseBillingPeriod: (planData.allowPause === false || planData.allowPauseBilling === false || planData.pauseBillingPeriod === "None")
+          ? "None"
+          : (planData.pauseBillingPeriod || "30 Days"),
       }),
     });
 
@@ -408,6 +434,8 @@ export async function updateMealPlan(id: string, updates: Partial<MealSubscripti
     if (updates.mealTimings !== undefined) payload.mealTimings = updates.mealTimings;
     if (updates.status !== undefined) payload.status = updates.status;
     if (updates.allowCancel !== undefined) payload.allowCancel = updates.allowCancel;
+    if (updates.allowPause !== undefined) payload.allowPause = updates.allowPause;
+    if (updates.allowPauseBilling !== undefined) payload.allowPauseBilling = updates.allowPauseBilling;
     if (updates.pauseBillingPeriod !== undefined) payload.pauseBillingPeriod = updates.pauseBillingPeriod;
 
     const res = await fetchApi("/api/seller/meal-plans", {
@@ -584,6 +612,8 @@ export interface UserActiveMealSubscription {
     status: string;
     allowCancel: boolean;
     pauseBillingPeriod: string;
+    allowPause?: boolean;
+    allowPauseBilling?: boolean;
   };
   seller: {
     id: string;

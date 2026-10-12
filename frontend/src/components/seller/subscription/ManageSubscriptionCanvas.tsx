@@ -6,7 +6,6 @@ import {
   Plus,
   Edit2,
   Users,
-  TrendingUp,
   CreditCard,
   CheckCircle2,
   Calendar,
@@ -310,17 +309,6 @@ export default function ManageSubscriptionCanvas({
         ? serverMetrics.activeSubscribers
         : plans.reduce((sum, p) => sum + (p.subscribersCount || 0), 0));
 
-  const totalMonthlyRevNum = subscribers.length > 0
-    ? uniqueActiveSubscribers.reduce((sum, s) => sum + getSubscriberPrice(s), 0)
-    : (serverMetrics?.rawMRR !== undefined
-        ? serverMetrics.rawMRR
-        : plans.reduce(
-            (sum, p) => sum + getPlanBasePrice(p) * (p.subscribersCount || 0),
-            0
-          ));
-
-  const totalMonthlyRev = totalMonthlyRevNum > 0 ? `₹${totalMonthlyRevNum.toLocaleString("en-IN")}` : "₹0";
-
   return (
     <div
       style={{
@@ -425,7 +413,7 @@ export default function ManageSubscriptionCanvas({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
           gap: "18px",
           width: "100%",
           boxSizing: "border-box",
@@ -486,45 +474,6 @@ export default function ManageSubscriptionCanvas({
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontSize: "12.5px", fontWeight: 600, color: "#64748B" }}>
-              Monthly Recurring Revenue
-            </span>
-            <div
-              style={{
-                width: "36px",
-                height: "36px",
-                borderRadius: "8px",
-                backgroundColor: "#DCFCE7",
-                color: "#16A34A",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <TrendingUp size={18} strokeWidth={2.4} />
-            </div>
-          </div>
-          <div style={{ fontSize: "24px", fontWeight: 800, color: "#0F172A" }}>{totalMonthlyRev}</div>
-          <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px" }}>
-            <span style={{ color: "#16A34A", fontWeight: 700 }}>Live</span>
-            <span style={{ color: "#94A3B8" }}>recurring billing</span>
-          </div>
-        </div>
-
-        {/* Metric 3 */}
-        <div
-          style={{
-            backgroundColor: "#FFFFFF",
-            borderRadius: "12px",
-            border: "1px solid #E2E8F0",
-            padding: "20px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "10px",
-            boxShadow: "0 2px 6px rgba(0, 0, 0, 0.02)",
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: "12.5px", fontWeight: 600, color: "#64748B" }}>
               Active Plan Tiers
             </span>
             <div
@@ -546,45 +495,6 @@ export default function ManageSubscriptionCanvas({
           <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px" }}>
             <span style={{ color: "#8B5CF6", fontWeight: 700 }}>Available</span>
             <span style={{ color: "#94A3B8" }}>for kitchen subscriptions</span>
-          </div>
-        </div>
-
-        {/* Metric 4 */}
-        <div
-          style={{
-            backgroundColor: "#FFFFFF",
-            borderRadius: "12px",
-            border: "1px solid #E2E8F0",
-            padding: "20px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "10px",
-            boxShadow: "0 2px 6px rgba(0, 0, 0, 0.02)",
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: "12.5px", fontWeight: 600, color: "#64748B" }}>
-              Avg. Meal Fulfilment
-            </span>
-            <div
-              style={{
-                width: "36px",
-                height: "36px",
-                borderRadius: "8px",
-                backgroundColor: "#E0F2FE",
-                color: "#0284C7",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <CheckCircle2 size={18} strokeWidth={2.4} />
-            </div>
-          </div>
-          <div style={{ fontSize: "24px", fontWeight: 800, color: "#0F172A" }}>100%</div>
-          <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px" }}>
-            <span style={{ color: "#0284C7", fontWeight: 700 }}>On-Time</span>
-            <span style={{ color: "#94A3B8" }}>daily meal delivery</span>
           </div>
         </div>
       </div>

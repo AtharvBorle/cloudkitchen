@@ -1066,31 +1066,40 @@ function MySubscriptionContent() {
                         const isPauseAllowed = (() => {
                           const matchedLivePlan = allPlans.find(
                             (p) =>
-                              (subItem.planId && p.id === subItem.planId) ||
-                              (subItem.plan?.id && p.id === subItem.plan.id) ||
+                              (subItem.planId && (p.id === subItem.planId || (p as any).planId === subItem.planId)) ||
+                              (subItem.plan?.id && (p.id === subItem.plan.id || (p as any).planId === subItem.plan.id)) ||
                               (subItem.plan?.name &&
                                 p.name &&
                                 p.name.trim().toLowerCase() === subItem.plan.name.trim().toLowerCase() &&
                                 (!subItem.sellerId || p.sellerId === subItem.sellerId))
                           );
-                          const effectivePlan: any = matchedLivePlan || subItem.plan;
-                          const pausePeriod = (
-                            matchedLivePlan?.pauseBillingPeriod ??
-                            subItem.plan?.pauseBillingPeriod ??
-                            ""
-                          )
-                            .trim()
-                            .toLowerCase();
-                          return !(
-                            !pausePeriod ||
-                            pausePeriod === "disabled" ||
-                            pausePeriod === "none" ||
-                            pausePeriod === "false" ||
-                            effectivePlan?.allowPause === false ||
-                            effectivePlan?.allowPauseBilling === false ||
-                            (subItem.plan as any)?.allowPause === false ||
-                            (subItem.plan as any)?.allowPauseBilling === false
-                          );
+
+                          const isValDisabled = (val?: string | boolean | null) => {
+                            if (val === false) return true;
+                            if (typeof val === "string") {
+                              const s = val.trim().toLowerCase();
+                              return s === "none" || s === "disabled" || s === "false" || s === "0" || s === "no";
+                            }
+                            return false;
+                          };
+
+                          if (isValDisabled(subItem.plan?.pauseBillingPeriod)) return false;
+                          if ((subItem.plan as any)?.allowPause === false) return false;
+                          if ((subItem.plan as any)?.allowPauseBilling === false) return false;
+
+                          if (matchedLivePlan) {
+                            if (isValDisabled(matchedLivePlan.pauseBillingPeriod)) return false;
+                            if ((matchedLivePlan as any).allowPause === false) return false;
+                            if ((matchedLivePlan as any).allowPauseBilling === false) return false;
+                          }
+
+                          const effectivePeriod = String(
+                            subItem.plan?.pauseBillingPeriod || matchedLivePlan?.pauseBillingPeriod || ""
+                          ).trim().toLowerCase();
+
+                          if (!effectivePeriod || isValDisabled(effectivePeriod)) return false;
+
+                          return true;
                         })();
 
                         return (
@@ -1453,25 +1462,44 @@ function MySubscriptionContent() {
                           <div className={styles.featuresSection}>
                             <div className={styles.featuresTitle}>Included In This Plan:</div>
                             <ul className={styles.featuresList}>
-                              {plan.features && plan.features.length > 0 ? (
-                                plan.features.map((feature, fIdx) => (
-                                  <li key={fIdx} className={styles.featureItem}>
-                                    <CheckCircle2 size={14} className={styles.featureIcon} />
-                                    <span>{feature}</span>
-                                  </li>
-                                ))
-                              ) : (
-                                <>
-                                  <li className={styles.featureItem}>
-                                    <CheckCircle2 size={14} className={styles.featureIcon} />
-                                    <span>Daily Freshly Cooked Home Meals</span>
-                                  </li>
-                                  <li className={styles.featureItem}>
-                                    <CheckCircle2 size={14} className={styles.featureIcon} />
-                                    <span>1 Dal + 1 Seasonal Sabzi + Chapatis + Rice</span>
-                                  </li>
-                                </>
-                              )}
+                              {(() => {
+                                const rawPause = (plan.pauseBillingPeriod || "").trim();
+                                const rawPauseLower = rawPause.toLowerCase();
+                                const isPlanPauseAllowed = Boolean(
+                                  rawPause &&
+                                  rawPauseLower !== "none" &&
+                                  rawPauseLower !== "disabled" &&
+                                  rawPauseLower !== "false" &&
+                                  (plan as any).allowPause !== false &&
+                                  (plan as any).allowPauseBilling !== false
+                                );
+                                const rawFeatures = plan.features && plan.features.length > 0 ? plan.features : [];
+                                const filteredFeatures = isPlanPauseAllowed
+                                  ? rawFeatures
+                                  : rawFeatures.filter((f) => !String(f).toLowerCase().includes("pause"));
+
+                                if (filteredFeatures.length > 0) {
+                                  return filteredFeatures.map((feature, fIdx) => (
+                                    <li key={fIdx} className={styles.featureItem}>
+                                      <CheckCircle2 size={14} className={styles.featureIcon} />
+                                      <span>{feature}</span>
+                                    </li>
+                                  ));
+                                }
+
+                                return (
+                                  <>
+                                    <li className={styles.featureItem}>
+                                      <CheckCircle2 size={14} className={styles.featureIcon} />
+                                      <span>Daily Freshly Cooked Home Meals</span>
+                                    </li>
+                                    <li className={styles.featureItem}>
+                                      <CheckCircle2 size={14} className={styles.featureIcon} />
+                                      <span>1 Dal + 1 Seasonal Sabzi + Chapatis + Rice</span>
+                                    </li>
+                                  </>
+                                );
+                              })()}
                               <li className={styles.featureItem}>
                                 <CheckCircle2 size={14} className={styles.featureIcon} />
                                 <span>100% Free Doorstep Delivery</span>

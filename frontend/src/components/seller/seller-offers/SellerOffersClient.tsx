@@ -218,8 +218,10 @@ export default function SellerOffersClient({
                             <Percent size={18} />
                         </div>
                     </div>
-                    <div style={{ fontSize: "24px", fontWeight: 800, color: "#0F172A" }}>{totalUsage} Orders</div>
-                    <div style={{ fontSize: "12px", color: "#64748B", marginTop: "4px" }}>Claimed across store</div>
+                    <div style={{ fontSize: "24px", fontWeight: 800, color: "#0F172A" }}>
+                        {totalUsage} {totalUsage === 1 ? "Redemption" : "Redemptions"}
+                    </div>
+                    <div style={{ fontSize: "12px", color: "#64748B", marginTop: "4px" }}>Applied across customer orders</div>
                 </div>
 
                 <div style={{ backgroundColor: "#FFFFFF", padding: "18px 20px", borderRadius: "14px", border: "1px solid #E2E8F0" }}>

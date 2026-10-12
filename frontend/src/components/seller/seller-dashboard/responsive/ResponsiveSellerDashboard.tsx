@@ -20,6 +20,7 @@ import styles from "./ResponsiveSellerDashboard.module.css";
 
 import { useSellerProfile } from "@/hooks/useSellerProfile";
 import { useSellerNotifications } from "@/hooks/useSellerNotifications";
+import { useRoomModule } from "@/context/RoomModuleContext";
 
 export interface ResponsiveOrderSummary {
   id: string;
@@ -36,6 +37,7 @@ export interface ResponsiveDashboardMetrics {
   ordersToday?: string | number;
   pendingBookings?: string | number;
   codOutstanding?: string;
+  allTimeRevenue?: string;
 }
 
 export interface ResponsiveSellerDashboardProps {
@@ -57,6 +59,7 @@ const DEFAULT_METRICS: ResponsiveDashboardMetrics = {
   ordersToday: 0,
   pendingBookings: 0,
   codOutstanding: "₹0",
+  allTimeRevenue: "₹0",
 };
 
 export const ResponsiveSellerDashboard: React.FC<ResponsiveSellerDashboardProps> = ({
@@ -75,6 +78,7 @@ export const ResponsiveSellerDashboard: React.FC<ResponsiveSellerDashboardProps>
   const router = useRouter();
   const seller = useSellerProfile();
   const { unreadCount } = useSellerNotifications();
+  const { isRoomEnabled } = useRoomModule();
   const isNotificationActive =
     hasUnreadNotifications !== undefined ? hasUnreadNotifications : unreadCount > 0;
   const effectiveOwnerName =
@@ -321,16 +325,28 @@ export const ResponsiveSellerDashboard: React.FC<ResponsiveSellerDashboardProps>
               </p>
             </div>
 
-            {/* 3. Pending Bookings */}
-            <div className={styles.metricCard}>
-              <div className={styles.metricIconWrapper}>
-                <Calendar size={22} strokeWidth={2.3} />
+            {/* 3. Pending Bookings (if rooms enabled) OR Lifetime Revenue (if pure food kitchen) */}
+            {isRoomEnabled ? (
+              <div className={styles.metricCard}>
+                <div className={styles.metricIconWrapper}>
+                  <Calendar size={22} strokeWidth={2.3} />
+                </div>
+                <h3 className={styles.metricValue}>
+                  {metrics.pendingBookings ?? DEFAULT_METRICS.pendingBookings}
+                </h3>
+                <p className={styles.metricLabel}>Pending Bookings</p>
               </div>
-              <h3 className={styles.metricValue}>
-                {metrics.pendingBookings ?? DEFAULT_METRICS.pendingBookings}
-              </h3>
-              <p className={styles.metricLabel}>Pending Bookings</p>
-            </div>
+            ) : (
+              <div className={styles.metricCard}>
+                <div className={styles.metricIconWrapper}>
+                  <DollarSign size={22} strokeWidth={2.5} />
+                </div>
+                <h3 className={styles.metricValue}>
+                  {metrics.allTimeRevenue ?? DEFAULT_METRICS.allTimeRevenue}
+                </h3>
+                <p className={styles.metricLabel}>Lifetime Revenue</p>
+              </div>
+            )}
 
             {/* 4. COD Outstanding */}
             <div className={styles.metricCard}>

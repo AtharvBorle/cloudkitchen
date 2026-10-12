@@ -76,6 +76,18 @@ export const getUserMealSubscriptions = async () => {
                 status: sub.plan.status,
                 allowCancel: sub.plan.allowCancel,
                 pauseBillingPeriod: sub.plan.pauseBillingPeriod,
+                allowPause: Boolean(
+                    sub.plan.pauseBillingPeriod &&
+                    sub.plan.pauseBillingPeriod.trim().toLowerCase() !== "none" &&
+                    sub.plan.pauseBillingPeriod.trim().toLowerCase() !== "disabled" &&
+                    sub.plan.pauseBillingPeriod.trim().toLowerCase() !== "false"
+                ),
+                allowPauseBilling: Boolean(
+                    sub.plan.pauseBillingPeriod &&
+                    sub.plan.pauseBillingPeriod.trim().toLowerCase() !== "none" &&
+                    sub.plan.pauseBillingPeriod.trim().toLowerCase() !== "disabled" &&
+                    sub.plan.pauseBillingPeriod.trim().toLowerCase() !== "false"
+                ),
             } : null,
             seller: sub.seller ? {
                 id: sub.seller.id,
@@ -546,8 +558,15 @@ export const togglePauseUserMealSubscription = async (subscriptionId: string, is
         const pausePeriod = (subscription.plan?.pauseBillingPeriod || "").trim().toLowerCase();
         const allowPause = (subscription.plan as any)?.allowPause;
         const allowPauseBilling = (subscription.plan as any)?.allowPauseBilling;
-        if (pausePeriod === "disabled" || pausePeriod === "none" || pausePeriod === "false" || allowPause === false || allowPauseBilling === false) {
-            throw new ApiError("Pausing is not allowed for this meal plan by the kitchen partner.", 400);
+        if (
+            !pausePeriod ||
+            pausePeriod === "disabled" ||
+            pausePeriod === "none" ||
+            pausePeriod === "false" ||
+            allowPause === false ||
+            allowPauseBilling === false
+        ) {
+            throw new ApiError("Pausing is disabled for this meal plan by the kitchen partner.", 400);
         }
     }
 

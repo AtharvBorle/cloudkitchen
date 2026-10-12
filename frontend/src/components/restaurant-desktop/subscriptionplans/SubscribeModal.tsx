@@ -755,19 +755,35 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
           </div>
 
           {/* Included Features */}
-          {plan.features && plan.features.length > 0 && (
-            <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Plan Highlights</label>
-              <ul className={styles.featuresList}>
-                {plan.features.slice(0, 4).map((f, i) => (
-                  <li key={i} className={styles.featureItem}>
-                    <CheckCircle2 size={16} color="#16A34A" />
-                    <span>{f}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          {plan.features && plan.features.length > 0 && (() => {
+            const rawPause = String((plan as any)?.pauseBillingPeriod || "").trim().toLowerCase();
+            const isPauseAllowed = !(
+              rawPause === "none" ||
+              rawPause === "disabled" ||
+              rawPause === "false" ||
+              (plan as any)?.allowPause === false ||
+              (plan as any)?.allowPauseBilling === false
+            );
+            const filteredFeatures = isPauseAllowed
+              ? plan.features
+              : plan.features.filter((f) => !String(f).toLowerCase().includes("pause"));
+
+            if (filteredFeatures.length === 0) return null;
+
+            return (
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>Plan Highlights</label>
+                <ul className={styles.featuresList}>
+                  {filteredFeatures.slice(0, 4).map((f, i) => (
+                    <li key={i} className={styles.featureItem}>
+                      <CheckCircle2 size={16} color="#16A34A" />
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Footer */}

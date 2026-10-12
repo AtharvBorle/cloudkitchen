@@ -201,6 +201,8 @@ export const getSellerMealPlans = async () => {
             status: plan.status,
             allowCancel: plan.allowCancel,
             pauseBillingPeriod: plan.pauseBillingPeriod,
+            allowPause: plan.pauseBillingPeriod !== "None" && plan.pauseBillingPeriod !== "disabled",
+            allowPauseBilling: plan.pauseBillingPeriod !== "None" && plan.pauseBillingPeriod !== "disabled",
             subscribersCount: activeSubscribers,
             createdAt: plan.createdAt.toISOString(),
             updatedAt: plan.updatedAt.toISOString(),
@@ -362,6 +364,14 @@ export const createSellerMealPlan = async (req: Request) => {
         ? parseFloat(String(yearlyPrice).replace(/[^0-9.]/g, ""))
         : null;
 
+    const pausePeriodInput = String(body.pauseBillingPeriod || pauseBillingPeriod || "").trim().toLowerCase();
+    const isPauseDisabled =
+        body.allowPause === false ||
+        body.allowPauseBilling === false ||
+        pausePeriodInput === "none" ||
+        pausePeriodInput === "disabled" ||
+        pausePeriodInput === "false";
+
     const newPlan = await db.sellerMealPlan.create({
         data: {
             sellerId: sellerProfile.id,
@@ -377,7 +387,7 @@ export const createSellerMealPlan = async (req: Request) => {
             mealTimings: JSON.stringify(Array.isArray(mealTimings) ? mealTimings : []),
             status: status || "Live",
             allowCancel: allowCancel !== undefined ? Boolean(allowCancel) : false,
-            pauseBillingPeriod: (body.allowPause === false || body.allowPauseBilling === false) ? "None" : (pauseBillingPeriod || "30 Days"),
+            pauseBillingPeriod: isPauseDisabled ? "None" : (pauseBillingPeriod || "30 Days"),
         }
     });
 
@@ -397,6 +407,8 @@ export const createSellerMealPlan = async (req: Request) => {
         status: newPlan.status,
         allowCancel: newPlan.allowCancel,
         pauseBillingPeriod: newPlan.pauseBillingPeriod,
+        allowPause: !isPauseDisabled,
+        allowPauseBilling: !isPauseDisabled,
         subscribersCount: 0,
         createdAt: newPlan.createdAt.toISOString(),
         updatedAt: newPlan.updatedAt.toISOString(),
@@ -472,10 +484,21 @@ export const updateSellerMealPlan = async (req: Request) => {
     if (body.allowCancel !== undefined) {
         updateData.allowCancel = Boolean(body.allowCancel);
     }
-    if (body.allowPause === false || body.allowPauseBilling === false) {
+    const rawPauseStr = String(body.pauseBillingPeriod || "").trim().toLowerCase();
+    if (
+        body.allowPause === false ||
+        body.allowPauseBilling === false ||
+        rawPauseStr === "none" ||
+        rawPauseStr === "disabled" ||
+        rawPauseStr === "false"
+    ) {
         updateData.pauseBillingPeriod = "None";
     } else if (body.pauseBillingPeriod !== undefined) {
         updateData.pauseBillingPeriod = body.pauseBillingPeriod;
+    } else if (body.allowPause === true || body.allowPauseBilling === true) {
+        if (existingPlan.pauseBillingPeriod === "None" || existingPlan.pauseBillingPeriod === "disabled") {
+            updateData.pauseBillingPeriod = "30 Days";
+        }
     }
 
     const updated = await db.sellerMealPlan.update({
@@ -496,7 +519,12 @@ export const updateSellerMealPlan = async (req: Request) => {
     }
 
     const updatedPauseLower = String(updated.pauseBillingPeriod || "").trim().toLowerCase();
-    if (updatedPauseLower === "none" || updatedPauseLower === "disabled" || updatedPauseLower === "false") {
+    const isUpdatedPauseDisabled =
+        updatedPauseLower === "none" ||
+        updatedPauseLower === "disabled" ||
+        updatedPauseLower === "false";
+
+    if (isUpdatedPauseDisabled) {
         await db.userMealSubscription.updateMany({
             where: { planId: existingPlan.id, isPaused: true },
             data: { isPaused: false, status: "ACTIVE" }
@@ -531,6 +559,8 @@ export const updateSellerMealPlan = async (req: Request) => {
         status: updated.status,
         allowCancel: updated.allowCancel,
         pauseBillingPeriod: updated.pauseBillingPeriod,
+        allowPause: !isUpdatedPauseDisabled,
+        allowPauseBilling: !isUpdatedPauseDisabled,
         subscribersCount: updated.subscribersCount || 0,
         createdAt: updated.createdAt.toISOString(),
         updatedAt: updated.updatedAt.toISOString(),
@@ -696,6 +726,14 @@ export const getPublicMealPlans = async (req: Request) => {
         }
 
         const isWeekly = (p.duration || "1 Week").toLowerCase().includes("week");
+        const pausePeriodLower = String(p.pauseBillingPeriod || "").trim().toLowerCase();
+        const allowPause = Boolean(
+            pausePeriodLower &&
+            pausePeriodLower !== "none" &&
+            pausePeriodLower !== "disabled" &&
+            pausePeriodLower !== "false"
+        );
+
         return {
             id: p.id,
             sellerId: p.sellerId,
@@ -713,7 +751,9 @@ export const getPublicMealPlans = async (req: Request) => {
             features: parsedFeatures,
             mealTimings: parsedTimings,
             allowCancel: p.allowCancel,
-            pauseBillingPeriod: p.pauseBillingPeriod,
+            pauseBillingPeriod: allowPause ? p.pauseBillingPeriod : "None",
+            allowPause,
+            allowPauseBilling: allowPause,
         };
     });
 };

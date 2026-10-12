@@ -256,6 +256,8 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
         features: validFeatures,
         mealTimings: mealTimings.map((m) => `${m.name}: ${m.time}`),
         allowCancel: false,
+        allowPause: allowPauseBilling,
+        allowPauseBilling: allowPauseBilling,
         pauseBillingPeriod: allowPauseBilling ? (pauseBillingPeriod || "30 Days") : "None",
       });
     }

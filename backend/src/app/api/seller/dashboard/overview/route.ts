@@ -62,6 +62,18 @@ export async function GET(req: Request) {
 
         const menuItemsCount = await db.foodItem.count({ where: { sellerId: sellerProfile.id } });
         const roomsCount = await db.room.count({ where: { sellerId: sellerProfile.id } });
+        const pendingBookingsCount = await db.booking.count({
+            where: {
+                room: { sellerId: sellerProfile.id },
+                status: "PENDING"
+            }
+        });
+        const activeBookingsCount = await db.booking.count({
+            where: {
+                room: { sellerId: sellerProfile.id },
+                status: { in: ["PENDING", "CONFIRMED"] }
+            }
+        });
 
         // Day's orders (created between startDate and endDate)
         const dayOrders = await db.order.findMany({
@@ -80,11 +92,30 @@ export async function GET(req: Request) {
         );
         const todayOrdersCount = completedOrders.length;
 
-        // 1. Online paid/delivered revenue for the day (non-COD)
-        const onlinePaidOrders = nonCancelledOrders.filter(
-            (o) => o.paymentMethod !== "COD" && (o.isPaid || o.status === "DELIVERED" || o.status === "COMPLETED")
+        // Day's completed/paid revenue (sum of completed orders and non-cancelled paid orders on this day)
+        const dayDeliveredOrders = nonCancelledOrders.filter(
+            (o) => o.status === "DELIVERED" || o.status === "COMPLETED" || o.isPaid
         );
-        const onlineRevenue = onlinePaidOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+        const todayRevenue = dayDeliveredOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+
+        // All time completed orders and revenue
+        const allCompletedOrders = await db.order.findMany({
+            where: {
+                sellerId: sellerProfile.id,
+                status: { in: ["DELIVERED", "COMPLETED"] }
+            },
+            select: { totalAmount: true }
+        });
+        const allTimeRevenue = allCompletedOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+        const allTimeOrdersCount = allCompletedOrders.length;
+
+        // Active orders currently in kitchen / delivery pipeline
+        const activeOrdersCount = await db.order.count({
+            where: {
+                sellerId: sellerProfile.id,
+                status: { in: ["PENDING", "CONFIRMED", "PREPARING", "READY_FOR_PICKUP", "OUT_FOR_DELIVERY", "ON_THE_WAY"] }
+            }
+        });
 
         // 2. Riders of this seller & active COD wallet balances (amount currently in rider's hand)
         const riders = await db.deliveryPerson.findMany({
@@ -124,22 +155,6 @@ export async function GET(req: Request) {
             riderTotalCodOutstanding,
             Math.max(0, todayCodDelivered - todaySettledCod)
         );
-
-        // Realized COD revenue for the day = delivered COD minus any portion still held by the rider
-        const realizedCod = Math.max(0, todayCodDelivered - unsettledDayCod);
-
-        const todayRevenue = onlineRevenue + realizedCod;
-
-        // All time revenue for reference
-        const allPaidOrders = await db.order.findMany({
-            where: {
-                sellerId: sellerProfile.id,
-                status: { not: "CANCELLED" },
-                OR: [{ isPaid: true }, { status: "DELIVERED" }]
-            },
-            select: { totalAmount: true }
-        });
-        const allTimeRevenue = allPaidOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
 
         const activeSubs = await db.subscription.findMany({
             where: {
@@ -187,8 +202,10 @@ export async function GET(req: Request) {
             sellerProfile,
             todayOrdersCount,
             todayRevenue,
-            totalRevenue: todayRevenue,
+            totalRevenue: allTimeRevenue,
             allTimeRevenue,
+            allTimeOrdersCount,
+            activeOrdersCount,
             todayCodAmount,
             todayCodDelivered,
             todaySettledCod,
@@ -198,6 +215,8 @@ export async function GET(req: Request) {
             isToday,
             menuItemsCount,
             roomsCount,
+            pendingBookingsCount,
+            activeBookingsCount,
             validUntilDate: newestActiveSub?.validUntil || null,
             isFoodActive,
             isPropertyActive

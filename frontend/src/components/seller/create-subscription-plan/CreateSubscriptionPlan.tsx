@@ -556,6 +556,8 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
                       mealTimings: mealTimings.map((m) => `${m.name}: ${m.time}`),
                       status: 'Live',
                       allowCancel: false,
+                      allowPause: allowPauseBilling,
+                      allowPauseBilling: allowPauseBilling,
                       pauseBillingPeriod: allowPauseBilling ? (pauseBillingPeriod || '30 Days') : 'None',
                     });
 
