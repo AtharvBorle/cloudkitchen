@@ -1,7 +1,8 @@
 import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
-import { revalidateTag } from "next/cache";
+import { revalidateTag, revalidatePath } from "next/cache";
+import { emitCouponChanged } from "@/lib/realtime-events";
 
 export const getCoupons = async () => {
     const session = await getAuthSession();
@@ -61,7 +62,19 @@ export const createCoupon = async (req: Request) => {
         }
     });
 
-    revalidateTag("coupons", {});
+    try {
+        revalidateTag("coupons", {});
+        revalidateTag("public-coupons", {});
+        revalidatePath("/api/public/coupons");
+    } catch (e) {
+        console.error("Revalidate error:", e);
+    }
+
+    try {
+        emitCouponChanged(coupon, "CREATE");
+    } catch (emErr) {
+        console.error("Live coupon emit error:", emErr);
+    }
 
     return { coupon };
 };

@@ -28,6 +28,7 @@ import { calculateDistanceKm, getPincodeCoordinates, MAX_DELIVERY_RADIUS_KM } fr
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/explore-desktop/footer";
 import { fetchApi } from "@/lib/fetch-api";
+import { useLiveShopStream } from "@/hooks/useLiveShopStream";
 import styles from "./UserCart.module.css";
 
 export interface UserCartItem {
@@ -321,6 +322,8 @@ export const UserCart: React.FC<UserCartProps> = ({
           setAppliedPromo(null);
           setDiscountPercent(0);
           setPromoCode("");
+          setUserDismissedPromo(false);
+          sessionStorage.removeItem("user_dismissed_promo");
           sessionStorage.removeItem("appliedCoupon");
           sessionStorage.removeItem("applied_cart_coupon");
           localStorage.removeItem("appliedCoupon");
@@ -335,7 +338,7 @@ export const UserCart: React.FC<UserCartProps> = ({
     setCurrentAddress(formattedDefaultAddress);
   }, [formattedDefaultAddress]);
 
-  React.useEffect(() => {
+  const checkSellerStatus = React.useCallback(async () => {
     if (!currentSellerId) {
       setSellerDetails(null);
       setIsSellerClosed(false);
@@ -343,47 +346,42 @@ export const UserCart: React.FC<UserCartProps> = ({
       return;
     }
 
-    let isMounted = true;
-    async function checkSellerStatus() {
-      try {
-        const res = await fetchApi(`/api/public/shop/${encodeURIComponent(currentSellerId as string)}`);
-        if (res.ok && isMounted) {
-          const json = await res.json();
-          const sellerObj = json.data || json;
-          setSellerDetails(sellerObj);
-          if (
-            !sellerObj ||
-            sellerObj.isOnline === false ||
-            sellerObj.user?.isActive === false ||
-            (sellerObj.verificationStatus && sellerObj.verificationStatus !== "APPROVED")
-          ) {
-            setIsSellerClosed(true);
-            if (!hasShownUnavailableToast.current) {
-              hasShownUnavailableToast.current = true;
-              showToast("This kitchen is currently unavailable. Please try another kitchen.");
-            }
-          } else {
-            setIsSellerClosed(false);
-            hasShownUnavailableToast.current = false;
+    try {
+      const res = await fetchApi(`/api/public/shop/${encodeURIComponent(currentSellerId as string)}`);
+      if (res.ok) {
+        const json = await res.json();
+        const sellerObj = json.data || json;
+        setSellerDetails(sellerObj);
+        if (
+          !sellerObj ||
+          sellerObj.isOnline === false ||
+          sellerObj.user?.isActive === false ||
+          (sellerObj.verificationStatus && sellerObj.verificationStatus !== "APPROVED")
+        ) {
+          setIsSellerClosed(true);
+          if (!hasShownUnavailableToast.current) {
+            hasShownUnavailableToast.current = true;
+            showToast("This kitchen is currently unavailable. Please try another kitchen.");
           }
-        } else if (res.status === 404 || !res.ok) {
-          if (isMounted) {
-            setIsSellerClosed(true);
-            setSellerDetails(null);
-            if (!hasShownUnavailableToast.current) {
-              hasShownUnavailableToast.current = true;
-              showToast("This kitchen is currently unavailable. Please try another kitchen.");
-            }
-          }
+        } else {
+          setIsSellerClosed(false);
+          hasShownUnavailableToast.current = false;
         }
-      } catch (e) {
-        // Silently continue
+      } else if (res.status === 404 || !res.ok) {
+        setIsSellerClosed(true);
+        setSellerDetails(null);
+        if (!hasShownUnavailableToast.current) {
+          hasShownUnavailableToast.current = true;
+          showToast("This kitchen is currently unavailable. Please try another kitchen.");
+        }
       }
+    } catch (e) {
+      // Silently continue
     }
-    checkSellerStatus();
+  }, [currentSellerId]);
 
-    // Real-time polling every 3 seconds to immediately detect superadmin disable/status changes without manual page reload
-    const pollInterval = setInterval(checkSellerStatus, 3000);
+  React.useEffect(() => {
+    checkSellerStatus();
 
     const handleFocus = () => {
       checkSellerStatus();
@@ -397,12 +395,10 @@ export const UserCart: React.FC<UserCartProps> = ({
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      isMounted = false;
-      clearInterval(pollInterval);
       window.removeEventListener("focus", handleFocus);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [currentSellerId]);
+  }, [checkSellerStatus]);
 
   // Coverage calculation
   const { isOutsideCoverage, shopDistanceKm, maxDeliveryRadius } = React.useMemo(() => {
@@ -603,45 +599,50 @@ export const UserCart: React.FC<UserCartProps> = ({
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
 
   // Fetch available public coupons for the seller / platform
-  const [userDismissedPromo, setUserDismissedPromo] = useState<boolean>(false);
-  const activeSellerId = cartItems.find((ci) => ci.sellerId)?.sellerId || null;
-
-  React.useEffect(() => {
-    let isMounted = true;
-    async function fetchOffers() {
+  const [userDismissedPromo, setUserDismissedPromo] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
       try {
-        const targetSeller = currentSellerId || activeSellerId;
-        const queryParams = new URLSearchParams();
-        if (targetSeller) queryParams.set("sellerId", targetSeller);
-        if (session?.user?.id) queryParams.set("userId", session.user.id);
-        queryParams.set("_t", String(Date.now()));
-        const url = `/api/public/coupons?${queryParams.toString()}`;
-        const res = await fetchApi(url, {
-          cache: "no-store",
-          headers: {
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-            Pragma: "no-cache",
-          },
-        });
-        if (res.ok && isMounted) {
-          const json = await res.json();
-          const serverCoupons = Array.isArray(json)
-            ? json
-            : (json.data?.coupons || json.coupons || json.data || []);
-          setAvailableOffers(Array.isArray(serverCoupons) ? serverCoupons : []);
-        }
-      } catch (err) {
-        console.error("Failed to fetch available coupons:", err);
-      } finally {
-        if (isMounted) setIsLoadingOffers(false);
+        return sessionStorage.getItem("user_dismissed_promo") === "true";
+      } catch (e) {
+        return false;
       }
     }
+    return false;
+  });
+  const activeSellerId = cartItems.find((ci) => ci.sellerId)?.sellerId || null;
 
+  const fetchOffers = React.useCallback(async () => {
+    try {
+      const targetSeller = currentSellerId || activeSellerId;
+      const queryParams = new URLSearchParams();
+      if (targetSeller) queryParams.set("sellerId", targetSeller);
+      if (session?.user?.id) queryParams.set("userId", session.user.id);
+      queryParams.set("_t", String(Date.now()));
+      const url = `/api/public/coupons?${queryParams.toString()}`;
+      const res = await fetchApi(url, {
+        cache: "no-store",
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          Pragma: "no-cache",
+        },
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const serverCoupons = Array.isArray(json)
+          ? json
+          : (json.data?.coupons || json.coupons || json.data || []);
+        setAvailableOffers(Array.isArray(serverCoupons) ? serverCoupons : []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch available coupons:", err);
+    } finally {
+      setIsLoadingOffers(false);
+    }
+  }, [currentSellerId, activeSellerId, session?.user?.id]);
+
+  React.useEffect(() => {
     setIsLoadingOffers(true);
     fetchOffers();
-
-    // Real-time polling every 3 seconds for instant seller changes revalidation
-    const pollInterval = setInterval(fetchOffers, 3000);
 
     const handleFocus = () => {
       fetchOffers();
@@ -655,12 +656,29 @@ export const UserCart: React.FC<UserCartProps> = ({
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      isMounted = false;
-      clearInterval(pollInterval);
       window.removeEventListener("focus", handleFocus);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [currentSellerId, activeSellerId, session?.user?.id]);
+  }, [fetchOffers]);
+
+  // Zero-polling real-time shop stream (coupons, seller status, menu availability)
+  useLiveShopStream({
+    sellerId: currentSellerId || activeSellerId,
+    enabled: true,
+    onCouponUpdated: () => {
+      fetchOffers();
+    },
+    onSellerStatusChanged: (payload) => {
+      if (!currentSellerId || payload.sellerId === currentSellerId) {
+        checkSellerStatus();
+      }
+    },
+    onMenuUpdated: (payload) => {
+      if (!currentSellerId || payload.sellerId === currentSellerId) {
+        syncCartWithLiveMenu();
+      }
+    },
+  });
 
   // Live sync of applied coupon properties when seller changes them in real-time
   React.useEffect(() => {
@@ -778,7 +796,8 @@ export const UserCart: React.FC<UserCartProps> = ({
 
   // Auto-apply eligible coupon when conditions are met
   React.useEffect(() => {
-    if (userDismissedPromo || isValidatingPromo || isSuppressingAutoApplyRef.current) {
+    const isDismissed = userDismissedPromo || (typeof window !== "undefined" && sessionStorage.getItem("user_dismissed_promo") === "true");
+    if (isDismissed || isValidatingPromo || isSuppressingAutoApplyRef.current) {
       return;
     }
 
@@ -1267,6 +1286,7 @@ export const UserCart: React.FC<UserCartProps> = ({
     setPromoCode("");
     if (typeof window !== "undefined") {
       try {
+        sessionStorage.setItem("user_dismissed_promo", "true");
         sessionStorage.removeItem("applied_cart_coupon");
         sessionStorage.removeItem("appliedCoupon");
         localStorage.removeItem("appliedCoupon");
@@ -1282,6 +1302,13 @@ export const UserCart: React.FC<UserCartProps> = ({
     if (appliedPromo && appliedPromo === targetCode) {
       handleRemovePromo();
       return;
+    }
+
+    setUserDismissedPromo(false);
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.removeItem("user_dismissed_promo");
+      } catch (e) {}
     }
 
     if (!targetCode) {

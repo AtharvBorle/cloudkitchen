@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { revalidateTag, revalidatePath } from "next/cache";
+import { emitCouponChanged } from "@/lib/realtime-events";
 
 export function validateCouponCodeFormat(code: any): string {
     if (!code || typeof code !== "string" || !code.trim()) {
@@ -246,6 +247,12 @@ export const createCoupon = async (req: Request) => {
             revalidatePath("/api/seller/dashboard/offers");
         } catch (e) {
             console.error("Revalidate coupons tag error:", e);
+        }
+
+        try {
+            emitCouponChanged(newCoupon, "CREATE");
+        } catch (emErr) {
+            console.error("Live coupon emit error:", emErr);
         }
 
         return newCoupon;
@@ -539,6 +546,12 @@ export const updateCoupon = async (req: Request, couponId: string) => {
         console.error("Revalidate coupons tag error:", e);
     }
 
+    try {
+        emitCouponChanged(updatedCoupon, "UPDATE");
+    } catch (emErr) {
+        console.error("Live coupon emit error:", emErr);
+    }
+
     return updatedCoupon;
 };
 
@@ -582,6 +595,12 @@ export const deleteCoupon = async (couponId: string) => {
         revalidatePath("/api/seller/dashboard/offers");
     } catch (e) {
         console.error("Revalidate coupons tag error:", e);
+    }
+
+    try {
+        emitCouponChanged(existingCoupon, "DELETE");
+    } catch (emErr) {
+        console.error("Live coupon emit error:", emErr);
     }
 
     return null;

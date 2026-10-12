@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, AlertCircle, CheckCircle2, Info, X } from "lucide-react";
 
 import { fetchApi } from "@/lib/fetch-api";
+import { useLiveShopStream } from "@/hooks/useLiveShopStream";
 
 export type AddonItem = {
     id?: string;
@@ -251,7 +252,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         }
     }, []);
 
-    // Sync prices and availability on focus, visibility change, or interval polling
+    // Sync prices and availability on focus, visibility change, or manual refresh event
     useEffect(() => {
         const handleSync = () => {
             syncCartWithLiveMenu();
@@ -267,21 +268,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 }
             });
 
-            // Poll every 4s when there are items in the cart to detect deletions in real-time
-            const interval = setInterval(() => {
-                if (cartItems.length > 0) {
-                    handleSync();
-                }
-            }, 4000);
-
             return () => {
                 window.removeEventListener("focus", handleSync);
                 window.removeEventListener("seller-menu-updated", handleSync);
                 window.removeEventListener("cart-sync-requested", handleSync);
-                clearInterval(interval);
             };
         }
-    }, [syncCartWithLiveMenu, cartItems.length]);
+    }, [syncCartWithLiveMenu]);
+
+    const activeCartSellerId = cartItems.length > 0 ? (cartItems[0]?.sellerId || null) : null;
+
+    useLiveShopStream({
+        sellerId: activeCartSellerId,
+        enabled: Boolean(activeCartSellerId),
+        onMenuUpdated: () => {
+            syncCartWithLiveMenu();
+        },
+    });
 
     // Save to local storage on change
     useEffect(() => {

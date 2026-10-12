@@ -37,6 +37,7 @@ import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import { broadcastOrderToSellerNotifications } from "@/hooks/useSellerNotifications";
 import { calculateDistanceKm, getPincodeCoordinates, MAX_DELIVERY_RADIUS_KM } from "@/lib/geo-distance";
 import { HouseMapPicker } from "@/components/house-map-picker";
+import { useLiveShopStream } from "@/hooks/useLiveShopStream";
 import styles from "./SecureCheckout.module.css";
 
 export interface SavedAddressItem {
@@ -273,47 +274,42 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
     }
   };
 
-  useEffect(() => {
-    const sellerId = cartItems.find((ci) => ci.sellerId)?.sellerId;
-    if (!sellerId) {
+  const checkoutSellerId = cartItems.find((ci) => ci.sellerId)?.sellerId;
+
+  const checkSellerStatus = React.useCallback(async () => {
+    if (!checkoutSellerId) {
       setSellerDetails(null);
       return;
     }
 
-    let isMounted = true;
-    async function checkSellerStatus() {
-      try {
-        const res = await fetchApi(`/api/public/shop/${encodeURIComponent(sellerId as string)}`);
-        if (res.ok && isMounted) {
-          const json = await res.json();
-          const sellerObj = json.data || json;
-          setSellerDetails(sellerObj);
-          if (
-            !sellerObj ||
-            sellerObj.isOnline === false ||
-            sellerObj.user?.isActive === false ||
-            (sellerObj.verificationStatus && sellerObj.verificationStatus !== "APPROVED")
-          ) {
-            setIsSellerClosed(true);
-          } else {
-            setIsSellerClosed(false);
-          }
-        } else if (res.status === 404 || !res.ok) {
-          if (isMounted) {
-            setIsSellerClosed(true);
-            setSellerDetails(null);
-          }
+    try {
+      const res = await fetchApi(`/api/public/shop/${encodeURIComponent(checkoutSellerId as string)}`);
+      if (res.ok) {
+        const json = await res.json();
+        const sellerObj = json.data || json;
+        setSellerDetails(sellerObj);
+        if (
+          !sellerObj ||
+          sellerObj.isOnline === false ||
+          sellerObj.user?.isActive === false ||
+          (sellerObj.verificationStatus && sellerObj.verificationStatus !== "APPROVED")
+        ) {
+          setIsSellerClosed(true);
+        } else {
+          setIsSellerClosed(false);
         }
-      } catch (e) {
-        // Silently continue
+      } else if (res.status === 404 || !res.ok) {
+        setIsSellerClosed(true);
+        setSellerDetails(null);
       }
+    } catch (e) {
+      // Silently continue
     }
-    checkSellerStatus();
+  }, [checkoutSellerId]);
 
-    return () => {
-      isMounted = false;
-    };
-  }, [cartItems]);
+  useEffect(() => {
+    checkSellerStatus();
+  }, [checkSellerStatus]);
 
   // Delivery coverage & distance validation for selected delivery address
   const { isOutsideCoverage, shopDistanceKm, maxDeliveryRadius } = React.useMemo(() => {
@@ -609,6 +605,14 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
   useEffect(() => {
     try {
       if (typeof window !== "undefined") {
+        if (sessionStorage.getItem("user_dismissed_promo") === "true") {
+          setUserDismissedPromo(true);
+          setIsPromoApplied(false);
+          setAppliedCoupon(null);
+          setPromoCode("");
+          setDiscountPercent(0);
+          return;
+        }
         const saved = sessionStorage.getItem("applied_cart_coupon") || sessionStorage.getItem("appliedCoupon") || localStorage.getItem("appliedCoupon");
         if (saved) {
           const parsed = JSON.parse(saved);
@@ -769,6 +773,7 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
           localStorage.removeItem("pending_order_transaction");
           sessionStorage.removeItem("applied_cart_coupon");
           sessionStorage.removeItem("appliedCoupon");
+          sessionStorage.removeItem("user_dismissed_promo");
           localStorage.removeItem("appliedCoupon");
         } catch (e) {
           console.error("Failed to save confirmed order to storage:", e);
@@ -973,47 +978,51 @@ const loadRazorpayScript = (): Promise<boolean> => {
   const taxesAndCharges = 0;
   const grandTotal = Math.max(0, subtotal - discountAmount);
 
-  const [userDismissedPromo, setUserDismissedPromo] = useState<boolean>(false);
-  const activeSellerId = cartItems[0]?.sellerId || (checkoutItems[0] as any)?.sellerId || null;
-
-  // Fetch available public coupons for the seller / platform with real-time sync
-  useEffect(() => {
-    let isMounted = true;
-    async function fetchOffers() {
+  const [userDismissedPromo, setUserDismissedPromo] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
       try {
-        const queryParams = new URLSearchParams();
-        if (activeSellerId) queryParams.set("sellerId", activeSellerId);
-        if (session?.user?.id) queryParams.set("userId", session.user.id);
-        queryParams.set("_t", String(Date.now()));
-        const url = `/api/public/coupons?${queryParams.toString()}`;
-        const res = await fetchApi(url, {
-          cache: "no-store",
-          headers: {
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-            Pragma: "no-cache",
-          },
-        });
-        if (res.ok && isMounted) {
-          const json = await res.json();
-          const serverCoupons = Array.isArray(json) ? json : (json.data?.coupons || json.coupons || json.data || []);
-          if (Array.isArray(serverCoupons)) {
-            setAvailableOffers(serverCoupons);
-          } else {
-            setAvailableOffers([]);
-          }
-        }
-      } catch {
-        if (isMounted) setAvailableOffers([]);
-      } finally {
-        if (isMounted) setIsLoadingOffers(false);
+        return sessionStorage.getItem("user_dismissed_promo") === "true";
+      } catch (e) {
+        return false;
       }
     }
+    return false;
+  });
+  const activeSellerId = cartItems[0]?.sellerId || (checkoutItems[0] as any)?.sellerId || null;
 
+  const fetchOffers = React.useCallback(async () => {
+    try {
+      const queryParams = new URLSearchParams();
+      if (activeSellerId) queryParams.set("sellerId", activeSellerId);
+      if (session?.user?.id) queryParams.set("userId", session.user.id);
+      queryParams.set("_t", String(Date.now()));
+      const url = `/api/public/coupons?${queryParams.toString()}`;
+      const res = await fetchApi(url, {
+        cache: "no-store",
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          Pragma: "no-cache",
+        },
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const serverCoupons = Array.isArray(json) ? json : (json.data?.coupons || json.coupons || json.data || []);
+        if (Array.isArray(serverCoupons)) {
+          setAvailableOffers(serverCoupons);
+        } else {
+          setAvailableOffers([]);
+        }
+      }
+    } catch {
+      setAvailableOffers([]);
+    } finally {
+      setIsLoadingOffers(false);
+    }
+  }, [activeSellerId, session?.user?.id]);
+
+  useEffect(() => {
     setIsLoadingOffers(true);
     fetchOffers();
-
-    // Polling every 3 seconds for instant seller changes revalidation
-    const pollInterval = setInterval(fetchOffers, 3000);
 
     const handleFocus = () => {
       fetchOffers();
@@ -1027,12 +1036,24 @@ const loadRazorpayScript = (): Promise<boolean> => {
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      isMounted = false;
-      clearInterval(pollInterval);
       window.removeEventListener("focus", handleFocus);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [activeSellerId, session?.user?.id]);
+  }, [fetchOffers]);
+
+  // Zero-polling real-time shop stream (coupons, seller status)
+  useLiveShopStream({
+    sellerId: activeSellerId || checkoutSellerId,
+    enabled: true,
+    onCouponUpdated: () => {
+      fetchOffers();
+    },
+    onSellerStatusChanged: (payload) => {
+      if (!checkoutSellerId || payload.sellerId === checkoutSellerId) {
+        checkSellerStatus();
+      }
+    },
+  });
 
   // Live sync of applied coupon properties when seller changes them in real-time
   useEffect(() => {
@@ -1120,7 +1141,8 @@ const loadRazorpayScript = (): Promise<boolean> => {
 
   // Auto-apply eligible coupon when conditions are met
   useEffect(() => {
-    if (userDismissedPromo || isValidatingPromo || availableOffers.length === 0) {
+    const isDismissed = userDismissedPromo || (typeof window !== "undefined" && sessionStorage.getItem("user_dismissed_promo") === "true");
+    if (isDismissed || isValidatingPromo || availableOffers.length === 0) {
       return;
     }
 
@@ -1339,6 +1361,14 @@ const loadRazorpayScript = (): Promise<boolean> => {
     setDiscountPercent(0);
     setAppliedCoupon(null);
     setPromoCode("");
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.setItem("user_dismissed_promo", "true");
+        sessionStorage.removeItem("applied_cart_coupon");
+        sessionStorage.removeItem("appliedCoupon");
+        localStorage.removeItem("appliedCoupon");
+      } catch (e) {}
+    }
     showToast("Promo code removed", "info");
   };
 
@@ -1398,6 +1428,11 @@ const loadRazorpayScript = (): Promise<boolean> => {
     }
 
     setUserDismissedPromo(false);
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.removeItem("user_dismissed_promo");
+      } catch (e) {}
+    }
     setPromoCode(clean);
     setIsValidatingPromo(true);
     const currentSellerId = (checkoutItems[0] as any)?.sellerId || cartItems[0]?.sellerId;
@@ -1733,6 +1768,8 @@ const loadRazorpayScript = (): Promise<boolean> => {
                   localStorage.setItem("latestConfirmedOrder", JSON.stringify(confirmedOrderPayload));
                   localStorage.removeItem("pending_order_transaction");
                   sessionStorage.removeItem("appliedCoupon");
+                  sessionStorage.removeItem("applied_cart_coupon");
+                  sessionStorage.removeItem("user_dismissed_promo");
                   localStorage.removeItem("appliedCoupon");
                 } catch (e) {
                   console.error("Failed to save confirmed order to session storage:", e);
@@ -1896,6 +1933,8 @@ const loadRazorpayScript = (): Promise<boolean> => {
           localStorage.setItem("latestConfirmedOrder", JSON.stringify(confirmedOrderPayload));
           localStorage.removeItem("pending_order_transaction");
           sessionStorage.removeItem("appliedCoupon");
+          sessionStorage.removeItem("applied_cart_coupon");
+          sessionStorage.removeItem("user_dismissed_promo");
           localStorage.removeItem("appliedCoupon");
         } catch (e) {
           console.error("Failed to save confirmed order to session storage:", e);
