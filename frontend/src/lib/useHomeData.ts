@@ -780,12 +780,13 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
 
   const activePincode = (options?.pincode || defaultAddress?.pincode || localPin || '').trim() || null;
 
+  const canUseLocalCoords = !defaultAddress?.pincode || !localPin || defaultAddress.pincode.trim() === localPin.trim();
   const userLat = (defaultAddress?.latitude != null && !isNaN(Number(defaultAddress.latitude)))
     ? Number(defaultAddress.latitude)
-    : (localLat !== null && !isNaN(localLat) ? localLat : null);
+    : (canUseLocalCoords && localLat !== null && !isNaN(localLat) ? localLat : null);
   const userLng = (defaultAddress?.longitude != null && !isNaN(Number(defaultAddress.longitude)))
     ? Number(defaultAddress.longitude)
-    : (localLng !== null && !isNaN(localLng) ? localLng : null);
+    : (canUseLocalCoords && localLng !== null && !isNaN(localLng) ? localLng : null);
   const pinFallbackCoords = activePincode ? getPincodeCoordinates(activePincode) : null;
   const activeUserLat = userLat ?? pinFallbackCoords?.lat ?? null;
   const activeUserLng = userLng ?? pinFallbackCoords?.lng ?? null;
@@ -852,7 +853,7 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
   ) => {
     const maxRadius =
       sellerRadiusKm !== undefined && sellerRadiusKm !== null && Number(sellerRadiusKm) > 0
-        ? Number(sellerRadiusKm)
+        ? Math.min(Number(sellerRadiusKm), MAX_DELIVERY_RADIUS_KM)
         : MAX_DELIVERY_RADIUS_KM;
 
     // 1. Resolve user coordinates: either direct GPS/pinned lat/lng OR fallback from active pincode
@@ -926,10 +927,10 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
     );
   }, [enrichedKitchens, activePincode, hasUserCoords, activeUserLat, activeUserLng]);
 
-  // Filter food items strictly by delivery radius when user location/pincode is active
+  // Strictly filter food items by 5 km delivery radius when user location/pincode is active
   const deliverableFoodItems = useMemo(() => {
     if (!activePincode && !hasUserCoords) return enrichedFoodItems;
-    const deliverable = enrichedFoodItems.filter((item) =>
+    return enrichedFoodItems.filter((item) =>
       isSellerDeliverable(
         item.sellerLatitude,
         item.sellerLongitude,
@@ -940,13 +941,12 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
         item.sellerDeliveryRadiusKm
       )
     );
-    return deliverable;
   }, [enrichedFoodItems, activePincode, hasUserCoords, activeUserLat, activeUserLng]);
 
-  // Filter kitchens strictly by delivery radius when user location/pincode is active
+  // Strictly filter kitchens by 5 km delivery radius when user location/pincode is active
   const deliverableKitchens = useMemo(() => {
     if (!activePincode && !hasUserCoords) return enrichedKitchens;
-    const deliverable = enrichedKitchens.filter((k) =>
+    return enrichedKitchens.filter((k) =>
       isSellerDeliverable(
         k.latitude,
         k.longitude,
@@ -957,7 +957,6 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
         k.deliveryRadiusKm
       )
     );
-    return deliverable;
   }, [enrichedKitchens, activePincode, hasUserCoords, activeUserLat, activeUserLng]);
 
   // Compute filtered food items based on dynamic distance + filter options

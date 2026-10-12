@@ -334,23 +334,54 @@ export default function PopularOrders({
                 )}
               </div>
 
-              {/* Info: Title & Coupon Code */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "2px", minWidth: 0, width: "100%", overflow: "hidden" }}>
-                <h3
-                  style={{
-                    fontSize: "1.02rem",
-                    fontWeight: "800",
-                    color: isClosed ? "#64748B" : "#18181B",
-                    margin: 0,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    maxWidth: "100%",
-                  }}
-                  title={offer.title}
-                >
-                  {offer.title}
-                </h3>
+              {/* Info: Title, Price, Kitchen, Dietary, Description & Coupon Code */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "3px", minWidth: 0, width: "100%", overflow: "hidden" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
+                  <h3
+                    style={{
+                      fontSize: "1.02rem",
+                      fontWeight: "800",
+                      color: isClosed ? "#64748B" : "#18181B",
+                      margin: 0,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      minWidth: 0,
+                      flex: 1,
+                    }}
+                    title={offer.title}
+                  >
+                    {offer.title}
+                  </h3>
+                  {offer.price !== undefined && offer.price > 0 && (
+                    <span
+                      style={{
+                        fontSize: "1.02rem",
+                        fontWeight: "800",
+                        color: isClosed ? "#64748B" : "#18181B",
+                        flexShrink: 0,
+                      }}
+                    >
+                      ₹{offer.price}
+                    </span>
+                  )}
+                </div>
+
+                {offer.sellerName && (
+                  <span
+                    style={{
+                      fontSize: "0.76rem",
+                      fontWeight: "600",
+                      color: isClosed ? "#94A3B8" : "#475569",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    by {offer.sellerName}
+                  </span>
+                )}
+
                 <div style={{ display: "flex", alignItems: "center", gap: "4px", margin: "2px 0", flexWrap: "wrap" }}>
                   <DietaryTag
                     itemType={resolveDishDietaryTypes({
@@ -362,11 +393,30 @@ export default function PopularOrders({
                     size="xs"
                   />
                 </div>
+
+                {offer.description && offer.description.trim() && offer.description.trim().toLowerCase() !== "xyz" && (
+                  <span
+                    style={{
+                      fontSize: "0.75rem",
+                      fontWeight: "500",
+                      color: isClosed ? "#94A3B8" : "#334155",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      maxWidth: "100%",
+                      display: "block",
+                    }}
+                    title={offer.description}
+                  >
+                    {offer.description}
+                  </span>
+                )}
+
                 <span
                   style={{
                     fontSize: "0.80rem",
-                    fontWeight: "600",
-                    color: isClosed ? "#94A3B8" : "#475569",
+                    fontWeight: "700",
+                    color: isClosed ? "#94A3B8" : "#9A3412",
                     whiteSpace: "nowrap",
                     overflow: "hidden",
                     textOverflow: "ellipsis",

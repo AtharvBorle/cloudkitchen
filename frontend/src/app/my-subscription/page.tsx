@@ -1064,11 +1064,30 @@ function MySubscriptionContent() {
                     <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
                       {displayedSubs.map((subItem) => {
                         const isPauseAllowed = (() => {
-                          const pausePeriod = (subItem.plan?.pauseBillingPeriod || "").trim().toLowerCase();
+                          const matchedLivePlan = allPlans.find(
+                            (p) =>
+                              (subItem.planId && p.id === subItem.planId) ||
+                              (subItem.plan?.id && p.id === subItem.plan.id) ||
+                              (subItem.plan?.name &&
+                                p.name &&
+                                p.name.trim().toLowerCase() === subItem.plan.name.trim().toLowerCase() &&
+                                (!subItem.sellerId || p.sellerId === subItem.sellerId))
+                          );
+                          const effectivePlan: any = matchedLivePlan || subItem.plan;
+                          const pausePeriod = (
+                            matchedLivePlan?.pauseBillingPeriod ??
+                            subItem.plan?.pauseBillingPeriod ??
+                            ""
+                          )
+                            .trim()
+                            .toLowerCase();
                           return !(
+                            !pausePeriod ||
                             pausePeriod === "disabled" ||
                             pausePeriod === "none" ||
                             pausePeriod === "false" ||
+                            effectivePlan?.allowPause === false ||
+                            effectivePlan?.allowPauseBilling === false ||
                             (subItem.plan as any)?.allowPause === false ||
                             (subItem.plan as any)?.allowPauseBilling === false
                           );
@@ -1130,18 +1149,21 @@ function MySubscriptionContent() {
                             </div>
 
                             {/* Pause Subscription Section */}
-                            <PauseSubscription
-                              isPaused={subItem.isPaused}
-                              disabled={subItem.status?.toUpperCase() === "CANCELLED"}
-                              allowPause={isPauseAllowed}
-                              pausePolicyNote="Pausing is disabled for this meal plan by the kitchen partner."
-                              onTogglePause={(nextPaused) => handleTogglePause(subItem.id, nextPaused)}
-                            />
+                            {isPauseAllowed && (
+                              <PauseSubscription
+                                isPaused={subItem.isPaused}
+                                disabled={subItem.status?.toUpperCase() === "CANCELLED"}
+                                allowPause={isPauseAllowed}
+                                pausePolicyNote="Pausing is disabled for this meal plan by the kitchen partner."
+                                onTogglePause={(nextPaused) => handleTogglePause(subItem.id, nextPaused)}
+                              />
+                            )}
 
                             {/* Delivery Times & Benefits Grid */}
                             <div className={styles.detailsGrid}>
                               <DeliveryTimes slots={getSubscriptionSlots(subItem)} />
                               <SubscriptionBenefits
+                                allowPause={isPauseAllowed}
                                 benefits={
                                   subItem.plan?.features && subItem.plan.features.length > 0
                                     ? subItem.plan.features
@@ -1458,12 +1480,28 @@ function MySubscriptionContent() {
                           </div>
 
                           {/* Policy Row */}
-                          <div className={styles.policyRow}>
-                            <span className={styles.policyItem}>
-                              <PauseCircle size={12} color="#FF5500" />
-                              <span>Pause: {plan.pauseBillingPeriod || "30 Days"}</span>
-                            </span>
-                          </div>
+                          {(() => {
+                            const rawPause = (plan.pauseBillingPeriod || "").trim();
+                            const rawPauseLower = rawPause.toLowerCase();
+                            const isPlanPauseAllowed = Boolean(
+                              rawPause &&
+                              rawPauseLower !== "none" &&
+                              rawPauseLower !== "disabled" &&
+                              rawPauseLower !== "false" &&
+                              (plan as any).allowPause !== false &&
+                              (plan as any).allowPauseBilling !== false
+                            );
+                            if (!isPlanPauseAllowed) return null;
+                            const displayPause = rawPauseLower === "monthly" ? "30 Days" : rawPause;
+                            return (
+                              <div className={styles.policyRow}>
+                                <span className={styles.policyItem}>
+                                  <PauseCircle size={12} color="#FF5500" />
+                                  <span>Pause: {displayPause}</span>
+                                </span>
+                              </div>
+                            );
+                          })()}
 
                           {/* Subscribe CTA Button */}
                           <button

@@ -200,12 +200,32 @@ export default function ManageSubscriptionCanvas({
   const filteredSubscribers = subscribers.filter((sub) => {
     const q = (searchQuery || "").toLowerCase().trim();
     if (!q) return true;
-    const nameMatch = (sub.customerName || sub.name || "").toLowerCase().includes(q);
-    const planMatch = (sub.planName || "").toLowerCase().includes(q);
-    const addressMatch = (sub.deliveryAddress || sub.roomNo || "").toLowerCase().includes(q);
-    const statusMatch = (sub.status || "").toLowerCase().includes(q);
-    const phoneMatch = (sub.customerPhone || "").toLowerCase().includes(q);
-    return nameMatch || planMatch || addressMatch || statusMatch || phoneMatch;
+    const formattedAddr = formatDeliveryAddressDisplay(sub.deliveryAddress, sub.roomNo);
+    const rawAmountDigits = String(sub.amount || sub.pricePaid || "").replace(/[^\d.]/g, "");
+    const rowText = [
+      sub.customerName,
+      sub.name,
+      sub.customerPhone,
+      sub.customerEmail,
+      formattedAddr,
+      sub.deliveryAddress,
+      sub.roomNo,
+      sub.planName,
+      sub.tier,
+      sub.cycle,
+      sub.startDate,
+      sub.renewalDate,
+      sub.amount,
+      rawAmountDigits,
+      sub.status,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    if (rowText.includes(q)) return true;
+    const tokens = q.split(/\s+/).filter(Boolean);
+    return tokens.length > 1 && tokens.every((t) => rowText.includes(t));
   });
 
   const [subPage, setSubPage] = useState<number>(1);
@@ -228,13 +248,14 @@ export default function ManageSubscriptionCanvas({
   const now = new Date();
   const isSubscriberActive = (s: RecentSubscriber) => {
     const statusStr = String(s.status || "").toUpperCase().trim();
-    const isStatusActive = statusStr === "ACTIVE" || statusStr === "LIVE";
+    if (statusStr === "EXPIRED" || statusStr === "CANCELLED" || statusStr === "PAUSED") return false;
+    const isStatusActive = statusStr === "ACTIVE" || statusStr === "LIVE" || statusStr === "EXPIRING SOON";
     const notPaused = !s.isPaused;
     const notExpired = !s.endDate || new Date(s.endDate) >= now;
     return isStatusActive && notPaused && notExpired;
   };
 
-  // Accurately calculate unique users who currently have an active subscription
+  // Accurately calculate active subscription pricing and Monthly Recurring Revenue (MRR)
   const getPlanBasePrice = (p: PlanItem) => {
     const dur = (p.duration || "1 Week").toLowerCase();
     if (dur.includes("year") && p.yearlyPrice) {
@@ -271,13 +292,13 @@ export default function ManageSubscriptionCanvas({
   const uniqueActiveSubscribersMap = new Map<string, RecentSubscriber>();
   subscribers.forEach((s) => {
     if (isSubscriberActive(s)) {
-      const userKey = String(
-        s.userId || s.customerEmail || s.customerPhone || s.customerName || s.name || s.id
+      const subKey = String(
+        s.id || `${s.userId || s.customerEmail || s.customerPhone || s.customerName || s.name}-${s.planId || s.planName}`
       )
         .toLowerCase()
         .trim();
-      if (userKey && !uniqueActiveSubscribersMap.has(userKey)) {
-        uniqueActiveSubscribersMap.set(userKey, s);
+      if (subKey && !uniqueActiveSubscribersMap.has(subKey)) {
+        uniqueActiveSubscribersMap.set(subKey, s);
       }
     }
   });
@@ -739,7 +760,7 @@ export default function ManageSubscriptionCanvas({
             const uniquePlanSubsMap = new Map<string, RecentSubscriber>();
             planActiveSubs.forEach((s) => {
               const key = String(
-                s.userId || s.customerEmail || s.customerPhone || s.customerName || s.name || s.id
+                s.id || `${s.userId || s.customerEmail || s.customerPhone || s.customerName || s.name}-${plan.id}`
               )
                 .toLowerCase()
                 .trim();
@@ -992,7 +1013,7 @@ export default function ManageSubscriptionCanvas({
               {/* Action Buttons */}
               <div style={{ display: "flex", gap: "8px" }}>
                 <Link
-                  href={`/seller/subscription/edit?id=${plan.planId}`}
+                  href={`/seller/subscription/edit?id=${plan.id}`}
                   style={{
                     flex: 1,
                     display: "inline-flex",
@@ -1096,6 +1117,8 @@ export default function ManageSubscriptionCanvas({
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            flexWrap: "wrap",
+            gap: "12px",
           }}
         >
           <div>
@@ -1113,6 +1136,29 @@ export default function ManageSubscriptionCanvas({
               Live resident assignments and auto-renewals.
             </p>
           </div>
+
+          <Link
+            href="/seller/subscription/subscribers"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              backgroundColor: "#FFF1E8",
+              color: "#FF5500",
+              border: "1px solid #FFD9C6",
+              padding: "8px 16px",
+              borderRadius: "8px",
+              fontSize: "13px",
+              fontWeight: 700,
+              textDecoration: "none",
+              transition: "all 0.15s ease",
+              whiteSpace: "nowrap",
+            }}
+            className="edit-plan-btn"
+          >
+            <span>View All</span>
+            <ChevronRight size={15} strokeWidth={2.5} />
+          </Link>
         </div>
 
         {/* Subscribers Table */}

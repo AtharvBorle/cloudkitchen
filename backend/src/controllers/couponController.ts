@@ -24,6 +24,11 @@ export const getAllCoupons = async () => {
         throw new ApiError("Please log in first to view discount coupons.", 401);
     }
 
+    await db.coupon.updateMany({
+        where: { currentUsersCount: { lt: 0 } },
+        data: { currentUsersCount: 0 }
+    });
+
     const role = session.user.role;
     let coupons;
 
@@ -48,7 +53,10 @@ export const getAllCoupons = async () => {
         throw new ApiError("Access denied. You do not have permission to view coupons.", 403);
     }
 
-    return coupons;
+    return coupons.map(c => ({
+        ...c,
+        currentUsersCount: Math.max(0, Number(c.currentUsersCount) || 0)
+    }));
 };
 
 export const createCoupon = async (req: Request) => {

@@ -78,6 +78,7 @@ export default function ManageSubscriptionCanvasDas({
         <Topbar
           title={topbarTitle}
           searchPlaceholder={searchPlaceholder}
+          searchQuery={searchQuery}
           ownerName={ownerName}
           partnerRole={partnerRole}
           avatarInitials={avatarInitials}

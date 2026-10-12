@@ -187,7 +187,7 @@ export default function SellerOffersClient({
 
     const activeCount = offers.filter(o => o.isActive && !isOfferDraft(o) && (!o.endDate || new Date(o.endDate) >= new Date())).length;
     const draftCount = offers.filter(o => isOfferDraft(o)).length;
-    const totalUsage = offers.reduce((sum, o) => sum + (o.currentUsage || o.usedCount || 0), 0);
+    const totalUsage = offers.reduce((sum, o) => sum + Math.max(0, Number(o.currentUsage ?? o.usedCount ?? o.currentUsersCount ?? 0)), 0);
 
     return (
         <div style={{ width: "100%", fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}>
@@ -539,7 +539,7 @@ export default function SellerOffersClient({
                                                 ₹{offer.minOrderAmount ?? offer.minimumCartValue ?? 0}
                                             </td>
                                             <td style={{ padding: "14px 16px", color: "#0F172A", fontWeight: 600 }}>
-                                                {offer.currentUsage ?? offer.usedCount ?? offer.currentUsersCount ?? 0} / {offer.usageLimit || offer.maxUsage || offer.maxUsers || "∞"}
+                                                {Math.max(0, Number(offer.currentUsage ?? offer.usedCount ?? offer.currentUsersCount ?? 0))} / {offer.usageLimit || offer.maxUsage || offer.maxUsers || "∞"}
                                             </td>
                                             <td style={{ padding: "14px 16px", color: "#64748B" }}>
                                                 {offer.noExpiry ? "No Expiry" : offer.validUntil ? new Date(offer.validUntil).toLocaleDateString() : offer.endDate ? new Date(offer.endDate).toLocaleDateString() : (isDraft ? "Draft" : "Active")}

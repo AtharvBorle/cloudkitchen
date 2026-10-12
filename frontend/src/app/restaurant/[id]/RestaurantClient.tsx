@@ -232,6 +232,15 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
                     features = [];
                   }
                 }
+                const rawPause = String(plan.pauseBillingPeriod || "").trim().toLowerCase();
+                const isPauseAllowed = Boolean(
+                  rawPause &&
+                  rawPause !== "none" &&
+                  rawPause !== "disabled" &&
+                  rawPause !== "false" &&
+                  plan.allowPause !== false &&
+                  plan.allowPauseBilling !== false
+                );
                 if (features.length === 0) {
                   features = [
                     "Fresh & hot home-style delivery",
@@ -239,8 +248,10 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
                       ? `Served for ${Array.isArray(plan.mealTimings) ? plan.mealTimings.join(", ") : plan.mealTimings}`
                       : "Daily breakfast, lunch or dinner",
                     "Direct doorstep delivery",
-                    "Pause anytime when away",
+                    ...(isPauseAllowed ? ["Pause anytime when away"] : []),
                   ];
+                } else if (!isPauseAllowed) {
+                  features = features.filter((f) => !String(f).toLowerCase().includes("pause"));
                 }
 
                 const rawPrice = plan.price !== undefined && plan.price !== null

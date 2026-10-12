@@ -506,7 +506,7 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
 
       {/* 4. Notifications Card Stack */}
       {filteredNotifications.length === 0 ? (
-        <div className={styles.emptyState}>
+        <div key={`empty-${activeFilter}`} className={styles.emptyState}>
           <div className={styles.emptyIconWrapper}>
             {searchQuery.trim() ? <Search size={26} color="#64748B" /> : <Bell size={26} />}
           </div>
@@ -549,11 +549,11 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
           )}
         </div>
       ) : (
-        <div className={styles.notificationList}>
-          {filteredNotifications.map((item) => {
+        <div key={`list-${activeFilter}`} className={styles.notificationList}>
+          {filteredNotifications.map((item, idx) => {
             return (
               <div
-                key={item.id}
+                key={`${item.id}-${idx}`}
                 className={`${styles.notificationCard} ${!item.isRead ? styles.unreadCard : ""}`}
                 style={{ cursor: "pointer" }}
                 onClick={() => {

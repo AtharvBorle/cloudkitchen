@@ -25,6 +25,80 @@ function notifyAll() {
   });
 }
 
+function getCanonicalNotificationKey(item: SellerNotificationItem): string {
+  const rawId = String(item.id || "").trim();
+  const title = String(item.title || "").trim();
+  const category = String(item.category || "orders").toLowerCase();
+
+  // Order notifications: unify client `notif-order-...` and backend `ord-new-...` / `#ORD-...`
+  if (
+    category === "orders" ||
+    rawId.startsWith("ord-") ||
+    rawId.startsWith("notif-order-")
+  ) {
+    const titleShortMatch = title.match(/#(?:ORD-)?([A-Za-z0-9]+)/i);
+    const shortFromTitle = titleShortMatch ? titleShortMatch[1].slice(-6).toUpperCase() : "";
+    const metaOrderId = item.metadata?.orderId ? String(item.metadata.orderId).trim() : "";
+    const strippedId = rawId
+      .replace(/^(?:notif-order-|ord-[a-z]+-)/i, "")
+      .replace(/^ORD-/i, "")
+      .trim();
+    const shortId =
+      shortFromTitle ||
+      (metaOrderId ? metaOrderId.slice(-6).toUpperCase() : "") ||
+      (strippedId ? strippedId.slice(-6).toUpperCase() : rawId);
+
+    const lowerTitle = title.toLowerCase();
+    const eventType = lowerTitle.includes("cancel") || rawId.startsWith("ord-can-")
+      ? "cancel"
+      : lowerTitle.includes("deliver") || rawId.startsWith("ord-don-")
+      ? "delivered"
+      : "new";
+
+    return `order:${eventType}:${shortId}`;
+  }
+
+  if (category === "delivery" || rawId.startsWith("notif-deliv-") || rawId.startsWith("ord-del-")) {
+    const strippedId = rawId
+      .replace(/^(?:notif-deliv-|ord-del-)/i, "")
+      .replace(/^ORD-/i, "")
+      .trim();
+    return `delivery:${strippedId.slice(-6).toUpperCase() || rawId}`;
+  }
+
+  if (category === "stock" || rawId.startsWith("stock-") || rawId.startsWith("notif-stock-")) {
+    const strippedId = rawId.replace(/^(?:notif-stock-|notif-|stock-)/i, "").trim();
+    return `stock:${strippedId || title.toLowerCase()}`;
+  }
+
+  if (category === "bookings" || rawId.startsWith("bk-") || rawId.startsWith("notif-book-")) {
+    const strippedId = rawId.replace(/^(?:notif-book-|bk-)/i, "").trim();
+    return `booking:${strippedId.slice(-6).toUpperCase() || rawId}`;
+  }
+
+  return `${category}:${rawId || title.toLowerCase()}`;
+}
+
+function deduplicateNotifications(items: SellerNotificationItem[]): SellerNotificationItem[] {
+  const seenIds = new Set<string>();
+  const seenKeys = new Set<string>();
+  const result: SellerNotificationItem[] = [];
+
+  for (const item of items) {
+    if (!item || typeof item !== "object") continue;
+    const id = String(item.id || "").trim();
+    const canonicalKey = getCanonicalNotificationKey(item);
+    if ((id && seenIds.has(id)) || seenKeys.has(canonicalKey)) {
+      continue;
+    }
+    if (id) seenIds.add(id);
+    seenKeys.add(canonicalKey);
+    result.push(item);
+  }
+
+  return result;
+}
+
 function loadInitialFromStorage(): SellerNotificationItem[] {
   if (typeof window === "undefined") {
     return [];
@@ -41,7 +115,7 @@ function loadInitialFromStorage(): SellerNotificationItem[] {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        return parsed;
+        return deduplicateNotifications(parsed);
       }
     }
   } catch (err) {
@@ -51,10 +125,11 @@ function loadInitialFromStorage(): SellerNotificationItem[] {
 }
 
 function persistNotifications(items: SellerNotificationItem[], shouldBroadcast = true) {
-  memoryNotifications = items;
+  const cleanItems = deduplicateNotifications(items);
+  memoryNotifications = cleanItems;
   if (typeof window !== "undefined") {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanItems));
     } catch (err) {
       console.error("Failed to persist notifications:", err);
     }
@@ -63,7 +138,7 @@ function persistNotifications(items: SellerNotificationItem[], shouldBroadcast =
       try {
         if ("BroadcastChannel" in window) {
           const bc = new BroadcastChannel("cloudkitchen_seller_notifications_bc");
-          bc.postMessage({ type: "SYNC_NOTIFICATIONS", payload: items });
+          bc.postMessage({ type: "SYNC_NOTIFICATIONS", payload: cleanItems });
           bc.close();
         }
       } catch {}
@@ -150,9 +225,11 @@ export function addSellerNotification(
   };
 
   // If already present, update in-place with latest info
+  const newCanonicalKey = getCanonicalNotificationKey(newItem);
   const existingIndex = current.findIndex(
     (n) =>
       n.id === newItemId ||
+      getCanonicalNotificationKey(n) === newCanonicalKey ||
       (newItemId.startsWith("stock-") && n.id === `notif-${newItemId}`) ||
       (newItemId.startsWith("stock-") && n.id === `notif-stock-${newItemId.replace("stock-", "")}`) ||
       (newItemId.startsWith("bk-") && (n.id === `notif-book-${newItemId.replace("bk-", "")}` || n.id === newItemId)) ||
@@ -496,7 +573,7 @@ function setupGlobalNotificationListeners() {
         if ((event.data?.type === "NEW_ORDER_NOTIFICATION" || event.data?.type === "NEW_NOTIFICATION") && event.data.payload) {
           addSellerNotification(event.data.payload);
         } else if (event.data?.type === "SYNC_NOTIFICATIONS" && Array.isArray(event.data.payload)) {
-          memoryNotifications = event.data.payload;
+          memoryNotifications = deduplicateNotifications(event.data.payload);
           notifyAll();
         }
       };
@@ -509,7 +586,7 @@ function setupGlobalNotificationListeners() {
       try {
         const parsed = JSON.parse(e.newValue);
         if (Array.isArray(parsed)) {
-          memoryNotifications = parsed;
+          memoryNotifications = deduplicateNotifications(parsed);
           notifyAll();
         }
       } catch {}
@@ -579,9 +656,11 @@ export async function syncNotificationsFromBackend() {
     const updated = [...current];
 
     serverNotifications.forEach((serverItem) => {
+      const serverCanonicalKey = getCanonicalNotificationKey(serverItem);
       const matchIndex = updated.findIndex(
         (n) =>
           n.id === serverItem.id ||
+          getCanonicalNotificationKey(n) === serverCanonicalKey ||
           (serverItem.id.startsWith("stock-") && (n.id === `notif-${serverItem.id}` || n.id === `notif-stock-${serverItem.id.replace("stock-", "")}`)) ||
           (serverItem.id.startsWith("bk-") && (n.id === `notif-book-${serverItem.id.replace("bk-", "")}` || n.id === serverItem.id)) ||
           (serverItem.id.startsWith("notif-book-") && (n.id === `bk-${serverItem.id.replace("notif-book-", "")}` || n.id === serverItem.id)) ||

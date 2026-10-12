@@ -75,21 +75,27 @@ export async function GET(req: Request) {
         });
 
         const nonCancelledOrders = dayOrders.filter((o) => o.status !== "CANCELLED");
-        const todayOrdersCount = nonCancelledOrders.length;
+        const completedOrders = dayOrders.filter(
+            (o) => o.status === "DELIVERED" || o.status === "COMPLETED"
+        );
+        const todayOrdersCount = completedOrders.length;
 
         // 1. Online paid/delivered revenue for the day (non-COD)
         const onlinePaidOrders = nonCancelledOrders.filter(
-            (o) => o.paymentMethod !== "COD" && (o.isPaid || o.status === "DELIVERED")
+            (o) => o.paymentMethod !== "COD" && (o.isPaid || o.status === "DELIVERED" || o.status === "COMPLETED")
         );
         const onlineRevenue = onlinePaidOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
 
-        // 2. Riders of this seller & active COD wallet balances
+        // 2. Riders of this seller & active COD wallet balances (amount currently in rider's hand)
         const riders = await db.deliveryPerson.findMany({
             where: { sellerId: sellerProfile.id },
             select: { id: true, outstandingBalance: true }
         });
         const riderIds = riders.map((r) => r.id);
-        const riderTotalCodOutstanding = riders.reduce((sum, r) => sum + (r.outstandingBalance || 0), 0);
+        const riderTotalCodOutstanding = riders.reduce(
+            (sum, r) => sum + Math.max(0, r.outstandingBalance || 0),
+            0
+        );
 
         // 3. Settlements recorded by seller from delivery riders on this day
         const daySettlements = await db.deliveryTransaction.findMany({
@@ -109,14 +115,18 @@ export async function GET(req: Request) {
         const codOrders = nonCancelledOrders.filter((o) => o.paymentMethod === "COD");
         const todayCodAmount = codOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
         const todayCodDelivered = codOrders
-            .filter((o) => o.status === "DELIVERED" || o.isPaid)
+            .filter((o) => o.status === "DELIVERED" || o.status === "COMPLETED" || o.isPaid)
             .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
 
-        // Realized COD revenue:
-        // When seller records settlement, rider wallet decrements and cash is collected by seller -> enters revenue today!
-        const realizedCod = todaySettledCod > 0
-            ? todaySettledCod
-            : Math.max(0, todayCodDelivered - riderTotalCodOutstanding);
+        // Unsettled COD from this day's completed orders cannot exceed the actual COD still in the rider's hand.
+        // Once the rider hands over the cash to the kitchen owner, riderTotalCodOutstanding is 0, so unsettled is 0.
+        const unsettledDayCod = Math.min(
+            riderTotalCodOutstanding,
+            Math.max(0, todayCodDelivered - todaySettledCod)
+        );
+
+        // Realized COD revenue for the day = delivered COD minus any portion still held by the rider
+        const realizedCod = Math.max(0, todayCodDelivered - unsettledDayCod);
 
         const todayRevenue = onlineRevenue + realizedCod;
 
@@ -165,10 +175,13 @@ export async function GET(req: Request) {
 
         const newestActiveSub = activeSubs.sort((a, b) => b.validUntil.getTime() - a.validUntil.getTime())[0];
 
-        // For today: COD Outstanding is rider wallet balance. When settled, rider wallet balance is 0.
+        // COD Outstanding only shows COD amount currently still in the hand of the rider.
+        // Once the rider hands over the cash to the kitchen owner, codOutstandingVal is 0.
         const codOutstandingVal = isToday
             ? riderTotalCodOutstanding
-            : Math.max(0, todayCodAmount - todaySettledCod);
+            : unsettledDayCod;
+
+        const formattedSelectedDate = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, "0")}-${String(startDate.getDate()).padStart(2, "0")}`;
 
         return successResponse({
             sellerProfile,
@@ -181,7 +194,7 @@ export async function GET(req: Request) {
             todaySettledCod,
             riderTotalCodOutstanding,
             codOutstanding: codOutstandingVal,
-            selectedDate: startDate.toISOString().split("T")[0],
+            selectedDate: formattedSelectedDate,
             isToday,
             menuItemsCount,
             roomsCount,

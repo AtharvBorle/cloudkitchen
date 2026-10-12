@@ -256,11 +256,13 @@ export default function Properties({
   }, []);
 
   const basePlaces = Array.isArray(places) ? places : (allKitchens && allKitchens.length > 0 ? allKitchens : []);
+  const allPlacesSource = allKitchens && allKitchens.length > 0 ? allKitchens : basePlaces;
 
   // Compute dynamic cuisine counts from available places & dishes
   const dynamicCuisines = React.useMemo(() => {
+    const cuisinePool = basePlaces.length > 0 ? basePlaces : allPlacesSource;
     return CUISINES.map((c) => {
-      const matchCount = basePlaces.filter((p) =>
+      const matchCount = cuisinePool.filter((p) =>
         kitchenMatchesCuisine(p, c.id, foodItems)
       ).length;
       return {
@@ -268,11 +270,20 @@ export default function Properties({
         count: matchCount,
       };
     });
-  }, [basePlaces, foodItems]);
+  }, [basePlaces, allPlacesSource, foodItems]);
 
-  // Compute dynamic dietary counts
+  // Compute dynamic dietary counts from all kitchens (filtered by cuisine/price, not dietary) so counts don't collapse to 0 when toggling a diet
   const dynamicDietary = React.useMemo(() => {
-    const countSource = basePlaces;
+    let countSource = allPlacesSource;
+    if (selectedCuisines.length > 0) {
+      countSource = countSource.filter((p) =>
+        selectedCuisines.some((cId) => kitchenMatchesCuisine(p, cId, foodItems))
+      );
+    }
+    countSource = countSource.filter((p) =>
+      isKitchenMatchingPrice(p, activePricePreset, maxPrice, foodItems)
+    );
+
     return DIETARY.map((d) => {
       const matchCount = countSource.filter((p) =>
         isKitchenMatchingDiet(
@@ -286,7 +297,7 @@ export default function Properties({
         count: matchCount,
       };
     });
-  }, [basePlaces, foodItems]);
+  }, [allPlacesSource, selectedCuisines, activePricePreset, maxPrice, foodItems]);
 
   // Dynamically filter places
   const filteredPlaces = React.useMemo(() => {
@@ -327,54 +338,40 @@ export default function Properties({
   };
 
   const toggleDietary = (id: string) => {
-    const isPureVegId = id === "pure_veg";
+    const isPureVegId = id === "pure_veg" || id === "pure-veg";
     const isNonVegId = id === "non-veg" || id === "non_veg";
 
     const isCurrentlyChecked = isPureVegId
-      ? selectedDietary.includes("pure_veg")
+      ? selectedDietary.includes("pure_veg") || selectedDietary.includes("pure-veg")
       : isNonVegId
       ? selectedDietary.includes("non-veg") || selectedDietary.includes("non_veg")
       : selectedDietary.includes(id);
 
-    let next: string[];
-    if (isCurrentlyChecked) {
-      if (isPureVegId) {
-        next = selectedDietary.filter((item) => item !== "pure_veg");
-      } else if (isNonVegId) {
-        next = selectedDietary.filter((item) => item !== "non-veg" && item !== "non_veg");
-      } else {
-        next = selectedDietary.filter((item) => item !== id);
-      }
-    } else {
-      if (isNonVegId) {
-        next = ["non-veg"];
-      } else if (isPureVegId) {
-        const withoutNonVeg = selectedDietary.filter((item) => item !== "non-veg" && item !== "non_veg");
-        next = [...withoutNonVeg, "pure_veg"];
-      } else {
-        const withoutNonVeg = selectedDietary.filter((item) => item !== "non-veg" && item !== "non_veg");
-        next = [...withoutNonVeg, id];
-      }
-    }
+    const normalizedId = isPureVegId ? "pure_veg" : isNonVegId ? "non-veg" : id;
+    const next: string[] = isCurrentlyChecked ? [] : [normalizedId];
 
     setInternalSelectedDietary(next);
-    onDietaryChange?.(next);
-
-    if (typeof window !== "undefined") {
+    if (onDietaryChange) {
+      onDietaryChange(next);
+    } else if (typeof window !== "undefined") {
       try {
-        const dietVal = next.includes("pure_veg")
-          ? "pure_veg"
-          : next.includes("non-veg") || next.includes("non_veg")
-          ? "non-veg"
-          : next.includes("vegan")
-          ? "vegan"
-          : next.includes("jain")
-          ? "jain"
-          : "all";
+        const dietVal =
+          next.length === 0
+            ? "all"
+            : next.includes("pure_veg")
+            ? "pure_veg"
+            : next.includes("non-veg") || next.includes("non_veg")
+            ? "non-veg"
+            : next.includes("vegan")
+            ? "vegan"
+            : next.includes("jain")
+            ? "jain"
+            : "all";
         localStorage.setItem("cloudkitchen_diet_preference", dietVal);
-        localStorage.setItem("cloudkitchen_veg_preference", String(dietVal === "pure_veg" || dietVal === "vegan" || dietVal === "jain"));
+        const isVeg = dietVal === "pure_veg" || dietVal === "vegan" || dietVal === "jain";
+        localStorage.setItem("cloudkitchen_veg_preference", String(isVeg));
         window.dispatchEvent(new CustomEvent("cloudkitchen_diet_preference_changed", { detail: dietVal }));
-        window.dispatchEvent(new CustomEvent("cloudkitchen_veg_preference_changed", { detail: dietVal === "pure_veg" || dietVal === "vegan" || dietVal === "jain" }));
+        window.dispatchEvent(new CustomEvent("cloudkitchen_veg_preference_changed", { detail: isVeg }));
       } catch {}
     }
   };
@@ -446,7 +443,13 @@ export default function Properties({
     const isPure = isPlacePureVeg(place, foodItems);
     const isPureVegActive = selectedDietary.includes("pure_veg") || selectedDietary.includes("pure-veg");
 
-    if (isPure || isPureVegActive) {
+    if (selectedDietary.includes("vegan")) {
+      params.set("diet", "vegan");
+    } else if (selectedDietary.includes("jain")) {
+      params.set("diet", "jain");
+    } else if (selectedDietary.includes("non-veg") || selectedDietary.includes("non_veg")) {
+      params.set("diet", "non-veg");
+    } else if (isPure || isPureVegActive) {
       params.set("vegOnly", "true");
     }
     if (activePricePreset && activePricePreset !== "all") {

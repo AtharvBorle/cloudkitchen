@@ -125,17 +125,24 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
 
   useEffect(() => {
     const loadPlan = async () => {
+      const cleanPrefix = (planIdParam || "").toUpperCase().startsWith("PLN-")
+        ? (planIdParam || "").slice(4).trim().toLowerCase()
+        : "";
+      const matchPlan = (list: MealSubscriptionPlan[]) =>
+        list.find(
+          (p) =>
+            p.id === planIdParam ||
+            p.planId === planIdParam ||
+            (cleanPrefix && p.id.toLowerCase().startsWith(cleanPrefix))
+        );
+
       let plans = getStoredMealPlans();
-      let found = plans.find((p) => p.id === planIdParam || p.planId === planIdParam);
-      if (!found) {
-        const fetched = await fetchStoredMealPlans();
-        if (fetched?.plans) {
-          plans = fetched.plans;
-          found = plans.find((p) => p.id === planIdParam || p.planId === planIdParam) || plans[0];
-        }
-      } else {
-        found = found || plans[0];
+      const fetched = await fetchStoredMealPlans();
+      if (fetched?.plans && fetched.plans.length > 0) {
+        plans = fetched.plans;
       }
+
+      const found = matchPlan(plans) || plans[0];
 
       if (found) {
         setTargetPlanId(found.id);
@@ -162,7 +169,11 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
           (found as any).allowPause === false ||
           (found as any).allowPauseBilling === false;
         setAllowPauseBilling(!isPauseDisabled);
-        setPauseBillingPeriod(isPauseDisabled ? "30 Days" : (found.pauseBillingPeriod || "30 Days"));
+        setPauseBillingPeriod(
+          isPauseDisabled || pausePeriodRaw === "monthly"
+            ? "30 Days"
+            : (found.pauseBillingPeriod || "30 Days")
+        );
         setMetrics({
           subscribers: found.subscribersCount || 0,
           monthlyRevenue: found.monthlyRevenue || "₹0",

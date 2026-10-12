@@ -124,7 +124,7 @@ function FoodExploreContent() {
     if (queryParam) setSearchQuery(queryParam);
     if (dietaryParam) setSelectedDiet(dietaryParam);
     if (priceParam) setSelectedPrice(priceParam);
-    if (offersParam) setOffersOnly(offersParam);
+    setOffersOnly(offersParam);
     if (sortParam) setSortBy(sortParam);
   }, [categoryParam, queryParam, dietaryParam, priceParam, offersParam, sortParam]);
 
@@ -136,11 +136,11 @@ function FoodExploreContent() {
         set.add(c.name);
       }
     });
-    homeData.allFoodItems.forEach((f) => {
+    homeData.foodItems.forEach((f) => {
       if (f.categoryName) set.add(f.categoryName);
     });
     return Array.from(set);
-  }, [homeData.categories, homeData.allFoodItems]);
+  }, [homeData.categories, homeData.foodItems]);
 
   // Dynamic filter counts
   const filterCounts = useMemo(() => {
@@ -220,7 +220,7 @@ function FoodExploreContent() {
 
     // Offers only
     if (offersOnly) {
-      list = list.filter((f) => isDishHavingOffers(f, homeData.coupons));
+      list = list.filter((f) => isDishHavingOffers(f, homeData.coupons, sourceItems));
     }
 
     // Sort
@@ -271,17 +271,14 @@ function FoodExploreContent() {
         if ((a.sellerIsOnline === false) !== (b.sellerIsOnline === false)) {
           return a.sellerIsOnline === false ? 1 : -1;
         }
-        const rA = Number(a.rating) || 0;
-        const rB = Number(b.rating) || 0;
-        if (rB !== rA) return rB - rA;
-        return (a.distanceKm ?? 999) - (b.distanceKm ?? 999);
+        return 0;
       });
     }
 
     return list;
   }, [
     homeData.foodItems,
-    homeData.allFoodItems,
+    homeData.kitchens,
     homeData.coupons,
     searchQuery,
     selectedCategory,
@@ -574,6 +571,9 @@ function FoodExploreContent() {
     setOffersOnly(false);
     setOpenOnly(false);
     setSortBy("popular");
+    if (typeof window !== "undefined") {
+      router.replace("/food-explore", { scroll: false });
+    }
   };
 
   const handleAddToCart = (dish: DynamicFoodItem, showAnimation: boolean = true) => {
@@ -960,7 +960,7 @@ function FoodExploreContent() {
                   <button
                     key={d.id}
                     type="button"
-                    onClick={() => setSelectedDiet(d.id as any)}
+                    onClick={() => setSelectedDiet(isSelected && d.id !== "all" ? "all" : (d.id as any))}
                     className={`${filterStyles.dietPillBtn} ${isSelected ? filterStyles.dietPillBtnSelected : ""}`}
                   >
                     <span>{d.label}</span>
@@ -1109,7 +1109,20 @@ function FoodExploreContent() {
               {/* Offers & Deals Toggle */}
               <button
                 type="button"
-                onClick={() => setOffersOnly(!offersOnly)}
+                onClick={() => {
+                  const next = !offersOnly;
+                  setOffersOnly(next);
+                  if (typeof window !== "undefined") {
+                    const params = new URLSearchParams(window.location.search);
+                    if (next) {
+                      params.set("offers", "true");
+                    } else {
+                      params.delete("offers");
+                    }
+                    const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
+                    router.replace(newUrl, { scroll: false });
+                  }
+                }}
                 className={`${filterStyles.toggleBtn} ${offersOnly ? filterStyles.toggleBtnActiveOffers : ""}`}
               >
                 <span
@@ -1302,7 +1315,11 @@ function FoodExploreContent() {
                   const isMaxStockInCart = !isClosed && stockLimit !== -1 && quantityInCart >= stockLimit;
                   const dishAddons = parseDishAddons(dish.addons || (dish as any).variants);
                   const hasAddons = dishAddons.length > 0;
-                  const offerDetails = getDishOfferBadge(dish, homeData.coupons);
+                  const offerDetails = getDishOfferBadge(
+                    dish,
+                    homeData.coupons,
+                    homeData.allFoodItems && homeData.allFoodItems.length > 0 ? homeData.allFoodItems : homeData.foodItems
+                  );
 
                   return (
                     <div
@@ -1529,6 +1546,51 @@ function FoodExploreContent() {
                             ));
                           })()}
                         </div>
+
+                        {/* Dish Description & Active Offer Coupon Code */}
+                        {dish.description && dish.description.trim() && dish.description.trim().toLowerCase() !== "xyz" && (
+                          <p
+                            style={{
+                              margin: "0",
+                              fontSize: "0.78rem",
+                              color: isClosed ? "#94A3B8" : "#475569",
+                              fontWeight: "500",
+                              lineHeight: "1.35",
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                            title={dish.description}
+                          >
+                            {dish.description}
+                          </p>
+                        )}
+
+                        {!isClosed && offerDetails.hasOffer && (offerDetails.couponCode || offerDetails.couponDescription) && (
+                          <div
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "5px",
+                              backgroundColor: "#FFF7ED",
+                              border: "1px dashed #FDBA74",
+                              color: "#C2410C",
+                              fontSize: "0.74rem",
+                              fontWeight: "700",
+                              padding: "3px 8px",
+                              borderRadius: "6px",
+                              width: "fit-content",
+                              maxWidth: "100%",
+                            }}
+                          >
+                            <Tag size={11} color="#EA580C" style={{ flexShrink: 0 }} />
+                            <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              {offerDetails.couponCode ? `Use code: ${offerDetails.couponCode}` : offerDetails.couponDescription}
+                            </span>
+                          </div>
+                        )}
 
                         {/* Rating Stars + Ratings Count & Delivery Time Row */}
                         <div

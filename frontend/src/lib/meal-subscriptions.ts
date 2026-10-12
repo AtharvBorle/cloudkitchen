@@ -150,7 +150,9 @@ export function formatMealPlan(rawPlan: any): MealSubscriptionPlan {
     allowCancel: rawPlan.allowCancel ?? false,
     pauseBillingPeriod: (rawPlan.allowPause === false || rawPlan.allowPauseBilling === false)
       ? "None"
-      : (rawPlan.pauseBillingPeriod !== undefined ? rawPlan.pauseBillingPeriod : "30 Days"),
+      : (rawPlan.pauseBillingPeriod !== undefined
+          ? (String(rawPlan.pauseBillingPeriod).trim().toLowerCase() === "monthly" ? "30 Days" : rawPlan.pauseBillingPeriod)
+          : "30 Days"),
   };
 }
 
@@ -172,7 +174,8 @@ export async function fetchStoredMealPlans(): Promise<{
       const now = new Date();
       const isSubActive = (s: any) => {
         const statusStr = String(s.status || "").toUpperCase().trim();
-        const isStatusActive = statusStr === "ACTIVE" || statusStr === "LIVE";
+        if (statusStr === "EXPIRED" || statusStr === "CANCELLED" || statusStr === "PAUSED") return false;
+        const isStatusActive = statusStr === "ACTIVE" || statusStr === "LIVE" || statusStr === "EXPIRING SOON";
         const notPaused = !s.isPaused;
         const notExpired = !s.endDate || new Date(s.endDate) >= now;
         return isStatusActive && notPaused && notExpired;
@@ -213,47 +216,51 @@ export async function fetchStoredMealPlans(): Promise<{
           return matchId || matchName;
         });
 
-        const planActiveUsers = new Set<string>();
+        const uniquePlanSubs = new Map<string, MealSubscriber>();
         planActiveSubs.forEach((s) => {
-          const key = s.userId || s.customerEmail || s.customerPhone || s.customerName || s.name || s.id;
-          if (key) planActiveUsers.add(String(key).toLowerCase().trim());
+          const key = String(s.id || `${s.userId || s.customerEmail || s.customerPhone || s.customerName}-${plan.id}`).toLowerCase().trim();
+          if (key && !uniquePlanSubs.has(key)) {
+            uniquePlanSubs.set(key, s);
+          }
         });
+        const dedupedPlanSubs = Array.from(uniquePlanSubs.values());
 
-        const activeCount = Array.isArray(payload.subscribers) ? planActiveUsers.size : (plan.subscribersCount || 0);
+        const activeCount = Array.isArray(payload.subscribers) ? dedupedPlanSubs.length : (plan.subscribersCount || 0);
         plan.subscribersCount = activeCount;
-        const planRev = planActiveSubs.length > 0
-          ? planActiveSubs.reduce((sum, s) => sum + (s.pricePaid || plan.rawWeeklyPrice || 0), 0)
+        const planRev = dedupedPlanSubs.length > 0
+          ? dedupedPlanSubs.reduce((sum, s) => sum + (s.pricePaid || plan.rawWeeklyPrice || 0), 0)
           : (plan.rawWeeklyPrice || 0) * activeCount;
         plan.monthlyRevenue = `₹${planRev.toLocaleString("en-IN")}`;
       });
 
-      const activeUserKeys = new Set<string>();
+      const uniqueActiveSubsMap = new Map<string, MealSubscriber>();
       mappedSubscribers.forEach((s) => {
         if (isSubActive(s)) {
-          const key = s.userId || s.customerEmail || s.customerPhone || s.customerName || s.id;
-          if (key) activeUserKeys.add(String(key).toLowerCase().trim());
+          const key = String(s.id || `${s.userId || s.customerEmail || s.customerPhone || s.customerName}-${s.planId || s.planName}`).toLowerCase().trim();
+          if (key && !uniqueActiveSubsMap.has(key)) {
+            uniqueActiveSubsMap.set(key, s);
+          }
         }
       });
+      const activeSubsList = Array.from(uniqueActiveSubsMap.values());
 
-      const activeRevTotal = mappedSubscribers
-        .filter(isSubActive)
-        .reduce((sum, s) => {
-          if (s.pricePaid && s.pricePaid > 0) return sum + s.pricePaid;
-          const matchedPlan = mappedPlans.find(
-            (p) =>
-              (s.planId && (s.planId === p.id || s.planId === p.planId)) ||
-              (s.planName && p.name && s.planName.trim().toLowerCase() === p.name.trim().toLowerCase())
-          );
-          return sum + (matchedPlan?.rawWeeklyPrice || 0);
-        }, 0);
+      const activeRevTotal = activeSubsList.reduce((sum, s) => {
+        if (s.pricePaid && s.pricePaid > 0) return sum + s.pricePaid;
+        const matchedPlan = mappedPlans.find(
+          (p) =>
+            (s.planId && (s.planId === p.id || s.planId === p.planId)) ||
+            (s.planName && p.name && s.planName.trim().toLowerCase() === p.name.trim().toLowerCase())
+        );
+        return sum + (matchedPlan?.rawWeeklyPrice || 0);
+      }, 0);
 
       const metrics: MealPlanMetrics = payload.metrics ? {
         ...payload.metrics,
-        activeSubscribers: activeUserKeys.size,
+        activeSubscribers: activeSubsList.length,
         rawMRR: activeRevTotal,
         monthlyRecurringRevenue: activeRevTotal > 0 ? `₹${activeRevTotal.toLocaleString("en-IN")}` : "₹0",
       } : {
-        activeSubscribers: activeUserKeys.size,
+        activeSubscribers: activeSubsList.length,
         monthlyRecurringRevenue: activeRevTotal > 0 ? `₹${activeRevTotal.toLocaleString("en-IN")}` : "₹0",
         rawMRR: activeRevTotal,
         activePlansCount: mappedPlans.filter((p) => p.status === "Live").length,
@@ -368,13 +375,20 @@ export async function saveMealPlan(
 
 export async function updateMealPlan(id: string, updates: Partial<MealSubscriptionPlan>): Promise<MealSubscriptionPlan | null> {
   const existing = getStoredMealPlans();
-  const targetIndex = existing.findIndex((p) => p.id === id || p.planId === id);
-  if (targetIndex === -1 && existing.length === 0) return null;
+  const cleanPrefix = String(id || "").toUpperCase().startsWith("PLN-") ? String(id).slice(4).trim().toLowerCase() : "";
+  const targetIndex = existing.findIndex(
+    (p) =>
+      p.id === id ||
+      p.planId === id ||
+      (cleanPrefix && p.id.toLowerCase().startsWith(cleanPrefix))
+  );
 
   const current = targetIndex !== -1 ? existing[targetIndex] : null;
+  const resolvedId = current?.id || id;
+  let serverUpdatedPlan: MealSubscriptionPlan | null = null;
 
   try {
-    const payload: any = { id };
+    const payload: any = { id: resolvedId };
     if (updates.name !== undefined) payload.name = updates.name;
     if (updates.tier !== undefined) payload.tier = updates.tier;
     if (updates.weeklyPrice !== undefined) {
@@ -396,22 +410,37 @@ export async function updateMealPlan(id: string, updates: Partial<MealSubscripti
     if (updates.allowCancel !== undefined) payload.allowCancel = updates.allowCancel;
     if (updates.pauseBillingPeriod !== undefined) payload.pauseBillingPeriod = updates.pauseBillingPeriod;
 
-    await fetchApi("/api/seller/meal-plans", {
+    const res = await fetchApi("/api/seller/meal-plans", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
+    if (res.ok) {
+      const json = await res.json();
+      const data = json.data || json;
+      if (data && data.id) {
+        serverUpdatedPlan = formatMealPlan(data);
+      }
+    }
   } catch (err) {
     console.error("Error updating meal plan in backend DB:", err);
   }
 
-  if (current) {
-    const updated: MealSubscriptionPlan = formatMealPlan({
-      ...current,
-      ...updates,
-    });
+  const finalPlan: MealSubscriptionPlan | null =
+    serverUpdatedPlan ||
+    (current
+      ? formatMealPlan({
+          ...current,
+          ...updates,
+        })
+      : null);
 
-    existing[targetIndex] = updated;
+  if (finalPlan) {
+    if (targetIndex !== -1) {
+      existing[targetIndex] = finalPlan;
+    } else {
+      existing.unshift(finalPlan);
+    }
 
     if (typeof window !== "undefined") {
       try {
@@ -422,7 +451,7 @@ export async function updateMealPlan(id: string, updates: Partial<MealSubscripti
       }
     }
 
-    return updated;
+    return finalPlan;
   }
 
   return null;

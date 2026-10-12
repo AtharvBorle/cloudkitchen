@@ -513,7 +513,7 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
         {/* Notification List */}
         <main className={styles.contentArea}>
           {filteredNotifications.length === 0 ? (
-            <div className={styles.emptyState}>
+            <div key={`empty-${activeTab}`} className={styles.emptyState}>
               <div className={styles.emptyIconWrapper}>
                 {searchQuery.trim() ? <Search size={24} color="#64748B" /> : <Inbox size={26} />}
               </div>
@@ -552,11 +552,11 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
               )}
             </div>
           ) : (
-            filteredNotifications.map((notif) => {
+            filteredNotifications.map((notif, idx) => {
               const isExpanded = expandedId === notif.id;
               return (
                 <div
-                  key={notif.id}
+                  key={`${notif.id}-${idx}`}
                   className={`${styles.notificationCard} ${!notif.isRead ? styles.unreadCard : ""}`}
                   style={{ cursor: "pointer" }}
                   onClick={(e) => {

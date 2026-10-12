@@ -256,6 +256,12 @@ export type { PlanItem as SubscriptionPlanItem } from "./subscription/ManageSubs
 export { default as ManageSubscriptionCanvasDas, default as SellerManageSubscriptionDas } from "./subscription/ManageSubscriptionCanvasDas";
 export type { ManageSubscriptionCanvasDasProps } from "./subscription/ManageSubscriptionCanvasDas";
 
+export { default as SubscribersCanvas } from "./subscription/SubscribersCanvas";
+export type { SubscribersCanvasProps, SubscriberFilterTab } from "./subscription/SubscribersCanvas";
+
+export { default as SubscribersCanvasDas } from "./subscription/SubscribersCanvasDas";
+export type { SubscribersCanvasDasProps } from "./subscription/SubscribersCanvasDas";
+
 export { default as SubscriptionEditCanvas } from "./subscription/SubscriptionEditCanvas";
 export type {
   SubscriptionEditCanvasProps,

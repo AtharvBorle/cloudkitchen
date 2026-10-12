@@ -118,20 +118,40 @@ export default function SubscriptionEditCanvas({
 
   useEffect(() => {
     const loadPlan = async () => {
+      const cleanPrefix = (planIdParam || "").toUpperCase().startsWith("PLN-")
+        ? (planIdParam || "").slice(4).trim().toLowerCase()
+        : "";
+      const matchPlan = (list: MealSubscriptionPlan[]) =>
+        list.find(
+          (p) =>
+            p.id === planIdParam ||
+            p.planId === planIdParam ||
+            (cleanPrefix && p.id.toLowerCase().startsWith(cleanPrefix))
+        );
+
       let plans = getStoredMealPlans();
-      let found = plans.find((p) => p.id === planIdParam || p.planId === planIdParam);
-      if (!found) {
-        const fetched = await fetchStoredMealPlans();
-        if (fetched?.plans) {
-          plans = fetched.plans;
-          found = plans.find((p) => p.id === planIdParam || p.planId === planIdParam) || plans[0];
-        }
-      } else {
-        found = found || plans[0];
+      const fetched = await fetchStoredMealPlans();
+      if (fetched?.plans && fetched.plans.length > 0) {
+        plans = fetched.plans;
       }
+
+      const found = matchPlan(plans) || plans[0];
 
       if (found) {
         setTargetPlanId(found.id);
+        const rawPause = (found.pauseBillingPeriod || "").trim();
+        const rawPauseLower = rawPause.toLowerCase();
+        const isPauseEnabled = Boolean(
+          rawPause &&
+          rawPauseLower !== "none" &&
+          rawPauseLower !== "disabled" &&
+          rawPauseLower !== "false" &&
+          (found as any).allowPause !== false &&
+          (found as any).allowPauseBilling !== false
+        );
+        const normalizedPausePeriod =
+          isPauseEnabled && rawPauseLower !== "monthly" ? rawPause : "30 Days";
+
         setFormData({
           planName: found.name,
           planTier: found.tier,
@@ -153,21 +173,9 @@ export default function SubscriptionEditCanvas({
               timing: timing || t,
             };
           }),
-          allowCancelSubscription: false,
-          allowPauseBilling: Boolean(
-            found.pauseBillingPeriod &&
-            found.pauseBillingPeriod.toLowerCase() !== "none" &&
-            found.pauseBillingPeriod.toLowerCase() !== "disabled" &&
-            found.pauseBillingPeriod.toLowerCase() !== "false" &&
-            (found as any).allowPause !== false &&
-            (found as any).allowPauseBilling !== false
-          ),
-          pauseBillingPeriod: (
-            found.pauseBillingPeriod &&
-            found.pauseBillingPeriod.toLowerCase() !== "none" &&
-            found.pauseBillingPeriod.toLowerCase() !== "disabled" &&
-            found.pauseBillingPeriod.toLowerCase() !== "false"
-          ) ? found.pauseBillingPeriod : "30 Days",
+          allowCancelSubscription: found.allowCancel ?? false,
+          allowPauseBilling: isPauseEnabled,
+          pauseBillingPeriod: normalizedPausePeriod,
           metrics: {
             subscribers: found.subscribersCount,
             monthlyRevenue: found.monthlyRevenue,

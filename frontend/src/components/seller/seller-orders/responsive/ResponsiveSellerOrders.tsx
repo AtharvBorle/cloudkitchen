@@ -125,14 +125,17 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
         const sec = getRemainingSeconds(order.createdAt, now);
         if (sec <= 0 && !autoCancelledRef.current.has(order.id)) {
           autoCancelledRef.current.add(order.id);
-          if (onReject) {
-            onReject(order.id);
-          } else {
-            fetchApi(`/api/seller/orders/${order.id}`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ status: "CANCELLED" }),
-            }).catch(() => {});
+          const isMobileViewport = typeof window !== "undefined" && window.innerWidth <= 1024;
+          if (isMobileViewport) {
+            if (onReject) {
+              onReject(order.id);
+            } else {
+              fetchApi(`/api/seller/orders/${order.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: "CANCELLED" }),
+              }).catch(() => {});
+            }
           }
           setOrdersList((prev) =>
             prev.map((o) => (o.id === order.id ? { ...o, status: "Cancelled" as const } : o))
