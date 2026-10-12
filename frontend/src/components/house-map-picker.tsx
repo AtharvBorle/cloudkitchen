@@ -135,14 +135,20 @@ export function HouseMapPicker({
                                 title: "Selected Delivery Location",
                             });
 
-                            marker.addListener("dragend", () => {
+                            const handleDragEnd = () => {
                                 const pos = marker.position;
                                 if (pos) {
                                     const curLat = typeof pos.lat === "function" ? pos.lat() : pos.lat;
                                     const curLng = typeof pos.lng === "function" ? pos.lng() : pos.lng;
                                     handleReverseGeocode(curLat, curLng);
                                 }
-                            });
+                            };
+
+                            if (typeof marker.addEventListener === "function") {
+                                marker.addEventListener("gmp-dragend", handleDragEnd);
+                            } else if (typeof marker.addListener === "function") {
+                                marker.addListener("dragend", handleDragEnd);
+                            }
 
                             map.addListener("click", (e: any) => {
                                 if (e.latLng) {
