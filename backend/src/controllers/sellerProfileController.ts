@@ -5,6 +5,7 @@ import { uploadImage } from "@/lib/upload";
 import { revalidateTag } from "next/cache";
 import bcrypt from "bcryptjs";
 import { validateKitchenName } from "@/lib/kitchen-validation";
+import { emitSellerStatusChanged } from "@/lib/realtime-events";
 
 export const getSellerProfile = async () => {
     const session = await getAuthSession();
@@ -323,6 +324,17 @@ export const updateSellerStatus = async (req: Request) => {
         where: { userId: session.user.id },
         data: { isOnline }
     });
+
+    try {
+        revalidateTag("explore", {});
+        revalidateTag("public-explore-data", {});
+    } catch (e) {}
+
+    try {
+        emitSellerStatusChanged(updatedProfile.id, updatedProfile.isOnline);
+    } catch (emErr) {
+        console.error("Live seller status emit error:", emErr);
+    }
 
     return { isOnline: updatedProfile.isOnline };
 };
