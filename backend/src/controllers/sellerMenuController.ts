@@ -4,6 +4,7 @@ import { ApiError } from "@/lib/api-error";
 import { uploadImage } from "@/lib/upload";
 import { getCategoryExpiries } from "@/lib/subscription";
 import { revalidateTag } from "next/cache";
+import { emitMenuUpdated } from "@/lib/realtime-events";
 
 const checkFoodCategoryActive = async (userId: string) => {
     const sellerProfile = await db.sellerProfile.findUnique({
@@ -333,6 +334,12 @@ export const createMenuItem = async (req: Request) => {
         revalidateTag("public-explore-data", {});
     } catch (e) {}
 
+    try {
+        emitMenuUpdated(sellerProfile.id);
+    } catch (emErr) {
+        console.error("Live menu emit error:", emErr);
+    }
+
     return { foodItem };
 };
 
@@ -519,6 +526,12 @@ export const updateMenuItem = async (req: Request, id: string) => {
         revalidateTag("public-explore-data", {});
     } catch (e) {}
 
+    try {
+        emitMenuUpdated(existingItem.sellerId);
+    } catch (emErr) {
+        console.error("Live menu emit error:", emErr);
+    }
+
     return { item: updatedItem };
 };
 
@@ -550,6 +563,12 @@ export const deleteMenuItem = async (id: string) => {
         revalidateTag("explore", {});
         revalidateTag("public-explore-data", {});
     } catch (e) {}
+
+    try {
+        emitMenuUpdated(existingItem.sellerId);
+    } catch (emErr) {
+        console.error("Live menu emit error:", emErr);
+    }
 
     return null;
 };

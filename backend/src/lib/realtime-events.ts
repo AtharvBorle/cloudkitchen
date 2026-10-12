@@ -120,3 +120,72 @@ export function emitSellerDashboardRefresh(sellerId: string) {
   };
   realtimeEmitter.emit(`seller:${sellerId}`, payload);
 }
+
+export interface RealtimeLivePayload {
+  event: "COUPON_UPDATED" | "SELLER_STATUS_CHANGED" | "MENU_UPDATED";
+  sellerId?: string | null;
+  coupon?: any;
+  action?: "CREATE" | "UPDATE" | "DELETE" | "TOGGLE";
+  isOnline?: boolean;
+  timestamp: string;
+}
+
+/**
+ * Dispatch when a coupon is created, updated, toggled, or deleted.
+ */
+export function emitCouponChanged(coupon: any, action: "CREATE" | "UPDATE" | "DELETE" | "TOGGLE" = "UPDATE") {
+  const sellerId = coupon?.appliesToSellerId || coupon?.sellerId || null;
+  const payload: RealtimeLivePayload = {
+    event: "COUPON_UPDATED",
+    sellerId: sellerId && sellerId !== "GLOBAL" && sellerId !== "ALL" ? String(sellerId) : null,
+    coupon: {
+      id: coupon?.id,
+      code: coupon?.code,
+      discountType: coupon?.discountType,
+      discountPercentage: coupon?.discountPercentage,
+      discountAmount: coupon?.discountAmount,
+      minimumCartValue: coupon?.minimumCartValue ?? coupon?.minOrderAmount,
+      isAutoApply: Boolean(coupon?.isAutoApply || coupon?.autoApply),
+      isActive: coupon?.isActive,
+      status: coupon?.status,
+      appliesToSellerId: coupon?.appliesToSellerId,
+      appliesToProductId: coupon?.appliesToProductId,
+    },
+    action,
+    timestamp: new Date().toISOString(),
+  };
+
+  realtimeEmitter.emit("public:live", payload);
+  if (payload.sellerId) {
+    realtimeEmitter.emit(`public:seller:${payload.sellerId}`, payload);
+  }
+}
+
+/**
+ * Dispatch when a seller's online/offline status changes.
+ */
+export function emitSellerStatusChanged(sellerId: string, isOnline: boolean) {
+  const payload: RealtimeLivePayload = {
+    event: "SELLER_STATUS_CHANGED",
+    sellerId: String(sellerId),
+    isOnline,
+    timestamp: new Date().toISOString(),
+  };
+
+  realtimeEmitter.emit("public:live", payload);
+  realtimeEmitter.emit(`public:seller:${sellerId}`, payload);
+}
+
+/**
+ * Dispatch when a seller's menu items or prices are created, updated, or deleted.
+ */
+export function emitMenuUpdated(sellerId: string) {
+  const payload: RealtimeLivePayload = {
+    event: "MENU_UPDATED",
+    sellerId: String(sellerId),
+    timestamp: new Date().toISOString(),
+  };
+
+  realtimeEmitter.emit("public:live", payload);
+  realtimeEmitter.emit(`public:seller:${sellerId}`, payload);
+}

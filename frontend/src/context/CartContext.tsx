@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, AlertCircle, CheckCircle2, Info, X } from "lucide-react";
 
 import { fetchApi } from "@/lib/fetch-api";
+import { useLiveShopStream } from "@/hooks/useLiveShopStream";
 
 export type AddonItem = {
     id?: string;
@@ -274,6 +275,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             };
         }
     }, [syncCartWithLiveMenu]);
+
+    const activeCartSellerId = cartItems.length > 0 ? (cartItems[0]?.sellerId || null) : null;
+
+    useLiveShopStream({
+        sellerId: activeCartSellerId,
+        enabled: Boolean(activeCartSellerId),
+        onMenuUpdated: () => {
+            syncCartWithLiveMenu();
+        },
+    });
 
     // Save to local storage on change
     useEffect(() => {

@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { revalidateTag, revalidatePath } from "next/cache";
+import { emitCouponChanged } from "@/lib/realtime-events";
 
 export const getPendingApprovals = async () => {
     const session = await getAuthSession();
@@ -64,6 +65,13 @@ export const updateApprovalStatus = async (req: Request, type: string, id: strin
             revalidatePath("/api/public/coupons");
             revalidatePath("/api/coupons");
         } catch (e) {}
+
+        try {
+            emitCouponChanged(updated, "UPDATE");
+        } catch (emErr) {
+            console.error("Live coupon emit error:", emErr);
+        }
+
         return { coupon: updated };
     } else {
         throw new ApiError("Invalid item type specified.", 400);
