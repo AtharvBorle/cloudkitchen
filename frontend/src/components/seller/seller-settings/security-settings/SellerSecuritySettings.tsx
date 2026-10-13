@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { CheckCircle2, AlertCircle, Loader2, Laptop, Smartphone, Trash2, X } from "lucide-react";
 import { signOut } from "next-auth/react";
+import { performLogout } from "@/lib/logout";
 import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
 import { fetchApi } from "@/lib/fetch-api";
 import styles from "./SellerSecuritySettings.module.css";
@@ -525,7 +526,7 @@ export const SellerDeleteAccountCard: React.FC<{ className?: string }> = ({ clas
         return;
       }
       setDeleteModalOpen(false);
-      await signOut({ callbackUrl: "/auth/login/seller?deletion_scheduled=true" });
+      await performLogout({ redirectTo: "/seller/login?deletion_scheduled=true" });
     } catch (err: any) {
       setDeleteError(err.message || "An unexpected network error occurred.");
     } finally {

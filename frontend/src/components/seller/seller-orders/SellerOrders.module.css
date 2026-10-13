@@ -571,3 +571,318 @@
     transform: scale(1);
   }
 }
+
+/* =========================================================================
+   SUBSCRIBERS MEAL SECTION STYLES
+   ========================================================================= */
+
+.sectionSwitchContainer {
+  display: inline-flex;
+  background-color: #F1F5F9;
+  padding: 5px;
+  border-radius: 14px;
+  gap: 6px;
+  border: 1px solid #E2E8F0;
+  width: fit-content;
+}
+
+.sectionSwitchBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: #64748B;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sectionSwitchBtn:hover {
+  color: #0F172A;
+}
+
+.sectionSwitchBtnActive {
+  background: #FFFFFF;
+  color: #EA580C;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.subMetricsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 16px;
+}
+
+.subMetricCard {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.subMetricCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
+}
+
+.subMetricIconBox {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.subMetricValue {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.subMetricLabel {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748B;
+  margin: 0;
+}
+
+.subTabsNav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  border-bottom: 2px solid #E2E8F0;
+  padding-bottom: 12px;
+}
+
+.subTabsGroup {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.subTabBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1.5px solid transparent;
+  background: transparent;
+  color: #64748B;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.subTabBtn:hover {
+  background: #F1F5F9;
+  color: #0F172A;
+}
+
+.subTabBtnActive {
+  background: #FFF7ED;
+  border-color: #FED7AA;
+  color: #EA580C;
+}
+
+.subBadge {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.pausedWindowBanner {
+  background: #FEF3C7;
+  border: 1.5px solid #FDE68A;
+  border-radius: 14px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  color: #92400E;
+}
+
+.subListContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.subCard {
+  background: #FFFFFF;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 18px;
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.subCard:hover {
+  border-color: #CBD5E1;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+}
+
+.subCardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.subCustomerInfo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.subAvatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #FFF7ED;
+  color: #EA580C;
+  font-weight: 800;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #FFEDD5;
+}
+
+.subCustomerName {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0;
+}
+
+.subCustomerMeta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.82rem;
+  color: #64748B;
+  margin-top: 2px;
+  flex-wrap: wrap;
+}
+
+.subContactLink {
+  color: #EA580C;
+  text-decoration: none;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.subContactLink:hover {
+  text-decoration: underline;
+}
+
+.subPlanPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.subDetailsRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  background: #F8FAFC;
+  border-radius: 12px;
+  padding: 14px 16px;
+  border: 1px solid #F1F5F9;
+  font-size: 0.85rem;
+}
+
+.subDetailBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.subDetailLabel {
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748B;
+  letter-spacing: 0.03em;
+}
+
+.subDetailValue {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #1E293B;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.subFooterActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  border-top: 1px solid #F1F5F9;
+  padding-top: 14px;
+}
+
+.deliveryToggleBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.deliveryBtnDelivered {
+  background: #DCFCE7;
+  color: #15803D;
+  border: 1.5px solid #BBF7D0;
+}
+
+.deliveryBtnDelivered:hover {
+  background: #BBF7D0;
+}
+
+.deliveryBtnPending {
+  background: #FEF3C7;
+  color: #B45309;
+  border: 1.5px solid #FDE68A;
+}
+
+.deliveryBtnPending:hover {
+  background: #FDE68A;
+}
+

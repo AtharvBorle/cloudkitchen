@@ -410,32 +410,41 @@ function MySubscriptionContent() {
     return `/${plan.duration || "cycle"}`;
   };
 
-  const handleTogglePause = async (subId: string, nextPaused: boolean) => {
+  const handleTogglePause = async (subId: string, nextPaused: boolean, days?: number) => {
     try {
+      let result: any = null;
       if (subId && !subId.startsWith("sub-demo")) {
-        await togglePauseUserSubscription(subId, nextPaused);
+        result = await togglePauseUserSubscription(subId, nextPaused, days);
       }
-      setUserSubs((prev) =>
-        prev.map((s) =>
-          s.id === subId
-            ? {
-                ...s,
-                isPaused: nextPaused,
-                status: nextPaused ? "PAUSED" : "ACTIVE",
-              }
-            : s
-        )
-      );
-      if (subscription?.id === subId) {
-        setSubscription((prev) =>
-          prev ? { ...prev, isPaused: nextPaused, status: nextPaused ? "PAUSED" : "ACTIVE" } : null
+
+      // Fetch fresh subscription state with updated endDate, pause quota and history
+      const freshSubs = await fetchUserMealSubscriptions();
+      if (freshSubs && freshSubs.length > 0) {
+        setUserSubs(freshSubs);
+        const match = freshSubs.find((s) => s.id === subId);
+        if (match) {
+          setSubscription(match);
+        }
+      } else {
+        setUserSubs((prev) =>
+          prev.map((s) =>
+            s.id === subId
+              ? {
+                  ...s,
+                  isPaused: nextPaused,
+                  status: nextPaused ? "PAUSED" : "ACTIVE",
+                }
+              : s
+          )
         );
       }
+
       showToast(
         "success",
-        nextPaused
-          ? "Meal subscription paused. Billing and scheduled meals frozen."
-          : "Meal subscription resumed! Scheduled meals will resume tomorrow."
+        result?.message ||
+          (nextPaused
+            ? `Meal subscription paused for ${days || 1} day${(days || 1) > 1 ? "s" : ""}. Validity extended!`
+            : "Meal subscription resumed! Scheduled meals are active again.")
       );
     } catch (err: any) {
       showToast("error", err.message || "Failed to update pause status.");
@@ -1126,7 +1135,14 @@ function MySubscriptionContent() {
                               disabled={subItem.status?.toUpperCase() === "CANCELLED"}
                               allowPause={isPauseAllowed}
                               pausePolicyNote="Pausing is disabled for this meal plan by the kitchen partner."
-                              onTogglePause={(nextPaused) => handleTogglePause(subItem.id, nextPaused)}
+                              pauseBillingPeriod={subItem.plan?.pauseBillingPeriod || "7 Days"}
+                              usedPauseDays={subItem.usedPauseDays || 0}
+                              pausedAt={subItem.pausedAt}
+                              pauseEndDate={subItem.pauseEndDate}
+                              pauseHistory={subItem.pauseHistory}
+                              currentEndDate={subItem.endDate}
+                              planName={subItem.plan?.name || "Meal Plan"}
+                              onTogglePause={(nextPaused, days) => handleTogglePause(subItem.id, nextPaused, days)}
                             />
 
                             {/* Delivery Times & Benefits Grid */}

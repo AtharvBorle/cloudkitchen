@@ -44,7 +44,7 @@ export async function POST(req: Request) {
         }
 
         if (action === "PAUSE") {
-            const data = await togglePauseUserMealSubscription(body.id, body.isPaused);
+            const data = await togglePauseUserMealSubscription(body.id, body.isPaused, body.days || body.pauseDays);
             return successResponse(data, data.message);
         }
 
@@ -74,7 +74,7 @@ export async function PATCH(req: Request) {
         }
 
         if (action === "PAUSE") {
-            const data = await togglePauseUserMealSubscription(id, body.isPaused);
+            const data = await togglePauseUserMealSubscription(id, body.isPaused, body.days || body.pauseDays);
             return successResponse(data, data.message);
         }
 

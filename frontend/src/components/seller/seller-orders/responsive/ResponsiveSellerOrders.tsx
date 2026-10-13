@@ -12,6 +12,15 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
+  Bike,
+  Utensils,
+  PauseCircle,
+  Phone,
+  MapPin,
+  Calendar,
+  Sparkles,
+  ShieldCheck,
+  Loader2,
 } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import RejectOrderModal from "../RejectOrderModal";
@@ -19,6 +28,11 @@ import ToastNotification from "../ToastNotification";
 import PaginationControls from "../../common/PaginationControls";
 import { getRemainingSeconds } from "../SellerOrders";
 import { fetchApi } from "@/lib/fetch-api";
+import {
+  markSubscriberMealDeliveryStatus,
+  MealSubscriber,
+  getTierColors,
+} from "@/lib/meal-subscriptions";
 import styles from "./ResponsiveSellerOrders.module.css";
 
 export type OrderFilterTab = "New" | "Preparing" | "Out" | "Done" | "Cancelled" | "All";
@@ -108,6 +122,114 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
       setOrdersList(orders);
     }
   }, [orders]);
+
+  // Section toggle: Regular Orders vs Subscribers Meal
+  const [activeSection, setActiveSection] = useState<"orders" | "subscribers">("orders");
+  const [subscribers, setSubscribers] = useState<MealSubscriber[]>([]);
+  const [loadingSubs, setLoadingSubs] = useState(false);
+  const [subscribersTab, setSubscribersTab] = useState<"today" | "paused" | "all">("today");
+
+  const todayDateStr = React.useMemo(() => new Date().toISOString().split("T")[0], []);
+
+  const loadSubscribers = React.useCallback(async (isSilent = false) => {
+    try {
+      if (!isSilent) setLoadingSubs(true);
+      const res = await fetchApi("/api/seller/meal-plans");
+      if (res.ok) {
+        const data = await res.json();
+        const list = data.data?.subscribers || data.subscribers || [];
+        if (Array.isArray(list)) {
+          setSubscribers(list);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load seller subscribers on mobile:", err);
+    } finally {
+      if (!isSilent) setLoadingSubs(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadSubscribers(false);
+  }, [loadSubscribers]);
+
+  useEffect(() => {
+    const handler = () => loadSubscribers(true);
+    window.addEventListener("meal-subscriptions-updated", handler);
+    return () => window.removeEventListener("meal-subscriptions-updated", handler);
+  }, [loadSubscribers]);
+
+  const formatSubDate = (iso?: string | null): string => {
+    if (!iso) return "N/A";
+    try {
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return "N/A";
+      return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+    } catch {
+      return "N/A";
+    }
+  };
+
+  const pausedSubscribers = React.useMemo(() => {
+    return subscribers.filter((s) => Boolean(s.isPaused));
+  }, [subscribers]);
+
+  const todayDeliverySubscribers = React.useMemo(() => {
+    const nowDate = new Date();
+    return subscribers.filter((s) => {
+      if (s.isPaused) return false;
+      const statusUpper = (s.status || "").toUpperCase();
+      if (statusUpper === "CANCELLED" || statusUpper === "EXPIRED") return false;
+      if (s.startDate && new Date(s.startDate) > nowDate) return false;
+      if (s.endDate && new Date(s.endDate) < nowDate) return false;
+      return true;
+    });
+  }, [subscribers]);
+
+  const mealsToDeliverTodayCount = todayDeliverySubscribers.length;
+  const deliveredTodayCount = React.useMemo(() => {
+    return todayDeliverySubscribers.filter((s) => {
+      const todayRec = s.dailyDeliveries?.find((d: any) => d.date === todayDateStr);
+      return todayRec?.status === "DELIVERED";
+    }).length;
+  }, [todayDeliverySubscribers, todayDateStr]);
+  const pendingTodayCount = Math.max(0, mealsToDeliverTodayCount - deliveredTodayCount);
+  const pausedCount = pausedSubscribers.length;
+  const totalSubscribersCount = subscribers.length;
+
+  const displayedSubscribers = React.useMemo(() => {
+    if (subscribersTab === "today") return todayDeliverySubscribers;
+    if (subscribersTab === "paused") return pausedSubscribers;
+    return subscribers;
+  }, [subscribersTab, todayDeliverySubscribers, pausedSubscribers, subscribers]);
+
+  const handleToggleDelivery = async (sub: MealSubscriber) => {
+    const isCurrentlyDelivered = sub.dailyDeliveries?.find((d: any) => d.date === todayDateStr)?.status === "DELIVERED";
+    const nextStatus: "DELIVERED" | "NOT_DELIVERED" = isCurrentlyDelivered ? "NOT_DELIVERED" : "DELIVERED";
+
+    setSubscribers((prev) =>
+      prev.map((s) => {
+        if (s.id !== sub.id) return s;
+        const currentDeliveries = Array.isArray(s.dailyDeliveries) ? [...s.dailyDeliveries] : [];
+        const idx = currentDeliveries.findIndex((d: any) => d.date === todayDateStr);
+        const rec = { date: todayDateStr, status: nextStatus, markedAt: new Date().toISOString() };
+        if (idx >= 0) currentDeliveries[idx] = rec;
+        else currentDeliveries.unshift(rec);
+        return { ...s, dailyDeliveries: currentDeliveries };
+      })
+    );
+
+    try {
+      await markSubscriberMealDeliveryStatus(sub.id, todayDateStr, nextStatus);
+      setToast({
+        type: "success",
+        text: `Meal marked as ${nextStatus === "DELIVERED" ? "Delivered" : "Pending"} for ${sub.customerName || "Customer"}`,
+      });
+    } catch (err: any) {
+      setToast({ type: "error", text: err.message || "Failed to update delivery status" });
+      loadSubscribers(true);
+    }
+  };
 
   // Auto-cancel expired New orders in background
   useEffect(() => {
@@ -286,8 +408,30 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
           </button>
         </header>
 
-        {/* Status Filter Tabs (Horizontal scrolling capsule pills) */}
-        <div className={styles.filterTabsWrapper} role="tablist" aria-label="Order Status Filters">
+        {/* Section Switcher: Food Orders vs Subscribers Meal */}
+        <div className={styles.sectionSwitchContainer}>
+          <button
+            type="button"
+            className={`${styles.sectionSwitchBtn} ${activeSection === "orders" ? styles.sectionSwitchBtnActive : ""}`}
+            onClick={() => setActiveSection("orders")}
+          >
+            <Bike size={16} />
+            <span>Food Orders</span>
+          </button>
+          <button
+            type="button"
+            className={`${styles.sectionSwitchBtn} ${activeSection === "subscribers" ? styles.sectionSwitchBtnActive : ""}`}
+            onClick={() => setActiveSection("subscribers")}
+          >
+            <Utensils size={16} />
+            <span>Subscribers Meal</span>
+          </button>
+        </div>
+
+        {activeSection === "orders" ? (
+          <>
+            {/* Status Filter Tabs (Horizontal scrolling capsule pills) */}
+            <div className={styles.filterTabsWrapper} role="tablist" aria-label="Order Status Filters">
           <button
             type="button"
             role="tab"
@@ -498,7 +642,237 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
             </div>
           )}
         </main>
-      </div>
+      </>
+    ) : (
+      <main className={styles.contentArea} style={{ paddingBottom: "32px" }}>
+        {/* Metric Cards Grid */}
+        <div className={styles.subMetricsGridMobile}>
+          <div className={styles.subMetricCardMobile}>
+            <Utensils size={20} color="#EA580C" />
+            <div>
+              <h4 className={styles.subMetricValMobile}>{mealsToDeliverTodayCount}</h4>
+              <p className={styles.subMetricLblMobile}>Meals Today</p>
+            </div>
+          </div>
+
+          <div className={styles.subMetricCardMobile}>
+            <CheckCircle2 size={20} color="#16A34A" />
+            <div>
+              <h4 className={styles.subMetricValMobile} style={{ color: "#16A34A" }}>{deliveredTodayCount}</h4>
+              <p className={styles.subMetricLblMobile}>Delivered</p>
+            </div>
+          </div>
+
+          <div className={styles.subMetricCardMobile}>
+            <Clock size={20} color="#B45309" />
+            <div>
+              <h4 className={styles.subMetricValMobile} style={{ color: "#B45309" }}>{pendingTodayCount}</h4>
+              <p className={styles.subMetricLblMobile}>Pending Today</p>
+            </div>
+          </div>
+
+          <div className={styles.subMetricCardMobile}>
+            <PauseCircle size={20} color="#DC2626" />
+            <div>
+              <h4 className={styles.subMetricValMobile} style={{ color: "#DC2626" }}>{pausedCount}</h4>
+              <p className={styles.subMetricLblMobile}>Paused Window</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Filter Tabs for Subscribers */}
+        <div className={styles.subTabsNavMobile}>
+          <button
+            type="button"
+            className={`${styles.subTabPillMobile} ${subscribersTab === "today" ? styles.subTabPillMobileActive : ""}`}
+            onClick={() => setSubscribersTab("today")}
+          >
+            <Utensils size={14} />
+            <span>Today&apos;s Deliveries</span>
+            <span className={styles.pillBadge}>{mealsToDeliverTodayCount}</span>
+          </button>
+
+          <button
+            type="button"
+            className={`${styles.subTabPillMobile} ${subscribersTab === "paused" ? styles.subTabPillMobileActive : ""}`}
+            onClick={() => setSubscribersTab("paused")}
+          >
+            <PauseCircle size={14} />
+            <span>Paused Window</span>
+            <span className={styles.pillBadge} style={{ backgroundColor: "#FEE2E2", color: "#DC2626" }}>{pausedCount}</span>
+          </button>
+
+          <button
+            type="button"
+            className={`${styles.subTabPillMobile} ${subscribersTab === "all" ? styles.subTabPillMobileActive : ""}`}
+            onClick={() => setSubscribersTab("all")}
+          >
+            <ShieldCheck size={14} />
+            <span>All Subscribers</span>
+            <span className={styles.pillBadge}>{totalSubscribersCount}</span>
+          </button>
+        </div>
+
+        {/* If Paused Tab, Info Banner */}
+        {subscribersTab === "paused" && (
+          <div className={styles.pausedWindowBannerMobile}>
+            <PauseCircle size={20} color="#DC2626" style={{ flexShrink: 0, marginTop: "2px" }} />
+            <div>
+              <h5 style={{ margin: "0 0 2px 0", fontSize: "0.85rem", fontWeight: 800 }}>Dedicated Paused Window</h5>
+              <p style={{ margin: 0, fontSize: "0.76rem", lineHeight: 1.4 }}>
+                Paused subscribers are <strong>strictly excluded from today&apos;s delivery list</strong>. Their paused days are automatically added to active subscription days.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Subscriber Cards List */}
+        {loadingSubs ? (
+          <div style={{ textAlign: "center", padding: "48px 16px", color: "#64748B" }}>
+            <Loader2 size={28} className="animate-spin" color="#FF5500" style={{ margin: "0 auto 8px" }} />
+            <p style={{ margin: 0, fontSize: "0.85rem", fontWeight: 600 }}>Loading subscribers...</p>
+          </div>
+        ) : displayedSubscribers.length === 0 ? (
+          <div className={styles.emptyState}>
+            <div className={styles.emptyIcon}>
+              <Utensils size={24} />
+            </div>
+            <h3 className={styles.emptyTitle}>
+              {subscribersTab === "today"
+                ? "No Meals to Deliver Today"
+                : subscribersTab === "paused"
+                ? "No Paused Subscribers"
+                : "No Subscribers Found"}
+            </h3>
+            <p className={styles.emptySubtitle}>
+              {subscribersTab === "today"
+                ? "All deliveries for today are complete or no active subscriptions scheduled."
+                : subscribersTab === "paused"
+                ? "None of your subscribers are currently on pause."
+                : "No meal subscribers registered."}
+            </p>
+          </div>
+        ) : (
+          <div>
+            {displayedSubscribers.map((sub) => {
+              const tierColors = getTierColors(sub.tier || "Bronze");
+              const todayRec = sub.dailyDeliveries?.find((d: any) => d.date === todayDateStr);
+              const isDelivered = todayRec?.status === "DELIVERED";
+              const initialLetter = (sub.customerName || "Customer").charAt(0).toUpperCase();
+
+              return (
+                <article key={sub.id} className={styles.subCardMobile}>
+                  <div className={styles.subCardHeaderMobile}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <div className={styles.subAvatarMobile}>{initialLetter}</div>
+                      <div>
+                        <h4 className={styles.subNameMobile}>{sub.customerName || "Subscriber"}</h4>
+                        <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap", marginTop: "2px" }}>
+                          <span
+                            style={{
+                              fontSize: "0.72rem",
+                              fontWeight: 700,
+                              padding: "2px 6px",
+                              borderRadius: "6px",
+                              backgroundColor: tierColors.tierBg,
+                              color: tierColors.tierColor,
+                            }}
+                          >
+                            {sub.planName} ({sub.tier || "Bronze"})
+                          </span>
+                          {sub.isPaused ? (
+                            <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "#DC2626", backgroundColor: "#FEF2F2", padding: "2px 6px", borderRadius: "6px" }}>
+                              ⏸️ Paused
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "#16A34A", backgroundColor: "#DCFCE7", padding: "2px 6px", borderRadius: "6px" }}>
+                              ✅ Active
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: "0.86rem", fontWeight: 800, color: "#0F172A" }}>
+                        ₹{sub.pricePaid || 0}
+                      </div>
+                      <div style={{ fontSize: "0.7rem", color: "#64748B" }}>{sub.cycle || "Weekly"}</div>
+                    </div>
+                  </div>
+
+                  <div className={styles.subDetailsBoxMobile}>
+                    {sub.customerPhone && (
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <Phone size={13} color="#64748B" />
+                        <a href={`tel:${sub.customerPhone}`} style={{ color: "#EA580C", fontWeight: 600, textDecoration: "none" }}>
+                          {sub.customerPhone}
+                        </a>
+                      </div>
+                    )}
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: "6px" }}>
+                      <MapPin size={13} color="#EA580C" style={{ flexShrink: 0, marginTop: "2px" }} />
+                      <span style={{ color: "#334155" }}>{sub.deliveryAddress || "Address provided at checkout"}</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <Clock size={13} color="#64748B" />
+                      <span style={{ color: "#334155" }}>
+                        Slot: {sub.mealTimings && sub.mealTimings.length > 0 ? sub.mealTimings.join(", ") : "Standard Delivery Window"}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <Calendar size={13} color="#64748B" />
+                      <span style={{ color: "#334155" }}>
+                        Valid: {formatSubDate(sub.startDate)} → {formatSubDate(sub.endDate)}
+                      </span>
+                    </div>
+                    {(sub.usedPauseDays || 0) > 0 && (
+                      <div style={{ display: "flex", alignItems: "center", gap: "4px", color: "#16A34A", fontWeight: 700, fontSize: "0.75rem" }}>
+                        <Sparkles size={12} />
+                        <span>+{sub.usedPauseDays} pause days added to validity</span>
+                      </div>
+                    )}
+                    {sub.isPaused && (
+                      <div style={{ marginTop: "4px", padding: "6px 8px", backgroundColor: "#FEF2F2", borderRadius: "6px", color: "#991B1B", fontSize: "0.75rem" }}>
+                        <div><strong>Paused:</strong> {formatSubDate(sub.pausedAt)}</div>
+                        <div><strong>Resumes:</strong> {formatSubDate(sub.pauseEndDate)}</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Delivery Action Button (Only for today's deliveries tab) */}
+                  {subscribersTab === "today" && (
+                    <button
+                      type="button"
+                      className={styles.deliveryActionBtnMobile}
+                      style={{
+                        backgroundColor: isDelivered ? "#F0FDF4" : "#EA580C",
+                        color: isDelivered ? "#15803D" : "#FFFFFF",
+                        border: isDelivered ? "1px solid #BBF7D0" : "none",
+                      }}
+                      onClick={() => handleToggleDelivery(sub)}
+                    >
+                      {isDelivered ? (
+                        <>
+                          <CheckCircle2 size={16} />
+                          <span>Delivered Today (Tap to change)</span>
+                        </>
+                      ) : (
+                        <>
+                          <PackageCheck size={16} />
+                          <span>Mark Today&apos;s Meal Delivered</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </main>
+    )}
+  </div>
 
       {/* In-App Rejection Confirmation Modal */}
       <RejectOrderModal

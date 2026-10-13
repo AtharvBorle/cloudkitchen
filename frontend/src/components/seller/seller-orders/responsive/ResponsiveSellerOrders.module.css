@@ -519,3 +519,183 @@
     box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
   }
 }
+
+/* =========================================================================
+   MOBILE SUBSCRIBERS MEAL SECTION
+   ========================================================================= */
+
+.sectionSwitchContainer {
+  display: flex;
+  background-color: #F1F5F9;
+  padding: 4px;
+  border-radius: 12px;
+  gap: 4px;
+  margin: 8px 16px 12px;
+}
+
+.sectionSwitchBtn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #64748B;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.sectionSwitchBtnActive {
+  background: #FFFFFF;
+  color: #EA580C;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.subMetricsGridMobile {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  padding: 0 16px 14px;
+}
+
+.subMetricCardMobile {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.subMetricValMobile {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.subMetricLblMobile {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748B;
+  margin: 0;
+}
+
+.subCardMobile {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 16px;
+  margin: 0 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
+}
+
+.subCardHeaderMobile {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.subNameMobile {
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0 0 2px 0;
+}
+
+.subDetailsBoxMobile {
+  background: #F8FAFC;
+  border: 1px solid #F1F5F9;
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.8rem;
+}
+
+.deliveryActionBtnMobile {
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.84rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+}
+
+.subTabsNavMobile {
+  display: flex;
+  overflow-x: auto;
+  gap: 8px;
+  padding: 0 16px 12px;
+  scrollbar-width: none;
+}
+
+.subTabsNavMobile::-webkit-scrollbar {
+  display: none;
+}
+
+.subTabPillMobile {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  border: 1px solid #E2E8F0;
+  background-color: #FFFFFF;
+  color: #64748B;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.subTabPillMobileActive {
+  background-color: #FFF7ED;
+  border-color: #EA580C;
+  color: #EA580C;
+}
+
+.pausedWindowBannerMobile {
+  background-color: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 0 16px 12px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  color: #991B1B;
+}
+
+.subAvatarMobile {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: #FFEDD5;
+  color: #EA580C;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+
+

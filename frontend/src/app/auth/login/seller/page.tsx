@@ -1,19 +1,19 @@
-import type { Metadata } from 'next';
-import React, { Suspense } from 'react';
-import { SellerLogin, SellerResponsiveWrapper, ResSellerLogin } from '@/components/seller';
+import { redirect } from 'next/navigation';
 
-export const metadata: Metadata = {
-  title: 'Owner Login | Neo Cloud Bite',
-  description: 'Log in to your Neo Cloud Kitchen seller portal to manage orders, inventory, and menus.',
-};
-
-export default function LegacySellerLoginPage() {
-  return (
-    <Suspense fallback={<div style={{ minHeight: '100vh', backgroundColor: '#FFFBF7' }} />}>
-      <SellerResponsiveWrapper
-        desktop={<SellerLogin />}
-        mobile={<ResSellerLogin />}
-      />
-    </Suspense>
-  );
+export default async function LegacySellerLoginPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }> | { [key: string]: string | string[] | undefined };
+}) {
+  const resolved = searchParams ? await Promise.resolve(searchParams) : {};
+  const query = new URLSearchParams();
+  for (const [key, val] of Object.entries(resolved)) {
+    if (typeof val === "string") {
+      query.set(key, val);
+    } else if (Array.isArray(val)) {
+      val.forEach((v) => query.append(key, v));
+    }
+  }
+  const q = query.toString();
+  redirect(q ? `/seller/login?${q}` : '/seller/login');
 }
