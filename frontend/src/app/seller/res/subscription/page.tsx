@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import ResponsiveSellerSubscription, { ResponsiveSubscriptionPlan } from "@/components/seller/subscription/responsive/ResponsiveSellerSubscription";
 import { fetchStoredMealPlans, getStoredMealPlans, getStoredMealSubscribers } from "@/lib/meal-subscriptions";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useLiveShopStream } from "@/hooks/useLiveShopStream";
 
 export default function ResponsiveSellerSubscriptionPage() {
   const seller = useSellerProfile();
@@ -93,11 +94,22 @@ export default function ResponsiveSellerSubscriptionPage() {
     }
   };
 
+  useLiveShopStream({
+    onMealPlanUpdated: () => {
+      refreshPlans();
+    },
+    onMealSubscriptionUpdated: () => {
+      refreshPlans();
+    },
+  });
+
   useEffect(() => {
     refreshPlans();
     window.addEventListener("meal-plans-updated", refreshPlans);
+    window.addEventListener("meal-subscriptions-updated", refreshPlans);
     return () => {
       window.removeEventListener("meal-plans-updated", refreshPlans);
+      window.removeEventListener("meal-subscriptions-updated", refreshPlans);
     };
   }, []);
 

@@ -3,6 +3,7 @@ import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { uploadImage } from "@/lib/upload";
 import { revalidateTag, revalidatePath } from "next/cache";
+import { emitCategoryUpdated } from "@/lib/realtime-events";
 
 const triggerCategoryRevalidation = () => {
     try {
@@ -18,6 +19,7 @@ const triggerCategoryRevalidation = () => {
         revalidatePath("/seller/edit-menu");
         revalidatePath("/seller/res/menu/item");
         revalidatePath("/dashboard/superadmin/categories");
+        emitCategoryUpdated("UPDATE");
     } catch (e) {
         console.error("Category revalidation error:", e);
     }

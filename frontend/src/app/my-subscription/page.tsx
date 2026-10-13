@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef, Suspense } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
+import { useLiveShopStream } from "@/hooks/useLiveShopStream";
 import { Navbar } from "@/components/navbar";
 import { SettingsSidebar } from "@/components/settings-desktop/settings-sidebar";
 import { SubscriptionHeader } from "@/components/my-subscription/subscription-header";
@@ -201,90 +202,105 @@ function MySubscriptionContent() {
   }, [tabParam]);
 
   // Load User Active Subscription
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadUserSubs() {
-      try {
-        setIsLoadingActive(true);
-        const subs = await fetchUserMealSubscriptions();
-        if (isMounted) {
-          setUserSubs(subs);
-          const activeList = subs.filter((s) => s.status === "ACTIVE" || s.isPaused || s.status === "PAUSED");
-          if (activeList.length > 0) {
-            const active = (selectedSubId ? activeList.find((s) => s.id === selectedSubId) : null) || activeList[0];
-            setSubscription(active);
-            setSelectedSubId(active.id);
-          } else if (subs.length > 0) {
-            const first = (selectedSubId ? subs.find((s) => s.id === selectedSubId) : null) || subs[0];
-            setSubscription(first);
-            setSelectedSubId(first.id);
-          } else {
-            setSubscription(null);
-            setSelectedSubId(null);
-          }
-        }
-      } catch (err) {
-        console.error("Error loading user subscriptions:", err);
-      } finally {
-        if (isMounted) setIsLoadingActive(false);
+  const loadUserSubs = useCallback(async () => {
+    try {
+      setIsLoadingActive(true);
+      const subs = await fetchUserMealSubscriptions();
+      setUserSubs(subs);
+      const activeList = subs.filter((s) => s.status === "ACTIVE" || s.isPaused || s.status === "PAUSED");
+      if (activeList.length > 0) {
+        const active = (selectedSubId ? activeList.find((s) => s.id === selectedSubId) : null) || activeList[0];
+        setSubscription(active);
+        setSelectedSubId(active.id);
+      } else if (subs.length > 0) {
+        const first = (selectedSubId ? subs.find((s) => s.id === selectedSubId) : null) || subs[0];
+        setSubscription(first);
+        setSelectedSubId(first.id);
+      } else {
+        setSubscription(null);
+        setSelectedSubId(null);
       }
+    } catch (err) {
+      console.error("Error loading user subscriptions:", err);
+    } finally {
+      setIsLoadingActive(false);
     }
+  }, [selectedSubId]);
 
+  useEffect(() => {
     loadUserSubs();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [session]);
+  }, [session, loadUserSubs]);
 
   // Load All Public Meal Plans & Kitchens from API
-  useEffect(() => {
-    let isMounted = true;
+  const loadPlansData = useCallback(async () => {
+    try {
+      setIsLoadingPlans(true);
+      const [plansRes, exploreRes] = await Promise.all([
+        fetchApi("/api/public/meal-plans").catch(() => null),
+        fetchApi("/api/public/explore").catch(() => null),
+      ]);
 
-    async function loadPlansData() {
-      try {
-        setIsLoadingPlans(true);
-        const [plansRes, exploreRes] = await Promise.all([
-          fetchApi("/api/public/meal-plans").catch(() => null),
-          fetchApi("/api/public/explore").catch(() => null),
-        ]);
+      let plansData: PublicMealPlan[] = [];
+      let kitchensData: any[] = [];
 
-        let plansData: PublicMealPlan[] = [];
-        let kitchensData: any[] = [];
-
-        if (plansRes && plansRes.ok) {
-          const plansJson = await plansRes.json();
-          plansData = plansJson.data || plansJson || [];
-        }
-
-        if (exploreRes && exploreRes.ok) {
-          const exploreJson = await exploreRes.json();
-          kitchensData = exploreJson.data?.kitchens || exploreJson.kitchens || [];
-        }
-
-        if (isMounted) {
-          setAllPlans(plansData);
-          setAllKitchens(kitchensData);
-
-          if (plansData.length > 0 && selectedSellerId === "all") {
-            // Default to first seller with plans
-            setSelectedSellerId(plansData[0].sellerId);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to load public meal plans:", err);
-      } finally {
-        if (isMounted) setIsLoadingPlans(false);
+      if (plansRes && plansRes.ok) {
+        const plansJson = await plansRes.json();
+        plansData = plansJson.data || plansJson || [];
       }
+
+      if (exploreRes && exploreRes.ok) {
+        const exploreJson = await exploreRes.json();
+        kitchensData = exploreJson.data?.kitchens || exploreJson.kitchens || [];
+      }
+
+      setAllPlans(plansData);
+      setAllKitchens(kitchensData);
+
+      setSelectedSellerId((prev) => {
+        if (plansData.length > 0 && prev === "all") {
+          return plansData[0].sellerId;
+        }
+        return prev;
+      });
+    } catch (err) {
+      console.error("Failed to load public meal plans:", err);
+    } finally {
+      setIsLoadingPlans(false);
     }
-
-    loadPlansData();
-
-    return () => {
-      isMounted = false;
-    };
   }, []);
+
+  useEffect(() => {
+    loadPlansData();
+  }, [loadPlansData]);
+
+  // Real-time SSE Live Stream: auto-refresh meal plans and user subscriptions without manual page refresh
+  useLiveShopStream({
+    onMealPlanUpdated: () => {
+      loadPlansData();
+    },
+    onMealSubscriptionUpdated: () => {
+      loadUserSubs();
+      loadPlansData();
+    },
+    onCatalogueUpdated: () => {
+      loadPlansData();
+    },
+  });
+
+  useEffect(() => {
+    const handlePlansUpdated = () => {
+      loadPlansData();
+    };
+    const handleSubsUpdated = () => {
+      loadUserSubs();
+    };
+    window.addEventListener("meal-plans-updated", handlePlansUpdated);
+    window.addEventListener("meal-subscriptions-updated", handleSubsUpdated);
+    return () => {
+      window.removeEventListener("meal-plans-updated", handlePlansUpdated);
+      window.removeEventListener("meal-subscriptions-updated", handleSubsUpdated);
+    };
+  }, [loadPlansData, loadUserSubs]);
 
   const showToast = (type: "success" | "error" | "info", text: string) => {
     setToast({ type, text });
@@ -1434,10 +1450,31 @@ function MySubscriptionContent() {
 
                           {/* Policy Row */}
                           <div className={styles.policyRow}>
-                            <span className={styles.policyItem}>
-                              <PauseCircle size={12} color="#FF5500" />
-                              <span>Pause: {plan.pauseBillingPeriod || "30 Days"}</span>
-                            </span>
+                            {(() => {
+                              const isPauseDisabled =
+                                !plan.pauseBillingPeriod ||
+                                plan.pauseBillingPeriod.trim().toLowerCase() === "none" ||
+                                plan.pauseBillingPeriod.trim().toLowerCase() === "disabled" ||
+                                plan.pauseBillingPeriod.trim().toLowerCase() === "false" ||
+                                (plan as any).allowPause === false ||
+                                (plan as any).allowPauseBilling === false;
+
+                              if (isPauseDisabled) {
+                                return (
+                                  <span className={styles.policyItem} style={{ color: "#94A3B8" }}>
+                                    <PauseCircle size={12} color="#94A3B8" />
+                                    <span>No pause available</span>
+                                  </span>
+                                );
+                              }
+
+                              return (
+                                <span className={styles.policyItem}>
+                                  <PauseCircle size={12} color="#FF5500" />
+                                  <span>Pause: {plan.pauseBillingPeriod || "30 Days"}</span>
+                                </span>
+                              );
+                            })()}
                           </div>
 
                           {/* Subscribe CTA Button */}

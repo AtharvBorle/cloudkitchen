@@ -186,26 +186,60 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
 
         fetchShop(false);
 
-        // Live polling interval (every 4 seconds)
-        const interval = setInterval(() => {
-            if (document.visibilityState === "visible") {
-                fetchShop(true);
-            }
-        }, 4000);
-
+        let syncDebounceTimer: any = null;
         const handleSync = () => {
-            fetchShop(true);
+            if (!isMounted) return;
+            if (syncDebounceTimer) clearTimeout(syncDebounceTimer);
+            syncDebounceTimer = setTimeout(() => {
+                if (isMounted) fetchShop(true);
+            }, 300);
         };
 
         const handleVisibility = () => {
             if (document.visibilityState === "visible") {
-                fetchShop(true);
+                handleSync();
             }
         };
+
+        // Real-time SSE connection for instant shop/menu updates without polling
+        let es: EventSource | null = null;
+        let reconnectTimeout: any = null;
+
+        const connectLiveStream = () => {
+            if (typeof window === "undefined" || !isMounted) return;
+            try {
+                const query = trackingId ? `?sellerId=${encodeURIComponent(trackingId)}` : "";
+                es = new EventSource(`/api/public/live/stream${query}`, { withCredentials: true });
+                es.addEventListener("live", () => {
+                    handleSync();
+                });
+                es.onmessage = (e) => {
+                    if (e.data && e.data.trim().startsWith("{")) {
+                        handleSync();
+                    }
+                };
+                es.onerror = () => {
+                    if (es && es.readyState === EventSource.CLOSED) {
+                        es.close();
+                        es = null;
+                        if (isMounted) {
+                            reconnectTimeout = setTimeout(connectLiveStream, 5000);
+                        }
+                    }
+                };
+            } catch (err) {
+                console.error("Shop live stream connection error:", err);
+            }
+        };
+
+        connectLiveStream();
 
         if (typeof window !== "undefined") {
             window.addEventListener("focus", handleSync);
             window.addEventListener("seller-status-updated", handleSync);
+            window.addEventListener("seller-menu-updated", handleSync);
+            window.addEventListener("public-live-shop", handleSync);
+            window.addEventListener("public-coupon-updated", handleSync);
             window.addEventListener("cloudkitchen-new-notification", handleSync);
             window.addEventListener("storage", handleSync);
             document.addEventListener("visibilitychange", handleVisibility);
@@ -224,10 +258,18 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
 
         return () => {
             isMounted = false;
-            clearInterval(interval);
+            if (syncDebounceTimer) clearTimeout(syncDebounceTimer);
+            if (reconnectTimeout) clearTimeout(reconnectTimeout);
+            if (es) {
+                try { es.close(); } catch {}
+                es = null;
+            }
             if (typeof window !== "undefined") {
                 window.removeEventListener("focus", handleSync);
                 window.removeEventListener("seller-status-updated", handleSync);
+                window.removeEventListener("seller-menu-updated", handleSync);
+                window.removeEventListener("public-live-shop", handleSync);
+                window.removeEventListener("public-coupon-updated", handleSync);
                 window.removeEventListener("cloudkitchen-new-notification", handleSync);
                 window.removeEventListener("storage", handleSync);
                 document.removeEventListener("visibilitychange", handleVisibility);

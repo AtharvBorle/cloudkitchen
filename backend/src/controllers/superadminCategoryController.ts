@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { revalidateTag } from "next/cache";
+import { emitCategoryUpdated } from "@/lib/realtime-events";
 
 export const getCategories = async () => {
     const session = await getAuthSession();
@@ -48,6 +49,7 @@ export const createCategory = async (req: Request) => {
         revalidateTag("public-categories", {});
         revalidateTag("explore", {});
         revalidateTag("public-explore-data", {});
+        emitCategoryUpdated("CREATE", category);
     } catch (e) {}
 
     return { category };
