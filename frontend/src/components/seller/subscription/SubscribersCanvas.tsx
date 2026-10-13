@@ -10,6 +10,7 @@ import {
 } from "@/lib/meal-subscriptions";
 import { formatDeliveryAddressDisplay } from "./ManageSubscriptionCanvas";
 import PaginationControls from "../common/PaginationControls";
+import { useLiveShopStream } from "@/hooks/useLiveShopStream";
 
 export type SubscriberFilterTab = "all" | "active" | "expired";
 
@@ -52,11 +53,22 @@ export default function SubscribersCanvas({
     }
   };
 
+  useLiveShopStream({
+    onMealPlanUpdated: () => {
+      refreshSubscribers();
+    },
+    onMealSubscriptionUpdated: () => {
+      refreshSubscribers();
+    },
+  });
+
   useEffect(() => {
     refreshSubscribers();
     window.addEventListener("meal-plans-updated", refreshSubscribers);
+    window.addEventListener("meal-subscriptions-updated", refreshSubscribers);
     return () => {
       window.removeEventListener("meal-plans-updated", refreshSubscribers);
+      window.removeEventListener("meal-subscriptions-updated", refreshSubscribers);
     };
   }, []);
 

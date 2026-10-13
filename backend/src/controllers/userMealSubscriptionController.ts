@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
+import { emitMealSubscriptionUpdated } from "@/lib/realtime-events";
 import Razorpay from "razorpay";
 import crypto from "crypto";
 
@@ -381,6 +382,8 @@ export const createUserMealSubscription = async (req: Request) => {
         data: { subscribersCount: { increment: 1 } }
     }).catch(() => {});
 
+    emitMealSubscriptionUpdated(newSub.sellerId, newSub.userId, "CREATE", newSub);
+
     return newSub;
 };
 
@@ -425,6 +428,8 @@ export const cancelUserMealSubscription = async (subscriptionId: string, reason?
             data: { subscribersCount: { decrement: 1 } }
         }).catch(() => {});
     }
+
+    emitMealSubscriptionUpdated(subscription.sellerId, session.user.id, "CANCEL", updated);
 
     return {
         success: true,
@@ -516,6 +521,8 @@ export const changeUserMealPlan = async (subscriptionId: string, newPlanId: stri
         }).catch(() => {});
     }
 
+    emitMealSubscriptionUpdated(updated.sellerId, session.user.id, "UPDATE", updated);
+
     return {
         success: true,
         message: `Plan changed successfully to ${newPlan.name}!`,
@@ -562,6 +569,8 @@ export const togglePauseUserMealSubscription = async (subscriptionId: string, is
             seller: true,
         }
     });
+
+    emitMealSubscriptionUpdated(updated.sellerId, session.user.id, isPaused ? "PAUSE" : "RESUME", updated);
 
     return {
         success: true,

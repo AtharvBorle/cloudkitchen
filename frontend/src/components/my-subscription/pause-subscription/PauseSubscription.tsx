@@ -52,7 +52,21 @@ export const PauseSubscription: React.FC<PauseSubscriptionProps> = ({
   };
 
   if (allowPause === false) {
-    return null;
+    return (
+      <div className={`${styles.container} ${styles.disabledContainer}`}>
+        <div className={styles.left}>
+          <div className={styles.iconSquare} style={{ backgroundColor: "#F8FAFC" }}>
+            <PauseCircle size={24} className={styles.icon} style={{ color: "#94A3B8" }} />
+          </div>
+          <div>
+            <h3 className={styles.title} style={{ color: "#64748B" }}>Pause Subscription</h3>
+            <p className={styles.subtitle} style={{ color: "#94A3B8" }}>
+              No pause available for this meal plan
+            </p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

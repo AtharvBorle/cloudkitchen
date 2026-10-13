@@ -11,10 +11,17 @@ export interface LiveShopPayload {
     | "CATEGORY_UPDATED"
     | "REEL_UPDATED"
     | "ROOM_UPDATED"
-    | "CATALOGUE_UPDATED";
+    | "CATALOGUE_UPDATED"
+    | "MEAL_PLAN_UPDATED"
+    | "MEAL_SUBSCRIPTION_UPDATED";
   sellerId?: string | null;
+  userId?: string | null;
+  planId?: string | null;
+  subscriptionId?: string | null;
+  plan?: any;
+  subscription?: any;
   coupon?: any;
-  action?: "CREATE" | "UPDATE" | "DELETE" | "TOGGLE";
+  action?: "CREATE" | "UPDATE" | "DELETE" | "TOGGLE" | "CANCEL" | "PAUSE" | "RESUME";
   isOnline?: boolean;
   type?: string;
   details?: any;
@@ -32,6 +39,8 @@ export interface UseLiveShopStreamOptions {
   onReelUpdated?: (payload: LiveShopPayload) => void;
   onRoomUpdated?: (payload: LiveShopPayload) => void;
   onCatalogueUpdated?: (payload: LiveShopPayload) => void;
+  onMealPlanUpdated?: (payload: LiveShopPayload) => void;
+  onMealSubscriptionUpdated?: (payload: LiveShopPayload) => void;
   onAnyEvent?: (payload: LiveShopPayload) => void;
 }
 
@@ -116,6 +125,10 @@ function startConnection(key: string, sellerId?: string | null) {
           window.dispatchEvent(new CustomEvent("public-room-updated", { detail: payload }));
         } else if (payload.event === "CATALOGUE_UPDATED") {
           window.dispatchEvent(new CustomEvent("public-catalogue-updated", { detail: payload }));
+        } else if (payload.event === "MEAL_PLAN_UPDATED") {
+          window.dispatchEvent(new CustomEvent("meal-plans-updated", { detail: payload }));
+        } else if (payload.event === "MEAL_SUBSCRIPTION_UPDATED") {
+          window.dispatchEvent(new CustomEvent("meal-subscriptions-updated", { detail: payload }));
         }
       } catch (err) {
         console.error("Failed to parse LiveShop SSE payload:", err);
@@ -190,6 +203,8 @@ export function useLiveShopStream(options: UseLiveShopStreamOptions = {}) {
     onReelUpdated,
     onRoomUpdated,
     onCatalogueUpdated,
+    onMealPlanUpdated,
+    onMealSubscriptionUpdated,
     onAnyEvent,
   } = options;
 
@@ -202,6 +217,8 @@ export function useLiveShopStream(options: UseLiveShopStreamOptions = {}) {
     onReelUpdated,
     onRoomUpdated,
     onCatalogueUpdated,
+    onMealPlanUpdated,
+    onMealSubscriptionUpdated,
     onAnyEvent,
   });
 
@@ -215,6 +232,8 @@ export function useLiveShopStream(options: UseLiveShopStreamOptions = {}) {
       onReelUpdated,
       onRoomUpdated,
       onCatalogueUpdated,
+      onMealPlanUpdated,
+      onMealSubscriptionUpdated,
       onAnyEvent,
     };
   }, [
@@ -226,6 +245,8 @@ export function useLiveShopStream(options: UseLiveShopStreamOptions = {}) {
     onReelUpdated,
     onRoomUpdated,
     onCatalogueUpdated,
+    onMealPlanUpdated,
+    onMealSubscriptionUpdated,
     onAnyEvent,
   ]);
 
@@ -253,6 +274,10 @@ export function useLiveShopStream(options: UseLiveShopStreamOptions = {}) {
         callbacksRef.current.onRoomUpdated?.(payload);
       } else if (payload.event === "CATALOGUE_UPDATED") {
         callbacksRef.current.onCatalogueUpdated?.(payload);
+      } else if (payload.event === "MEAL_PLAN_UPDATED") {
+        callbacksRef.current.onMealPlanUpdated?.(payload);
+      } else if (payload.event === "MEAL_SUBSCRIPTION_UPDATED") {
+        callbacksRef.current.onMealSubscriptionUpdated?.(payload);
       }
     };
 

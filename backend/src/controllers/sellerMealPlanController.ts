@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { getCategoryExpiries } from "@/lib/subscription";
+import { emitMealPlanUpdated } from "@/lib/realtime-events";
 
 export const getAuthenticatedSellerProfile = async () => {
     const session = await getAuthSession();
@@ -381,6 +382,8 @@ export const createSellerMealPlan = async (req: Request) => {
         }
     });
 
+    emitMealPlanUpdated(sellerProfile.id, "CREATE", newPlan);
+
     return {
         id: newPlan.id,
         name: newPlan.name,
@@ -517,6 +520,8 @@ export const updateSellerMealPlan = async (req: Request) => {
         parsedTimings = [];
     }
 
+    emitMealPlanUpdated(sellerProfile.id, "UPDATE", updated);
+
     return {
         id: updated.id,
         name: updated.name,
@@ -577,6 +582,8 @@ export const toggleSellerMealPlanStatus = async (req: Request, paramId?: string)
         data: { status: newStatus }
     });
 
+    emitMealPlanUpdated(sellerProfile.id, "TOGGLE", updated);
+
     return {
         id: updated.id,
         name: updated.name,
@@ -628,6 +635,8 @@ export const deleteSellerMealPlan = async (req: Request, paramId?: string) => {
     await db.sellerMealPlan.delete({
         where: { id: existingPlan.id }
     });
+
+    emitMealPlanUpdated(sellerProfile.id, "DELETE", { id: existingPlan.id });
 
     return { success: true, message: "Meal subscription plan deleted successfully" };
 };

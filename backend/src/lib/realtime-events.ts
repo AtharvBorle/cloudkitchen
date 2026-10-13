@@ -130,10 +130,17 @@ export interface RealtimeLivePayload {
     | "CATEGORY_UPDATED"
     | "REEL_UPDATED"
     | "ROOM_UPDATED"
-    | "CATALOGUE_UPDATED";
+    | "CATALOGUE_UPDATED"
+    | "MEAL_PLAN_UPDATED"
+    | "MEAL_SUBSCRIPTION_UPDATED";
   sellerId?: string | null;
+  userId?: string | null;
+  planId?: string | null;
+  subscriptionId?: string | null;
+  plan?: any;
+  subscription?: any;
   coupon?: any;
-  action?: "CREATE" | "UPDATE" | "DELETE" | "TOGGLE";
+  action?: "CREATE" | "UPDATE" | "DELETE" | "TOGGLE" | "CANCEL" | "PAUSE" | "RESUME";
   isOnline?: boolean;
   type?: string;
   details?: any;
@@ -275,3 +282,57 @@ export function emitCatalogueUpdated(type: string, sellerId?: string | null) {
     realtimeEmitter.emit(`public:seller:${sellerId}`, payload);
   }
 }
+
+/**
+ * Dispatch when a meal subscription plan is created, updated, toggled, or deleted by a seller.
+ */
+export function emitMealPlanUpdated(
+  sellerId: string,
+  action: "CREATE" | "UPDATE" | "DELETE" | "TOGGLE" = "UPDATE",
+  plan?: any
+) {
+  const payload: RealtimeLivePayload = {
+    event: "MEAL_PLAN_UPDATED",
+    sellerId: sellerId ? String(sellerId) : null,
+    planId: plan?.id ? String(plan.id) : undefined,
+    plan,
+    action,
+    timestamp: new Date().toISOString(),
+  };
+
+  realtimeEmitter.emit("public:live", payload);
+  if (sellerId) {
+    realtimeEmitter.emit(`public:seller:${sellerId}`, payload);
+    realtimeEmitter.emit(`seller:${sellerId}`, payload);
+  }
+}
+
+/**
+ * Dispatch when a user creates, pauses, resumes, changes or cancels a meal subscription.
+ */
+export function emitMealSubscriptionUpdated(
+  sellerId: string,
+  userId: string,
+  action: "CREATE" | "UPDATE" | "CANCEL" | "PAUSE" | "RESUME" = "UPDATE",
+  subscription?: any
+) {
+  const payload: RealtimeLivePayload = {
+    event: "MEAL_SUBSCRIPTION_UPDATED",
+    sellerId: sellerId ? String(sellerId) : null,
+    userId: userId ? String(userId) : null,
+    subscriptionId: subscription?.id ? String(subscription.id) : undefined,
+    subscription,
+    action,
+    timestamp: new Date().toISOString(),
+  };
+
+  realtimeEmitter.emit("public:live", payload);
+  if (sellerId) {
+    realtimeEmitter.emit(`public:seller:${sellerId}`, payload);
+    realtimeEmitter.emit(`seller:${sellerId}`, payload);
+  }
+  if (userId) {
+    realtimeEmitter.emit(`user:${userId}`, payload);
+  }
+}
+

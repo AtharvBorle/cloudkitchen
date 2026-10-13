@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useLiveShopStream } from "@/hooks/useLiveShopStream";
 import {
   Plus,
   Edit2,
@@ -107,11 +108,22 @@ export default function ManageSubscriptionCanvas({
     }
   };
 
+  useLiveShopStream({
+    onMealPlanUpdated: () => {
+      refreshData();
+    },
+    onMealSubscriptionUpdated: () => {
+      refreshData();
+    },
+  });
+
   useEffect(() => {
     refreshData();
     window.addEventListener("meal-plans-updated", refreshData);
+    window.addEventListener("meal-subscriptions-updated", refreshData);
     return () => {
       window.removeEventListener("meal-plans-updated", refreshData);
+      window.removeEventListener("meal-subscriptions-updated", refreshData);
     };
   }, []);
 

@@ -605,6 +605,9 @@ export async function cancelUserSubscription(subscriptionId: string, reason?: st
     if (!res.ok) {
       throw new Error(json.message || "Failed to cancel subscription");
     }
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("meal-subscriptions-updated"));
+    }
     return { success: true, message: json.message || "Subscription cancelled successfully" };
   } catch (err: any) {
     console.error("Error cancelling subscription:", err);
@@ -623,6 +626,9 @@ export async function changeUserSubscriptionPlan(subscriptionId: string, newPlan
     if (!res.ok) {
       throw new Error(json.message || "Failed to change meal plan");
     }
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("meal-subscriptions-updated"));
+    }
     return { success: true, message: json.message || "Meal plan changed successfully", subscription: json.data?.subscription };
   } catch (err: any) {
     console.error("Error changing subscription plan:", err);
@@ -640,6 +646,9 @@ export async function togglePauseUserSubscription(subscriptionId: string, isPaus
     const json = await res.json();
     if (!res.ok) {
       throw new Error(json.message || "Failed to update pause state");
+    }
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("meal-subscriptions-updated"));
     }
     return { success: true, message: json.message || "Pause status updated" };
   } catch (err: any) {
@@ -727,6 +736,9 @@ export async function verifyAndActivateMealSubscription(params: {
     if (!res.ok) {
       throw new Error(json.message || json.error || "Payment verification failed. Please try again.");
     }
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("meal-subscriptions-updated"));
+    }
     return {
       success: true,
       message: json.message || "Subscribed to meal plan successfully!",
@@ -770,6 +782,9 @@ export async function subscribeToMealPlan(
     const json = await res.json();
     if (!res.ok) {
       throw new Error(json.message || "Failed to subscribe to meal plan");
+    }
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("meal-subscriptions-updated"));
     }
     return {
       success: true,
