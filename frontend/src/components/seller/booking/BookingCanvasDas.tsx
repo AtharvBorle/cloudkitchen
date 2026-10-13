@@ -72,6 +72,8 @@ export default function BookingCanvasDas({
   const [propertyVerification, setPropertyVerification] = useState<string>("NONE");
 
   useEffect(() => {
+    if (!isRoomEnabled) return;
+
     async function checkCategoryAccess() {
       try {
         const res = await fetchApi("/api/seller/dashboard/status");
@@ -84,7 +86,7 @@ export default function BookingCanvasDas({
           setPropertyVerification(verif);
           setStatusChecked(true);
 
-          if (!active) {
+          if (!active && isRoomEnabled) {
             window.dispatchEvent(
               new CustomEvent(verif === "APPROVED" ? "open-subscription-modal" : "open-category-upgrade", {
                 detail: { category: "PROPERTY" },
@@ -99,7 +101,7 @@ export default function BookingCanvasDas({
       }
     }
     checkCategoryAccess();
-  }, []);
+  }, [isRoomEnabled]);
 
   useEffect(() => {
     if (isPropertyActive === false) return; // Do not load bookings if property category is not active

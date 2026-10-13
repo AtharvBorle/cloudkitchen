@@ -164,12 +164,14 @@ export default function SellerSidebar({
     const handleOpenUpgrade = (e: Event) => {
       const customEvent = e as CustomEvent;
       const category = customEvent.detail?.category || "FOOD";
+      if (category === "PROPERTY" && !isRoomEnabled) return;
       openCategoryUpgradeModal(category);
     };
 
     const handleOpenSubscription = (e: Event) => {
       const customEvent = e as CustomEvent;
       const category = customEvent.detail?.category || "FOOD";
+      if (category === "PROPERTY" && !isRoomEnabled) return;
       openSubscriptionModal(category);
     };
 
@@ -179,9 +181,10 @@ export default function SellerSidebar({
       window.removeEventListener("open-category-upgrade", handleOpenUpgrade);
       window.removeEventListener("open-subscription-modal", handleOpenSubscription);
     };
-  }, [statusData]);
+  }, [statusData, isRoomEnabled]);
 
   const openSubscriptionModal = async (category: "FOOD" | "PROPERTY") => {
+    if (category === "PROPERTY" && !isRoomEnabled) return;
     setModalCategory(category);
     setModalType("SUBSCRIPTION");
     setModalOpen(true);
@@ -200,6 +203,7 @@ export default function SellerSidebar({
   };
 
   const openCategoryUpgradeModal = (category: "FOOD" | "PROPERTY") => {
+    if (category === "PROPERTY" && !isRoomEnabled) return;
     setModalCategory(category);
     setModalType("UPGRADE");
     setModalOpen(true);
@@ -305,6 +309,10 @@ export default function SellerSidebar({
           return;
         }
       } else if (isPropertyTab) {
+        if (!isRoomEnabled) {
+          e.preventDefault();
+          return;
+        }
         if (!hasActiveSub) {
           e.preventDefault();
           openSubscriptionModal("PROPERTY");
