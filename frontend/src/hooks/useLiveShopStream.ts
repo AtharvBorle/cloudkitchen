@@ -3,11 +3,21 @@
 import { useEffect, useRef } from "react";
 
 export interface LiveShopPayload {
-  event: "COUPON_UPDATED" | "SELLER_STATUS_CHANGED" | "MENU_UPDATED";
+  event:
+    | "COUPON_UPDATED"
+    | "SELLER_STATUS_CHANGED"
+    | "MENU_UPDATED"
+    | "BANNER_UPDATED"
+    | "CATEGORY_UPDATED"
+    | "REEL_UPDATED"
+    | "ROOM_UPDATED"
+    | "CATALOGUE_UPDATED";
   sellerId?: string | null;
   coupon?: any;
   action?: "CREATE" | "UPDATE" | "DELETE" | "TOGGLE";
   isOnline?: boolean;
+  type?: string;
+  details?: any;
   timestamp: string;
 }
 
@@ -17,6 +27,11 @@ export interface UseLiveShopStreamOptions {
   onCouponUpdated?: (payload: LiveShopPayload) => void;
   onSellerStatusChanged?: (payload: LiveShopPayload) => void;
   onMenuUpdated?: (payload: LiveShopPayload) => void;
+  onBannerUpdated?: (payload: LiveShopPayload) => void;
+  onCategoryUpdated?: (payload: LiveShopPayload) => void;
+  onReelUpdated?: (payload: LiveShopPayload) => void;
+  onRoomUpdated?: (payload: LiveShopPayload) => void;
+  onCatalogueUpdated?: (payload: LiveShopPayload) => void;
   onAnyEvent?: (payload: LiveShopPayload) => void;
 }
 
@@ -91,6 +106,16 @@ function startConnection(key: string, sellerId?: string | null) {
           window.dispatchEvent(new CustomEvent("seller-status-updated", { detail: payload }));
         } else if (payload.event === "MENU_UPDATED") {
           window.dispatchEvent(new CustomEvent("seller-menu-updated", { detail: payload }));
+        } else if (payload.event === "BANNER_UPDATED") {
+          window.dispatchEvent(new CustomEvent("public-banner-updated", { detail: payload }));
+        } else if (payload.event === "CATEGORY_UPDATED") {
+          window.dispatchEvent(new CustomEvent("public-category-updated", { detail: payload }));
+        } else if (payload.event === "REEL_UPDATED") {
+          window.dispatchEvent(new CustomEvent("public-reel-updated", { detail: payload }));
+        } else if (payload.event === "ROOM_UPDATED") {
+          window.dispatchEvent(new CustomEvent("public-room-updated", { detail: payload }));
+        } else if (payload.event === "CATALOGUE_UPDATED") {
+          window.dispatchEvent(new CustomEvent("public-catalogue-updated", { detail: payload }));
         }
       } catch (err) {
         console.error("Failed to parse LiveShop SSE payload:", err);
@@ -150,8 +175,8 @@ function stopConnectionIfOrphaned(key: string) {
 }
 
 /**
- * Hook to listen to real-time shop updates (coupons, seller online status, menu items) via SSE.
- * Requires ZERO polling. Multiple components subscribing to the same seller share 1 single SSE stream.
+ * Hook to listen to real-time shop and catalogue updates (coupons, seller status, menu, banners, categories, reels, rooms) via SSE.
+ * Requires ZERO polling. Multiple components subscribing to the same stream share 1 single SSE connection.
  */
 export function useLiveShopStream(options: UseLiveShopStreamOptions = {}) {
   const {
@@ -160,6 +185,11 @@ export function useLiveShopStream(options: UseLiveShopStreamOptions = {}) {
     onCouponUpdated,
     onSellerStatusChanged,
     onMenuUpdated,
+    onBannerUpdated,
+    onCategoryUpdated,
+    onReelUpdated,
+    onRoomUpdated,
+    onCatalogueUpdated,
     onAnyEvent,
   } = options;
 
@@ -167,6 +197,11 @@ export function useLiveShopStream(options: UseLiveShopStreamOptions = {}) {
     onCouponUpdated,
     onSellerStatusChanged,
     onMenuUpdated,
+    onBannerUpdated,
+    onCategoryUpdated,
+    onReelUpdated,
+    onRoomUpdated,
+    onCatalogueUpdated,
     onAnyEvent,
   });
 
@@ -175,9 +210,24 @@ export function useLiveShopStream(options: UseLiveShopStreamOptions = {}) {
       onCouponUpdated,
       onSellerStatusChanged,
       onMenuUpdated,
+      onBannerUpdated,
+      onCategoryUpdated,
+      onReelUpdated,
+      onRoomUpdated,
+      onCatalogueUpdated,
       onAnyEvent,
     };
-  }, [onCouponUpdated, onSellerStatusChanged, onMenuUpdated, onAnyEvent]);
+  }, [
+    onCouponUpdated,
+    onSellerStatusChanged,
+    onMenuUpdated,
+    onBannerUpdated,
+    onCategoryUpdated,
+    onReelUpdated,
+    onRoomUpdated,
+    onCatalogueUpdated,
+    onAnyEvent,
+  ]);
 
   useEffect(() => {
     if (!enabled || typeof window === "undefined") return;
@@ -193,6 +243,16 @@ export function useLiveShopStream(options: UseLiveShopStreamOptions = {}) {
         callbacksRef.current.onSellerStatusChanged?.(payload);
       } else if (payload.event === "MENU_UPDATED") {
         callbacksRef.current.onMenuUpdated?.(payload);
+      } else if (payload.event === "BANNER_UPDATED") {
+        callbacksRef.current.onBannerUpdated?.(payload);
+      } else if (payload.event === "CATEGORY_UPDATED") {
+        callbacksRef.current.onCategoryUpdated?.(payload);
+      } else if (payload.event === "REEL_UPDATED") {
+        callbacksRef.current.onReelUpdated?.(payload);
+      } else if (payload.event === "ROOM_UPDATED") {
+        callbacksRef.current.onRoomUpdated?.(payload);
+      } else if (payload.event === "CATALOGUE_UPDATED") {
+        callbacksRef.current.onCatalogueUpdated?.(payload);
       }
     };
 

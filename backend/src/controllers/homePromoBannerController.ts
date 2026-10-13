@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { uploadImage } from "@/lib/upload";
+import { emitBannerUpdated } from "@/lib/realtime-events";
 
 /**
  * Public: Get all active home promo banners
@@ -101,6 +102,8 @@ export const createHomeBanner = async (req: Request) => {
         }
     });
 
+    emitBannerUpdated("CREATE", newBanner);
+
     return { banner: newBanner };
 };
 
@@ -179,6 +182,8 @@ export const updateHomeBanner = async (req: Request, id: string) => {
         data: dataToUpdate
     });
 
+    emitBannerUpdated("UPDATE", updatedBanner);
+
     return { banner: updatedBanner };
 };
 
@@ -197,6 +202,8 @@ export const deleteHomeBanner = async (id: string) => {
     await (db as any).homePromoBanner.delete({
         where: { id }
     });
+
+    emitBannerUpdated("DELETE", { id });
 
     return { success: true };
 };
