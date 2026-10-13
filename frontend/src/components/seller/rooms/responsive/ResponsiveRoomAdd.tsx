@@ -306,8 +306,8 @@ export const ResponsiveRoomAdd: React.FC<ResponsiveRoomAddProps> = ({
       const fullQuery = q.toLowerCase().includes("pune") ? q : `${q}, Pune, Maharashtra`;
       const res = await geocodeWithGoogle(fullQuery);
       if (res) {
-        setLatitude(res.lat);
-        setLongitude(res.lng);
+        setLatitude(res.lat ?? null);
+        setLongitude(res.lng ?? null);
         if (res.pincode) setPincode(res.pincode);
         if (res.locality) setLocality(res.locality);
         else setLocality(q.split(",")[0].trim());

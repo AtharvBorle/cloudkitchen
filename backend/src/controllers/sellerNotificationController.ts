@@ -5,6 +5,7 @@ import { ApiError } from "@/lib/api-error";
 export type NotificationCategory =
     | "all"
     | "orders"
+    | "offers"
     | "stock"
     | "delivery"
     | "timings"
@@ -404,27 +405,97 @@ export const getSellerNotifications = async (req: Request) => {
         }
     } catch {}
 
+    // 8. Fetch Promotional Offers & Deals for the Seller
+    try {
+        const coupons = await db.coupon.findMany({
+            where: {
+                OR: [
+                    { appliesToSellerId: sellerProfile.id },
+                    { appliesToSellerId: null }
+                ]
+            },
+            orderBy: { createdAt: "desc" },
+            take: 20
+        });
+
+        for (const cp of coupons) {
+            const discountText = cp.discountType === "PERCENTAGE"
+                ? `${cp.discountPercentage}% OFF`
+                : `Flat ₹${cp.discountAmount || 0} OFF`;
+            const minCartText = cp.minimumCartValue ? ` • Min Order: ₹${cp.minimumCartValue}` : "";
+            const usageCount = cp.currentUsersCount || 0;
+            const usageText = usageCount > 0 ? ` • ${usageCount} order${usageCount === 1 ? "" : "s"} redeemed` : "";
+            const isStoreSpecific = cp.appliesToSellerId === sellerProfile.id;
+
+            notifications.push({
+                id: `offer-${cp.id}`,
+                category: "offers",
+                title: isStoreSpecific ? `Active Store Offer: ${cp.code} (${discountText})` : `Platform Promo Live: ${cp.code} (${discountText})`,
+                message: cp.description || `Customers can apply code ${cp.code} at checkout to receive ${discountText}${minCartText}.`,
+                details: `Code: ${cp.code} • Discount: ${discountText}${minCartText}${usageText}`,
+                timestamp: cp.createdAt ? cp.createdAt.toISOString() : new Date().toISOString(),
+                timeAgo: calculateTimeAgo(cp.createdAt || new Date()),
+                isRead: false,
+                severity: "success",
+                actionLabel: "Manage Offers",
+                actionHref: `/seller/offers`,
+                metadata: { couponId: cp.id, code: cp.code, currentUsage: usageCount }
+            });
+        }
+    } catch {}
+
+    // 6. Dismissed / Deleted Notifications filtering
+    const dismissedSet = await getSellerDismissedNotificationIds(sellerProfile.id);
+    let clearedTimestamp: number | null = null;
+    try {
+        const clearedKey = `seller_notifications_cleared_${sellerProfile.id}`;
+        const clearedRec = await db.systemSettings.findUnique({ where: { key: clearedKey } });
+        if (clearedRec?.value) {
+            clearedTimestamp = new Date(clearedRec.value).getTime();
+        }
+    } catch {}
+
+    const isDismissed = (n: SellerNotification) => {
+        if (dismissedSet.has(n.id) || dismissedSet.has(n.id.toLowerCase())) return true;
+        if (n.metadata?.orderId) {
+            const ordId = String(n.metadata.orderId);
+            if (dismissedSet.has(ordId) || dismissedSet.has(`ord-new-${ordId}`) || dismissedSet.has(`notif-order-${ordId}`)) {
+                return true;
+            }
+        }
+        const cleanId = n.id.replace(/^(?:notif-order-|ord-[a-z]+-|notif-stock-|stock-|notif-book-|bk-|notif-offer-|offer-)/i, "");
+        if (cleanId && (dismissedSet.has(cleanId) || dismissedSet.has(cleanId.toLowerCase()))) return true;
+        if (clearedTimestamp && n.timestamp) {
+            const notifTime = new Date(n.timestamp).getTime();
+            if (notifTime <= clearedTimestamp) return true;
+        }
+        return false;
+    };
+
+    const activeNotifications = notifications.filter(n => !isDismissed(n));
+
     // Sort all notifications chronologically (newest first)
-    notifications.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    activeNotifications.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
     // Calculate Counts by Category
     const countsByCategory: Record<string, number> = {
-        all: notifications.length,
-        unread: notifications.filter(n => !n.isRead).length,
-        orders: notifications.filter(n => n.category === "orders").length,
-        stock: notifications.filter(n => n.category === "stock").length,
-        delivery: notifications.filter(n => n.category === "delivery").length,
-        timings: notifications.filter(n => n.category === "timings").length,
-        bookings: notifications.filter(n => n.category === "bookings").length,
-        reviews: notifications.filter(n => n.category === "reviews").length,
-        settlements: notifications.filter(n => n.category === "settlements").length,
-        system: notifications.filter(n => n.category === "system").length,
+        all: activeNotifications.length,
+        unread: activeNotifications.filter(n => !n.isRead).length,
+        orders: activeNotifications.filter(n => n.category === "orders").length,
+        offers: activeNotifications.filter(n => n.category === "offers").length,
+        stock: activeNotifications.filter(n => n.category === "stock").length,
+        delivery: activeNotifications.filter(n => n.category === "delivery").length,
+        timings: activeNotifications.filter(n => n.category === "timings").length,
+        bookings: activeNotifications.filter(n => n.category === "bookings").length,
+        reviews: activeNotifications.filter(n => n.category === "reviews").length,
+        settlements: activeNotifications.filter(n => n.category === "settlements").length,
+        system: activeNotifications.filter(n => n.category === "system").length,
     };
 
-    const unreadCount = notifications.filter(n => !n.isRead).length;
+    const unreadCount = activeNotifications.filter(n => !n.isRead).length;
 
     // Apply Filter
-    let filtered = notifications;
+    let filtered = activeNotifications;
     if (categoryFilter && categoryFilter !== "all") {
         if (categoryFilter.toLowerCase() === "unread") {
             filtered = filtered.filter(n => !n.isRead);
@@ -441,10 +512,86 @@ export const getSellerNotifications = async (req: Request) => {
 
     return {
         unreadCount,
-        totalCount: notifications.length,
+        totalCount: activeNotifications.length,
         filteredCount: filtered.length,
         countsByCategory,
         notifications: paged
+    };
+};
+
+export const getSellerDismissedNotificationIds = async (sellerId: string): Promise<Set<string>> => {
+    try {
+        const key = `seller_dismissed_notifications_${sellerId}`;
+        const record = await db.systemSettings.findUnique({ where: { key } });
+        if (record?.value) {
+            const parsed = JSON.parse(record.value);
+            if (Array.isArray(parsed)) {
+                return new Set(parsed.map(String));
+            }
+        }
+    } catch (err) {
+        console.error("Error reading dismissed notification ids:", err);
+    }
+    return new Set<string>();
+};
+
+export const dismissSellerNotification = async (notificationId: string) => {
+    const { sellerProfile } = await getAuthenticatedSeller();
+    const rawId = String(notificationId || "").trim();
+    if (!rawId) {
+        throw new ApiError("Notification ID is required", 400);
+    }
+
+    const dismissedSet = await getSellerDismissedNotificationIds(sellerProfile.id);
+    dismissedSet.add(rawId);
+    dismissedSet.add(rawId.toLowerCase());
+
+    const cleanId = rawId.replace(/^(?:notif-order-|ord-[a-z]+-|notif-stock-|stock-|notif-book-|bk-|notif-offer-|offer-)/i, "").trim();
+    if (cleanId) {
+        dismissedSet.add(cleanId);
+        dismissedSet.add(cleanId.toLowerCase());
+        dismissedSet.add(`ord-new-${cleanId}`);
+        dismissedSet.add(`notif-order-${cleanId}`);
+        dismissedSet.add(`ord-del-${cleanId}`);
+        dismissedSet.add(`ord-can-${cleanId}`);
+        dismissedSet.add(`ord-don-${cleanId}`);
+        dismissedSet.add(`stock-${cleanId}`);
+        dismissedSet.add(`notif-stock-${cleanId}`);
+        dismissedSet.add(`bk-${cleanId}`);
+        dismissedSet.add(`notif-book-${cleanId}`);
+    }
+
+    const key = `seller_dismissed_notifications_${sellerProfile.id}`;
+    const list = Array.from(dismissedSet);
+    await db.systemSettings.upsert({
+        where: { key },
+        update: { value: JSON.stringify(list) },
+        create: { id: key, key, value: JSON.stringify(list) },
+    });
+
+    return {
+        success: true,
+        message: `Notification ${rawId} permanently deleted`,
+        notificationId: rawId,
+        dismissed: true,
+    };
+};
+
+export const clearAllSellerNotifications = async () => {
+    const { sellerProfile } = await getAuthenticatedSeller();
+    const key = `seller_notifications_cleared_${sellerProfile.id}`;
+    const nowIso = new Date().toISOString();
+    await db.systemSettings.upsert({
+        where: { key },
+        update: { value: nowIso },
+        create: { id: key, key, value: nowIso },
+    });
+
+    return {
+        success: true,
+        message: "All notifications cleared permanently",
+        cleared: true,
+        clearedAt: nowIso,
     };
 };
 
@@ -468,31 +615,59 @@ export const markSellerNotificationRead = async (req: Request) => {
 
 export const getSellerNotificationCount = async () => {
     const { session, sellerProfile } = await getAuthenticatedSeller();
+    const dismissedSet = await getSellerDismissedNotificationIds(sellerProfile.id);
+
+    let clearedTimestamp: number | null = null;
+    try {
+        const clearedKey = `seller_notifications_cleared_${sellerProfile.id}`;
+        const clearedRec = await db.systemSettings.findUnique({ where: { key: clearedKey } });
+        if (clearedRec?.value) {
+            clearedTimestamp = new Date(clearedRec.value).getTime();
+        }
+    } catch {}
 
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const pendingOrdersCount = await db.order.count({
+    const pendingOrders = await db.order.findMany({
         where: {
             sellerId: sellerProfile.id,
             status: { in: ["PENDING", "NEW"] },
             createdAt: { gte: thirtyDaysAgo }
-        }
+        },
+        select: { id: true, createdAt: true }
     });
 
-    const lowStockCount = await db.foodItem.count({
+    const activePendingOrders = pendingOrders.filter((ord) => {
+        if (dismissedSet.has(ord.id) || dismissedSet.has(`ord-new-${ord.id}`) || dismissedSet.has(`notif-order-${ord.id}`)) {
+            return false;
+        }
+        if (clearedTimestamp && ord.createdAt.getTime() <= clearedTimestamp) {
+            return false;
+        }
+        return true;
+    });
+
+    const pendingOrdersCount = activePendingOrders.length;
+
+    const lowStockFoodItems = await db.foodItem.findMany({
         where: {
             sellerId: sellerProfile.id,
             OR: [
                 { isAvailable: false },
                 { AND: [{ stockQuantity: { gte: 0 } }, { stockQuantity: { lte: 5 } }] }
             ]
-        }
+        },
+        select: { id: true }
     });
+
+    const lowStockCount = lowStockFoodItems.filter(
+        item => !dismissedSet.has(`stock-${item.id}`) && !dismissedSet.has(`notif-stock-${item.id}`) && !dismissedSet.has(item.id)
+    ).length;
 
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const unreadBookingsCount = await db.booking.count({
+    const bookings = await db.booking.findMany({
         where: {
             OR: [
                 { room: { sellerId: sellerProfile.id } },
@@ -500,8 +675,21 @@ export const getSellerNotificationCount = async () => {
                 { userId: session.user.id }
             ],
             createdAt: { gte: sevenDaysAgo }
-        }
+        },
+        select: { id: true, createdAt: true }
     });
+
+    const activeBookings = bookings.filter((bk) => {
+        if (dismissedSet.has(bk.id) || dismissedSet.has(`bk-${bk.id}`) || dismissedSet.has(`notif-book-${bk.id}`)) {
+            return false;
+        }
+        if (clearedTimestamp && bk.createdAt.getTime() <= clearedTimestamp) {
+            return false;
+        }
+        return true;
+    });
+
+    const unreadBookingsCount = activeBookings.length;
 
     const unreadCount = pendingOrdersCount + lowStockCount + unreadBookingsCount;
 

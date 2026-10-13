@@ -208,7 +208,18 @@ export default function Properties({
   selectedDietary: controlledDietary,
   onDietaryChange,
 }: PropertiesProps) {
-  const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
+  const [selectedCuisines, setSelectedCuisines] = useState<string[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = sessionStorage.getItem("cloudkitchen_selected_cuisines") || localStorage.getItem("cloudkitchen_selected_cuisines");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) return parsed;
+        }
+      } catch {}
+    }
+    return [];
+  });
   const [internalSelectedDietary, setInternalSelectedDietary] = useState<string[]>(() => {
     if (typeof window !== "undefined") {
       try {
@@ -221,10 +232,75 @@ export default function Properties({
     }
     return [];
   });
-  const [maxPrice, setMaxPrice] = useState<number>(2500);
-  const [activePricePreset, setActivePricePreset] = useState<string>("all");
+  const [maxPrice, setMaxPrice] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const urlMax = params.get("maxPrice");
+        const urlPrice = params.get("price");
+        if (urlMax) {
+          const num = Number(urlMax);
+          if (!isNaN(num) && num > 0) return num;
+        }
+        if (urlPrice) {
+          if (urlPrice === "under-150") return 150;
+          if (urlPrice === "150-300" || urlPrice === "under-300") return 300;
+          if (urlPrice === "150-400") return 400;
+        }
+
+        const stored = localStorage.getItem("cloudkitchen_price_filter") || sessionStorage.getItem("cloudkitchen_price_filter");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed) {
+            if (typeof parsed.maxPrice === "number" && parsed.maxPrice > 0) {
+              return parsed.maxPrice;
+            }
+            if (parsed.preset === "under-150") return 150;
+            if (parsed.preset === "150-300" || parsed.preset === "under-300") return 300;
+            if (parsed.preset === "150-400") return 400;
+          }
+        }
+      } catch {}
+    }
+    return 2500;
+  });
+  const [activePricePreset, setActivePricePreset] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const urlPrice = params.get("price");
+        const urlMax = params.get("maxPrice");
+        if (urlPrice) return urlPrice;
+        if (urlMax && Number(urlMax) < 2500) return "custom";
+
+        const stored = localStorage.getItem("cloudkitchen_price_filter") || sessionStorage.getItem("cloudkitchen_price_filter");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed) {
+            if (parsed.preset) return parsed.preset;
+            if (parsed.maxPrice && Number(parsed.maxPrice) < 2500) return "custom";
+          }
+        }
+      } catch {}
+    }
+    return "all";
+  });
 
   const selectedDietary = controlledDietary !== undefined ? controlledDietary : internalSelectedDietary;
+
+  // Persist selected cuisines across session and back-navigation
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      if (selectedCuisines.length > 0) {
+        sessionStorage.setItem("cloudkitchen_selected_cuisines", JSON.stringify(selectedCuisines));
+        localStorage.setItem("cloudkitchen_selected_cuisines", JSON.stringify(selectedCuisines));
+      } else {
+        sessionStorage.removeItem("cloudkitchen_selected_cuisines");
+        localStorage.removeItem("cloudkitchen_selected_cuisines");
+      }
+    } catch {}
+  }, [selectedCuisines]);
 
   // Sync external events / localStorage changes
   useEffect(() => {
@@ -245,12 +321,55 @@ export default function Properties({
         setInternalSelectedDietary([]);
       }
     };
+
+    const syncPrice = (e?: any) => {
+      try {
+        if (e?.detail) {
+          const payload = e.detail;
+          if (payload.maxPrice !== undefined) {
+            setMaxPrice(Number(payload.maxPrice));
+          }
+          if (payload.preset !== undefined) {
+            setActivePricePreset(payload.preset);
+          }
+          return;
+        }
+
+        const stored = localStorage.getItem("cloudkitchen_price_filter") || sessionStorage.getItem("cloudkitchen_price_filter");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed) {
+            let restoredMax = 2500;
+            if (typeof parsed.maxPrice === "number" && parsed.maxPrice > 0) {
+              restoredMax = parsed.maxPrice;
+            } else if (parsed.preset === "under-150") {
+              restoredMax = 150;
+            } else if (parsed.preset === "150-300" || parsed.preset === "under-300") {
+              restoredMax = 300;
+            } else if (parsed.preset === "150-400") {
+              restoredMax = 400;
+            }
+            const restoredPreset = parsed.preset || (restoredMax < 2500 ? "custom" : "all");
+            setMaxPrice(restoredMax);
+            setActivePricePreset(restoredPreset);
+            return;
+          }
+        }
+      } catch {}
+    };
+
     if (typeof window !== "undefined") {
       window.addEventListener("cloudkitchen_diet_preference_changed", handleDietEvent);
+      window.addEventListener("cloudkitchen_price_filter_changed", syncPrice);
       window.addEventListener("storage", handleDietEvent);
+      window.addEventListener("storage", syncPrice);
+      window.addEventListener("popstate", syncPrice);
       return () => {
         window.removeEventListener("cloudkitchen_diet_preference_changed", handleDietEvent);
+        window.removeEventListener("cloudkitchen_price_filter_changed", syncPrice);
         window.removeEventListener("storage", handleDietEvent);
+        window.removeEventListener("storage", syncPrice);
+        window.removeEventListener("popstate", syncPrice);
       };
     }
   }, []);
@@ -389,6 +508,9 @@ export default function Properties({
         window.dispatchEvent(new CustomEvent("cloudkitchen_diet_preference_changed", { detail: "all" }));
         window.dispatchEvent(new CustomEvent("cloudkitchen_veg_preference_changed", { detail: false }));
         localStorage.removeItem("cloudkitchen_price_filter");
+        sessionStorage.removeItem("cloudkitchen_price_filter");
+        localStorage.removeItem("cloudkitchen_selected_cuisines");
+        sessionStorage.removeItem("cloudkitchen_selected_cuisines");
         window.dispatchEvent(
           new CustomEvent("cloudkitchen_price_filter_changed", { detail: null })
         );
@@ -424,11 +546,13 @@ export default function Properties({
           maxPrice: max,
         };
         localStorage.setItem("cloudkitchen_price_filter", JSON.stringify(filterPayload));
+        sessionStorage.setItem("cloudkitchen_price_filter", JSON.stringify(filterPayload));
         window.dispatchEvent(
           new CustomEvent("cloudkitchen_price_filter_changed", { detail: filterPayload })
         );
       } else {
         localStorage.removeItem("cloudkitchen_price_filter");
+        sessionStorage.removeItem("cloudkitchen_price_filter");
         window.dispatchEvent(
           new CustomEvent("cloudkitchen_price_filter_changed", { detail: null })
         );
@@ -587,7 +711,6 @@ export default function Properties({
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      justifyContent: "space-between",
                       cursor: "pointer",
                       userSelect: "none",
                     }}
@@ -625,16 +748,6 @@ export default function Properties({
                         {item.label}
                       </span>
                     </div>
-                    <span
-                      style={{
-                        fontSize: "14px",
-                        color: "#94A3B8",
-                        fontWeight: "400",
-                        fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-                      }}
-                    >
-                      {item.count}
-                    </span>
                   </div>
                 );
               })}
@@ -669,7 +782,6 @@ export default function Properties({
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      justifyContent: "space-between",
                       cursor: "pointer",
                       userSelect: "none",
                     }}
@@ -706,16 +818,6 @@ export default function Properties({
                         {item.label}
                       </span>
                     </div>
-                    <span
-                      style={{
-                        fontSize: "14px",
-                        color: "#94A3B8",
-                        fontWeight: "400",
-                        fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-                      }}
-                    >
-                      {item.count}
-                    </span>
                   </div>
                 );
               })}
@@ -771,8 +873,9 @@ export default function Properties({
                 step="25"
                 value={activePricePreset !== "all" && activePricePreset !== "custom" ? (activePricePreset === "under-150" ? 150 : activePricePreset === "150-300" ? 300 : activePricePreset === "150-400" ? 400 : 2500) : maxPrice}
                 onChange={(e) => {
-                  setMaxPrice(Number(e.target.value));
-                  setActivePricePreset("custom");
+                  const val = Number(e.target.value);
+                  setMaxPrice(val);
+                  setActivePricePreset(val >= 2500 ? "all" : "custom");
                 }}
                 style={{
                   width: "100%",

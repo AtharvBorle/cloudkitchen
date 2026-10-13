@@ -21,7 +21,7 @@ export default function SellerOffersClient({
 }: SellerOffersClientProps) {
     const [offers, setOffers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [filterStatus, setFilterStatus] = useState<"ALL" | "ACTIVE" | "EXPIRED" | "DRAFT">("ALL");
+    const [filterStatus, setFilterStatus] = useState<"ALL" | "ACTIVE" | "EXPIRED">("ALL");
     const [couponToDelete, setCouponToDelete] = useState<{ id: string; code: string } | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
@@ -100,15 +100,11 @@ export default function SellerOffersClient({
         }
     };
 
-    const isOfferDraft = (o: any) => o.approvalStatus === "DRAFT" || o.status === "Draft" || o.status === "DRAFT";
-
     const filteredOffers = useMemo(() => {
         return offers.filter(o => {
             const isExpired = o.endDate && new Date(o.endDate) < new Date();
-            const isDraft = isOfferDraft(o);
-            if (filterStatus === "ACTIVE" && (!o.isActive || isDraft || isExpired)) return false;
-            if (filterStatus === "EXPIRED" && !((!o.isActive && !isDraft) || isExpired)) return false;
-            if (filterStatus === "DRAFT" && !isDraft) return false;
+            if (filterStatus === "ACTIVE" && (!o.isActive || isExpired)) return false;
+            if (filterStatus === "EXPIRED" && (o.isActive && !isExpired)) return false;
 
             if (!searchQuery.trim()) return true;
 
@@ -125,7 +121,7 @@ export default function SellerOffersClient({
                 : `₹${o.discountAmount || o.discountValue} off`).toLowerCase();
             const category = (o.category || "").toLowerCase();
             const appliesTo = (o.appliesTo || "").toLowerCase();
-            const statusStr = isDraft ? "draft" : (o.isActive && !isExpired ? "live active" : "paused expired inactive");
+            const statusStr = o.isActive && !isExpired ? "live active" : "paused expired inactive";
             const minOrder = String(o.minOrderAmount ?? o.minimumCartValue ?? "").toLowerCase();
 
             // Direct check
@@ -185,8 +181,7 @@ export default function SellerOffersClient({
         return filteredOffers.slice(startIndex, startIndex + numSize);
     }, [filteredOffers, currentPage, pageSize]);
 
-    const activeCount = offers.filter(o => o.isActive && !isOfferDraft(o) && (!o.endDate || new Date(o.endDate) >= new Date())).length;
-    const draftCount = offers.filter(o => isOfferDraft(o)).length;
+    const activeCount = offers.filter(o => o.isActive && (!o.endDate || new Date(o.endDate) >= new Date())).length;
     const totalUsage = offers.reduce((sum, o) => sum + Math.max(0, Number(o.currentUsage ?? o.usedCount ?? o.currentUsersCount ?? 0)), 0);
 
     return (
@@ -284,24 +279,6 @@ export default function SellerOffersClient({
                     >
                         Active ({activeCount})
                     </button>
-                    {draftCount > 0 && (
-                        <button
-                            type="button"
-                            onClick={() => setFilterStatus("DRAFT")}
-                            style={{
-                                padding: "6px 14px",
-                                borderRadius: "6px",
-                                border: "none",
-                                fontSize: "12.5px",
-                                fontWeight: 600,
-                                cursor: "pointer",
-                                backgroundColor: filterStatus === "DRAFT" ? "#FF5500" : "#F1F5F9",
-                                color: filterStatus === "DRAFT" ? "#FFFFFF" : "#64748B",
-                            }}
-                        >
-                            Drafts ({draftCount})
-                        </button>
-                    )}
                     <button
                         type="button"
                         onClick={() => setFilterStatus("EXPIRED")}
@@ -316,7 +293,7 @@ export default function SellerOffersClient({
                             color: filterStatus === "EXPIRED" ? "#FFFFFF" : "#64748B",
                         }}
                     >
-                        Expired / Paused ({offers.length - activeCount - draftCount})
+                        Expired / Paused ({offers.length - activeCount})
                     </button>
                 </div>
 
@@ -485,8 +462,6 @@ export default function SellerOffersClient({
                                         ? `${offer.discountPercentage || offer.discountValue}% OFF`
                                         : `₹${offer.discountAmount || offer.discountValue} OFF`;
 
-                                    const isDraft = isOfferDraft(offer);
-
                                     return (
                                         <tr key={offer.id} style={{ borderBottom: "1px solid #F1F5F9" }}>
                                             <td style={{ padding: "14px 16px", fontWeight: 700, color: "#0F172A" }}>
@@ -544,24 +519,24 @@ export default function SellerOffersClient({
                                                 {Math.max(0, Number(offer.currentUsage ?? offer.usedCount ?? offer.currentUsersCount ?? 0))} / {offer.usageLimit || offer.maxUsage || offer.maxUsers || "∞"}
                                             </td>
                                             <td style={{ padding: "14px 16px", color: "#64748B" }}>
-                                                {offer.noExpiry ? "No Expiry" : offer.validUntil ? new Date(offer.validUntil).toLocaleDateString() : offer.endDate ? new Date(offer.endDate).toLocaleDateString() : (isDraft ? "Draft" : "Active")}
+                                                {offer.noExpiry ? "No Expiry" : offer.validUntil ? new Date(offer.validUntil).toLocaleDateString() : offer.endDate ? new Date(offer.endDate).toLocaleDateString() : "Active"}
                                             </td>
                                             <td style={{ padding: "14px 16px" }}>
                                                 <button
                                                     type="button"
-                                                    onClick={() => !isDraft && handleToggleStatus(offer.id, offer.isActive)}
+                                                    onClick={() => handleToggleStatus(offer.id, offer.isActive)}
                                                     style={{
                                                         padding: "3px 8px",
                                                         borderRadius: "6px",
                                                         border: "none",
                                                         fontSize: "11px",
                                                         fontWeight: 700,
-                                                        cursor: isDraft ? "default" : "pointer",
-                                                        backgroundColor: isDraft ? "#FEF3C7" : (offer.isActive && !isExpired ? "#DCFCE7" : "#F1F5F9"),
-                                                        color: isDraft ? "#B45309" : (offer.isActive && !isExpired ? "#15803D" : "#64748B"),
+                                                        cursor: "pointer",
+                                                        backgroundColor: offer.isActive && !isExpired ? "#DCFCE7" : "#F1F5F9",
+                                                        color: offer.isActive && !isExpired ? "#15803D" : "#64748B",
                                                     }}
                                                 >
-                                                    {isDraft ? "DRAFT" : (offer.isActive && !isExpired ? "LIVE" : "PAUSED")}
+                                                    {offer.isActive && !isExpired ? "LIVE" : "PAUSED"}
                                                 </button>
                                             </td>
                                             <td style={{ padding: "14px 16px", textAlign: "right" }}>

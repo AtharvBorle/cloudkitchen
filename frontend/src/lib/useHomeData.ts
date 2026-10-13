@@ -6,6 +6,7 @@ import {
   formatDistance,
   MAX_DELIVERY_RADIUS_KM,
   getPincodeCoordinates,
+  resolveLocationCoordinates,
 } from './geo-distance';
 import { extractRoomPropertyLocation, cleanRoomAboutText } from './room-location-helper';
 
@@ -51,6 +52,8 @@ export interface DynamicFoodItem {
   isWithin5km?: boolean;
   addons?: any;
   variants?: any;
+  totalSales?: number;
+  orderCount?: number;
 }
 
 export interface DynamicRoom {
@@ -506,6 +509,8 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
               sellerDeliveryRadiusKm: item.sellerDeliveryRadiusKm !== undefined && item.sellerDeliveryRadiusKm !== null ? Number(item.sellerDeliveryRadiusKm) : (item.deliveryRadiusKm !== undefined && item.deliveryRadiusKm !== null ? Number(item.deliveryRadiusKm) : 5.0),
               addons: item.addons || item.variants || [],
               variants: item.variants || item.addons || [],
+              totalSales: typeof item.totalSales === "number" ? item.totalSales : (typeof item.orderCount === "number" ? item.orderCount : 0),
+              orderCount: typeof item.orderCount === "number" ? item.orderCount : (typeof item.totalSales === "number" ? item.totalSales : 0),
             };
             rawFoodItems.push(foodItem);
           });
@@ -774,22 +779,30 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
   };
 
   // Compute active location coordinates and pincode with localStorage immediate fallback
+  const hasUserExplicitlySelected = typeof window !== "undefined" && localStorage.getItem("user-has-selected-location") === "true";
   const localLat = typeof window !== "undefined" && localStorage.getItem("guest-lat") ? parseFloat(localStorage.getItem("guest-lat")!) : null;
   const localLng = typeof window !== "undefined" && localStorage.getItem("guest-lng") ? parseFloat(localStorage.getItem("guest-lng")!) : null;
   const localPin = typeof window !== "undefined" ? (localStorage.getItem("active-selected-pincode") || localStorage.getItem("guest-pincode")) : null;
+  const localLocality = typeof window !== "undefined" ? localStorage.getItem("guest-locality") : null;
 
-  const activePincode = (options?.pincode || defaultAddress?.pincode || localPin || '').trim() || null;
+  // Resolve user active location: prioritize explicitly selected location / localPin, else defaultAddress
+  const rawCandidate = options?.pincode || (hasUserExplicitlySelected && localPin ? localPin : (defaultAddress?.pincode || localPin || ''));
+  const resolvedCandidate = resolveLocationCoordinates(rawCandidate || (hasUserExplicitlySelected ? localLocality : (defaultAddress?.locality || localLocality)));
+  const activePincode = (resolvedCandidate?.pincode || rawCandidate || '').trim() || null;
 
-  const canUseLocalCoords = !defaultAddress?.pincode || !localPin || defaultAddress.pincode.trim() === localPin.trim();
-  const userLat = (defaultAddress?.latitude != null && !isNaN(Number(defaultAddress.latitude)))
+  const userLat = (hasUserExplicitlySelected && localLat !== null && !isNaN(localLat))
+    ? localLat
+    : (defaultAddress?.latitude != null && !isNaN(Number(defaultAddress.latitude)))
     ? Number(defaultAddress.latitude)
-    : (canUseLocalCoords && localLat !== null && !isNaN(localLat) ? localLat : null);
-  const userLng = (defaultAddress?.longitude != null && !isNaN(Number(defaultAddress.longitude)))
+    : (localLat !== null && !isNaN(localLat) ? localLat : null);
+  const userLng = (hasUserExplicitlySelected && localLng !== null && !isNaN(localLng))
+    ? localLng
+    : (defaultAddress?.longitude != null && !isNaN(Number(defaultAddress.longitude)))
     ? Number(defaultAddress.longitude)
-    : (canUseLocalCoords && localLng !== null && !isNaN(localLng) ? localLng : null);
-  const pinFallbackCoords = activePincode ? getPincodeCoordinates(activePincode) : null;
-  const activeUserLat = userLat ?? pinFallbackCoords?.lat ?? null;
-  const activeUserLng = userLng ?? pinFallbackCoords?.lng ?? null;
+    : (localLng !== null && !isNaN(localLng) ? localLng : null);
+
+  const activeUserLat = userLat ?? resolvedCandidate?.lat ?? null;
+  const activeUserLng = userLng ?? resolvedCandidate?.lng ?? null;
   const hasUserCoords = activeUserLat !== null && activeUserLng !== null;
 
   // Compute enriched food items with accurate distances
@@ -853,7 +866,7 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
   ) => {
     const maxRadius =
       sellerRadiusKm !== undefined && sellerRadiusKm !== null && Number(sellerRadiusKm) > 0
-        ? Math.min(Number(sellerRadiusKm), MAX_DELIVERY_RADIUS_KM)
+        ? Number(sellerRadiusKm)
         : MAX_DELIVERY_RADIUS_KM;
 
     // 1. Resolve user coordinates: either direct GPS/pinned lat/lng OR fallback from active pincode
@@ -871,21 +884,21 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
         ? getPincodeCoordinates(activePincode)?.lng ?? null
         : null;
 
-    // 2. Resolve seller coordinates: either direct seller lat/lng OR fallback from seller pincode
+    // 2. Resolve seller coordinates: either direct seller lat/lng OR fallback from seller pincode or locality
     const effectiveSellerPin = sellerPin || (servedPins && servedPins.length > 0 ? servedPins[0] : undefined);
+    const sellerPinCoords = effectiveSellerPin
+      ? getPincodeCoordinates(effectiveSellerPin)
+      : (locality ? resolveLocationCoordinates(locality) : null);
+
     const resolvedSellerLat =
       sellerLat != null && !isNaN(Number(sellerLat)) && Number(sellerLat) !== 0
         ? Number(sellerLat)
-        : effectiveSellerPin
-        ? getPincodeCoordinates(effectiveSellerPin)?.lat ?? null
-        : null;
+        : sellerPinCoords?.lat ?? null;
 
     const resolvedSellerLng =
       sellerLng != null && !isNaN(Number(sellerLng)) && Number(sellerLng) !== 0
         ? Number(sellerLng)
-        : effectiveSellerPin
-        ? getPincodeCoordinates(effectiveSellerPin)?.lng ?? null
-        : null;
+        : sellerPinCoords?.lng ?? null;
 
     // 3. If both user and seller coordinates are resolved, STRICTLY enforce distance <= maxRadius
     if (
@@ -908,7 +921,7 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
       return isPincodeServiced(activePincode, sellerPin, servedPins, locality, landmark);
     }
 
-    return true;
+    return false;
   };
 
   // Check if at least one kitchen directly serves the user's active location

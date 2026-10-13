@@ -29,7 +29,7 @@ import {
 } from "../notificationData";
 import styles from "./ResponsiveSellerNotifications.module.css";
 
-type TabFilter = "all" | "unread" | "orders" | "stock" | "delivery" | "timings" | "bookings" | "reviews" | "settlements";
+type TabFilter = "all" | "unread" | "orders" | "stock" | "delivery" | "reviews" | "settlements";
 
 interface TabItem {
   id: TabFilter;
@@ -42,8 +42,6 @@ const TABS: TabItem[] = [
   { id: "orders", label: "Orders" },
   { id: "stock", label: "Stock" },
   { id: "delivery", label: "Delivery" },
-  { id: "timings", label: "Timings" },
-  { id: "bookings", label: "Bookings" },
   { id: "reviews", label: "Reviews" },
   { id: "settlements", label: "Settlements" },
 ];
@@ -138,8 +136,6 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
         tabParam === "orders" ||
         tabParam === "stock" ||
         tabParam === "delivery" ||
-        tabParam === "timings" ||
-        tabParam === "bookings" ||
         tabParam === "reviews" ||
         tabParam === "settlements"
       ) {
@@ -179,7 +175,7 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
   const handleDismiss = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     deleteNotification(id);
-    showToast("Notification dismissed");
+    showToast("Notification deleted permanently");
   };
 
   const toggleExpand = (id: string) => {

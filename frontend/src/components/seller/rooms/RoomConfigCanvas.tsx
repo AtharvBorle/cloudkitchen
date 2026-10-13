@@ -423,8 +423,8 @@ export default function RoomConfigCanvas({
       if (geocoded && geocoded.lat && geocoded.lng) {
         setFormData((prev) => ({
           ...prev,
-          latitude: geocoded.lat,
-          longitude: geocoded.lng,
+          latitude: geocoded.lat ?? null,
+          longitude: geocoded.lng ?? null,
           locality: geocoded.locality || prev.locality,
           pincode: geocoded.pincode || prev.pincode,
           street: geocoded.street || prev.street,

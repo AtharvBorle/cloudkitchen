@@ -11,7 +11,7 @@ import {
 import { formatDeliveryAddressDisplay } from "./ManageSubscriptionCanvas";
 import PaginationControls from "../common/PaginationControls";
 
-export type SubscriberFilterTab = "all" | "active" | "expired";
+export type SubscriberFilterTab = "all" | "active" | "expired" | "paused";
 
 export interface SubscribersCanvasProps {
   searchQuery?: string;
@@ -67,18 +67,29 @@ export default function SubscribersCanvas({
   const isSubscriberActive = (s: MealSubscriber) => {
     const now = new Date();
     const statusStr = String(s.status || "").toUpperCase().trim();
-    if (statusStr === "EXPIRED") return false;
+    if (statusStr === "EXPIRED" || statusStr === "CANCELLED" || statusStr === "PAUSED" || s.isPaused) return false;
     const isStatusActive = statusStr === "ACTIVE" || statusStr === "LIVE" || statusStr === "EXPIRING SOON";
-    const notPaused = !s.isPaused && statusStr !== "PAUSED";
     const notExpired = !s.endDate || new Date(s.endDate) >= now;
-    return isStatusActive && notPaused && notExpired;
+    return isStatusActive && notExpired;
+  };
+
+  const isSubscriberPaused = (s: MealSubscriber) => {
+    const statusStr = String(s.status || "").toUpperCase().trim();
+    return s.isPaused === true || statusStr === "PAUSED";
+  };
+
+  const isSubscriberExpired = (s: MealSubscriber) => {
+    if (isSubscriberPaused(s)) return false;
+    if (isSubscriberActive(s)) return false;
+    return true;
   };
 
   const matchesSearch = (sub: MealSubscriber, rawQuery: string) => {
     const q = (rawQuery || "").toLowerCase().trim();
     if (!q) return true;
     const isActive = isSubscriberActive(sub);
-    const displayStatus = isActive ? "Active" : sub.status === "Paused" ? "Paused" : "Expired";
+    const isPaused = isSubscriberPaused(sub);
+    const displayStatus = isActive ? "Active" : isPaused ? "Paused" : "Expired";
     const formattedAddr = formatDeliveryAddressDisplay(sub.deliveryAddress, sub.roomNo);
     const rawAmountDigits = String(sub.amount || sub.pricePaid || "").replace(/[^\d.]/g, "");
 
@@ -116,19 +127,21 @@ export default function SubscribersCanvas({
   const counts = useMemo(() => {
     const allCount = searchMatchedSubscribers.length;
     const activeCount = searchMatchedSubscribers.filter((s) => isSubscriberActive(s)).length;
-    const expiredCount = searchMatchedSubscribers.filter((s) => !isSubscriberActive(s)).length;
+    const pausedCount = searchMatchedSubscribers.filter((s) => isSubscriberPaused(s)).length;
+    const expiredCount = searchMatchedSubscribers.filter((s) => isSubscriberExpired(s)).length;
     return {
       all: allCount,
       active: activeCount,
       expired: expiredCount,
+      paused: pausedCount,
     };
   }, [searchMatchedSubscribers]);
 
   const filteredSubscribers = useMemo(() => {
     return searchMatchedSubscribers.filter((sub) => {
-      const active = isSubscriberActive(sub);
-      if (activeFilter === "active") return active;
-      if (activeFilter === "expired") return !active;
+      if (activeFilter === "active") return isSubscriberActive(sub);
+      if (activeFilter === "paused") return isSubscriberPaused(sub);
+      if (activeFilter === "expired") return isSubscriberExpired(sub);
       return true;
     });
   }, [searchMatchedSubscribers, activeFilter]);
@@ -207,13 +220,13 @@ export default function SubscribersCanvas({
               All Subscribers
             </h1>
             <p style={{ fontSize: "13px", color: "#64748B", margin: "4px 0 0 0" }}>
-              View and manage all active and expired meal plan subscribers.
+              View and manage all active, expired, and paused meal plan subscribers.
             </p>
           </div>
         </div>
       </div>
 
-      {/* 2. Filter Pills Row (All / Active / Expired) in Website Theme */}
+      {/* 2. Filter Pills Row (All / Active / Expired / Paused) in Website Theme */}
       <div
         style={{
           display: "flex",
@@ -228,6 +241,7 @@ export default function SubscribersCanvas({
             { id: "all", label: "All", count: counts.all },
             { id: "active", label: "Active", count: counts.active },
             { id: "expired", label: "Expired", count: counts.expired },
+            { id: "paused", label: "Paused", count: counts.paused },
           ] as { id: SubscriberFilterTab; label: string; count: number }[]
         ).map((tab) => {
           const isSelected = activeFilter === tab.id;
@@ -274,11 +288,15 @@ export default function SubscribersCanvas({
                       ? "rgba(255, 255, 255, 0.24)"
                       : tab.id === "active"
                       ? "#FFF1E8"
+                      : tab.id === "paused"
+                      ? "#FEF3C7"
                       : "#F1F5F9",
                     color: isSelected
                       ? "#FFFFFF"
                       : tab.id === "active"
                       ? "#FF5500"
+                      : tab.id === "paused"
+                      ? "#B45309"
                       : "#475569",
                   }}
                 >
@@ -384,6 +402,8 @@ export default function SubscribersCanvas({
                   ? "Active Subscribers"
                   : activeFilter === "expired"
                   ? "Expired Subscribers"
+                  : activeFilter === "paused"
+                  ? "Paused Subscribers"
                   : "All Subscribers Directory"}
               </h3>
               <p style={{ fontSize: "12.5px", color: "#64748B", margin: "2px 0 0 0" }}>
@@ -391,7 +411,9 @@ export default function SubscribersCanvas({
                   ? "Currently active subscriber accounts receiving scheduled deliveries."
                   : activeFilter === "expired"
                   ? "Past subscriber accounts whose billing cycle has ended."
-                  : "Complete list of both active and expired meal plan subscribers."}
+                  : activeFilter === "paused"
+                  ? "Subscribers with temporary billing and delivery pause."
+                  : "Complete list of active, expired, and paused meal plan subscribers."}
               </p>
             </div>
           </div>
@@ -474,6 +496,8 @@ export default function SubscribersCanvas({
                       ? "No active subscribers found."
                       : activeFilter === "expired"
                       ? "No expired subscribers found."
+                      : activeFilter === "paused"
+                      ? "No paused subscribers found."
                       : "No subscribers yet."}
                   </td>
                 </tr>
@@ -484,9 +508,10 @@ export default function SubscribersCanvas({
                     sub.roomNo
                   );
                   const active = isSubscriberActive(sub);
+                  const paused = isSubscriberPaused(sub);
                   const statusLabel = active
                     ? "Active"
-                    : sub.status === "Paused"
+                    : paused
                     ? "Paused"
                     : "Expired";
 

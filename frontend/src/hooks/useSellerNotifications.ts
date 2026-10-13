@@ -11,6 +11,7 @@ import {
 import { fetchApi } from "@/lib/fetch-api";
 
 const STORAGE_KEY = "seller_notifications_store_v4";
+const DELETED_IDS_STORAGE_KEY = "seller_notifications_deleted_ids_v4";
 
 let memoryNotifications: SellerNotificationItem[] | null = null;
 const listeners = new Set<() => void>();
@@ -23,6 +24,100 @@ function notifyAll() {
       console.error("Error in notification listener:", e);
     }
   });
+}
+
+function getDeletedNotificationIds(): Set<string> {
+  if (typeof window === "undefined") return new Set<string>();
+  try {
+    const raw = localStorage.getItem(DELETED_IDS_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return new Set(parsed.map((item) => String(item).trim()).filter(Boolean));
+      }
+    }
+  } catch {}
+  return new Set<string>();
+}
+
+function saveDeletedNotificationIds(set: Set<string>) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(DELETED_IDS_STORAGE_KEY, JSON.stringify(Array.from(set)));
+  } catch {}
+}
+
+function getNotificationIdentifierVariants(item: SellerNotificationItem | { id?: string; title?: string; category?: string; metadata?: any }): string[] {
+  const variants = new Set<string>();
+  const id = String(item.id || "").trim();
+  const title = String(item.title || "").trim();
+
+  if (id) {
+    variants.add(id);
+    variants.add(id.toLowerCase());
+  }
+
+  try {
+    const canonicalKey = getCanonicalNotificationKey(item as SellerNotificationItem);
+    if (canonicalKey) {
+      variants.add(canonicalKey);
+      variants.add(canonicalKey.toLowerCase());
+    }
+  } catch {}
+
+  const metaOrderId = item.metadata?.orderId ? String(item.metadata.orderId).trim() : "";
+  if (metaOrderId) {
+    variants.add(metaOrderId);
+    variants.add(`ord-new-${metaOrderId}`);
+    variants.add(`notif-order-${metaOrderId}`);
+    variants.add(`ord-del-${metaOrderId}`);
+    variants.add(`ord-can-${metaOrderId}`);
+    variants.add(`ord-don-${metaOrderId}`);
+  }
+
+  const titleShortMatch = title.match(/#(?:ORD-)?([A-Za-z0-9]+)/i);
+  if (titleShortMatch && titleShortMatch[1]) {
+    const shortCode = titleShortMatch[1].toUpperCase();
+    variants.add(shortCode);
+  }
+
+  if (id.startsWith("ord-") || id.startsWith("notif-order-")) {
+    const stripped = id.replace(/^(?:notif-order-|ord-[a-z]+-)/i, "").trim();
+    if (stripped) {
+      variants.add(stripped);
+      variants.add(`notif-order-${stripped}`);
+      variants.add(`ord-new-${stripped}`);
+      variants.add(`ord-del-${stripped}`);
+      variants.add(`ord-can-${stripped}`);
+      variants.add(`ord-don-${stripped}`);
+    }
+  }
+
+  if (id.startsWith("stock-") || id.startsWith("notif-stock-")) {
+    const stripped = id.replace(/^(?:notif-stock-|notif-|stock-)/i, "").trim();
+    if (stripped) {
+      variants.add(stripped);
+      variants.add(`stock-${stripped}`);
+      variants.add(`notif-stock-${stripped}`);
+    }
+  }
+
+  if (id.startsWith("bk-") || id.startsWith("notif-book-")) {
+    const stripped = id.replace(/^(?:notif-book-|bk-)/i, "").trim();
+    if (stripped) {
+      variants.add(stripped);
+      variants.add(`bk-${stripped}`);
+      variants.add(`notif-book-${stripped}`);
+    }
+  }
+
+  return Array.from(variants);
+}
+
+function isNotificationDeleted(item: SellerNotificationItem, deletedSet: Set<string>): boolean {
+  if (!deletedSet || deletedSet.size === 0) return false;
+  const variants = getNotificationIdentifierVariants(item);
+  return variants.some((v) => deletedSet.has(v) || deletedSet.has(v.toLowerCase()));
 }
 
 function getCanonicalNotificationKey(item: SellerNotificationItem): string {
@@ -76,6 +171,11 @@ function getCanonicalNotificationKey(item: SellerNotificationItem): string {
     return `booking:${strippedId.slice(-6).toUpperCase() || rawId}`;
   }
 
+  if (category === "offers" || rawId.startsWith("offer-")) {
+    const strippedId = rawId.replace(/^(?:notif-offer-|offer-)/i, "").trim();
+    return `offer:${strippedId || title.toLowerCase()}`;
+  }
+
   return `${category}:${rawId || title.toLowerCase()}`;
 }
 
@@ -111,11 +211,18 @@ function loadInitialFromStorage(): SellerNotificationItem[] {
       localStorage.removeItem("seller_notifications_store_v3");
     } catch {}
 
+    const isCleared = localStorage.getItem("seller_notifications_cleared") === "true";
+    if (isCleared) {
+      return [];
+    }
+
+    const deletedSet = getDeletedNotificationIds();
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        return deduplicateNotifications(parsed);
+        const nonDeleted = parsed.filter((n) => !isNotificationDeleted(n, deletedSet));
+        return deduplicateNotifications(nonDeleted);
       }
     }
   } catch (err) {
@@ -173,8 +280,41 @@ export function toggleNotificationRead(id: string) {
 
 export function deleteSellerNotification(id: string) {
   const current = getGlobalSellerNotifications();
-  const updated = current.filter((n) => n.id !== id);
+  const deletedSet = getDeletedNotificationIds();
+
+  deletedSet.add(id);
+  deletedSet.add(id.toLowerCase());
+
+  const target = current.find((n) => n.id === id);
+  if (target) {
+    const variants = getNotificationIdentifierVariants(target);
+    variants.forEach((v) => {
+      deletedSet.add(v);
+      deletedSet.add(v.toLowerCase());
+    });
+  }
+
+  saveDeletedNotificationIds(deletedSet);
+
+  const updated = current.filter((n) => n.id !== id && !isNotificationDeleted(n, deletedSet));
   persistNotifications(updated);
+
+  // Call backend deletion API to permanently delete from backend database
+  if (typeof window !== "undefined") {
+    fetchApi(`/api/seller/notifications/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }).catch((err) => {
+      console.warn("Could not sync notification deletion to backend:", err);
+    });
+
+    try {
+      if ("BroadcastChannel" in window) {
+        const bc = new BroadcastChannel("cloudkitchen_seller_notifications_bc");
+        bc.postMessage({ type: "DELETE_NOTIFICATION", payload: { id } });
+        bc.close();
+      }
+    } catch {}
+  }
 }
 
 export function markAllSellerNotificationsAsRead() {
@@ -187,6 +327,23 @@ export function clearAllSellerNotifications() {
   if (typeof window !== "undefined") {
     try {
       localStorage.setItem("seller_notifications_cleared", "true");
+      const current = getGlobalSellerNotifications();
+      const deletedSet = getDeletedNotificationIds();
+      current.forEach((item) => {
+        deletedSet.add(item.id);
+        const variants = getNotificationIdentifierVariants(item);
+        variants.forEach((v) => {
+          deletedSet.add(v);
+          deletedSet.add(v.toLowerCase());
+        });
+      });
+      saveDeletedNotificationIds(deletedSet);
+
+      fetchApi("/api/seller/notifications", {
+        method: "DELETE",
+      }).catch((err) => {
+        console.warn("Could not clear notifications on backend:", err);
+      });
     } catch {}
   }
   persistNotifications([]);
@@ -223,6 +380,11 @@ export function addSellerNotification(
     actionLabel: item.actionLabel,
     actionHref: item.actionHref,
   };
+
+  const deletedSet = getDeletedNotificationIds();
+  if (isNotificationDeleted(newItem, deletedSet)) {
+    return newItem;
+  }
 
   // If already present, update in-place with latest info
   const newCanonicalKey = getCanonicalNotificationKey(newItem);
@@ -553,6 +715,7 @@ export function resetSellerNotificationsToDefaults() {
   if (typeof window !== "undefined") {
     try {
       localStorage.removeItem("seller_notifications_cleared");
+      localStorage.removeItem(DELETED_IDS_STORAGE_KEY);
     } catch {}
   }
   persistNotifications(INITIAL_SELLER_NOTIFICATIONS);
@@ -573,8 +736,18 @@ function setupGlobalNotificationListeners() {
         if ((event.data?.type === "NEW_ORDER_NOTIFICATION" || event.data?.type === "NEW_NOTIFICATION") && event.data.payload) {
           addSellerNotification(event.data.payload);
         } else if (event.data?.type === "SYNC_NOTIFICATIONS" && Array.isArray(event.data.payload)) {
-          memoryNotifications = deduplicateNotifications(event.data.payload);
+          const deletedSet = getDeletedNotificationIds();
+          memoryNotifications = deduplicateNotifications(event.data.payload.filter((n: any) => !isNotificationDeleted(n, deletedSet)));
           notifyAll();
+        } else if (event.data?.type === "DELETE_NOTIFICATION" && event.data.payload?.id) {
+          const deletedId = String(event.data.payload.id);
+          const current = getGlobalSellerNotifications();
+          const deletedSet = getDeletedNotificationIds();
+          deletedSet.add(deletedId);
+          deletedSet.add(deletedId.toLowerCase());
+          saveDeletedNotificationIds(deletedSet);
+          const updated = current.filter((n) => n.id !== deletedId && !isNotificationDeleted(n, deletedSet));
+          persistNotifications(updated, false);
         }
       };
     }
@@ -586,9 +759,17 @@ function setupGlobalNotificationListeners() {
       try {
         const parsed = JSON.parse(e.newValue);
         if (Array.isArray(parsed)) {
-          memoryNotifications = deduplicateNotifications(parsed);
+          const deletedSet = getDeletedNotificationIds();
+          memoryNotifications = deduplicateNotifications(parsed.filter((n: any) => !isNotificationDeleted(n, deletedSet)));
           notifyAll();
         }
+      } catch {}
+    } else if (e.key === DELETED_IDS_STORAGE_KEY && e.newValue) {
+      try {
+        const deletedSet = getDeletedNotificationIds();
+        const current = getGlobalSellerNotifications();
+        const updated = current.filter((n) => !isNotificationDeleted(n, deletedSet));
+        persistNotifications(updated, false);
       } catch {}
     }
   });
@@ -650,12 +831,19 @@ export async function syncNotificationsFromBackend() {
     const json = await res.json();
     const serverNotifications: SellerNotificationItem[] =
       json.data?.notifications || json.notifications || [];
-    if (!Array.isArray(serverNotifications) || serverNotifications.length === 0) return;
+    if (!Array.isArray(serverNotifications)) return;
+
+    const deletedSet = getDeletedNotificationIds();
+    const isCleared = localStorage.getItem("seller_notifications_cleared") === "true";
 
     const current = getGlobalSellerNotifications();
-    const updated = [...current];
+    const updated = current.filter((n) => !isNotificationDeleted(n, deletedSet));
 
-    serverNotifications.forEach((serverItem) => {
+    const activeServerItems = serverNotifications.filter(
+      (serverItem) => !isNotificationDeleted(serverItem, deletedSet)
+    );
+
+    activeServerItems.forEach((serverItem) => {
       const serverCanonicalKey = getCanonicalNotificationKey(serverItem);
       const matchIndex = updated.findIndex(
         (n) =>
@@ -686,7 +874,9 @@ export async function syncNotificationsFromBackend() {
           isRead: existingIsRead !== undefined ? existingIsRead : serverItem.isRead,
         };
       } else {
-        updated.push(serverItem);
+        if (!isCleared) {
+          updated.push(serverItem);
+        }
       }
     });
 

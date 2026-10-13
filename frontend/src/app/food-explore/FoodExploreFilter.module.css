@@ -188,6 +188,20 @@
   font-weight: 700;
 }
 
+.toggleBtnActivePopular {
+  border: 1.5px solid #ff6b00 !important;
+  background-color: #fff3eb !important;
+  color: #ff6b00 !important;
+  font-weight: 700;
+}
+
+.toggleBtnActiveTopRated {
+  border: 1.5px solid #f59e0b !important;
+  background-color: #fffbeb !important;
+  color: #b45309 !important;
+  font-weight: 700;
+}
+
 .checkboxIndicator {
   width: 14px;
   height: 14px;
@@ -207,6 +221,16 @@
 .checkboxIndicatorActiveOpen {
   border-color: #10b981 !important;
   background-color: #10b981 !important;
+}
+
+.checkboxIndicatorActivePopular {
+  border-color: #ff6b00 !important;
+  background-color: #ff6b00 !important;
+}
+
+.checkboxIndicatorActiveTopRated {
+  border-color: #f59e0b !important;
+  background-color: #f59e0b !important;
 }
 
 /* Clear All Button on Desktop */

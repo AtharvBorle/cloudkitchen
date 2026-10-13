@@ -39,6 +39,15 @@ export async function GET() {
             data: { currentUsersCount: 0 }
         });
 
+        // Heal any legacy draft coupons so they are approved and active
+        await db.coupon.updateMany({
+            where: {
+                appliesToSellerId: sellerProfile.id,
+                approvalStatus: "DRAFT"
+            },
+            data: { approvalStatus: "APPROVED", isActive: true }
+        });
+
         const rawCoupons = await db.coupon.findMany({
             where: {
                 appliesToSellerId: sellerProfile.id

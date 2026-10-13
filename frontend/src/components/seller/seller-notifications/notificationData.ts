@@ -1,6 +1,7 @@
 export type NotificationCategory =
   | "all"
   | "orders"
+  | "offers"
   | "stock"
   | "delivery"
   | "timings"

@@ -63,7 +63,7 @@ export default function ManageSubscriptionCanvas({
   const [plans, setPlans] = useState<PlanItem[]>([]);
   const [subscribers, setSubscribers] = useState<RecentSubscriber[]>([]);
   const [serverMetrics, setServerMetrics] = useState<MealPlanMetrics | null>(null);
-  const [activeTab, setActiveTab] = useState<"all" | "active">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "active" | "expired" | "paused">("all");
   const [localSearchQuery, setLocalSearchQuery] = useState("");
   const searchQuery = externalSearchQuery !== undefined ? externalSearchQuery : localSearchQuery;
 
@@ -176,8 +176,25 @@ export default function ManageSubscriptionCanvas({
     }
   };
 
+  const isPlanActive = (plan: PlanItem) => {
+    const s = String(plan.status || "").toLowerCase().trim();
+    return s === "live" || s === "active";
+  };
+
+  const isPlanPaused = (plan: PlanItem) => {
+    const s = String(plan.status || "").toLowerCase().trim();
+    return s === "paused";
+  };
+
+  const isPlanExpired = (plan: PlanItem) => {
+    const s = String(plan.status || "").toLowerCase().trim();
+    return s === "expired" || s === "inactive" || s === "draft";
+  };
+
   const filteredPlans = plans.filter((plan) => {
-    if (activeTab === "active" && plan.status !== "Live") return false;
+    if (activeTab === "active" && !isPlanActive(plan)) return false;
+    if (activeTab === "paused" && !isPlanPaused(plan)) return false;
+    if (activeTab === "expired" && !isPlanExpired(plan)) return false;
 
     const q = (searchQuery || "").toLowerCase().trim();
     if (!q) return true;
@@ -241,7 +258,9 @@ export default function ManageSubscriptionCanvas({
     return filteredSubscribers.slice(startIdx, startIdx + numSize);
   }, [filteredSubscribers, subPage, subPageSize]);
 
-  const activePlansCount = plans.filter((p) => p.status === "Live").length;
+  const activePlansCount = plans.filter(isPlanActive).length;
+  const expiredPlansCount = plans.filter(isPlanExpired).length;
+  const pausedPlansCount = plans.filter(isPlanPaused).length;
 
   // Helper to determine if a subscriber record represents a currently active subscription
   const now = new Date();
@@ -552,7 +571,41 @@ export default function ManageSubscriptionCanvas({
               transition: "all 0.15s ease",
             }}
           >
-            Active ({plans.filter((p) => p.status === "Live").length})
+            Active ({activePlansCount})
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("expired")}
+            style={{
+              padding: "8px 16px",
+              borderRadius: "6px",
+              border: "none",
+              fontSize: "13px",
+              fontWeight: activeTab === "expired" ? 700 : 500,
+              backgroundColor: activeTab === "expired" ? "#FF5500" : "transparent",
+              color: activeTab === "expired" ? "#FFFFFF" : "#64748B",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+            }}
+          >
+            Expired ({expiredPlansCount})
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("paused")}
+            style={{
+              padding: "8px 16px",
+              borderRadius: "6px",
+              border: "none",
+              fontSize: "13px",
+              fontWeight: activeTab === "paused" ? 700 : 500,
+              backgroundColor: activeTab === "paused" ? "#FF5500" : "transparent",
+              color: activeTab === "paused" ? "#FFFFFF" : "#64748B",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+            }}
+          >
+            Paused ({pausedPlansCount})
           </button>
         </div>
 
@@ -598,6 +651,12 @@ export default function ManageSubscriptionCanvas({
           <h3 style={{ fontSize: "17px", fontWeight: 700, color: "#0F172A", margin: 0 }}>
             {searchQuery.trim()
               ? `No subscription plans matching "${searchQuery}"`
+              : activeTab === "active"
+              ? "No active subscription plans found"
+              : activeTab === "expired"
+              ? "No expired or inactive subscription plans found"
+              : activeTab === "paused"
+              ? "No paused subscription plans found"
               : "No subscription plans found"}
           </h3>
           <p style={{ fontSize: "13.5px", color: "#64748B", margin: 0, maxWidth: "440px" }}>
@@ -685,12 +744,6 @@ export default function ManageSubscriptionCanvas({
               : (plan.subscribersCount || 0);
 
             const planBasePrice = getPlanBasePrice(plan);
-            const planActiveRevenueNum = uniquePlanActiveSubs.length > 0
-              ? uniquePlanActiveSubs.reduce((sum, s) => sum + (getSubscriberPrice(s) || planBasePrice), 0)
-              : currentActiveSubscribers * planBasePrice;
-            const calculatedMonthlyRev = planActiveRevenueNum > 0
-              ? `₹${planActiveRevenueNum.toLocaleString("en-IN")}`
-              : "₹0";
 
             return (
           <div
@@ -741,7 +794,11 @@ export default function ManageSubscriptionCanvas({
                       width: "8px",
                       height: "8px",
                       borderRadius: "50%",
-                      backgroundColor: plan.status === "Live" ? "#22C55E" : "#94A3B8",
+                      backgroundColor: isPlanActive(plan)
+                        ? "#22C55E"
+                        : isPlanPaused(plan)
+                        ? "#F59E0B"
+                        : "#94A3B8",
                       display: "inline-block",
                     }}
                   />
@@ -749,7 +806,11 @@ export default function ManageSubscriptionCanvas({
                     style={{
                       fontSize: "12px",
                       fontWeight: 600,
-                      color: plan.status === "Live" ? "#16A34A" : "#64748B",
+                      color: isPlanActive(plan)
+                        ? "#16A34A"
+                        : isPlanPaused(plan)
+                        ? "#D97706"
+                        : "#64748B",
                     }}
                   >
                     {plan.status}
@@ -902,7 +963,7 @@ export default function ManageSubscriptionCanvas({
               <div
                 style={{
                   display: "flex",
-                  justifyContent: "space-between",
+                  justifyContent: "flex-start",
                   alignItems: "center",
                 }}
               >
@@ -911,12 +972,6 @@ export default function ManageSubscriptionCanvas({
                     {currentActiveSubscribers} Users
                   </div>
                   <div style={{ fontSize: "11.5px", color: "#64748B" }}>Active Subscribers</div>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: "14px", fontWeight: 700, color: "#16A34A" }}>
-                    {calculatedMonthlyRev}
-                  </div>
-                  <div style={{ fontSize: "11.5px", color: "#64748B" }}>Monthly Rev.</div>
                 </div>
               </div>
 

@@ -89,12 +89,50 @@ export const PINCODE_COORDINATES: Record<string, { lat: number; lng: number; loc
 };
 
 /**
- * Returns coordinate and locality info for a given 6-digit pincode if available.
+ * Resolves pincode, coordinates, locality, and city from a pincode OR locality / address text.
+ * Accurately resolves areas like "Hadapsar", "Kothrud", "Karve Nagar", "Baner", "Hinjawadi", etc.
+ */
+export function resolveLocationCoordinates(input?: string | null): { pincode: string; lat: number; lng: number; locality: string; city: string } | null {
+  if (!input) return null;
+  const str = input.trim();
+  if (!str) return null;
+
+  // 1. Direct 6-digit pincode extraction
+  const pinMatch = str.match(/\b\d{6}\b/);
+  if (pinMatch && PINCODE_COORDINATES[pinMatch[0]]) {
+    const info = PINCODE_COORDINATES[pinMatch[0]];
+    return { pincode: pinMatch[0], ...info };
+  }
+
+  // 2. Locality keyword / segment match against known PINCODE_COORDINATES
+  const lower = str.toLowerCase();
+  for (const [pin, info] of Object.entries(PINCODE_COORDINATES)) {
+    const locLower = info.locality.toLowerCase();
+    const segments = locLower.split(/[\/,]/).map((s) => s.trim().toLowerCase()).filter(Boolean);
+    if (
+      lower.includes(locLower) ||
+      locLower.includes(lower) ||
+      segments.some((seg) => lower.includes(seg) || seg.includes(lower))
+    ) {
+      return { pincode: pin, ...info };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Returns coordinate and locality info for a given 6-digit pincode or locality name if available.
  */
 export function getPincodeCoordinates(pincode?: string | null): { lat: number; lng: number; locality: string; city: string } | null {
   if (!pincode) return null;
   const clean = pincode.replace(/\D/g, "").slice(0, 6);
-  return PINCODE_COORDINATES[clean] || null;
+  if (clean && PINCODE_COORDINATES[clean]) {
+    return PINCODE_COORDINATES[clean];
+  }
+  // Fallback to locality lookup if not a clean 6-digit pincode
+  const resolved = resolveLocationCoordinates(pincode);
+  return resolved ? { lat: resolved.lat, lng: resolved.lng, locality: resolved.locality, city: resolved.city } : null;
 }
 
 export interface LocationAddressInput {

@@ -72,7 +72,7 @@ function FoodExploreContent() {
   const dietaryParam = (searchParams.get("dietary") as any) || "all";
   const priceParam = (searchParams.get("price") as any) || "all";
   const offersParam = searchParams.get("offers") === "true";
-  const sortParam = searchParams.get("sort") || "popular";
+  const sortParam = searchParams.get("sort") || "";
 
   const { defaultAddress, openLocationModal } = useLocation();
   const { addToCart, decreaseQuantity, showToast, cartItems } = useCart();
@@ -237,9 +237,18 @@ function FoodExploreContent() {
 
     if (sortBy === "rating") {
       list = [...list].sort((a, b) => {
+        if ((a.sellerIsOnline === false) !== (b.sellerIsOnline === false)) {
+          return a.sellerIsOnline === false ? 1 : -1;
+        }
         const rA = Number(a.rating) || 0;
         const rB = Number(b.rating) || 0;
         if (rB !== rA) return rB - rA;
+        const countA = Number(a.totalRatings || a.reviewsCount) || 0;
+        const countB = Number(b.totalRatings || b.reviewsCount) || 0;
+        if (countB !== countA) return countB - countA;
+        const salesA = Number((a as any).totalSales ?? (a as any).orderCount) || 0;
+        const salesB = Number((b as any).totalSales ?? (b as any).orderCount) || 0;
+        if (salesB !== salesA) return salesB - salesA;
         return (a.distanceKm ?? 999) - (b.distanceKm ?? 999);
       });
     } else if (sortBy === "price_asc") {
@@ -271,7 +280,16 @@ function FoodExploreContent() {
         if ((a.sellerIsOnline === false) !== (b.sellerIsOnline === false)) {
           return a.sellerIsOnline === false ? 1 : -1;
         }
-        return 0;
+        const salesA = Number((a as any).totalSales ?? (a as any).orderCount) || 0;
+        const salesB = Number((b as any).totalSales ?? (b as any).orderCount) || 0;
+        if (salesB !== salesA) return salesB - salesA;
+        const ratingA = Number(a.rating) || 0;
+        const ratingB = Number(b.rating) || 0;
+        if (ratingB !== ratingA) return ratingB - ratingA;
+        const countA = Number(a.totalRatings || a.reviewsCount) || 0;
+        const countB = Number(b.totalRatings || b.reviewsCount) || 0;
+        if (countB !== countA) return countB - countA;
+        return (a.distanceKm ?? 999) - (b.distanceKm ?? 999);
       });
     }
 
@@ -559,7 +577,7 @@ function FoodExploreContent() {
     (selectedCuisines.length > 0 ? 1 : 0) +
     (offersOnly ? 1 : 0) +
     (openOnly ? 1 : 0) +
-    (sortBy !== "popular" ? 1 : 0) +
+    (sortBy ? 1 : 0) +
     (searchQuery ? 1 : 0);
 
   const handleClearAll = () => {
@@ -570,7 +588,7 @@ function FoodExploreContent() {
     setSelectedCuisines([]);
     setOffersOnly(false);
     setOpenOnly(false);
-    setSortBy("popular");
+    setSortBy("");
     if (typeof window !== "undefined") {
       router.replace("/food-explore", { scroll: false });
     }
@@ -1148,6 +1166,66 @@ function FoodExploreContent() {
                 <span>Open Kitchens</span>
               </button>
 
+              {/* Popular Dishes Toggle */}
+              <button
+                type="button"
+                onClick={() => {
+                  const next = sortBy === "popular" ? "" : "popular";
+                  setSortBy(next);
+                  if (typeof window !== "undefined") {
+                    const params = new URLSearchParams(window.location.search);
+                    if (next === "popular") {
+                      params.set("sort", "popular");
+                    } else {
+                      params.delete("sort");
+                    }
+                    const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
+                    router.replace(newUrl, { scroll: false });
+                  }
+                }}
+                className={`${filterStyles.toggleBtn} ${sortBy === "popular" ? filterStyles.toggleBtnActivePopular : ""}`}
+              >
+                <span
+                  className={`${filterStyles.checkboxIndicator} ${sortBy === "popular" ? filterStyles.checkboxIndicatorActivePopular : ""}`}
+                >
+                  {sortBy === "popular" && <Check size={10} color="#FFFFFF" />}
+                </span>
+                <Sparkles size={13} color={sortBy === "popular" ? "#FF6B00" : "#94A3B8"} />
+                <span>Popular Dishes</span>
+              </button>
+
+              {/* Top Rated Toggle */}
+              <button
+                type="button"
+                onClick={() => {
+                  const next = sortBy === "rating" ? "" : "rating";
+                  setSortBy(next);
+                  if (typeof window !== "undefined") {
+                    const params = new URLSearchParams(window.location.search);
+                    if (next === "rating") {
+                      params.set("sort", "rating");
+                    } else {
+                      params.delete("sort");
+                    }
+                    const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
+                    router.replace(newUrl, { scroll: false });
+                  }
+                }}
+                className={`${filterStyles.toggleBtn} ${sortBy === "rating" ? filterStyles.toggleBtnActiveTopRated : ""}`}
+              >
+                <span
+                  className={`${filterStyles.checkboxIndicator} ${sortBy === "rating" ? filterStyles.checkboxIndicatorActiveTopRated : ""}`}
+                >
+                  {sortBy === "rating" && <Check size={10} color="#FFFFFF" />}
+                </span>
+                <Star
+                  size={13}
+                  color={sortBy === "rating" ? "#D97706" : "#94A3B8"}
+                  fill={sortBy === "rating" ? "#D97706" : "none"}
+                />
+                <span>Top Rated</span>
+              </button>
+
               {/* Clear All Button on Desktop */}
               {activeFiltersCount > 0 && (
                 <button
@@ -1204,7 +1282,20 @@ function FoodExploreContent() {
               <span style={{ fontSize: "0.85rem", fontWeight: "600", color: "#64748B" }}>Sort by:</span>
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSortBy(val);
+                  if (typeof window !== "undefined") {
+                    const params = new URLSearchParams(window.location.search);
+                    if (val) {
+                      params.set("sort", val);
+                    } else {
+                      params.delete("sort");
+                    }
+                    const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
+                    router.replace(newUrl, { scroll: false });
+                  }
+                }}
                 style={{
                   padding: "8px 12px",
                   borderRadius: "10px",
@@ -1217,6 +1308,7 @@ function FoodExploreContent() {
                   outline: "none",
                 }}
               >
+                <option value="">Recommended</option>
                 <option value="popular">Most Popular</option>
                 <option value="rating">Rating: High to Low ⭐</option>
                 <option value="price_asc">Price: Low to High</option>
@@ -1604,14 +1696,70 @@ function FoodExploreContent() {
                         >
                           <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
-                              {[1, 2, 3, 4, 5].map((s) => (
-                                <Star
-                                  key={s}
-                                  size={13}
-                                  fill={isClosed ? "#94A3B8" : "#D97706"}
-                                  color={isClosed ? "#94A3B8" : "#D97706"}
-                                />
-                              ))}
+                              {(() => {
+                                const dishRating =
+                                  dish.rating && !isNaN(Number(dish.rating)) && Number(dish.rating) > 0
+                                    ? Number(dish.rating)
+                                    : 5.0;
+                                return [1, 2, 3, 4, 5].map((s) => {
+                                  let fillPct = 0;
+                                  if (dishRating >= s) {
+                                    fillPct = 100;
+                                  } else if (dishRating > s - 1) {
+                                    fillPct = Math.round((dishRating - (s - 1)) * 100);
+                                  }
+
+                                  const starActiveColor = isClosed ? "#94A3B8" : "#D97706";
+                                  const starEmptyBg = isClosed ? "#E2E8F0" : "#F1F5F9";
+                                  const starEmptyBorder = isClosed ? "#CBD5E1" : "#CBD5E1";
+
+                                  return (
+                                    <div
+                                      key={s}
+                                      style={{
+                                        position: "relative",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        width: 13,
+                                        height: 13,
+                                        flexShrink: 0,
+                                      }}
+                                    >
+                                      {/* Unfilled base star */}
+                                      <Star
+                                        size={13}
+                                        fill={starEmptyBg}
+                                        color={starEmptyBorder}
+                                        strokeWidth={1.2}
+                                      />
+                                      {/* Dynamic filled star overlay */}
+                                      {fillPct > 0 && (
+                                        <div
+                                          style={{
+                                            position: "absolute",
+                                            top: 0,
+                                            left: 0,
+                                            width: `${fillPct}%`,
+                                            height: "100%",
+                                            overflow: "hidden",
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                          }}
+                                        >
+                                          <Star
+                                            size={13}
+                                            fill={starActiveColor}
+                                            color={starActiveColor}
+                                            strokeWidth={1.2}
+                                            style={{ flexShrink: 0, minWidth: 13, minHeight: 13 }}
+                                          />
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                });
+                              })()}
                             </div>
                             <span style={{ fontSize: "0.78rem", fontWeight: "700", color: isClosed ? "#94A3B8" : "#18181B" }}>
                               {dish.rating && dish.rating > 0 ? `${Number(dish.rating).toFixed(1)} Ratings` : "5.0 Ratings"}

@@ -86,7 +86,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
         };
       }
 
-      const stored = localStorage.getItem("cloudkitchen_price_filter");
+      const stored = localStorage.getItem("cloudkitchen_price_filter") || sessionStorage.getItem("cloudkitchen_price_filter");
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed && (parsed.preset !== "all" || (parsed.maxPrice && parsed.maxPrice < 2500) || parsed.minPrice)) {
@@ -136,7 +136,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
         setPriceFilter(e.detail);
       } else if (typeof window !== "undefined") {
         try {
-          const stored = localStorage.getItem("cloudkitchen_price_filter");
+          const stored = localStorage.getItem("cloudkitchen_price_filter") || sessionStorage.getItem("cloudkitchen_price_filter");
           if (stored) {
             setPriceFilter(JSON.parse(stored));
           } else {
@@ -164,6 +164,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
     if (typeof window !== "undefined") {
       try {
         localStorage.removeItem("cloudkitchen_price_filter");
+        sessionStorage.removeItem("cloudkitchen_price_filter");
         window.dispatchEvent(
           new CustomEvent("cloudkitchen_price_filter_changed", { detail: null })
         );

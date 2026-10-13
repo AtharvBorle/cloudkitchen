@@ -1,4 +1,4 @@
-import { getSellerNotifications, markSellerNotificationRead } from "@/controllers/sellerNotificationController";
+import { getSellerNotifications, markSellerNotificationRead, clearAllSellerNotifications } from "@/controllers/sellerNotificationController";
 import { successResponse, errorResponse } from "@/lib/api-response";
 import { ApiError } from "@/lib/api-error";
 
@@ -28,5 +28,16 @@ export async function PATCH(req: Request) {
         if (error instanceof ApiError) return errorResponse(error.message, error.statusCode);
         console.error("Error updating seller notification status:", error);
         return errorResponse("An error occurred updating notification status", 500);
+    }
+}
+
+export async function DELETE(_req: Request) {
+    try {
+        const data = await clearAllSellerNotifications();
+        return successResponse(data);
+    } catch (error: any) {
+        if (error instanceof ApiError) return errorResponse(error.message, error.statusCode);
+        console.error("Error clearing seller notifications:", error);
+        return errorResponse("An error occurred clearing notifications", 500);
     }
 }
