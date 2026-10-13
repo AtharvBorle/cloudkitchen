@@ -11,6 +11,7 @@ import {
   cleanRoomAboutText,
   formatRoomLocationComment,
 } from "@/lib/room-location-helper";
+import { useRoomModule } from "@/context/RoomModuleContext";
 
 const DEFAULT_AMENITIES: ResponsiveAmenity[] = [
   { id: "wifi", name: "WiFi", selected: false },
@@ -22,9 +23,19 @@ const DEFAULT_AMENITIES: ResponsiveAmenity[] = [
 
 function RoomAddEditContent() {
   const router = useRouter();
+  const { isRoomEnabled } = useRoomModule();
+
+  useEffect(() => {
+    if (!isRoomEnabled) {
+      router.replace("/seller/dashboard");
+    }
+  }, [isRoomEnabled, router]);
+
   const searchParams = useSearchParams();
   const roomId = searchParams ? (searchParams.get("id") || searchParams.get("roomId")) : null;
   const isEditMode = Boolean(roomId);
+
+  if (!isRoomEnabled) return null;
 
   const [initialData, setInitialData] = useState<{
     roomName: string;

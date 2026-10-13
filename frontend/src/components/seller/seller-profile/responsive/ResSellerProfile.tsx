@@ -33,6 +33,7 @@ import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import SellerMapPicker from "@/components/seller/seller-registration/business-information/SellerMapPicker";
 import styles from "./ResSellerProfile.module.css";
+import { useRoomModule } from "@/context/RoomModuleContext";
 
 import { useSellerProfile, isGenericFallbackName, updateCachedProfile, computeInitials } from "@/hooks/useSellerProfile";
 import { useSellerNotifications } from "@/hooks/useSellerNotifications";
@@ -79,6 +80,7 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
 }) => {
   const router = useRouter();
   const seller = useSellerProfile();
+  const { isRoomEnabled } = useRoomModule();
   const { unreadCount } = useSellerNotifications();
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
 
@@ -296,7 +298,12 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
   const propertyExpiry =
     statusData?.propertyExpiry ? new Date(statusData.propertyExpiry) : stackedProperty.length > 0 ? stackedProperty[stackedProperty.length - 1].endDate : null;
 
-  const hasAnyActiveSub = Boolean(statusData?.hasActiveSub || activeSubs.length > 0);
+  const hasAnyActiveSub = Boolean(
+    stackedFood.length > 0 ||
+      (isRoomEnabled && stackedProperty.length > 0) ||
+      statusData?.isFoodActive ||
+      (isRoomEnabled && statusData?.isPropertyActive)
+  );
   const isFoodVerified =
     statusData?.sellerProfile?.foodVerificationStatus === "APPROVED" ||
     (statusData?.sellerProfile?.verificationStatus === "APPROVED" &&
@@ -304,10 +311,11 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
         statusData?.sellerProfile?.businessCategory === "BOTH"));
 
   const isPropertyVerified =
-    statusData?.sellerProfile?.propertyVerificationStatus === "APPROVED" ||
-    (statusData?.sellerProfile?.verificationStatus === "APPROVED" &&
-      (statusData?.sellerProfile?.businessCategory === "PROPERTY" ||
-        statusData?.sellerProfile?.businessCategory === "BOTH"));
+    isRoomEnabled &&
+    (statusData?.sellerProfile?.propertyVerificationStatus === "APPROVED" ||
+      (statusData?.sellerProfile?.verificationStatus === "APPROVED" &&
+        (statusData?.sellerProfile?.businessCategory === "PROPERTY" ||
+          statusData?.sellerProfile?.businessCategory === "BOTH")));
 
   // Toast State
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -1216,77 +1224,79 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
             </div>
 
             {/* Property Bookings Group */}
-            <div className={styles.planGroup}>
-              <div className={styles.planGroupHeader}>
-                <span className={styles.planGroupTitle}>PROPERTY BOOKINGS</span>
-                <span className={`${styles.categoryTag} ${stackedProperty.length > 0 ? styles.categoryTagActiveProperty : styles.categoryTagInactive}`}>
-                  {stackedProperty.length > 0 ? "PROPERTY ACTIVE" : isPropertyVerified ? "NOT SUBSCRIBED" : "UNVERIFIED"}
-                </span>
-              </div>
-              <p className={styles.planGroupSubtitle}>
-                Listing, info &amp; reservation tools
-              </p>
-
-              {stackedProperty.length > 0 ? (
-                <>
-                  {stackedProperty.map((sub: any, idx: number) => (
-                    <div key={sub.id || idx} className={styles.planItemBox}>
-                      <div className={styles.planItemTop}>
-                        <h3 className={styles.planItemName}>
-                          {idx + 1}. {sub.plan?.name || "Property Subscription"}
-                        </h3>
-                        <button
-                          type="button"
-                          className={styles.renewSmallBtn}
-                          onClick={() => router.push(`/seller/payment?category=PROPERTY&planId=${sub.planId || sub.plan?.id || ""}`)}
-                        >
-                          Renew
-                        </button>
-                      </div>
-                      <div className={styles.planItemDetailRow}>
-                        <span className={styles.planItemDetailKey}>Amount:</span>
-                        <span className={styles.planItemDetailVal}>₹{sub.amount || sub.plan?.price} / {sub.plan?.durationMonths || 1} mo</span>
-                      </div>
-                      <div className={styles.planItemDetailRow}>
-                        <span className={styles.planItemDetailKey}>Validity:</span>
-                        <span className={styles.planItemDetailVal}>
-                          {new Date(sub.startDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} –{" "}
-                          {new Date(sub.endDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-
-                  <div className={styles.expiryRow}>
-                    <span className={styles.expiryKey}>Final Property Expiry</span>
-                    <span className={styles.expiryValBlue}>
-                      {propertyExpiry?.toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" })}
-                    </span>
-                  </div>
-                </>
-              ) : (
-                <div className={styles.noPlanBox}>
-                  <p className={styles.noPlanText}>
-                    {isPropertyVerified
-                      ? "No active property subscription. Subscribe to unlock room listings and bookings."
-                      : "Room & Property category not verified. Apply for property category verification."}
-                  </p>
-                  <button
-                    type="button"
-                    className={`${styles.categoryBtn} ${styles.propertyBtn}`}
-                    onClick={() => {
-                      if (isPropertyVerified) {
-                        router.push("/seller/payment?category=PROPERTY");
-                      } else {
-                        window.dispatchEvent(new CustomEvent("open-category-upgrade", { detail: { category: "PROPERTY" } }));
-                      }
-                    }}
-                  >
-                    {isPropertyVerified ? "Get Property Subscription" : "Upgrade Rooms Category"}
-                  </button>
+            {isRoomEnabled && (
+              <div className={styles.planGroup}>
+                <div className={styles.planGroupHeader}>
+                  <span className={styles.planGroupTitle}>PROPERTY BOOKINGS</span>
+                  <span className={`${styles.categoryTag} ${stackedProperty.length > 0 ? styles.categoryTagActiveProperty : styles.categoryTagInactive}`}>
+                    {stackedProperty.length > 0 ? "PROPERTY ACTIVE" : isPropertyVerified ? "NOT SUBSCRIBED" : "UNVERIFIED"}
+                  </span>
                 </div>
-              )}
-            </div>
+                <p className={styles.planGroupSubtitle}>
+                  Listing, info &amp; reservation tools
+                </p>
+
+                {stackedProperty.length > 0 ? (
+                  <>
+                    {stackedProperty.map((sub: any, idx: number) => (
+                      <div key={sub.id || idx} className={styles.planItemBox}>
+                        <div className={styles.planItemTop}>
+                          <h3 className={styles.planItemName}>
+                            {idx + 1}. {sub.plan?.name || "Property Subscription"}
+                          </h3>
+                          <button
+                            type="button"
+                            className={styles.renewSmallBtn}
+                            onClick={() => router.push(`/seller/payment?category=PROPERTY&planId=${sub.planId || sub.plan?.id || ""}`)}
+                          >
+                            Renew
+                          </button>
+                        </div>
+                        <div className={styles.planItemDetailRow}>
+                          <span className={styles.planItemDetailKey}>Amount:</span>
+                          <span className={styles.planItemDetailVal}>₹{sub.amount || sub.plan?.price} / {sub.plan?.durationMonths || 1} mo</span>
+                        </div>
+                        <div className={styles.planItemDetailRow}>
+                          <span className={styles.planItemDetailKey}>Validity:</span>
+                          <span className={styles.planItemDetailVal}>
+                            {new Date(sub.startDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} –{" "}
+                            {new Date(sub.endDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+
+                    <div className={styles.expiryRow}>
+                      <span className={styles.expiryKey}>Final Property Expiry</span>
+                      <span className={styles.expiryValBlue}>
+                        {propertyExpiry?.toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" })}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div className={styles.noPlanBox}>
+                    <p className={styles.noPlanText}>
+                      {isPropertyVerified
+                        ? "No active property subscription. Subscribe to unlock room listings and bookings."
+                        : "Room & Property category not verified. Apply for property category verification."}
+                    </p>
+                    <button
+                      type="button"
+                      className={`${styles.categoryBtn} ${styles.propertyBtn}`}
+                      onClick={() => {
+                        if (isPropertyVerified) {
+                          router.push("/seller/payment?category=PROPERTY");
+                        } else {
+                          window.dispatchEvent(new CustomEvent("open-category-upgrade", { detail: { category: "PROPERTY" } }));
+                        }
+                      }}
+                    >
+                      {isPropertyVerified ? "Get Property Subscription" : "Upgrade Rooms Category"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </section>
         </main>
 
