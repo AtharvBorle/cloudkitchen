@@ -115,7 +115,39 @@ export const getSellerMealPlans = async () => {
     const appendSub = (sub: any, planName?: string, planTier?: string, planId?: string, planObj?: any) => {
         if (!sub?.id || seenSubIds.has(sub.id)) return;
         seenSubIds.add(sub.id);
+
+        // Check if pause expired naturally
+        if (sub.isPaused && sub.pauseEndDate && new Date(sub.pauseEndDate) <= now) {
+            sub.isPaused = false;
+            sub.status = "ACTIVE";
+        }
+
         const resolvedPrice = Number(sub.pricePaid) > 0 ? Number(sub.pricePaid) : getPlanBasePrice(planObj || sub.plan);
+
+        let parsedMealTimings: string[] = [];
+        try {
+            const rawTimings = planObj?.mealTimings || sub.plan?.mealTimings;
+            parsedMealTimings = typeof rawTimings === "string" ? JSON.parse(rawTimings) : (Array.isArray(rawTimings) ? rawTimings : []);
+        } catch {
+            parsedMealTimings = [];
+        }
+
+        let parsedPauseHistory: any[] = [];
+        try {
+            parsedPauseHistory = typeof sub.pauseHistory === "string" ? JSON.parse(sub.pauseHistory) : (Array.isArray(sub.pauseHistory) ? sub.pauseHistory : []);
+        } catch {
+            parsedPauseHistory = [];
+        }
+
+        let parsedDailyDeliveries: any[] = [];
+        try {
+            parsedDailyDeliveries = typeof sub.dailyDeliveries === "string" ? JSON.parse(sub.dailyDeliveries) : (Array.isArray(sub.dailyDeliveries) ? sub.dailyDeliveries : []);
+        } catch {
+            parsedDailyDeliveries = [];
+        }
+
+        const pauseBillingPeriod = planObj?.pauseBillingPeriod || sub.plan?.pauseBillingPeriod || "7 Days";
+
         allSubscribers.push({
             id: sub.id,
             userId: sub.user?.id || sub.userId || "",
@@ -129,6 +161,13 @@ export const getSellerMealPlans = async () => {
             status: isSubscriptionActive(sub) ? "ACTIVE" : (sub.isPaused ? "PAUSED" : (sub.endDate && new Date(sub.endDate) < now ? "EXPIRED" : sub.status)),
             rawStatus: sub.status,
             isPaused: Boolean(sub.isPaused),
+            pausedAt: sub.pausedAt ? (sub.pausedAt instanceof Date ? sub.pausedAt.toISOString() : String(sub.pausedAt)) : null,
+            pauseEndDate: sub.pauseEndDate ? (sub.pauseEndDate instanceof Date ? sub.pauseEndDate.toISOString() : String(sub.pauseEndDate)) : null,
+            usedPauseDays: Number(sub.usedPauseDays || 0),
+            pauseHistory: parsedPauseHistory,
+            dailyDeliveries: parsedDailyDeliveries,
+            mealTimings: parsedMealTimings,
+            pauseBillingPeriod,
             cycle: sub.cycle || "Weekly",
             startDate: sub.startDate instanceof Date ? sub.startDate.toISOString() : String(sub.startDate),
             endDate: sub.endDate ? (sub.endDate instanceof Date ? sub.endDate.toISOString() : String(sub.endDate)) : null,
@@ -726,4 +765,66 @@ export const getPublicMealPlans = async (req: Request) => {
         };
     });
 };
+
+export const toggleSubscriberMealDeliveryStatus = async (
+    subscriptionId: string,
+    date: string,
+    status: "DELIVERED" | "NOT_DELIVERED",
+    note?: string
+) => {
+    const { sellerProfile } = await getAuthenticatedSellerProfile();
+
+    const sub = await db.userMealSubscription.findFirst({
+        where: {
+            id: subscriptionId,
+            sellerId: sellerProfile.id,
+        },
+        include: { user: true, plan: true }
+    });
+
+    if (!sub) {
+        throw new ApiError("Subscription not found or not assigned to your kitchen", 404);
+    }
+
+    let deliveries: any[] = [];
+    try {
+        deliveries = typeof sub.dailyDeliveries === "string" ? JSON.parse(sub.dailyDeliveries) : (sub.dailyDeliveries || []);
+    } catch {
+        deliveries = [];
+    }
+
+    const existingIdx = deliveries.findIndex((d: any) => d.date === date);
+    const record = {
+        date,
+        status,
+        markedAt: new Date().toISOString(),
+        markedBy: sellerProfile.id,
+        note: note || undefined,
+    };
+
+    if (existingIdx >= 0) {
+        deliveries[existingIdx] = { ...deliveries[existingIdx], ...record };
+    } else {
+        deliveries.unshift(record);
+    }
+
+    const updated = await db.userMealSubscription.update({
+        where: { id: subscriptionId },
+        data: {
+            dailyDeliveries: JSON.stringify(deliveries),
+        },
+        include: { user: true, plan: true }
+    });
+
+    // Realtime notification
+    emitMealSubscriptionUpdated(sellerProfile.id, sub.userId, "UPDATE", updated);
+
+    return {
+        success: true,
+        message: `Delivery status marked as ${status === "DELIVERED" ? "Delivered" : "Not Delivered"} for ${date}`,
+        subscription: updated,
+        dailyDeliveries: deliveries,
+    };
+};
+
 

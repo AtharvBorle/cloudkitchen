@@ -45,6 +45,19 @@ export interface MealSubscriber {
   cycle?: string;
   status: "Active" | "Expiring Soon" | "Paused" | string;
   isPaused?: boolean;
+  pausedAt?: string | null;
+  pauseEndDate?: string | null;
+  usedPauseDays?: number;
+  pauseHistory?: any[];
+  dailyDeliveries?: Array<{
+    date: string;
+    status: "DELIVERED" | "NOT_DELIVERED";
+    markedAt: string;
+    markedBy?: string;
+    note?: string;
+  }>;
+  mealTimings?: string[];
+  pauseBillingPeriod?: string;
 }
 
 export interface MealPlanMetrics {
@@ -534,6 +547,27 @@ export interface UserActiveMealSubscription {
   cycle: "WEEKLY" | "MONTHLY" | string;
   pricePaid: number;
   isPaused: boolean;
+  pausedAt?: string | null;
+  pauseEndDate?: string | null;
+  usedPauseDays?: number;
+  pauseHistory?: Array<{
+    id: string;
+    pausedAt: string;
+    pauseEndDate: string;
+    requestedDays: number;
+    previousEndDate?: string;
+    newEndDate?: string;
+    resumedAt?: string | null;
+    status: string;
+    actualDaysUsed?: number;
+  }>;
+  dailyDeliveries?: Array<{
+    date: string;
+    status: "DELIVERED" | "NOT_DELIVERED";
+    markedAt: string;
+    markedBy?: string;
+    note?: string;
+  }>;
   startDate: string;
   endDate: string | null;
   deliveryAddress: string;
@@ -636,12 +670,16 @@ export async function changeUserSubscriptionPlan(subscriptionId: string, newPlan
   }
 }
 
-export async function togglePauseUserSubscription(subscriptionId: string, isPaused: boolean): Promise<{ success: boolean; message: string }> {
+export async function togglePauseUserSubscription(
+  subscriptionId: string,
+  isPaused: boolean,
+  days?: number
+): Promise<{ success: boolean; message: string; remainingPauseDays?: number; extendedEndDate?: string }> {
   try {
     const res = await fetchApi("/api/user/meal-subscriptions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "PAUSE", id: subscriptionId, isPaused }),
+      body: JSON.stringify({ action: "PAUSE", id: subscriptionId, isPaused, days }),
     });
     const json = await res.json();
     if (!res.ok) {
@@ -650,9 +688,44 @@ export async function togglePauseUserSubscription(subscriptionId: string, isPaus
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event("meal-subscriptions-updated"));
     }
-    return { success: true, message: json.message || "Pause status updated" };
+    return {
+      success: true,
+      message: json.message || "Pause status updated",
+      remainingPauseDays: json.data?.remainingPauseDays,
+      extendedEndDate: json.data?.extendedEndDate,
+    };
   } catch (err: any) {
     console.error("Error toggling pause state:", err);
+    throw err;
+  }
+}
+
+export async function markSubscriberMealDeliveryStatus(
+  subscriptionId: string,
+  date: string,
+  status: "DELIVERED" | "NOT_DELIVERED",
+  note?: string
+): Promise<{ success: boolean; message: string; dailyDeliveries?: any[] }> {
+  try {
+    const res = await fetchApi("/api/seller/meal-plans/delivery-status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subscriptionId, date, status, note }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json.message || "Failed to update delivery status");
+    }
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("meal-subscriptions-updated"));
+    }
+    return {
+      success: true,
+      message: json.message || "Delivery status updated",
+      dailyDeliveries: json.data?.dailyDeliveries,
+    };
+  } catch (err: any) {
+    console.error("Error updating subscriber meal delivery status:", err);
     throw err;
   }
 }

@@ -288,6 +288,11 @@ model UserMealSubscription {
   pricePaid         Float          @default(0)
   cycle             String         @default("WEEKLY")
   isPaused          Boolean        @default(false)
+  pausedAt          DateTime?
+  pauseEndDate      DateTime?
+  usedPauseDays     Int            @default(0)
+  pauseHistory      String         @default("[]")
+  dailyDeliveries   String         @default("[]")
   deliveryAddress   String?        @default("")
   contactPhone      String?        @default("")
   razorpayOrderId   String?        @unique
