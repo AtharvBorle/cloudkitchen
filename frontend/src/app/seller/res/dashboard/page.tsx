@@ -129,13 +129,15 @@ export default function ResponsiveSellerDashboardPage() {
 
   const dynamicMetrics: ResponsiveDashboardMetrics | undefined = useMemo(() => {
     if (!overviewData) return undefined;
-    const revenueVal = overviewData.todayRevenue !== undefined ? overviewData.todayRevenue : overviewData.totalRevenue || 0;
+    const revenueVal = overviewData.todayRevenue !== undefined ? overviewData.todayRevenue : 0;
     const codVal = (overviewData.codOutstanding !== undefined ? overviewData.codOutstanding : overviewData.riderTotalCodOutstanding) || 0;
+    const allTimeRev = overviewData.allTimeRevenue !== undefined ? overviewData.allTimeRevenue : overviewData.totalRevenue || 0;
     return {
       todayRevenue: `₹${revenueVal.toLocaleString("en-IN")}`,
       ordersToday: overviewData.todayOrdersCount ?? 0,
-      pendingBookings: overviewData.roomsCount ?? 0,
+      pendingBookings: overviewData.pendingBookingsCount ?? 0,
       codOutstanding: `₹${codVal.toLocaleString("en-IN")}`,
+      allTimeRevenue: `₹${allTimeRev.toLocaleString("en-IN")}`,
     };
   }, [overviewData]);
 

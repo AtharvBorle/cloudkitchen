@@ -130,6 +130,18 @@ export const getUserMealSubscriptions = async () => {
                 status: sub.plan.status,
                 allowCancel: sub.plan.allowCancel,
                 pauseBillingPeriod: sub.plan.pauseBillingPeriod,
+                allowPause: Boolean(
+                    sub.plan.pauseBillingPeriod &&
+                    sub.plan.pauseBillingPeriod.trim().toLowerCase() !== "none" &&
+                    sub.plan.pauseBillingPeriod.trim().toLowerCase() !== "disabled" &&
+                    sub.plan.pauseBillingPeriod.trim().toLowerCase() !== "false"
+                ),
+                allowPauseBilling: Boolean(
+                    sub.plan.pauseBillingPeriod &&
+                    sub.plan.pauseBillingPeriod.trim().toLowerCase() !== "none" &&
+                    sub.plan.pauseBillingPeriod.trim().toLowerCase() !== "disabled" &&
+                    sub.plan.pauseBillingPeriod.trim().toLowerCase() !== "false"
+                ),
             } : null,
             seller: sub.seller ? {
                 id: sub.seller.id,

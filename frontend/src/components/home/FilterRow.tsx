@@ -153,9 +153,11 @@ export default function FilterRow({
 
           const payload = { preset: tier, minPrice: min, maxPrice: max };
           localStorage.setItem("cloudkitchen_price_filter", JSON.stringify(payload));
+          sessionStorage.setItem("cloudkitchen_price_filter", JSON.stringify(payload));
           window.dispatchEvent(new CustomEvent("cloudkitchen_price_filter_changed", { detail: payload }));
         } else {
           localStorage.removeItem("cloudkitchen_price_filter");
+          sessionStorage.removeItem("cloudkitchen_price_filter");
           window.dispatchEvent(new CustomEvent("cloudkitchen_price_filter_changed", { detail: null }));
         }
       } catch {}

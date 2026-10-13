@@ -56,8 +56,25 @@ function getInitialDietPreference(): "all" | "veg" | "pure_veg" | "non_veg" | "v
 
 export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState("food");
-  const [activeFilters, setActiveFilters] = useState<ActiveHomeFilters>({
-    dietary: "all",
+  const [activeFilters, setActiveFilters] = useState<ActiveHomeFilters>(() => {
+    let initialDiet: "all" | "veg" | "pure_veg" | "non_veg" | "vegan" | "jain" = "all";
+    let initialPriceTier: "all" | "under-150" | "150-300" | "300-plus" | null = null;
+    if (typeof window !== "undefined") {
+      try {
+        initialDiet = getInitialDietPreference();
+        const storedPrice = localStorage.getItem("cloudkitchen_price_filter") || sessionStorage.getItem("cloudkitchen_price_filter");
+        if (storedPrice) {
+          const parsed = JSON.parse(storedPrice);
+          if (parsed?.preset && parsed.preset !== "all" && parsed.preset !== "custom") {
+            initialPriceTier = parsed.preset;
+          }
+        }
+      } catch {}
+    }
+    return {
+      dietary: initialDiet,
+      priceTier: initialPriceTier,
+    };
   });
   const [homeSearchQuery, setHomeSearchQuery] = useState("");
   const { openLocationModal, defaultAddress, setGuestLocation } = useLocation();
@@ -155,17 +172,32 @@ export default function Home() {
       }
     };
 
+    const syncPrice = (e?: any) => {
+      const payload = e?.detail;
+      if (payload && payload.preset && payload.preset !== "all" && payload.preset !== "custom") {
+        setActiveFilters((prev) => (prev.priceTier === payload.preset ? prev : { ...prev, priceTier: payload.preset }));
+      } else if (!payload || payload?.preset === "all" || payload?.preset === "custom") {
+        setActiveFilters((prev) => (prev.priceTier === null ? prev : { ...prev, priceTier: null }));
+      }
+    };
+
     if (typeof window !== "undefined") {
       window.addEventListener("cloudkitchen_diet_preference_changed", syncDiet);
       window.addEventListener("cloudkitchen_veg_preference_changed", syncVeg);
+      window.addEventListener("cloudkitchen_price_filter_changed", syncPrice);
       window.addEventListener("storage", syncDiet);
+      window.addEventListener("storage", syncPrice);
+      window.addEventListener("popstate", syncPrice);
     }
 
     return () => {
       if (typeof window !== "undefined") {
         window.removeEventListener("cloudkitchen_diet_preference_changed", syncDiet);
         window.removeEventListener("cloudkitchen_veg_preference_changed", syncVeg);
+        window.removeEventListener("cloudkitchen_price_filter_changed", syncPrice);
         window.removeEventListener("storage", syncDiet);
+        window.removeEventListener("storage", syncPrice);
+        window.removeEventListener("popstate", syncPrice);
       }
     };
   }, []);
@@ -470,7 +502,17 @@ export default function Home() {
       list = list.filter((f) => (f.rating || 0) >= (activeFilters.minRating || 4.5));
     }
 
-    return list.slice(0, 4).map((f) => {
+    const sortedDishes = [...list].sort((a, b) => {
+      const salesA = Number(a.totalSales || a.orderCount) || 0;
+      const salesB = Number(b.totalSales || b.orderCount) || 0;
+      if (salesB !== salesA) return salesB - salesA;
+      const ratingA = Number(a.rating) || 0;
+      const ratingB = Number(b.rating) || 0;
+      if (ratingB !== ratingA) return ratingB - ratingA;
+      return 0;
+    });
+
+    return sortedDishes.slice(0, 4).map((f) => {
       const offerInfo = getDishOfferBadge(f, homeData.coupons, sourceFoodItems);
       const discountText = offerInfo.hasOffer && offerInfo.badgeText ? offerInfo.badgeText : undefined;
 
@@ -534,7 +576,20 @@ export default function Home() {
       list = list.filter((f) => (f.rating || 0) >= (activeFilters.minRating || 4.5));
     }
 
-    return list.slice(0, 6).map((f) => ({
+    const sortedTopRated = [...list].sort((a, b) => {
+      const rA = Number(a.rating) || 0;
+      const rB = Number(b.rating) || 0;
+      if (rB !== rA) return rB - rA;
+      const countA = Number(a.totalRatings || a.reviewsCount) || 0;
+      const countB = Number(b.totalRatings || b.reviewsCount) || 0;
+      if (countB !== countA) return countB - countA;
+      const salesA = Number(a.totalSales || a.orderCount) || 0;
+      const salesB = Number(b.totalSales || b.orderCount) || 0;
+      if (salesB !== salesA) return salesB - salesA;
+      return 0;
+    });
+
+    return sortedTopRated.slice(0, 6).map((f) => ({
       id: f.id,
       foodItemId: f.id,
       name: f.name,
@@ -891,7 +946,7 @@ export default function Home() {
         {dynamicDishes.length > 0 && (
           <BestPlaces
             dishes={dynamicDishes}
-            seeAllLink="/food-explore"
+            seeAllLink="/food-explore?sort=popular"
           />
         )}
 

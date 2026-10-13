@@ -80,7 +80,7 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
   const router = useRouter();
   const { data: session } = useSession();
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"all" | "orders" | "offers" | "updates">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "orders" | "updates">("all");
   const [readIds, setReadIds] = useState<string[]>([]);
   const [clearedIds, setClearedIds] = useState<string[]>([]);
   const [dynamicOrders, setDynamicOrders] = useState<any[]>([]);
@@ -399,9 +399,6 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
   const filteredNotifications = useMemo(() => {
     if (activeTab === "orders") {
       return allNotifications.filter((n) => n.type === "order");
-    }
-    if (activeTab === "offers") {
-      return allNotifications.filter((n) => n.type === "offer");
     }
     if (activeTab === "updates") {
       return allNotifications.filter(
@@ -748,15 +745,6 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
                   onClick={() => setActiveTab("orders")}
                 >
                   Orders
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={activeTab === "offers"}
-                  className={`${styles.tabBtn} ${activeTab === "offers" ? styles.tabBtnActive : ""}`}
-                  onClick={() => setActiveTab("offers")}
-                >
-                  Offers
                 </button>
                 <button
                   type="button"

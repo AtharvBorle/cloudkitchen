@@ -5,15 +5,16 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(15, 23, 42, 0.65);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  background-color: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100005;
-  padding: 16px;
+  z-index: 99999999;
+  padding: 24px 16px;
   animation: fadeIn 0.2s ease-out;
+  box-sizing: border-box;
 }
 
 @keyframes fadeIn {
@@ -26,13 +27,14 @@
   max-width: 480px;
   background: #FFFFFF;
   border-radius: 20px;
-  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.22);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
   display: flex;
   flex-direction: column;
-  max-height: 90vh;
+  max-height: min(85vh, 600px);
   overflow: hidden;
   animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
+  z-index: 100000000;
 }
 
 @keyframes slideUp {
@@ -119,6 +121,7 @@
   padding: 16px 22px;
   overflow-y: auto;
   flex: 1;
+  min-height: 0;
 }
 
 .sectionHeader {
@@ -222,6 +225,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
 }
 
 .totalStack {
@@ -259,6 +265,7 @@
   cursor: pointer;
   transition: all 0.15s ease;
   box-shadow: 0 4px 14px rgba(234, 88, 12, 0.28);
+  white-space: nowrap;
 }
 
 .submitBtn:hover {
@@ -281,5 +288,9 @@
     max-width: 100%;
     border-radius: 20px 20px 0 0;
     max-height: 85vh;
+  }
+
+  .footer {
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
   }
 }

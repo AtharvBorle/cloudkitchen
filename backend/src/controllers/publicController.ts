@@ -61,6 +61,35 @@ export const getPublicExploreData = unstable_cache(
             orderBy: { name: 'asc' }
         });
 
+        // Compute dish sales and popularity metric from all customer orders
+        const nonCancelledOrders = await db.order.findMany({
+            where: {
+                status: { not: "CANCELLED" }
+            },
+            select: { items: true }
+        });
+
+        const itemSalesCount = new Map<string, number>();
+        const itemNameSalesCount = new Map<string, number>();
+        nonCancelledOrders.forEach((ord: any) => {
+            try {
+                const parsedItems = typeof ord.items === "string" ? JSON.parse(ord.items) : ord.items;
+                if (Array.isArray(parsedItems)) {
+                    parsedItems.forEach((ci: any) => {
+                        const rawId = ci.foodItemId || (typeof ci.id === "string" && ci.id.includes("_") ? ci.id.split("_")[0] : ci.id);
+                        const qty = Math.max(1, Number(ci.quantity) || 1);
+                        if (rawId) {
+                            itemSalesCount.set(rawId, (itemSalesCount.get(rawId) || 0) + qty);
+                        }
+                        if (ci.name) {
+                            const normName = String(ci.name).trim().toLowerCase();
+                            itemNameSalesCount.set(normName, (itemNameSalesCount.get(normName) || 0) + qty);
+                        }
+                    });
+                }
+            } catch {}
+        });
+
         const now = new Date();
 
         const activeSellersList: any[] = [];
@@ -120,12 +149,16 @@ export const getPublicExploreData = unstable_cache(
                     ? Number((itemRatingsList.reduce((acc: number, r: any) => acc + r.rating, 0) / itemRatingCount).toFixed(1))
                     : (avgRating > 0 ? avgRating : 0);
 
+                const sales = itemSalesCount.get(item.id) || (item.name ? itemNameSalesCount.get(item.name.trim().toLowerCase()) : 0) || 0;
+
                 return {
                     ...item,
                     rating: itemAvgRating,
                     averageRating: itemAvgRating,
                     totalRatings: itemRatingCount,
                     reviewsCount: itemRatingCount > 0 ? itemRatingCount : reviewsCount,
+                    totalSales: sales,
+                    orderCount: sales,
                     sellerName: seller.businessName || seller.user.name,
                     sellerCity: seller.user.city,
                     sellerPincode: effectiveSellerPincode,

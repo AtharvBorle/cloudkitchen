@@ -6,6 +6,7 @@ import { CheckCircle2 } from "lucide-react";
 
 export interface SubscriptionBenefitsProps {
   benefits?: string[];
+  allowPause?: boolean;
 }
 
 const DEFAULT_BENEFITS = [
@@ -17,13 +18,18 @@ const DEFAULT_BENEFITS = [
 
 export const SubscriptionBenefits: React.FC<SubscriptionBenefitsProps> = ({
   benefits = DEFAULT_BENEFITS,
+  allowPause = true,
 }) => {
+  const displayedBenefits = allowPause
+    ? benefits
+    : benefits.filter((b) => !b.toLowerCase().includes("pause"));
+
   return (
     <div className={styles.cardContainer}>
       <h3 className={styles.cardHeading}>Subscription Benefits</h3>
 
       <div className={styles.benefitsList}>
-        {benefits.map((benefit, index) => (
+        {displayedBenefits.map((benefit, index) => (
           <div key={index} className={styles.benefitRow}>
             <div className={styles.checkBadge}>
               <CheckCircle2 size={16} strokeWidth={2.4} className={styles.checkIcon} />

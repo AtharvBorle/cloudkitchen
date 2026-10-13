@@ -268,8 +268,11 @@ export default function UserFoodPage() {
         .map(item => {
             let distanceKm: number | undefined;
             let distanceText: string | undefined;
-            if (hasUserCoords && item.sellerLatitude != null && item.sellerLongitude != null) {
-                distanceKm = calculateDistanceKm(finalUserLat!, finalUserLng!, Number(item.sellerLatitude), Number(item.sellerLongitude));
+            const sellerCoords = (item.sellerLatitude != null && item.sellerLongitude != null)
+                ? { lat: Number(item.sellerLatitude), lng: Number(item.sellerLongitude) }
+                : (item.sellerPincode ? getPincodeCoordinates(item.sellerPincode) : null);
+            if (hasUserCoords && sellerCoords) {
+                distanceKm = calculateDistanceKm(finalUserLat!, finalUserLng!, Number(sellerCoords.lat), Number(sellerCoords.lng));
                 distanceText = formatDistance(distanceKm);
             }
             return {

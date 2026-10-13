@@ -192,7 +192,7 @@ function EditOfferForm({
   const [noExpiry, setNoExpiry] = useState(true);
   const [expiryDate, setExpiryDate] = useState("Runs indefinitely");
   const [perUserLimit, setPerUserLimit] = useState("1");
-  const [status, setStatus] = useState<"Active" | "Pending" | "Draft" | "Expired">("Active");
+  const [status, setStatus] = useState<"Active" | "Pending" | "Expired">("Active");
 
   const startDateRef = useRef<HTMLInputElement>(null);
   const expiryDateRef = useRef<HTMLInputElement>(null);
@@ -332,9 +332,7 @@ function EditOfferForm({
               setIsAutoApply(Boolean(matched.isAutoApply));
             }
 
-            if (matched.approvalStatus === "DRAFT" || matched.status === "Draft" || matched.status === "DRAFT") {
-              setStatus("Draft");
-            } else if (matched.approvalStatus === "PENDING_APPROVAL" || matched.status === "Pending") {
+            if (matched.approvalStatus === "PENDING_APPROVAL" || matched.status === "Pending") {
               setStatus("Pending");
             } else if (matched.isActive) {
               setStatus("Active");
@@ -353,7 +351,7 @@ function EditOfferForm({
 
   const isFormValid = couponCode.trim().length > 0 && couponCode.trim().length <= 20 && discountValue.trim().length > 0;
 
-  const handleUpdate = async (isDraft: boolean = false, targetStatus?: "Active" | "Pending" | "Draft" | "Expired") => {
+  const handleUpdate = async (targetStatus?: "Active" | "Pending" | "Expired") => {
     const cleanCode = couponCode.trim().toUpperCase();
     if (!cleanCode) {
       alert("Please enter a valid coupon code.");
@@ -412,7 +410,7 @@ function EditOfferForm({
 
     setSubmitting(true);
     try {
-      const finalStatus: "Active" | "Pending" | "Draft" | "Expired" = targetStatus || (isDraft ? "Draft" : (status === "Draft" ? "Active" : status));
+      const finalStatus: "Active" | "Pending" | "Expired" = targetStatus || (status === "Pending" ? "Pending" : "Active");
       const payload = {
         id: resolvedId || offerId,
         code: couponCode.trim().toUpperCase(),
@@ -562,24 +560,18 @@ function EditOfferForm({
                     borderColor:
                       status === "Active"
                         ? "#BBF7D0"
-                        : status === "Draft"
-                        ? "#CBD5E1"
                         : status === "Pending"
                         ? "#FEF08A"
                         : "#FED7AA",
                     backgroundColor:
                       status === "Active"
                         ? "#F0FDF4"
-                        : status === "Draft"
-                        ? "#F8FAFC"
                         : status === "Pending"
                         ? "#FEFCE8"
                         : "#FFF7ED",
                     color:
                       status === "Active"
                         ? "#16A34A"
-                        : status === "Draft"
-                        ? "#64748B"
                         : status === "Pending"
                         ? "#CA8A04"
                         : "#EA580C",
@@ -591,8 +583,6 @@ function EditOfferForm({
                       backgroundColor:
                         status === "Active"
                           ? "#16A34A"
-                          : status === "Draft"
-                          ? "#64748B"
                           : status === "Pending"
                           ? "#CA8A04"
                           : "#EA580C",
@@ -601,65 +591,34 @@ function EditOfferForm({
                   <span>{status}</span>
                 </div>
                 <div className={styles.desktopActions}>
-                  {status === "Draft" ? (
-                    <>
-                      <button
-                        type="button"
-                        className={styles.saveDraftBtn}
-                        disabled={submitting}
-                        onClick={() => handleUpdate(true, "Draft")}
-                      >
-                        Save Draft
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.publishBtn}
-                        disabled={submitting}
-                        onClick={() => handleUpdate(false, "Active")}
-                      >
-                        {submitting ? "Publishing..." : "Publish Offer"}
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        style={{
-                          padding: "10px 18px",
-                          borderRadius: "8px",
-                          border: "1px solid #FEE2E2",
-                          backgroundColor: "#FEF2F2",
-                          color: "#DC2626",
-                          fontSize: "0.875rem",
-                          fontWeight: 600,
-                          cursor: "pointer",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "6px",
-                        }}
-                        onClick={() => setShowDeleteModal(true)}
-                      >
-                        <Trash2 size={15} />
-                        <span>Delete</span>
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.saveDraftBtn}
-                        disabled={submitting}
-                        onClick={() => handleUpdate(true, "Draft")}
-                      >
-                        Save as Draft
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.publishBtn}
-                        disabled={submitting}
-                        onClick={() => handleUpdate(false, status === "Pending" ? "Pending" : "Active")}
-                      >
-                        {submitting ? "Saving..." : "Update Offer"}
-                      </button>
-                    </>
-                  )}
+                  <button
+                    type="button"
+                    style={{
+                      padding: "10px 18px",
+                      borderRadius: "8px",
+                      border: "1px solid #FEE2E2",
+                      backgroundColor: "#FEF2F2",
+                      color: "#DC2626",
+                      fontSize: "0.875rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                    }}
+                    onClick={() => setShowDeleteModal(true)}
+                  >
+                    <Trash2 size={15} />
+                    <span>Delete</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.publishBtn}
+                    disabled={submitting}
+                    onClick={() => handleUpdate(status === "Pending" ? "Pending" : "Active")}
+                  >
+                    {submitting ? "Saving..." : "Update Offer"}
+                  </button>
                 </div>
               </div>
             </div>
@@ -1441,45 +1400,14 @@ function EditOfferForm({
                 </div>
 
                 <div className={styles.mobileFormActions}>
-                  {status === "Draft" ? (
-                    <>
-                      <button
-                        type="button"
-                        className={styles.mobileSaveDraftBtn}
-                        disabled={submitting}
-                        onClick={() => handleUpdate(true, "Draft")}
-                      >
-                        Save Draft
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.mobilePublishBtn}
-                        disabled={submitting}
-                        onClick={() => handleUpdate(false, "Active")}
-                      >
-                        {submitting ? "Publishing..." : "Publish Offer"}
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        className={styles.mobileSaveDraftBtn}
-                        disabled={submitting}
-                        onClick={() => handleUpdate(true, "Draft")}
-                      >
-                        Save as Draft
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.mobilePublishBtn}
-                        disabled={submitting}
-                        onClick={() => handleUpdate(false, status === "Pending" ? "Pending" : "Active")}
-                      >
-                        {submitting ? "Saving..." : "Update Offer"}
-                      </button>
-                    </>
-                  )}
+                  <button
+                    type="button"
+                    className={styles.mobilePublishBtn}
+                    disabled={submitting}
+                    onClick={() => handleUpdate(status === "Pending" ? "Pending" : "Active")}
+                  >
+                    {submitting ? "Saving..." : "Update Offer"}
+                  </button>
                 </div>
               </div>
             </div>

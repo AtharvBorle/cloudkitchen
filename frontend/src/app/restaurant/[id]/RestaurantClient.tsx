@@ -86,7 +86,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
         };
       }
 
-      const stored = localStorage.getItem("cloudkitchen_price_filter");
+      const stored = localStorage.getItem("cloudkitchen_price_filter") || sessionStorage.getItem("cloudkitchen_price_filter");
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed && (parsed.preset !== "all" || (parsed.maxPrice && parsed.maxPrice < 2500) || parsed.minPrice)) {
@@ -136,7 +136,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
         setPriceFilter(e.detail);
       } else if (typeof window !== "undefined") {
         try {
-          const stored = localStorage.getItem("cloudkitchen_price_filter");
+          const stored = localStorage.getItem("cloudkitchen_price_filter") || sessionStorage.getItem("cloudkitchen_price_filter");
           if (stored) {
             setPriceFilter(JSON.parse(stored));
           } else {
@@ -164,6 +164,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
     if (typeof window !== "undefined") {
       try {
         localStorage.removeItem("cloudkitchen_price_filter");
+        sessionStorage.removeItem("cloudkitchen_price_filter");
         window.dispatchEvent(
           new CustomEvent("cloudkitchen_price_filter_changed", { detail: null })
         );
@@ -232,6 +233,15 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
                     features = [];
                   }
                 }
+                const rawPause = String(plan.pauseBillingPeriod || "").trim().toLowerCase();
+                const isPauseAllowed = Boolean(
+                  rawPause &&
+                  rawPause !== "none" &&
+                  rawPause !== "disabled" &&
+                  rawPause !== "false" &&
+                  plan.allowPause !== false &&
+                  plan.allowPauseBilling !== false
+                );
                 if (features.length === 0) {
                   features = [
                     "Fresh & hot home-style delivery",
@@ -239,8 +249,10 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
                       ? `Served for ${Array.isArray(plan.mealTimings) ? plan.mealTimings.join(", ") : plan.mealTimings}`
                       : "Daily breakfast, lunch or dinner",
                     "Direct doorstep delivery",
-                    "Pause anytime when away",
+                    ...(isPauseAllowed ? ["Pause anytime when away"] : []),
                   ];
+                } else if (!isPauseAllowed) {
+                  features = features.filter((f) => !String(f).toLowerCase().includes("pause"));
                 }
 
                 const rawPrice = plan.price !== undefined && plan.price !== null

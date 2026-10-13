@@ -20,6 +20,7 @@ import {
   SlidersHorizontal,
   Search,
   X,
+  Tag,
 } from "lucide-react";
 import {
   SellerNotificationItem,
@@ -29,7 +30,7 @@ import {
 import { useSellerNotifications } from "@/hooks/useSellerNotifications";
 import styles from "./SellerNotificationsCanvas.module.css";
 
-export type FilterTab = "all" | "unread" | "orders" | "stock" | "delivery" | "timings" | "bookings";
+export type FilterTab = "all" | "unread" | "orders" | "offers" | "stock" | "delivery";
 
 export interface SellerNotificationsCanvasProps {
   initialNotifications?: SellerNotificationItem[];
@@ -111,10 +112,9 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
       if (
         tabParam === "unread" ||
         tabParam === "orders" ||
+        tabParam === "offers" ||
         tabParam === "stock" ||
-        tabParam === "delivery" ||
-        tabParam === "timings" ||
-        tabParam === "bookings"
+        tabParam === "delivery"
       ) {
         setActiveFilter(tabParam as FilterTab);
       }
@@ -143,7 +143,7 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
   const handleDeleteNotification = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     deleteNotification(id);
-    showToast("Notification dismissed");
+    showToast("Notification deleted permanently");
   };
 
   const handleMarkAllAsRead = () => {
@@ -162,15 +162,9 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
       // 1. Tab filter
       if (activeFilter === "unread" && n.isRead) return false;
       if (activeFilter === "orders" && n.category !== "orders") return false;
+      if (activeFilter === "offers" && n.category !== "offers") return false;
       if (activeFilter === "stock" && n.category !== "stock") return false;
       if (activeFilter === "delivery" && n.category !== "delivery") return false;
-      if (activeFilter === "timings" && n.category !== "timings") return false;
-      if (
-        activeFilter === "bookings" &&
-        !(n.category === "bookings" || n.category === "reviews" || n.category === "settlements")
-      ) {
-        return false;
-      }
 
       // 2. Search query filter
       if (!searchQuery.trim()) return true;
@@ -226,6 +220,8 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
         return <Package size={20} />;
       case "orders":
         return <ShoppingBag size={20} />;
+      case "offers":
+        return <Tag size={20} />;
       case "delivery":
         return <Truck size={20} />;
       case "timings":
@@ -247,6 +243,8 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
         return styles.iconStock;
       case "orders":
         return styles.iconOrders;
+      case "offers":
+        return styles.iconOffers;
       case "delivery":
         return styles.iconDelivery;
       case "timings":
@@ -322,6 +320,7 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
     if (filter === "all") return list.length;
     if (filter === "unread") return list.filter((n) => !n.isRead).length;
     if (filter === "orders") return list.filter((n) => n.category === "orders").length;
+    if (filter === "offers") return list.filter((n) => n.category === "offers").length;
     if (filter === "stock") return list.filter((n) => n.category === "stock").length;
     if (filter === "delivery") return list.filter((n) => n.category === "delivery").length;
     if (filter === "timings") return list.filter((n) => n.category === "timings").length;
@@ -474,10 +473,9 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
             { id: "all", label: "All Alerts" },
             { id: "unread", label: "Unread" },
             { id: "orders", label: "Orders & Kitchen" },
+            { id: "offers", label: "Offers & Deals" },
             { id: "stock", label: "Stock & Inventory" },
             { id: "delivery", label: "Delivery & Riders" },
-            { id: "timings", label: "Shop Timings" },
-            { id: "bookings", label: "Bookings & Reports" },
           ] as { id: FilterTab; label: string }[]
         ).map((tab) => {
           const count = getCountByFilter(tab.id);
@@ -506,7 +504,7 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
 
       {/* 4. Notifications Card Stack */}
       {filteredNotifications.length === 0 ? (
-        <div className={styles.emptyState}>
+        <div key={`empty-${activeFilter}`} className={styles.emptyState}>
           <div className={styles.emptyIconWrapper}>
             {searchQuery.trim() ? <Search size={26} color="#64748B" /> : <Bell size={26} />}
           </div>
@@ -549,11 +547,11 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
           )}
         </div>
       ) : (
-        <div className={styles.notificationList}>
-          {filteredNotifications.map((item) => {
+        <div key={`list-${activeFilter}`} className={styles.notificationList}>
+          {filteredNotifications.map((item, idx) => {
             return (
               <div
-                key={item.id}
+                key={`${item.id}-${idx}`}
                 className={`${styles.notificationCard} ${!item.isRead ? styles.unreadCard : ""}`}
                 style={{ cursor: "pointer" }}
                 onClick={() => {

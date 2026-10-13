@@ -2,12 +2,10 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useLiveShopStream } from "@/hooks/useLiveShopStream";
 import {
   Plus,
   Edit2,
   Users,
-  TrendingUp,
   CreditCard,
   CheckCircle2,
   Calendar,
@@ -65,7 +63,7 @@ export default function ManageSubscriptionCanvas({
   const [plans, setPlans] = useState<PlanItem[]>([]);
   const [subscribers, setSubscribers] = useState<RecentSubscriber[]>([]);
   const [serverMetrics, setServerMetrics] = useState<MealPlanMetrics | null>(null);
-  const [activeTab, setActiveTab] = useState<"all" | "active">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "active" | "expired" | "paused">("all");
   const [localSearchQuery, setLocalSearchQuery] = useState("");
   const searchQuery = externalSearchQuery !== undefined ? externalSearchQuery : localSearchQuery;
 
@@ -108,22 +106,11 @@ export default function ManageSubscriptionCanvas({
     }
   };
 
-  useLiveShopStream({
-    onMealPlanUpdated: () => {
-      refreshData();
-    },
-    onMealSubscriptionUpdated: () => {
-      refreshData();
-    },
-  });
-
   useEffect(() => {
     refreshData();
     window.addEventListener("meal-plans-updated", refreshData);
-    window.addEventListener("meal-subscriptions-updated", refreshData);
     return () => {
       window.removeEventListener("meal-plans-updated", refreshData);
-      window.removeEventListener("meal-subscriptions-updated", refreshData);
     };
   }, []);
 
@@ -189,8 +176,25 @@ export default function ManageSubscriptionCanvas({
     }
   };
 
+  const isPlanActive = (plan: PlanItem) => {
+    const s = String(plan.status || "").toLowerCase().trim();
+    return s === "live" || s === "active";
+  };
+
+  const isPlanPaused = (plan: PlanItem) => {
+    const s = String(plan.status || "").toLowerCase().trim();
+    return s === "paused";
+  };
+
+  const isPlanExpired = (plan: PlanItem) => {
+    const s = String(plan.status || "").toLowerCase().trim();
+    return s === "expired" || s === "inactive" || s === "draft";
+  };
+
   const filteredPlans = plans.filter((plan) => {
-    if (activeTab === "active" && plan.status !== "Live") return false;
+    if (activeTab === "active" && !isPlanActive(plan)) return false;
+    if (activeTab === "paused" && !isPlanPaused(plan)) return false;
+    if (activeTab === "expired" && !isPlanExpired(plan)) return false;
 
     const q = (searchQuery || "").toLowerCase().trim();
     if (!q) return true;
@@ -254,7 +258,9 @@ export default function ManageSubscriptionCanvas({
     return filteredSubscribers.slice(startIdx, startIdx + numSize);
   }, [filteredSubscribers, subPage, subPageSize]);
 
-  const activePlansCount = plans.filter((p) => p.status === "Live").length;
+  const activePlansCount = plans.filter(isPlanActive).length;
+  const expiredPlansCount = plans.filter(isPlanExpired).length;
+  const pausedPlansCount = plans.filter(isPlanPaused).length;
 
   // Helper to determine if a subscriber record represents a currently active subscription
   const now = new Date();
@@ -321,17 +327,6 @@ export default function ManageSubscriptionCanvas({
     : (serverMetrics?.activeSubscribers !== undefined
         ? serverMetrics.activeSubscribers
         : plans.reduce((sum, p) => sum + (p.subscribersCount || 0), 0));
-
-  const totalMonthlyRevNum = subscribers.length > 0
-    ? uniqueActiveSubscribers.reduce((sum, s) => sum + getSubscriberPrice(s), 0)
-    : (serverMetrics?.rawMRR !== undefined
-        ? serverMetrics.rawMRR
-        : plans.reduce(
-            (sum, p) => sum + getPlanBasePrice(p) * (p.subscribersCount || 0),
-            0
-          ));
-
-  const totalMonthlyRev = totalMonthlyRevNum > 0 ? `₹${totalMonthlyRevNum.toLocaleString("en-IN")}` : "₹0";
 
   return (
     <div
@@ -437,7 +432,7 @@ export default function ManageSubscriptionCanvas({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
           gap: "18px",
           width: "100%",
           boxSizing: "border-box",
@@ -498,45 +493,6 @@ export default function ManageSubscriptionCanvas({
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontSize: "12.5px", fontWeight: 600, color: "#64748B" }}>
-              Monthly Recurring Revenue
-            </span>
-            <div
-              style={{
-                width: "36px",
-                height: "36px",
-                borderRadius: "8px",
-                backgroundColor: "#DCFCE7",
-                color: "#16A34A",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <TrendingUp size={18} strokeWidth={2.4} />
-            </div>
-          </div>
-          <div style={{ fontSize: "24px", fontWeight: 800, color: "#0F172A" }}>{totalMonthlyRev}</div>
-          <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px" }}>
-            <span style={{ color: "#16A34A", fontWeight: 700 }}>Live</span>
-            <span style={{ color: "#94A3B8" }}>recurring billing</span>
-          </div>
-        </div>
-
-        {/* Metric 3 */}
-        <div
-          style={{
-            backgroundColor: "#FFFFFF",
-            borderRadius: "12px",
-            border: "1px solid #E2E8F0",
-            padding: "20px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "10px",
-            boxShadow: "0 2px 6px rgba(0, 0, 0, 0.02)",
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: "12.5px", fontWeight: 600, color: "#64748B" }}>
               Active Plan Tiers
             </span>
             <div
@@ -558,45 +514,6 @@ export default function ManageSubscriptionCanvas({
           <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px" }}>
             <span style={{ color: "#8B5CF6", fontWeight: 700 }}>Available</span>
             <span style={{ color: "#94A3B8" }}>for kitchen subscriptions</span>
-          </div>
-        </div>
-
-        {/* Metric 4 */}
-        <div
-          style={{
-            backgroundColor: "#FFFFFF",
-            borderRadius: "12px",
-            border: "1px solid #E2E8F0",
-            padding: "20px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "10px",
-            boxShadow: "0 2px 6px rgba(0, 0, 0, 0.02)",
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: "12.5px", fontWeight: 600, color: "#64748B" }}>
-              Avg. Meal Fulfilment
-            </span>
-            <div
-              style={{
-                width: "36px",
-                height: "36px",
-                borderRadius: "8px",
-                backgroundColor: "#E0F2FE",
-                color: "#0284C7",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <CheckCircle2 size={18} strokeWidth={2.4} />
-            </div>
-          </div>
-          <div style={{ fontSize: "24px", fontWeight: 800, color: "#0F172A" }}>100%</div>
-          <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px" }}>
-            <span style={{ color: "#0284C7", fontWeight: 700 }}>On-Time</span>
-            <span style={{ color: "#94A3B8" }}>daily meal delivery</span>
           </div>
         </div>
       </div>
@@ -654,7 +571,41 @@ export default function ManageSubscriptionCanvas({
               transition: "all 0.15s ease",
             }}
           >
-            Active ({plans.filter((p) => p.status === "Live").length})
+            Active ({activePlansCount})
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("expired")}
+            style={{
+              padding: "8px 16px",
+              borderRadius: "6px",
+              border: "none",
+              fontSize: "13px",
+              fontWeight: activeTab === "expired" ? 700 : 500,
+              backgroundColor: activeTab === "expired" ? "#FF5500" : "transparent",
+              color: activeTab === "expired" ? "#FFFFFF" : "#64748B",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+            }}
+          >
+            Expired ({expiredPlansCount})
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("paused")}
+            style={{
+              padding: "8px 16px",
+              borderRadius: "6px",
+              border: "none",
+              fontSize: "13px",
+              fontWeight: activeTab === "paused" ? 700 : 500,
+              backgroundColor: activeTab === "paused" ? "#FF5500" : "transparent",
+              color: activeTab === "paused" ? "#FFFFFF" : "#64748B",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+            }}
+          >
+            Paused ({pausedPlansCount})
           </button>
         </div>
 
@@ -700,6 +651,12 @@ export default function ManageSubscriptionCanvas({
           <h3 style={{ fontSize: "17px", fontWeight: 700, color: "#0F172A", margin: 0 }}>
             {searchQuery.trim()
               ? `No subscription plans matching "${searchQuery}"`
+              : activeTab === "active"
+              ? "No active subscription plans found"
+              : activeTab === "expired"
+              ? "No expired or inactive subscription plans found"
+              : activeTab === "paused"
+              ? "No paused subscription plans found"
               : "No subscription plans found"}
           </h3>
           <p style={{ fontSize: "13.5px", color: "#64748B", margin: 0, maxWidth: "440px" }}>
@@ -787,12 +744,6 @@ export default function ManageSubscriptionCanvas({
               : (plan.subscribersCount || 0);
 
             const planBasePrice = getPlanBasePrice(plan);
-            const planActiveRevenueNum = uniquePlanActiveSubs.length > 0
-              ? uniquePlanActiveSubs.reduce((sum, s) => sum + (getSubscriberPrice(s) || planBasePrice), 0)
-              : currentActiveSubscribers * planBasePrice;
-            const calculatedMonthlyRev = planActiveRevenueNum > 0
-              ? `₹${planActiveRevenueNum.toLocaleString("en-IN")}`
-              : "₹0";
 
             return (
           <div
@@ -843,7 +794,11 @@ export default function ManageSubscriptionCanvas({
                       width: "8px",
                       height: "8px",
                       borderRadius: "50%",
-                      backgroundColor: plan.status === "Live" ? "#22C55E" : "#94A3B8",
+                      backgroundColor: isPlanActive(plan)
+                        ? "#22C55E"
+                        : isPlanPaused(plan)
+                        ? "#F59E0B"
+                        : "#94A3B8",
                       display: "inline-block",
                     }}
                   />
@@ -851,7 +806,11 @@ export default function ManageSubscriptionCanvas({
                     style={{
                       fontSize: "12px",
                       fontWeight: 600,
-                      color: plan.status === "Live" ? "#16A34A" : "#64748B",
+                      color: isPlanActive(plan)
+                        ? "#16A34A"
+                        : isPlanPaused(plan)
+                        ? "#D97706"
+                        : "#64748B",
                     }}
                   >
                     {plan.status}
@@ -1004,7 +963,7 @@ export default function ManageSubscriptionCanvas({
               <div
                 style={{
                   display: "flex",
-                  justifyContent: "space-between",
+                  justifyContent: "flex-start",
                   alignItems: "center",
                 }}
               >
@@ -1013,12 +972,6 @@ export default function ManageSubscriptionCanvas({
                     {currentActiveSubscribers} Users
                   </div>
                   <div style={{ fontSize: "11.5px", color: "#64748B" }}>Active Subscribers</div>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: "14px", fontWeight: 700, color: "#16A34A" }}>
-                    {calculatedMonthlyRev}
-                  </div>
-                  <div style={{ fontSize: "11.5px", color: "#64748B" }}>Monthly Rev.</div>
                 </div>
               </div>
 

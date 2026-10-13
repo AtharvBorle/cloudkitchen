@@ -106,7 +106,7 @@ const [menuItems, setMenuItems] = useState<any[]>([]);
 
   const isFormValid = couponCode.trim().length > 0 && couponCode.trim().length <= 20 && discountValue.trim().length > 0;
 
-  const handlePublish = async (isDraft: boolean = false) => {
+  const handlePublish = async () => {
     const cleanCode = couponCode.trim().toUpperCase();
     if (!cleanCode) {
       alert("Please enter a valid coupon code.");
@@ -178,8 +178,8 @@ const [menuItems, setMenuItems] = useState<any[]>([]);
         usageLimit: usageLimit.trim() !== "" ? parseInt(usageLimit) : null,
         perUserLimit: perUserLimit.trim() !== "" ? parseInt(perUserLimit) : 1,
         noExpiry: noExpiry,
-        status: isDraft ? "Draft" : "Active",
-        isActive: !isDraft,
+        status: "Active",
+        isActive: true,
         isAutoApply: isAutoApply,
       };
 
@@ -284,24 +284,12 @@ const [menuItems, setMenuItems] = useState<any[]>([]);
               </div>
 
               <div className={styles.actionsGroup}>
-                <div className={styles.draftBadge}>
-                  <span className={styles.draftDot} />
-                  <span>Draft</span>
-                </div>
                 <div className={styles.desktopActions}>
-                  <button
-                    type="button"
-                    className={styles.saveDraftBtn}
-                    disabled={submitting}
-                    onClick={() => handlePublish(true)}
-                  >
-                    Save Draft
-                  </button>
                   <button
                     type="button"
                     className={styles.publishBtn}
                     disabled={submitting}
-                    onClick={() => handlePublish(false)}
+                    onClick={() => handlePublish()}
                   >
                     {submitting ? "Publishing..." : "Publish Offer"}
                   </button>
@@ -1088,17 +1076,9 @@ const [menuItems, setMenuItems] = useState<any[]>([]);
                 <div className={styles.mobileFormActions}>
                   <button
                     type="button"
-                    className={styles.mobileSaveDraftBtn}
-                    disabled={submitting}
-                    onClick={() => handlePublish(true)}
-                  >
-                    Save Draft
-                  </button>
-                  <button
-                    type="button"
                     className={styles.mobilePublishBtn}
                     disabled={submitting}
-                    onClick={() => handlePublish(false)}
+                    onClick={() => handlePublish()}
                   >
                     {submitting ? "Publishing..." : "Publish Offer"}
                   </button>

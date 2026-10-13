@@ -1026,10 +1026,9 @@ export default function MyOrdersView() {
             setSelectedOrder(updatedCancelledOrder);
           }
 
-          setCancelModalOrder(null);
           setCancelError(null);
           showToast("Your order is already cancelled.");
-          return;
+          return true;
         }
 
         setCancelError(errorMsg);
@@ -1072,10 +1071,9 @@ export default function MyOrdersView() {
         setSelectedOrder(updatedCancelledOrder);
       }
 
-      setCancelModalOrder(null);
       setCancelError(null);
-      showToast("Your order has been cancelled successfully.");
       loadData();
+      return true;
     } catch (err: any) {
       console.error("Cancel order error:", err);
       throw err;

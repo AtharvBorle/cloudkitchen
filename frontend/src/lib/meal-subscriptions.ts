@@ -22,6 +22,8 @@ export interface MealSubscriptionPlan {
   status: "Live" | "Draft" | "Paused" | "Inactive" | string;
   deployedDate: string;
   allowCancel?: boolean;
+  allowPause?: boolean;
+  allowPauseBilling?: boolean;
   pauseBillingPeriod?: string;
 }
 
@@ -161,6 +163,18 @@ export function formatMealPlan(rawPlan: any): MealSubscriptionPlan {
     status: rawPlan.status || "Live",
     deployedDate,
     allowCancel: rawPlan.allowCancel ?? false,
+    allowPause:
+      rawPlan.allowPause !== undefined
+        ? Boolean(rawPlan.allowPause)
+        : rawPlan.allowPauseBilling !== undefined
+        ? Boolean(rawPlan.allowPauseBilling)
+        : rawPlan.pauseBillingPeriod !== "None",
+    allowPauseBilling:
+      rawPlan.allowPauseBilling !== undefined
+        ? Boolean(rawPlan.allowPauseBilling)
+        : rawPlan.allowPause !== undefined
+        ? Boolean(rawPlan.allowPause)
+        : rawPlan.pauseBillingPeriod !== "None",
     pauseBillingPeriod: (rawPlan.allowPause === false || rawPlan.allowPauseBilling === false)
       ? "None"
       : (rawPlan.pauseBillingPeriod !== undefined ? rawPlan.pauseBillingPeriod : "30 Days"),
@@ -381,13 +395,20 @@ export async function saveMealPlan(
 
 export async function updateMealPlan(id: string, updates: Partial<MealSubscriptionPlan>): Promise<MealSubscriptionPlan | null> {
   const existing = getStoredMealPlans();
-  const targetIndex = existing.findIndex((p) => p.id === id || p.planId === id);
-  if (targetIndex === -1 && existing.length === 0) return null;
+  const cleanPrefix = id.includes("-") ? id.split("-")[0] : id;
+  const targetIndex = existing.findIndex(
+    (p) =>
+      p.id === id ||
+      p.planId === id ||
+      (cleanPrefix && p.id.toLowerCase().startsWith(cleanPrefix))
+  );
 
   const current = targetIndex !== -1 ? existing[targetIndex] : null;
+  const resolvedId = current?.id || id;
+  let serverUpdatedPlan: MealSubscriptionPlan | null = null;
 
   try {
-    const payload: any = { id };
+    const payload: any = { id: resolvedId };
     if (updates.name !== undefined) payload.name = updates.name;
     if (updates.tier !== undefined) payload.tier = updates.tier;
     if (updates.weeklyPrice !== undefined) {
@@ -407,24 +428,41 @@ export async function updateMealPlan(id: string, updates: Partial<MealSubscripti
     if (updates.mealTimings !== undefined) payload.mealTimings = updates.mealTimings;
     if (updates.status !== undefined) payload.status = updates.status;
     if (updates.allowCancel !== undefined) payload.allowCancel = updates.allowCancel;
+    if (updates.allowPause !== undefined) payload.allowPause = updates.allowPause;
+    if (updates.allowPauseBilling !== undefined) payload.allowPauseBilling = updates.allowPauseBilling;
     if (updates.pauseBillingPeriod !== undefined) payload.pauseBillingPeriod = updates.pauseBillingPeriod;
 
-    await fetchApi("/api/seller/meal-plans", {
+    const res = await fetchApi("/api/seller/meal-plans", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
+    if (res.ok) {
+      const json = await res.json();
+      const data = json.data || json;
+      if (data && data.id) {
+        serverUpdatedPlan = formatMealPlan(data);
+      }
+    }
   } catch (err) {
     console.error("Error updating meal plan in backend DB:", err);
   }
 
-  if (current) {
-    const updated: MealSubscriptionPlan = formatMealPlan({
-      ...current,
-      ...updates,
-    });
+  const finalPlan: MealSubscriptionPlan | null =
+    serverUpdatedPlan ||
+    (current
+      ? formatMealPlan({
+          ...current,
+          ...updates,
+        })
+      : null);
 
-    existing[targetIndex] = updated;
+  if (finalPlan) {
+    if (targetIndex !== -1) {
+      existing[targetIndex] = finalPlan;
+    } else {
+      existing.unshift(finalPlan);
+    }
 
     if (typeof window !== "undefined") {
       try {
@@ -435,7 +473,7 @@ export async function updateMealPlan(id: string, updates: Partial<MealSubscripti
       }
     }
 
-    return updated;
+    return finalPlan;
   }
 
   return null;
@@ -589,6 +627,8 @@ export interface UserActiveMealSubscription {
     status: string;
     allowCancel: boolean;
     pauseBillingPeriod: string;
+    allowPause?: boolean;
+    allowPauseBilling?: boolean;
   };
   seller: {
     id: string;

@@ -15,7 +15,8 @@ import {
   Briefcase,
   Search,
   Check,
-  Edit3
+  ChevronDown,
+  Edit3,
 } from "lucide-react";
 import { 
   loadRazorpayScript,
@@ -25,6 +26,12 @@ import {
 import { fetchApi } from "@/lib/fetch-api";
 import { useLocation } from "@/components/location-provider";
 import styles from "./SubscribeModal.module.css";
+
+export const START_DATE_OPTIONS = [
+  { value: "Tomorrow", label: "Starts Tomorrow (Next Delivery Slot)" },
+  { value: "Monday", label: "Starts Coming Monday" },
+  { value: "1st", label: "Starts 1st of Next Month" },
+];
 
 export const PUNE_LOCALITY_SUGGESTIONS = [
   { name: "Kothrud, Pune", pincode: "411038" },
@@ -103,6 +110,10 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const phoneInputRef = useRef<HTMLInputElement>(null);
 
+  // Custom Start Date Dropdown state
+  const [isStartDateOpen, setIsStartDateOpen] = useState(false);
+  const startDateRef = useRef<HTMLDivElement>(null);
+
   // Initialize and load saved addresses
   useEffect(() => {
     if (!isOpen) {
@@ -114,6 +125,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
     setIsChangingAddress(false);
     setIsEditingPhone(false);
     setShowManualAddressInput(false);
+    setIsStartDateOpen(false);
     setErrorMsg(null);
 
     const userPhone = (session?.user as any)?.phone;
@@ -177,6 +189,19 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Click outside to close start date dropdown
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (startDateRef.current && !startDateRef.current.contains(e.target as Node)) {
+        setIsStartDateOpen(false);
+      }
+    }
+    if (isStartDateOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [isStartDateOpen]);
 
   if (!isOpen || !plan) return null;
 
@@ -681,37 +706,84 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
           </div>
 
           {/* Subscription Start Date Preference */}
-          <div className={styles.formGroup}>
+          <div className={styles.formGroup} ref={startDateRef}>
             <label className={styles.formLabel}>
               <Calendar size={14} color="#EA580C" />
               <span>Subscription Start Date</span>
             </label>
-            <select
-              value={startDatePreference}
-              onChange={(e) => setStartDatePreference(e.target.value)}
-              className={styles.formInput}
-              style={{ width: "100%", boxSizing: "border-box", cursor: "pointer", fontWeight: 600, color: "#1E293B" }}
-            >
-              <option value="Tomorrow">Starts Tomorrow (Next Delivery Slot)</option>
-              <option value="Monday">Starts Coming Monday</option>
-              <option value="1st">Starts 1st of Next Month</option>
-            </select>
+            <div className={styles.dateDropdownContainer}>
+              <button
+                type="button"
+                className={`${styles.dateDropdownTrigger} ${isStartDateOpen ? styles.dateDropdownTriggerActive : ""}`}
+                onClick={() => setIsStartDateOpen((prev) => !prev)}
+                aria-haspopup="listbox"
+                aria-expanded={isStartDateOpen}
+              >
+                <span className={styles.dateDropdownText}>
+                  {START_DATE_OPTIONS.find((opt) => opt.value === startDatePreference)?.label || "Starts Tomorrow (Next Delivery Slot)"}
+                </span>
+                <ChevronDown
+                  size={18}
+                  className={`${styles.dateChevronIcon} ${isStartDateOpen ? styles.dateChevronIconOpen : ""}`}
+                />
+              </button>
+
+              {isStartDateOpen && (
+                <div className={styles.dateDropdownMenu} role="listbox">
+                  {START_DATE_OPTIONS.map((opt) => {
+                    const isSelected = startDatePreference === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        role="option"
+                        aria-selected={isSelected}
+                        className={`${styles.dateDropdownOption} ${isSelected ? styles.dateDropdownOptionSelected : ""}`}
+                        onClick={() => {
+                          setStartDatePreference(opt.value);
+                          setIsStartDateOpen(false);
+                        }}
+                      >
+                        <span>{opt.label}</span>
+                        {isSelected && <Check size={16} className={styles.dateOptionCheck} />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Included Features */}
-          {plan.features && plan.features.length > 0 && (
-            <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Plan Highlights</label>
-              <ul className={styles.featuresList}>
-                {plan.features.slice(0, 4).map((f, i) => (
-                  <li key={i} className={styles.featureItem}>
-                    <CheckCircle2 size={16} color="#16A34A" />
-                    <span>{f}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          {plan.features && plan.features.length > 0 && (() => {
+            const rawPause = String((plan as any)?.pauseBillingPeriod || "").trim().toLowerCase();
+            const isPauseAllowed = !(
+              rawPause === "none" ||
+              rawPause === "disabled" ||
+              rawPause === "false" ||
+              (plan as any)?.allowPause === false ||
+              (plan as any)?.allowPauseBilling === false
+            );
+            const filteredFeatures = isPauseAllowed
+              ? plan.features
+              : plan.features.filter((f) => !String(f).toLowerCase().includes("pause"));
+
+            if (filteredFeatures.length === 0) return null;
+
+            return (
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>Plan Highlights</label>
+                <ul className={styles.featuresList}>
+                  {filteredFeatures.slice(0, 4).map((f, i) => (
+                    <li key={i} className={styles.featureItem}>
+                      <CheckCircle2 size={16} color="#16A34A" />
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Footer */}
