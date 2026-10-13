@@ -122,11 +122,28 @@ export function emitSellerDashboardRefresh(sellerId: string) {
 }
 
 export interface RealtimeLivePayload {
-  event: "COUPON_UPDATED" | "SELLER_STATUS_CHANGED" | "MENU_UPDATED";
+  event:
+    | "COUPON_UPDATED"
+    | "SELLER_STATUS_CHANGED"
+    | "MENU_UPDATED"
+    | "BANNER_UPDATED"
+    | "CATEGORY_UPDATED"
+    | "REEL_UPDATED"
+    | "ROOM_UPDATED"
+    | "CATALOGUE_UPDATED"
+    | "MEAL_PLAN_UPDATED"
+    | "MEAL_SUBSCRIPTION_UPDATED";
   sellerId?: string | null;
+  userId?: string | null;
+  planId?: string | null;
+  subscriptionId?: string | null;
+  plan?: any;
+  subscription?: any;
   coupon?: any;
-  action?: "CREATE" | "UPDATE" | "DELETE" | "TOGGLE";
+  action?: "CREATE" | "UPDATE" | "DELETE" | "TOGGLE" | "CANCEL" | "PAUSE" | "RESUME";
   isOnline?: boolean;
+  type?: string;
+  details?: any;
   timestamp: string;
 }
 
@@ -189,3 +206,133 @@ export function emitMenuUpdated(sellerId: string) {
   realtimeEmitter.emit("public:live", payload);
   realtimeEmitter.emit(`public:seller:${sellerId}`, payload);
 }
+
+/**
+ * Dispatch when promotional banners or popup banners are created, updated, or deleted.
+ */
+export function emitBannerUpdated(action: "CREATE" | "UPDATE" | "DELETE" = "UPDATE", details?: any) {
+  const payload: RealtimeLivePayload = {
+    event: "BANNER_UPDATED",
+    action,
+    details,
+    timestamp: new Date().toISOString(),
+  };
+
+  realtimeEmitter.emit("public:live", payload);
+}
+
+/**
+ * Dispatch when food categories or subcategories are created, updated, or deleted.
+ */
+export function emitCategoryUpdated(action: "CREATE" | "UPDATE" | "DELETE" = "UPDATE", details?: any) {
+  const payload: RealtimeLivePayload = {
+    event: "CATEGORY_UPDATED",
+    action,
+    details,
+    timestamp: new Date().toISOString(),
+  };
+
+  realtimeEmitter.emit("public:live", payload);
+}
+
+/**
+ * Dispatch when curated video reels are created, updated, or deleted.
+ */
+export function emitReelUpdated(action: "CREATE" | "UPDATE" | "DELETE" = "UPDATE", details?: any) {
+  const payload: RealtimeLivePayload = {
+    event: "REEL_UPDATED",
+    action,
+    details,
+    timestamp: new Date().toISOString(),
+  };
+
+  realtimeEmitter.emit("public:live", payload);
+}
+
+/**
+ * Dispatch when rooms/properties are created, updated, or deleted.
+ */
+export function emitRoomUpdated(sellerId?: string | null, action: "CREATE" | "UPDATE" | "DELETE" = "UPDATE") {
+  const payload: RealtimeLivePayload = {
+    event: "ROOM_UPDATED",
+    sellerId: sellerId ? String(sellerId) : null,
+    action,
+    timestamp: new Date().toISOString(),
+  };
+
+  realtimeEmitter.emit("public:live", payload);
+  if (sellerId) {
+    realtimeEmitter.emit(`public:seller:${sellerId}`, payload);
+  }
+}
+
+/**
+ * Dispatch general catalogue update (combines dishes, kitchens, categories, explore catalogue).
+ */
+export function emitCatalogueUpdated(type: string, sellerId?: string | null) {
+  const payload: RealtimeLivePayload = {
+    event: "CATALOGUE_UPDATED",
+    type,
+    sellerId: sellerId ? String(sellerId) : null,
+    timestamp: new Date().toISOString(),
+  };
+
+  realtimeEmitter.emit("public:live", payload);
+  if (sellerId) {
+    realtimeEmitter.emit(`public:seller:${sellerId}`, payload);
+  }
+}
+
+/**
+ * Dispatch when a meal subscription plan is created, updated, toggled, or deleted by a seller.
+ */
+export function emitMealPlanUpdated(
+  sellerId: string,
+  action: "CREATE" | "UPDATE" | "DELETE" | "TOGGLE" = "UPDATE",
+  plan?: any
+) {
+  const payload: RealtimeLivePayload = {
+    event: "MEAL_PLAN_UPDATED",
+    sellerId: sellerId ? String(sellerId) : null,
+    planId: plan?.id ? String(plan.id) : undefined,
+    plan,
+    action,
+    timestamp: new Date().toISOString(),
+  };
+
+  realtimeEmitter.emit("public:live", payload);
+  if (sellerId) {
+    realtimeEmitter.emit(`public:seller:${sellerId}`, payload);
+    realtimeEmitter.emit(`seller:${sellerId}`, payload);
+  }
+}
+
+/**
+ * Dispatch when a user creates, pauses, resumes, changes or cancels a meal subscription.
+ */
+export function emitMealSubscriptionUpdated(
+  sellerId: string,
+  userId: string,
+  action: "CREATE" | "UPDATE" | "CANCEL" | "PAUSE" | "RESUME" = "UPDATE",
+  subscription?: any
+) {
+  const payload: RealtimeLivePayload = {
+    event: "MEAL_SUBSCRIPTION_UPDATED",
+    sellerId: sellerId ? String(sellerId) : null,
+    userId: userId ? String(userId) : null,
+    subscriptionId: subscription?.id ? String(subscription.id) : undefined,
+    subscription,
+    action,
+    timestamp: new Date().toISOString(),
+  };
+
+  realtimeEmitter.emit("public:live", payload);
+  if (sellerId) {
+    realtimeEmitter.emit(`public:seller:${sellerId}`, payload);
+    realtimeEmitter.emit(`seller:${sellerId}`, payload);
+  }
+  if (userId) {
+    realtimeEmitter.emit(`user:${userId}`, payload);
+  }
+}
+

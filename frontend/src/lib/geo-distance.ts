@@ -304,3 +304,4 @@ export function formatShortDeliveryLocation(addr?: LocationAddressInput | null, 
 
   return finalStr || (pin ? `PIN ${pin}` : "Select Location");
 }
+

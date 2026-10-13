@@ -47,7 +47,6 @@ export async function GET() {
             },
             data: { approvalStatus: "APPROVED", isActive: true }
         });
-
         const rawCoupons = await db.coupon.findMany({
             where: {
                 appliesToSellerId: sellerProfile.id

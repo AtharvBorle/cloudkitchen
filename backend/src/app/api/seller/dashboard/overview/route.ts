@@ -92,30 +92,11 @@ export async function GET(req: Request) {
         );
         const todayOrdersCount = completedOrders.length;
 
-        // Day's completed/paid revenue (sum of completed orders and non-cancelled paid orders on this day)
-        const dayDeliveredOrders = nonCancelledOrders.filter(
-            (o) => o.status === "DELIVERED" || o.status === "COMPLETED" || o.isPaid
+        // 1. Online paid/delivered revenue for the day (non-COD)
+        const onlinePaidOrders = nonCancelledOrders.filter(
+            (o) => o.paymentMethod !== "COD" && (o.isPaid || o.status === "DELIVERED" || o.status === "COMPLETED")
         );
-        const todayRevenue = dayDeliveredOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-
-        // All time completed orders and revenue
-        const allCompletedOrders = await db.order.findMany({
-            where: {
-                sellerId: sellerProfile.id,
-                status: { in: ["DELIVERED", "COMPLETED"] }
-            },
-            select: { totalAmount: true }
-        });
-        const allTimeRevenue = allCompletedOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-        const allTimeOrdersCount = allCompletedOrders.length;
-
-        // Active orders currently in kitchen / delivery pipeline
-        const activeOrdersCount = await db.order.count({
-            where: {
-                sellerId: sellerProfile.id,
-                status: { in: ["PENDING", "CONFIRMED", "PREPARING", "READY_FOR_PICKUP", "OUT_FOR_DELIVERY", "ON_THE_WAY"] }
-            }
-        });
+        const onlineRevenue = onlinePaidOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
 
         // 2. Riders of this seller & active COD wallet balances (amount currently in rider's hand)
         const riders = await db.deliveryPerson.findMany({
@@ -155,6 +136,30 @@ export async function GET(req: Request) {
             riderTotalCodOutstanding,
             Math.max(0, todayCodDelivered - todaySettledCod)
         );
+
+        // Realized COD revenue for the day = delivered COD minus any portion still held by the rider
+        const realizedCod = Math.max(0, todayCodDelivered - unsettledDayCod);
+
+        const todayRevenue = onlineRevenue + realizedCod;
+
+        // All time completed orders and revenue
+        const allCompletedOrders = await db.order.findMany({
+            where: {
+                sellerId: sellerProfile.id,
+                status: { in: ["DELIVERED", "COMPLETED"] }
+            },
+            select: { totalAmount: true }
+        });
+        const allTimeRevenue = allCompletedOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+        const allTimeOrdersCount = allCompletedOrders.length;
+
+        // Active orders currently in kitchen / delivery pipeline
+        const activeOrdersCount = await db.order.count({
+            where: {
+                sellerId: sellerProfile.id,
+                status: { in: ["PENDING", "CONFIRMED", "PREPARING", "READY_FOR_PICKUP", "OUT_FOR_DELIVERY", "ON_THE_WAY"] }
+            }
+        });
 
         const activeSubs = await db.subscription.findMany({
             where: {

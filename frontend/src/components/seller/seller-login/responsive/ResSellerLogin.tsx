@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
-import { Mail, Lock, Eye, EyeOff, ArrowRight, Check } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Check, AlertCircle } from "lucide-react";
 import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
 import { fetchApi } from "@/lib/fetch-api";
 import { updateCachedProfile } from "@/hooks/useSellerProfile";
@@ -174,6 +174,29 @@ export const ResSellerLogin: React.FC<ResSellerLoginProps> = ({
 
         {/* Login Form Card */}
         <form onSubmit={handleSubmit} className={styles.formCard}>
+          {searchParams?.get("deletion_scheduled") === "true" && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: "10px",
+                padding: "12px 14px",
+                backgroundColor: "#FEF2F2",
+                border: "1px solid #FCA5A5",
+                borderRadius: "10px",
+                fontSize: "0.85rem",
+                color: "#991B1B",
+                lineHeight: "1.4",
+                marginBottom: "8px",
+              }}
+            >
+              <AlertCircle size={18} style={{ flexShrink: 0, marginTop: "2px" }} />
+              <div>
+                <strong>Account Deletion Scheduled:</strong> Your kitchen is currently offline. You have a 30-day grace period to restore your account simply by logging back in.
+              </div>
+            </div>
+          )}
+
           {errorMessage && (
             <div className={styles.errorMessage} role="alert">
               {errorMessage}

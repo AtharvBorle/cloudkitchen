@@ -257,13 +257,15 @@ export const authConfig: NextAuthConfig = {
             if (url.startsWith("/")) return `${baseUrl}${url}`;
             const allowedOrigins = [
                 "https://cloudkitchen-rose.vercel.app",
+                "https://dev.neocloudbites.com",
+                "https://neocloudbites.com",
                 "http://localhost:3000",
                 "http://localhost:3001",
                 "http://localhost:5000"
             ];
             try {
                 const targetOrigin = new URL(url).origin;
-                if (allowedOrigins.includes(targetOrigin) || targetOrigin === baseUrl) {
+                if (allowedOrigins.includes(targetOrigin) || targetOrigin === baseUrl || targetOrigin.endsWith(".neocloudbites.com")) {
                     return url;
                 }
             } catch (e) {

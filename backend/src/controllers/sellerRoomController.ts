@@ -3,6 +3,7 @@ import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { uploadImage } from "@/lib/upload";
 import { getCategoryExpiries } from "@/lib/subscription";
+import { emitRoomUpdated } from "@/lib/realtime-events";
 
 const checkPropertyCategoryActive = async (userId: string) => {
     const sellerProfile = await db.sellerProfile.findUnique({
@@ -238,6 +239,8 @@ export const createSellerRoom = async (req: Request) => {
         }
     });
 
+    emitRoomUpdated(sellerProfile.id, "CREATE");
+
     const parsed = parseRoomDescription(room.description);
     return { room: { ...room, ...parsed } };
 };
@@ -270,6 +273,8 @@ export const deleteSellerRoom = async (req: Request) => {
     await db.room.delete({
         where: { id: roomId }
     });
+
+    emitRoomUpdated(sellerProfile.id, "DELETE");
 
     return { success: true, message: "Room deleted successfully" };
 };
@@ -518,6 +523,8 @@ export const updateSellerRoom = async (req: Request, roomIdOverride?: string) =>
         where: { id: roomId },
         data: dataToUpdate
     });
+
+    emitRoomUpdated(sellerProfile.id, "UPDATE");
 
     const parsed = parseRoomDescription(updatedRoom.description);
     return { room: { ...updatedRoom, ...parsed } };

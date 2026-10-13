@@ -9,6 +9,7 @@ import ConsoleSidebar from '../sidebar/Sidebar';
 import Topbar from '../nav/Topbar';
 import { fetchApi } from '@/lib/fetch-api';
 import { useSellerProfile } from '@/hooks/useSellerProfile';
+import { useRoomModule } from '@/context/RoomModuleContext';
 import PaginationControls from '../common/PaginationControls';
 import styles from './SellerRooms.module.css';
 
@@ -47,6 +48,14 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
 }) => {
   const router = useRouter();
   const seller = useSellerProfile();
+  const { isRoomEnabled } = useRoomModule();
+
+  useEffect(() => {
+    if (!isRoomEnabled) {
+      router.replace("/seller/dashboard");
+    }
+  }, [isRoomEnabled, router]);
+
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [roomList, setRoomList] = useState<RoomItem[]>(rooms || []);
@@ -97,6 +106,8 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
   }, [filteredRooms, currentPage, pageSize]);
 
   useEffect(() => {
+    if (!isRoomEnabled) return;
+
     async function checkCategoryAccess() {
       try {
         const res = await fetchApi("/api/seller/dashboard/status");
@@ -109,7 +120,7 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
           setPropertyVerification(verif);
           setStatusChecked(true);
 
-          if (!active) {
+          if (!active && isRoomEnabled) {
             // Trigger upgrade popup immediately
             window.dispatchEvent(
               new CustomEvent(verif === "APPROVED" ? "open-subscription-modal" : "open-category-upgrade", {
@@ -125,7 +136,7 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
       }
     }
     checkCategoryAccess();
-  }, []);
+  }, [isRoomEnabled]);
 
   useEffect(() => {
     if (isPropertyActive === false) return; // Do not load rooms if property category is not active
@@ -268,6 +279,10 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
       router.push('/seller/rooms/config');
     }
   };
+
+  if (!isRoomEnabled) {
+    return null;
+  }
 
   return (
     <div className={styles.roomsContainer}>

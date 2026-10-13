@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import SellerSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
 import RoomConfigCanvas, {
@@ -9,6 +10,7 @@ import RoomConfigCanvas, {
 } from "./RoomConfigCanvas";
 
 import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useRoomModule } from "@/context/RoomModuleContext";
 
 export interface RoomConfigCanvasDasProps extends RoomConfigCanvasProps {
   topbarTitle?: string;
@@ -32,12 +34,23 @@ export default function RoomConfigCanvasDas({
   onNotificationClick,
   ...canvasProps
 }: RoomConfigCanvasDasProps) {
+  const router = useRouter();
+  const { isRoomEnabled } = useRoomModule();
+
+  useEffect(() => {
+    if (!isRoomEnabled) {
+      router.replace("/seller/dashboard");
+    }
+  }, [isRoomEnabled, router]);
+
   const seller = useSellerProfile();
   const effectiveOwnerName = ownerName && ownerName !== "John Doe" ? ownerName : seller.ownerName;
   const effectivePartnerRole = partnerRole || seller.partnerRole;
   const effectiveAvatarInitials = avatarInitials && avatarInitials !== "JD" ? avatarInitials : seller.avatarInitials;
 
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  if (!isRoomEnabled) return null;
 
   return (
     <div

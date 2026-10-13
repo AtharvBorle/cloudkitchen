@@ -29,6 +29,23 @@ export interface SellerMapPickerProps {
   onChange: (lat: number, lng: number, formattedAddress?: string, details?: AddressDetails) => void;
 }
 
+function setSafeMarkerPosition(marker: any, pos: { lat: number; lng: number } | any) {
+  if (!marker) return;
+  try {
+    if (typeof marker.setPosition === "function") {
+      marker.setPosition(pos);
+    } else {
+      marker.position = pos;
+    }
+  } catch {
+    try {
+      marker.position = pos;
+    } catch (e) {
+      console.warn("Failed to set marker position:", e);
+    }
+  }
+}
+
 export const SellerMapPicker: React.FC<SellerMapPickerProps> = ({
   latitude,
   longitude,
@@ -144,7 +161,7 @@ export const SellerMapPicker: React.FC<SellerMapPickerProps> = ({
             if (e.latLng) {
               const curLat = e.latLng.lat();
               const curLng = e.latLng.lng();
-              marker.setPosition(e.latLng);
+              setSafeMarkerPosition(marker, e.latLng);
               handleReverseGeocode(curLat, curLng);
             }
           });
@@ -285,8 +302,10 @@ export const SellerMapPicker: React.FC<SellerMapPickerProps> = ({
     if (latitude && longitude) {
       if (googleMapRef.current && googleMarkerRef.current) {
         const pos = { lat: latitude, lng: longitude };
-        googleMarkerRef.current.setPosition(pos);
-        googleMapRef.current.panTo(pos);
+        setSafeMarkerPosition(googleMarkerRef.current, pos);
+        if (typeof googleMapRef.current.panTo === "function") {
+          googleMapRef.current.panTo(pos);
+        }
         setCurrentCoords({ lat: latitude, lng: longitude });
       } else if (leafletMapRef.current && leafletMarkerRef.current) {
         const current = leafletMarkerRef.current.getLatLng();
@@ -318,9 +337,13 @@ export const SellerMapPicker: React.FC<SellerMapPickerProps> = ({
 
         if (googleMapRef.current && googleMarkerRef.current) {
           const gPos = { lat, lng };
-          googleMarkerRef.current.setPosition(gPos);
-          googleMapRef.current.panTo(gPos);
-          googleMapRef.current.setZoom(17);
+          setSafeMarkerPosition(googleMarkerRef.current, gPos);
+          if (typeof googleMapRef.current.panTo === "function") {
+            googleMapRef.current.panTo(gPos);
+          }
+          if (typeof googleMapRef.current.setZoom === "function") {
+            googleMapRef.current.setZoom(17);
+          }
         } else if (leafletMapRef.current && leafletMarkerRef.current) {
           leafletMarkerRef.current.setLatLng([lat, lng]);
           leafletMapRef.current.setView([lat, lng], 17);
@@ -439,9 +462,13 @@ export const SellerMapPicker: React.FC<SellerMapPickerProps> = ({
 
     if (googleMapRef.current && googleMarkerRef.current) {
       const pos = { lat: targetLat, lng: targetLng };
-      googleMarkerRef.current.setPosition(pos);
-      googleMapRef.current.panTo(pos);
-      googleMapRef.current.setZoom(16);
+      setSafeMarkerPosition(googleMarkerRef.current, pos);
+      if (typeof googleMapRef.current.panTo === "function") {
+        googleMapRef.current.panTo(pos);
+      }
+      if (typeof googleMapRef.current.setZoom === "function") {
+        googleMapRef.current.setZoom(16);
+      }
     } else if (leafletMapRef.current && leafletMarkerRef.current) {
       leafletMarkerRef.current.setLatLng([targetLat, targetLng]);
       leafletMapRef.current.setView([targetLat, targetLng], 16);

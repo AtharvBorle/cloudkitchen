@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { performLogout } from "@/lib/logout";
 import Topbar, { TopbarProps } from "../nav/Topbar";
 import { useSellerProfile, isGenericFallbackName, computeInitials } from "@/hooks/useSellerProfile";
+import { useRoomModule } from "@/context/RoomModuleContext";
 import { fetchApi } from "@/lib/fetch-api";
 import {
   Sparkles,
@@ -69,6 +70,7 @@ export default function MainCanvas({
   onDataChange,
 }: MainCanvasProps) {
   const seller = useSellerProfile();
+  const { isRoomEnabled } = useRoomModule();
   const [internalFormData, setInternalFormData] = useState<SellerProfileData>(() => {
     const owner = initialData?.ownerName || (!isGenericFallbackName(seller.userFullName) ? seller.userFullName : "") || seller.ownerName;
     const outlet = initialData?.outletName || seller.businessName || seller.ownerName;
@@ -454,7 +456,12 @@ export default function MainCanvas({
   const propertyExpiry =
     statusData?.propertyExpiry ? new Date(statusData.propertyExpiry) : stackedProperty.length > 0 ? stackedProperty[stackedProperty.length - 1].endDate : null;
 
-  const hasAnyActiveSub = Boolean(statusData?.hasActiveSub || activeSubs.length > 0);
+  const hasAnyActiveSub = Boolean(
+    stackedFood.length > 0 ||
+      (isRoomEnabled && stackedProperty.length > 0) ||
+      statusData?.isFoodActive ||
+      (isRoomEnabled && statusData?.isPropertyActive)
+  );
   const isFoodVerified =
     statusData?.sellerProfile?.foodVerificationStatus === "APPROVED" ||
     (statusData?.sellerProfile?.verificationStatus === "APPROVED" &&
@@ -462,10 +469,11 @@ export default function MainCanvas({
         statusData?.sellerProfile?.businessCategory === "BOTH"));
 
   const isPropertyVerified =
-    statusData?.sellerProfile?.propertyVerificationStatus === "APPROVED" ||
-    (statusData?.sellerProfile?.verificationStatus === "APPROVED" &&
-      (statusData?.sellerProfile?.businessCategory === "PROPERTY" ||
-        statusData?.sellerProfile?.businessCategory === "BOTH"));
+    isRoomEnabled &&
+    (statusData?.sellerProfile?.propertyVerificationStatus === "APPROVED" ||
+      (statusData?.sellerProfile?.verificationStatus === "APPROVED" &&
+        (statusData?.sellerProfile?.businessCategory === "PROPERTY" ||
+          statusData?.sellerProfile?.businessCategory === "BOTH")));
 
   const handleShareQR = () => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
@@ -691,7 +699,7 @@ export default function MainCanvas({
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "1fr 1fr",
+              gridTemplateColumns: isRoomEnabled ? "1fr 1fr" : "1fr",
               gap: "20px",
             }}
             className="two-col-grid"
@@ -864,7 +872,8 @@ export default function MainCanvas({
             </div>
 
             {/* PROPERTY BOOKINGS COLUMN */}
-            <div
+            {isRoomEnabled && (
+              <div
               style={{
                 backgroundColor: "#F8FAFC",
                 border: "1px solid #E2E8F0",
@@ -1029,6 +1038,7 @@ export default function MainCanvas({
                 </div>
               )}
             </div>
+            )}
           </div>
         </div>
 

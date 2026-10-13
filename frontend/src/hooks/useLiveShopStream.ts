@@ -3,11 +3,28 @@
 import { useEffect, useRef } from "react";
 
 export interface LiveShopPayload {
-  event: "COUPON_UPDATED" | "SELLER_STATUS_CHANGED" | "MENU_UPDATED";
+  event:
+    | "COUPON_UPDATED"
+    | "SELLER_STATUS_CHANGED"
+    | "MENU_UPDATED"
+    | "BANNER_UPDATED"
+    | "CATEGORY_UPDATED"
+    | "REEL_UPDATED"
+    | "ROOM_UPDATED"
+    | "CATALOGUE_UPDATED"
+    | "MEAL_PLAN_UPDATED"
+    | "MEAL_SUBSCRIPTION_UPDATED";
   sellerId?: string | null;
+  userId?: string | null;
+  planId?: string | null;
+  subscriptionId?: string | null;
+  plan?: any;
+  subscription?: any;
   coupon?: any;
-  action?: "CREATE" | "UPDATE" | "DELETE" | "TOGGLE";
+  action?: "CREATE" | "UPDATE" | "DELETE" | "TOGGLE" | "CANCEL" | "PAUSE" | "RESUME";
   isOnline?: boolean;
+  type?: string;
+  details?: any;
   timestamp: string;
 }
 
@@ -17,6 +34,13 @@ export interface UseLiveShopStreamOptions {
   onCouponUpdated?: (payload: LiveShopPayload) => void;
   onSellerStatusChanged?: (payload: LiveShopPayload) => void;
   onMenuUpdated?: (payload: LiveShopPayload) => void;
+  onBannerUpdated?: (payload: LiveShopPayload) => void;
+  onCategoryUpdated?: (payload: LiveShopPayload) => void;
+  onReelUpdated?: (payload: LiveShopPayload) => void;
+  onRoomUpdated?: (payload: LiveShopPayload) => void;
+  onCatalogueUpdated?: (payload: LiveShopPayload) => void;
+  onMealPlanUpdated?: (payload: LiveShopPayload) => void;
+  onMealSubscriptionUpdated?: (payload: LiveShopPayload) => void;
   onAnyEvent?: (payload: LiveShopPayload) => void;
 }
 
@@ -91,6 +115,20 @@ function startConnection(key: string, sellerId?: string | null) {
           window.dispatchEvent(new CustomEvent("seller-status-updated", { detail: payload }));
         } else if (payload.event === "MENU_UPDATED") {
           window.dispatchEvent(new CustomEvent("seller-menu-updated", { detail: payload }));
+        } else if (payload.event === "BANNER_UPDATED") {
+          window.dispatchEvent(new CustomEvent("public-banner-updated", { detail: payload }));
+        } else if (payload.event === "CATEGORY_UPDATED") {
+          window.dispatchEvent(new CustomEvent("public-category-updated", { detail: payload }));
+        } else if (payload.event === "REEL_UPDATED") {
+          window.dispatchEvent(new CustomEvent("public-reel-updated", { detail: payload }));
+        } else if (payload.event === "ROOM_UPDATED") {
+          window.dispatchEvent(new CustomEvent("public-room-updated", { detail: payload }));
+        } else if (payload.event === "CATALOGUE_UPDATED") {
+          window.dispatchEvent(new CustomEvent("public-catalogue-updated", { detail: payload }));
+        } else if (payload.event === "MEAL_PLAN_UPDATED") {
+          window.dispatchEvent(new CustomEvent("meal-plans-updated", { detail: payload }));
+        } else if (payload.event === "MEAL_SUBSCRIPTION_UPDATED") {
+          window.dispatchEvent(new CustomEvent("meal-subscriptions-updated", { detail: payload }));
         }
       } catch (err) {
         console.error("Failed to parse LiveShop SSE payload:", err);
@@ -150,8 +188,8 @@ function stopConnectionIfOrphaned(key: string) {
 }
 
 /**
- * Hook to listen to real-time shop updates (coupons, seller online status, menu items) via SSE.
- * Requires ZERO polling. Multiple components subscribing to the same seller share 1 single SSE stream.
+ * Hook to listen to real-time shop and catalogue updates (coupons, seller status, menu, banners, categories, reels, rooms) via SSE.
+ * Requires ZERO polling. Multiple components subscribing to the same stream share 1 single SSE connection.
  */
 export function useLiveShopStream(options: UseLiveShopStreamOptions = {}) {
   const {
@@ -160,6 +198,13 @@ export function useLiveShopStream(options: UseLiveShopStreamOptions = {}) {
     onCouponUpdated,
     onSellerStatusChanged,
     onMenuUpdated,
+    onBannerUpdated,
+    onCategoryUpdated,
+    onReelUpdated,
+    onRoomUpdated,
+    onCatalogueUpdated,
+    onMealPlanUpdated,
+    onMealSubscriptionUpdated,
     onAnyEvent,
   } = options;
 
@@ -167,6 +212,13 @@ export function useLiveShopStream(options: UseLiveShopStreamOptions = {}) {
     onCouponUpdated,
     onSellerStatusChanged,
     onMenuUpdated,
+    onBannerUpdated,
+    onCategoryUpdated,
+    onReelUpdated,
+    onRoomUpdated,
+    onCatalogueUpdated,
+    onMealPlanUpdated,
+    onMealSubscriptionUpdated,
     onAnyEvent,
   });
 
@@ -175,9 +227,28 @@ export function useLiveShopStream(options: UseLiveShopStreamOptions = {}) {
       onCouponUpdated,
       onSellerStatusChanged,
       onMenuUpdated,
+      onBannerUpdated,
+      onCategoryUpdated,
+      onReelUpdated,
+      onRoomUpdated,
+      onCatalogueUpdated,
+      onMealPlanUpdated,
+      onMealSubscriptionUpdated,
       onAnyEvent,
     };
-  }, [onCouponUpdated, onSellerStatusChanged, onMenuUpdated, onAnyEvent]);
+  }, [
+    onCouponUpdated,
+    onSellerStatusChanged,
+    onMenuUpdated,
+    onBannerUpdated,
+    onCategoryUpdated,
+    onReelUpdated,
+    onRoomUpdated,
+    onCatalogueUpdated,
+    onMealPlanUpdated,
+    onMealSubscriptionUpdated,
+    onAnyEvent,
+  ]);
 
   useEffect(() => {
     if (!enabled || typeof window === "undefined") return;
@@ -193,6 +264,20 @@ export function useLiveShopStream(options: UseLiveShopStreamOptions = {}) {
         callbacksRef.current.onSellerStatusChanged?.(payload);
       } else if (payload.event === "MENU_UPDATED") {
         callbacksRef.current.onMenuUpdated?.(payload);
+      } else if (payload.event === "BANNER_UPDATED") {
+        callbacksRef.current.onBannerUpdated?.(payload);
+      } else if (payload.event === "CATEGORY_UPDATED") {
+        callbacksRef.current.onCategoryUpdated?.(payload);
+      } else if (payload.event === "REEL_UPDATED") {
+        callbacksRef.current.onReelUpdated?.(payload);
+      } else if (payload.event === "ROOM_UPDATED") {
+        callbacksRef.current.onRoomUpdated?.(payload);
+      } else if (payload.event === "CATALOGUE_UPDATED") {
+        callbacksRef.current.onCatalogueUpdated?.(payload);
+      } else if (payload.event === "MEAL_PLAN_UPDATED") {
+        callbacksRef.current.onMealPlanUpdated?.(payload);
+      } else if (payload.event === "MEAL_SUBSCRIPTION_UPDATED") {
+        callbacksRef.current.onMealSubscriptionUpdated?.(payload);
       }
     };
 

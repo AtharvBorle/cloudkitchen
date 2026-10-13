@@ -138,6 +138,11 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
           return;
         }
       } else if (isPropertyTab) {
+        if (!isRoomEnabled) {
+          e.preventDefault();
+          onClose();
+          return;
+        }
         if (!hasActiveSub) {
           e.preventDefault();
           window.dispatchEvent(new CustomEvent("open-subscription-modal", { detail: { category: "PROPERTY" } }));

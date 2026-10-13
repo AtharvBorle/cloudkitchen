@@ -61,6 +61,11 @@ export async function GET() {
             }
         });
 
+        const roomSetting = await db.systemSettings.findUnique({
+            where: { key: "ENABLE_ROOM_MODULE" }
+        });
+        const isRoomEnabled = roomSetting?.value === "true";
+
         const isFoodCategoryApproved =
             sellerProfile.verificationStatus === "APPROVED" &&
             (sellerProfile.businessCategory === "FOOD" ||
@@ -68,6 +73,7 @@ export async function GET() {
                 sellerProfile.foodVerificationStatus === "APPROVED");
 
         const isPropertyCategoryApproved =
+            isRoomEnabled &&
             sellerProfile.verificationStatus === "APPROVED" &&
             (sellerProfile.businessCategory === "PROPERTY" ||
                 sellerProfile.businessCategory === "BOTH" ||
@@ -75,16 +81,17 @@ export async function GET() {
 
         const { foodExpiry, propertyExpiry } = getCategoryExpiries(activeSubs);
         const isFoodActive = (foodExpiry ? foodExpiry > new Date() : false) && isFoodCategoryApproved;
-        const isPropertyActive = (propertyExpiry ? propertyExpiry > new Date() : false) && isPropertyCategoryApproved;
+        const isPropertyActive = isRoomEnabled && (propertyExpiry ? propertyExpiry > new Date() : false) && isPropertyCategoryApproved;
 
         return successResponse({
             sellerProfile,
             hasActiveSub: activeSubs.length > 0,
             activeSubs,
             foodExpiry,
-            propertyExpiry,
+            propertyExpiry: isRoomEnabled ? propertyExpiry : null,
             isFoodActive,
-            isPropertyActive
+            isPropertyActive,
+            isRoomEnabled
         });
     } catch (error: any) {
         if (error instanceof ApiError) return errorResponse(error.message, error.statusCode);

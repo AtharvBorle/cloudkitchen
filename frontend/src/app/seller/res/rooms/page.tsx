@@ -27,6 +27,7 @@ export default function ResponsiveRoomsPage() {
   const [propertyVerification, setPropertyVerification] = useState<string>("NONE");
 
   useEffect(() => {
+    if (!isRoomEnabled) return;
     let isMounted = true;
 
     async function checkCategoryAccess() {
@@ -43,7 +44,7 @@ export default function ResponsiveRoomsPage() {
             setStatusChecked(true);
           }
 
-          if (!active) {
+          if (!active && isRoomEnabled) {
             window.dispatchEvent(
               new CustomEvent(verif === "APPROVED" ? "open-subscription-modal" : "open-category-upgrade", {
                 detail: { category: "PROPERTY" },

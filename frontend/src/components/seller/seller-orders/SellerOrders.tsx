@@ -1,8 +1,29 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Search, RotateCw, Bike, AlertTriangle, CheckCircle2, Loader2, X, Clock } from "lucide-react";
+import {
+  Search,
+  RotateCw,
+  Bike,
+  AlertTriangle,
+  CheckCircle2,
+  Loader2,
+  X,
+  Clock,
+  Utensils,
+  MapPin,
+  Phone,
+  Mail,
+  Calendar,
+  PlayCircle,
+  Truck,
+  Sparkles,
+  PauseCircle,
+  ChevronRight,
+  Check,
+  ShieldCheck,
+} from "lucide-react";
 import ConsoleSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
 import { fetchApi } from "@/lib/fetch-api";
@@ -12,6 +33,11 @@ import { playNewOrderChime } from "@/lib/audio-chime";
 import RejectOrderModal from "./RejectOrderModal";
 import ToastNotification from "./ToastNotification";
 import PaginationControls from "../common/PaginationControls";
+import {
+  markSubscriberMealDeliveryStatus,
+  MealSubscriber,
+  getTierColors,
+} from "@/lib/meal-subscriptions";
 import styles from "./SellerOrders.module.css";
 
 export const ORDER_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
@@ -156,6 +182,20 @@ export interface SellerOrdersProps {
   onNotificationClick?: () => void;
 }
 
+function OrderRedirectHandler() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const targetOrderId = searchParams?.get("orderId") || searchParams?.get("id");
+    if (targetOrderId) {
+      router.replace(`/seller/orders/details?orderId=${encodeURIComponent(targetOrderId)}`);
+    }
+  }, [searchParams, router]);
+
+  return null;
+}
+
 export const SellerOrders: React.FC<SellerOrdersProps> = ({
   ownerName: initialOwnerName,
   partnerRole: initialPartnerRole,
@@ -237,6 +277,172 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
   const ownerName = initialOwnerName || seller.ownerName;
   const partnerRole = initialPartnerRole || seller.partnerRole;
   const avatarInitials = initialAvatarInitials || seller.avatarInitials;
+
+  // Section toggle: Regular Food Orders vs Subscribers Meal
+  const [activeSection, setActiveSection] = useState<"orders" | "subscribers">("orders");
+
+  // Subscribers State
+  const [subscribers, setSubscribers] = useState<MealSubscriber[]>([]);
+  const [loadingSubs, setLoadingSubs] = useState(false);
+  const [subscribersTab, setSubscribersTab] = useState<"today" | "paused" | "all">("today");
+  const [subSearchQuery, setSubSearchQuery] = useState("");
+  const [subTierFilter, setSubTierFilter] = useState("ALL");
+  const [subDeliveryFilter, setSubDeliveryFilter] = useState<"ALL" | "DELIVERED" | "PENDING">("ALL");
+
+  const todayDateStr = useMemo(() => new Date().toISOString().split("T")[0], []);
+
+  const loadSubscribers = useCallback(async (isSilent = false) => {
+    try {
+      if (!isSilent) setLoadingSubs(true);
+      const res = await fetchApi("/api/seller/meal-plans");
+      if (res.ok) {
+        const data = await res.json();
+        const list = data.data?.subscribers || data.subscribers || [];
+        if (Array.isArray(list)) {
+          setSubscribers(list);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load seller meal subscribers:", err);
+    } finally {
+      if (!isSilent) setLoadingSubs(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadSubscribers(false);
+  }, [loadSubscribers]);
+
+  useEffect(() => {
+    const handler = () => loadSubscribers(true);
+    window.addEventListener("meal-subscriptions-updated", handler);
+    return () => window.removeEventListener("meal-subscriptions-updated", handler);
+  }, [loadSubscribers]);
+
+  const formatSubDate = (iso?: string | null): string => {
+    if (!iso) return "N/A";
+    try {
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return "N/A";
+      return d.toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+    } catch {
+      return "N/A";
+    }
+  };
+
+  // 1. Paused subscribers list
+  const pausedSubscribers = useMemo(() => {
+    return subscribers.filter((s) => Boolean(s.isPaused));
+  }, [subscribers]);
+
+  // 2. Today's Delivery subscribers (strictly excludes paused subscribers!)
+  const todayDeliverySubscribers = useMemo(() => {
+    const nowDate = new Date();
+    return subscribers.filter((s) => {
+      if (s.isPaused) return false;
+      const statusUpper = (s.status || "").toUpperCase();
+      if (statusUpper === "CANCELLED" || statusUpper === "EXPIRED") return false;
+      if (s.startDate && new Date(s.startDate) > nowDate) return false;
+      if (s.endDate && new Date(s.endDate) < nowDate) return false;
+      return true;
+    });
+  }, [subscribers]);
+
+  // Metric counters
+  const mealsToDeliverTodayCount = todayDeliverySubscribers.length;
+  const deliveredTodayCount = useMemo(() => {
+    return todayDeliverySubscribers.filter((s) => {
+      const todayRec = s.dailyDeliveries?.find((d: any) => d.date === todayDateStr);
+      return todayRec?.status === "DELIVERED";
+    }).length;
+  }, [todayDeliverySubscribers, todayDateStr]);
+  const pendingTodayCount = Math.max(0, mealsToDeliverTodayCount - deliveredTodayCount);
+  const pausedCount = pausedSubscribers.length;
+  const totalSubscribersCount = subscribers.length;
+
+  // Filtered subscribers for display based on active tab & filters
+  const displayedSubscribers = useMemo(() => {
+    let list =
+      subscribersTab === "today"
+        ? todayDeliverySubscribers
+        : subscribersTab === "paused"
+        ? pausedSubscribers
+        : subscribers;
+
+    const q = subSearchQuery.toLowerCase().trim();
+    if (q) {
+      list = list.filter(
+        (s) =>
+          (s.customerName || "").toLowerCase().includes(q) ||
+          (s.customerPhone || "").toLowerCase().includes(q) ||
+          (s.customerEmail || "").toLowerCase().includes(q) ||
+          (s.deliveryAddress || "").toLowerCase().includes(q) ||
+          (s.planName || "").toLowerCase().includes(q)
+      );
+    }
+
+    if (subTierFilter !== "ALL") {
+      list = list.filter((s) => (s.tier || "Bronze").toUpperCase() === subTierFilter.toUpperCase());
+    }
+
+    if (subscribersTab === "today" && subDeliveryFilter !== "ALL") {
+      list = list.filter((s) => {
+        const isDel = s.dailyDeliveries?.find((d: any) => d.date === todayDateStr)?.status === "DELIVERED";
+        return subDeliveryFilter === "DELIVERED" ? isDel : !isDel;
+      });
+    }
+
+    return list;
+  }, [
+    subscribersTab,
+    todayDeliverySubscribers,
+    pausedSubscribers,
+    subscribers,
+    subSearchQuery,
+    subTierFilter,
+    subDeliveryFilter,
+    todayDateStr,
+  ]);
+
+  const handleToggleDelivery = async (sub: MealSubscriber) => {
+    const isCurrentlyDelivered = sub.dailyDeliveries?.find((d: any) => d.date === todayDateStr)?.status === "DELIVERED";
+    const nextStatus: "DELIVERED" | "NOT_DELIVERED" = isCurrentlyDelivered ? "NOT_DELIVERED" : "DELIVERED";
+
+    // Optimistic UI update
+    setSubscribers((prev) =>
+      prev.map((s) => {
+        if (s.id !== sub.id) return s;
+        const currentDeliveries = Array.isArray(s.dailyDeliveries) ? [...s.dailyDeliveries] : [];
+        const idx = currentDeliveries.findIndex((d: any) => d.date === todayDateStr);
+        const rec = {
+          date: todayDateStr,
+          status: nextStatus,
+          markedAt: new Date().toISOString(),
+        };
+        if (idx >= 0) {
+          currentDeliveries[idx] = rec;
+        } else {
+          currentDeliveries.unshift(rec);
+        }
+        return { ...s, dailyDeliveries: currentDeliveries };
+      })
+    );
+
+    try {
+      await markSubscriberMealDeliveryStatus(sub.id, todayDateStr, nextStatus);
+      setToast({
+        type: "success",
+        text: `Meal marked as ${nextStatus === "DELIVERED" ? "Delivered" : "Pending"} for ${sub.customerName || "Customer"}`,
+      });
+    } catch (err: any) {
+      setToast({ type: "error", text: err.message || "Failed to update delivery status" });
+      loadSubscribers(true);
+    }
+  };
 
   const loadOrders = useCallback(async (isPolling = false) => {
     if (propOrders && propOrders.length > 0 && !isPolling) {
@@ -672,6 +878,9 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
 
   return (
     <div className={styles.ordersContainer}>
+      <Suspense fallback={null}>
+        <OrderRedirectHandler />
+      </Suspense>
       {/* 1. Left Sidebar Component with active Orders tab */}
       <ConsoleSidebar
         activeItemId="orders"
@@ -700,16 +909,44 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
 
         {/* Main Orders Content */}
         <main className={styles.mainContent}>
-          {/* Header Title & Subtitle */}
-          <div className={styles.headerGroup}>
-            <h1 className={styles.title}>Food & Service Orders</h1>
-            <p className={styles.subtitle}>
-              Manage active incoming, preparation, and delivery cycles in real-time.
-            </p>
+          {/* Header Title & Subtitle + Top Section Switcher */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
+            <div className={styles.headerGroup}>
+              <h1 className={styles.title}>
+                {activeSection === "orders" ? "Food & Service Orders" : "Subscribers Meal Delivery"}
+              </h1>
+              <p className={styles.subtitle}>
+                {activeSection === "orders"
+                  ? "Manage active incoming, preparation, and delivery cycles in real-time."
+                  : "Dispatch daily meal deliveries for active subscribers and monitor paused customer accounts."}
+              </p>
+            </div>
+
+            {/* Top Switcher: Regular Food Orders vs Subscribers Meal */}
+            <div className={styles.sectionSwitchContainer}>
+              <button
+                type="button"
+                className={`${styles.sectionSwitchBtn} ${activeSection === "orders" ? styles.sectionSwitchBtnActive : ""}`}
+                onClick={() => setActiveSection("orders")}
+              >
+                <Bike size={16} />
+                <span>Food Orders ({orderList.length})</span>
+              </button>
+              <button
+                type="button"
+                className={`${styles.sectionSwitchBtn} ${activeSection === "subscribers" ? styles.sectionSwitchBtnActive : ""}`}
+                onClick={() => setActiveSection("subscribers")}
+              >
+                <Utensils size={16} />
+                <span>Subscribers Meal ({mealsToDeliverTodayCount} Today)</span>
+              </button>
+            </div>
           </div>
 
-          {/* Control Bar: Status Filter Tabs + Right Filter/Sort Buttons */}
-          <div className={styles.controlBar}>
+          {activeSection === "orders" ? (
+            <>
+              {/* Control Bar: Status Filter Tabs + Right Filter/Sort Buttons */}
+              <div className={styles.controlBar}>
             {/* Status Segmented Pill Group */}
             <div className={styles.statusPillGroup}>
               {statusFilters.map((filter) => (
@@ -993,7 +1230,453 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
               />
             )}
           </div>
-        </main>
+        </>
+      ) : (
+        /* =========================================================================
+           SUBSCRIBERS MEAL SECTION
+           ========================================================================= */
+        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          {/* Metric Cards Grid */}
+          <div className={styles.subMetricsGrid}>
+            {/* 1. Meals to Deliver Today (Strictly Non-Paused) */}
+            <div className={styles.subMetricCard}>
+              <div className={styles.subMetricIconBox} style={{ backgroundColor: "#FFF7ED", color: "#EA580C" }}>
+                <Utensils size={24} />
+              </div>
+              <div>
+                <h3 className={styles.subMetricValue}>{mealsToDeliverTodayCount}</h3>
+                <p className={styles.subMetricLabel}>Meals To Deliver Today</p>
+              </div>
+            </div>
+
+            {/* 2. Delivered Today */}
+            <div className={styles.subMetricCard}>
+              <div className={styles.subMetricIconBox} style={{ backgroundColor: "#F0FDF4", color: "#16A34A" }}>
+                <CheckCircle2 size={24} />
+              </div>
+              <div>
+                <h3 className={styles.subMetricValue} style={{ color: "#16A34A" }}>{deliveredTodayCount}</h3>
+                <p className={styles.subMetricLabel}>Delivered Today</p>
+              </div>
+            </div>
+
+            {/* 3. Pending Delivery Today */}
+            <div className={styles.subMetricCard}>
+              <div className={styles.subMetricIconBox} style={{ backgroundColor: "#FEF3C7", color: "#B45309" }}>
+                <Clock size={24} />
+              </div>
+              <div>
+                <h3 className={styles.subMetricValue} style={{ color: "#B45309" }}>{pendingTodayCount}</h3>
+                <p className={styles.subMetricLabel}>Pending Delivery Today</p>
+              </div>
+            </div>
+
+            {/* 4. Paused Subscribers */}
+            <div className={styles.subMetricCard}>
+              <div className={styles.subMetricIconBox} style={{ backgroundColor: "#FEF2F2", color: "#DC2626" }}>
+                <PauseCircle size={24} />
+              </div>
+              <div>
+                <h3 className={styles.subMetricValue} style={{ color: "#DC2626" }}>{pausedCount}</h3>
+                <p className={styles.subMetricLabel}>Paused Subscribers</p>
+              </div>
+            </div>
+
+            {/* 5. Total Plan Subscribers */}
+            <div className={styles.subMetricCard}>
+              <div className={styles.subMetricIconBox} style={{ backgroundColor: "#F1F5F9", color: "#475569" }}>
+                <Truck size={24} />
+              </div>
+              <div>
+                <h3 className={styles.subMetricValue}>{totalSubscribersCount}</h3>
+                <p className={styles.subMetricLabel}>Total Subscribers</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Sub-Tabs Nav & Filter Controls */}
+          <div className={styles.subTabsNav}>
+            <div className={styles.subTabsGroup}>
+              <button
+                type="button"
+                className={`${styles.subTabBtn} ${subscribersTab === "today" ? styles.subTabBtnActive : ""}`}
+                onClick={() => setSubscribersTab("today")}
+              >
+                <Utensils size={15} />
+                <span>Today&apos;s Meal Deliveries</span>
+                <span
+                  className={styles.subBadge}
+                  style={{
+                    backgroundColor: subscribersTab === "today" ? "#FFEDD5" : "#E2E8F0",
+                    color: subscribersTab === "today" ? "#C2410C" : "#475569",
+                  }}
+                >
+                  {mealsToDeliverTodayCount}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                className={`${styles.subTabBtn} ${subscribersTab === "paused" ? styles.subTabBtnActive : ""}`}
+                onClick={() => setSubscribersTab("paused")}
+              >
+                <PauseCircle size={15} />
+                <span>Paused Subscribers Window</span>
+                <span
+                  className={styles.subBadge}
+                  style={{
+                    backgroundColor: subscribersTab === "paused" ? "#FEE2E2" : "#E2E8F0",
+                    color: subscribersTab === "paused" ? "#DC2626" : "#475569",
+                  }}
+                >
+                  {pausedCount}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                className={`${styles.subTabBtn} ${subscribersTab === "all" ? styles.subTabBtnActive : ""}`}
+                onClick={() => setSubscribersTab("all")}
+              >
+                <ShieldCheck size={15} />
+                <span>All Subscribers</span>
+                <span
+                  className={styles.subBadge}
+                  style={{
+                    backgroundColor: subscribersTab === "all" ? "#FFEDD5" : "#E2E8F0",
+                    color: subscribersTab === "all" ? "#C2410C" : "#475569",
+                  }}
+                >
+                  {totalSubscribersCount}
+                </span>
+              </button>
+            </div>
+
+            {/* Filters Group */}
+            <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+              <div className={styles.searchWrapper}>
+                <Search size={15} className={styles.searchIcon} />
+                <input
+                  type="text"
+                  placeholder="Search subscriber, phone, address..."
+                  value={subSearchQuery}
+                  onChange={(e) => setSubSearchQuery(e.target.value)}
+                  className={styles.searchInput}
+                />
+              </div>
+
+              <select
+                value={subTierFilter}
+                onChange={(e) => setSubTierFilter(e.target.value)}
+                className={styles.filterSelect}
+                aria-label="Filter by Tier"
+              >
+                <option value="ALL">All Tiers</option>
+                <option value="BRONZE">Tier: Bronze</option>
+                <option value="SILVER">Tier: Silver</option>
+                <option value="GOLD">Tier: Gold</option>
+              </select>
+
+              {subscribersTab === "today" && (
+                <select
+                  value={subDeliveryFilter}
+                  onChange={(e) => setSubDeliveryFilter(e.target.value as any)}
+                  className={styles.filterSelect}
+                  aria-label="Filter by Delivery Status"
+                >
+                  <option value="ALL">Status: All</option>
+                  <option value="PENDING">Pending Delivery ({pendingTodayCount})</option>
+                  <option value="DELIVERED">Delivered Today ({deliveredTodayCount})</option>
+                </select>
+              )}
+            </div>
+          </div>
+
+          {/* Informative Header Notices */}
+          {subscribersTab === "today" && (
+            <div style={{ fontSize: "0.86rem", color: "#64748B", display: "flex", alignItems: "center", gap: "8px" }}>
+              <Sparkles size={16} color="#EA580C" />
+              <span>
+                Showing active meal subscriptions scheduled for today ({new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })}). Paused subscribers are strictly excluded from this preparation roster.
+              </span>
+            </div>
+          )}
+
+          {subscribersTab === "paused" && (
+            <div className={styles.pausedWindowBanner}>
+              <PauseCircle size={24} style={{ flexShrink: 0, marginTop: "2px" }} />
+              <div>
+                <h4 style={{ margin: "0 0 4px 0", fontSize: "0.98rem", fontWeight: 800 }}>
+                  Dedicated Paused Subscribers Window
+                </h4>
+                <p style={{ margin: 0, fontSize: "0.86rem", lineHeight: 1.5 }}>
+                  These subscribers have frozen their meal subscriptions. Deliveries are stopped, and they are <strong>excluded from today&apos;s meal preparation and delivery count</strong>. The days they pause are automatically added to extend their active subscription validity.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Subscribers List Cards */}
+          <div className={styles.subListContainer}>
+            {loadingSubs ? (
+              <div style={{ textAlign: "center", padding: "64px 20px", color: "#64748B" }}>
+                <Loader2 size={32} className="animate-spin" color="#FF5500" style={{ margin: "0 auto 12px" }} />
+                <p style={{ margin: 0, fontWeight: 600 }}>Loading meal subscribers roster...</p>
+              </div>
+            ) : displayedSubscribers.length === 0 ? (
+              <div
+                style={{
+                  backgroundColor: "#FFFFFF",
+                  borderRadius: "18px",
+                  padding: "60px 24px",
+                  textAlign: "center",
+                  border: "1.5px dashed #CBD5E1",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "12px",
+                }}
+              >
+                <div
+                  style={{
+                    width: "56px",
+                    height: "56px",
+                    borderRadius: "50%",
+                    backgroundColor: "#FFF7ED",
+                    color: "#EA580C",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Utensils size={26} />
+                </div>
+                <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800, color: "#0F172A" }}>
+                  {subscribersTab === "today"
+                    ? "No Meals to Deliver Today"
+                    : subscribersTab === "paused"
+                    ? "No Paused Subscribers"
+                    : "No Subscribers Found"}
+                </h3>
+                <p style={{ margin: 0, fontSize: "0.88rem", color: "#64748B", maxWidth: "420px" }}>
+                  {subscribersTab === "today"
+                    ? "All scheduled meal deliveries for today have either been marked delivered or no active plans are running today."
+                    : subscribersTab === "paused"
+                    ? "None of your subscribers are currently on pause. All subscribers are on active meal schedules."
+                    : "No subscribers match your search or filter criteria."}
+                </p>
+              </div>
+            ) : (
+              displayedSubscribers.map((sub) => {
+                const tierColors = getTierColors(sub.tier || "Bronze");
+                const todayRecord = sub.dailyDeliveries?.find((d: any) => d.date === todayDateStr);
+                const isDeliveredToday = todayRecord?.status === "DELIVERED";
+                const initialLetter = (sub.customerName || "Customer").charAt(0).toUpperCase();
+
+                return (
+                  <div key={sub.id} className={styles.subCard}>
+                    {/* Card Header */}
+                    <div className={styles.subCardHeader}>
+                      <div className={styles.subCustomerInfo}>
+                        <div className={styles.subAvatar}>{initialLetter}</div>
+                        <div>
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                            <h3 className={styles.subCustomerName}>{sub.customerName || "Subscriber"}</h3>
+                            <span
+                              className={styles.subPlanPill}
+                              style={{ backgroundColor: tierColors.tierBg, color: tierColors.tierColor }}
+                            >
+                              🍱 {sub.planName} ({sub.tier || "Bronze"})
+                            </span>
+                            {sub.isPaused ? (
+                              <span
+                                style={{
+                                  fontSize: "0.72rem",
+                                  fontWeight: 700,
+                                  padding: "2px 8px",
+                                  borderRadius: "6px",
+                                  backgroundColor: "#FEF2F2",
+                                  color: "#DC2626",
+                                  border: "1px solid #FECACA",
+                                }}
+                              >
+                                ⏸️ Currently Paused
+                              </span>
+                            ) : (
+                              <span
+                                style={{
+                                  fontSize: "0.72rem",
+                                  fontWeight: 700,
+                                  padding: "2px 8px",
+                                  borderRadius: "6px",
+                                  backgroundColor: "#DCFCE7",
+                                  color: "#15803D",
+                                  border: "1px solid #BBF7D0",
+                                }}
+                              >
+                                ✅ Active Delivery
+                              </span>
+                            )}
+                          </div>
+
+                          <div className={styles.subCustomerMeta}>
+                            {sub.customerPhone && (
+                              <a href={`tel:${sub.customerPhone}`} className={styles.subContactLink}>
+                                <Phone size={13} />
+                                <span>{sub.customerPhone}</span>
+                              </a>
+                            )}
+                            {sub.customerEmail && (
+                              <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                <Mail size={13} color="#94A3B8" />
+                                <span>{sub.customerEmail}</span>
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ textAlign: "right" }}>
+                        <span style={{ fontSize: "0.82rem", color: "#64748B", fontWeight: 600 }}>Billing Cycle:</span>
+                        <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "#0F172A" }}>
+                          {sub.cycle || "Weekly"} (₹{(sub.pricePaid || 0).toLocaleString("en-IN")})
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Subscriber Details Row */}
+                    <div className={styles.subDetailsRow}>
+                      {/* Delivery Address */}
+                      <div className={styles.subDetailBlock} style={{ gridColumn: "span 2" }}>
+                        <span className={styles.subDetailLabel}>Delivery Address</span>
+                        <span className={styles.subDetailValue}>
+                          <MapPin size={15} color="#EA580C" style={{ flexShrink: 0 }} />
+                          <span>{sub.deliveryAddress || "Address provided at checkout"}</span>
+                        </span>
+                      </div>
+
+                      {/* Meal Timings */}
+                      <div className={styles.subDetailBlock}>
+                        <span className={styles.subDetailLabel}>Meal Timings & Slot</span>
+                        <span className={styles.subDetailValue}>
+                          <Clock size={15} color="#EA580C" style={{ flexShrink: 0 }} />
+                          <span>
+                            {sub.mealTimings && sub.mealTimings.length > 0
+                              ? sub.mealTimings.join(", ")
+                              : "Standard Delivery Window"}
+                          </span>
+                        </span>
+                      </div>
+
+                      {/* Subscription Validity (Showing Added Pause Days) */}
+                      <div className={styles.subDetailBlock}>
+                        <span className={styles.subDetailLabel}>Active Subscription Validity</span>
+                        <span className={styles.subDetailValue}>
+                          <Calendar size={15} color="#EA580C" style={{ flexShrink: 0 }} />
+                          <span>
+                            {formatSubDate(sub.startDate)} → {formatSubDate(sub.endDate)}
+                          </span>
+                        </span>
+                        {(sub.usedPauseDays || 0) > 0 && (
+                          <span style={{ fontSize: "0.75rem", color: "#16A34A", fontWeight: 700, marginTop: "2px" }}>
+                            ✨ +{sub.usedPauseDays} pause days added to plan expiry
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Paused Details If Active Pause */}
+                      {sub.isPaused && (
+                        <div className={styles.subDetailBlock} style={{ gridColumn: "span 2", background: "#FEF2F2", padding: "8px 12px", borderRadius: "8px", border: "1px solid #FECACA" }}>
+                          <span className={styles.subDetailLabel} style={{ color: "#DC2626" }}>Pause Window Details</span>
+                          <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", marginTop: "2px", fontSize: "0.85rem", color: "#991B1B" }}>
+                            <span><strong>Paused On:</strong> {formatSubDate(sub.pausedAt)}</span>
+                            <span><strong>Resumes On:</strong> {formatSubDate(sub.pauseEndDate)}</span>
+                            <span><strong>Total Paused:</strong> {sub.usedPauseDays || 0} days</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Footer Action: Today's Delivery Marking (For Today Tab) */}
+                    {subscribersTab === "today" && (
+                      <div className={styles.subFooterActions}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          {isDeliveredToday ? (
+                            <span
+                              style={{
+                                backgroundColor: "#DCFCE7",
+                                color: "#15803D",
+                                padding: "6px 14px",
+                                borderRadius: "8px",
+                                fontWeight: 700,
+                                fontSize: "0.85rem",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "6px",
+                              }}
+                            >
+                              <CheckCircle2 size={16} />
+                              <span>
+                                Delivered Today{" "}
+                                {todayRecord?.markedAt
+                                  ? `(${new Date(todayRecord.markedAt).toLocaleTimeString("en-IN", {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    })})`
+                                  : ""}
+                              </span>
+                            </span>
+                          ) : (
+                            <span
+                              style={{
+                                backgroundColor: "#FEF3C7",
+                                color: "#B45309",
+                                padding: "6px 14px",
+                                borderRadius: "8px",
+                                fontWeight: 700,
+                                fontSize: "0.85rem",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "6px",
+                              }}
+                            >
+                              <Clock size={16} />
+                              <span>Pending Delivery Today</span>
+                            </span>
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleToggleDelivery(sub)}
+                          className={`${styles.deliveryToggleBtn} ${
+                            isDeliveredToday ? styles.deliveryBtnPending : styles.deliveryBtnDelivered
+                          }`}
+                          title={isDeliveredToday ? "Mark as Pending Delivery" : "Mark as Delivered Today"}
+                        >
+                          {isDeliveredToday ? (
+                            <>
+                              <Clock size={15} />
+                              <span>Mark as Not Delivered</span>
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle2 size={15} />
+                              <span>Mark as Delivered Today</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </main>
       </div>
 
       {/* In-App Rejection Confirmation Modal */}

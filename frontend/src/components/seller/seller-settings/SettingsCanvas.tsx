@@ -38,6 +38,7 @@ import { validateEmail } from "@/lib/email-validation";
 import { validateKitchenName } from "@/lib/kitchen-validation";
 import { convertBusinessDataToCSV } from "@/lib/export-business-data-csv";
 import { compressImage } from "@/lib/image-compression";
+import { performLogout } from "@/lib/logout";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import SellerMapPicker from "@/components/seller/seller-registration/business-information/SellerMapPicker";
 import styles from "./SettingsCanvas.module.css";
@@ -955,16 +956,23 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
     setIsEditingGeneral(false);
   };
 
-  const handleConfirmDeleteAccount = () => {
+  const handleConfirmDeleteAccount = async () => {
     if (deleteConfirmationText.trim().toUpperCase() !== "DELETE") return;
     setIsDeletingAccount(true);
 
-    setTimeout(() => {
+    try {
+      await fetchApi("/api/seller/delete-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({})
+      });
+      await performLogout({ redirectTo: "/seller/login?deletion_scheduled=true" });
+    } catch (err: any) {
+      console.error("Delete account error:", err);
+      await performLogout({ redirectTo: "/seller/login?deletion_scheduled=true" });
+    } finally {
       setIsDeletingAccount(false);
-      setTimeout(() => {
-        window.location.href = "/seller/login";
-      }, 1500);
-    }, 1200);
+    }
   };
 
   const [isExportingData, setIsExportingData] = useState<boolean>(false);

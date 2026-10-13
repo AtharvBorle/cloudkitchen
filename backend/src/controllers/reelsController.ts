@@ -3,6 +3,7 @@ import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { syncInstagramReelsToDatabase } from "@/lib/instagram-sync";
 import { unstable_cache } from "next/cache";
+import { emitReelUpdated } from "@/lib/realtime-events";
 
 export const getAdminReels = async (req: Request) => {
   const session = await getAuthSession();
@@ -100,6 +101,7 @@ export const syncAdminReels = async () => {
   }
 
   const result = await syncInstagramReelsToDatabase(session.user.id);
+  emitReelUpdated("UPDATE", result);
   return result;
 };
 
@@ -172,6 +174,8 @@ export const updateAdminReel = async (id: string, req: Request) => {
     },
   });
 
+  emitReelUpdated("UPDATE", updated);
+
   return { reel: updated, message: "Reel updated successfully." };
 };
 
@@ -191,6 +195,9 @@ export const deleteAdminReel = async (id: string) => {
   }
 
   await db.curatedReel.delete({ where: { id } });
+
+  emitReelUpdated("DELETE", { id });
+
   return { success: true, message: "Reel deleted successfully." };
 };
 
