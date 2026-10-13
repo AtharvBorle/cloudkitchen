@@ -1,18 +1,14 @@
 import { NextRequest } from "next/server";
 import { realtimeEmitter, RealtimeLivePayload } from "@/lib/realtime-events";
+import { getCorsHeaders } from "@/lib/cors";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export async function OPTIONS() {
+export async function OPTIONS(req: NextRequest) {
   return new Response(null, {
     status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization, Cookie, X-Requested-With",
-      "Access-Control-Allow-Credentials": "true",
-    },
+    headers: getCorsHeaders(req),
   });
 }
 
@@ -91,15 +87,19 @@ export async function GET(req: NextRequest) {
         "Content-Type": "text/event-stream; charset=utf-8",
         "Cache-Control": "no-cache, no-transform, must-revalidate, no-store",
         "Connection": "keep-alive",
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Credentials": "true",
+        "Content-Encoding": "none",
+        "X-Accel-Buffering": "no",
+        ...getCorsHeaders(req),
       },
     });
   } catch (error) {
     console.error("Public live SSE stream error:", error);
     return new Response(JSON.stringify({ error: "Failed to initialize public live stream" }), {
       status: 500,
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...getCorsHeaders(req),
+      },
     });
   }
 }

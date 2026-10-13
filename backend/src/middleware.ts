@@ -1,28 +1,23 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { getCorsHeaders } from "@/lib/cors";
 
 export function middleware(request: NextRequest) {
-    // In production, Nginx handles all CORS headers.
-    // In development, we set them here for local testing.
-    if (request.nextUrl.pathname.startsWith("/api/") && process.env.NODE_ENV === "development") {
-        const origin = request.headers.get("origin");
+    if (request.nextUrl.pathname.startsWith("/api/")) {
+        const corsHeaders = getCorsHeaders(request);
+
+        // Preflight OPTIONS requests - return 204 immediately with full CORS headers
         if (request.method === "OPTIONS") {
             const response = new NextResponse(null, { status: 204 });
-            if (origin) {
-                response.headers.set("Access-Control-Allow-Origin", origin);
-                response.headers.set("Access-Control-Allow-Credentials", "true");
-                response.headers.set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-                response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+            for (const [key, val] of Object.entries(corsHeaders)) {
+                response.headers.set(key, val);
             }
             return response;
         }
 
         const response = NextResponse.next();
-        if (origin) {
-            response.headers.set("Access-Control-Allow-Origin", origin);
-            response.headers.set("Access-Control-Allow-Credentials", "true");
-            response.headers.set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-            response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+        for (const [key, val] of Object.entries(corsHeaders)) {
+            response.headers.set(key, val);
         }
         return response;
     }
