@@ -35,6 +35,7 @@ import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import { validateEmail } from "@/lib/email-validation";
 import { validateKitchenName } from "@/lib/kitchen-validation";
 import { convertBusinessDataToCSV } from "@/lib/export-business-data-csv";
+import { performLogout } from "@/lib/logout";
 import SellerMapPicker from "@/components/seller/seller-registration/business-information/SellerMapPicker";
 import styles from "./ResponsiveSellerSettings.module.css";
 
@@ -977,18 +978,26 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
     setIsEditingGeneral(false);
   };
 
-  const handleConfirmDeleteAccount = () => {
+  const handleConfirmDeleteAccount = async () => {
     if (deleteConfirmationText.trim().toUpperCase() !== "DELETE") return;
     setIsDeletingAccount(true);
 
-    setTimeout(() => {
-      setIsDeletingAccount(false);
+    try {
+      await fetchApi("/api/seller/delete-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({})
+      });
       setIsDeleteModalOpen(false);
-      setToastData({ title: "Account deleted successfully. Redirecting...", status: "OFF" });
-      setTimeout(() => {
-        window.location.href = "/seller/login";
-      }, 1500);
-    }, 1200);
+      setToastData({ title: "Account deletion scheduled. Redirecting...", status: "OFF" });
+      await performLogout({ redirectTo: "/seller/login?deletion_scheduled=true" });
+    } catch (err: any) {
+      console.error("Delete account error:", err);
+      setIsDeleteModalOpen(false);
+      await performLogout({ redirectTo: "/seller/login?deletion_scheduled=true" });
+    } finally {
+      setIsDeletingAccount(false);
+    }
   };
 
   const [isExportingData, setIsExportingData] = useState<boolean>(false);
