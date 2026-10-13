@@ -74,10 +74,7 @@ export async function GET() {
         const totalSubscriptions = await db.subscription.count({
             where: {
                 status: "ACTIVE",
-                OR: [
-                    { validUntil: null },
-                    { validUntil: { gte: now } }
-                ]
+                validUntil: { gte: now }
             }
         });
 
@@ -90,8 +87,8 @@ export async function GET() {
             totalSubscriptions
         });
     } catch (error: any) {
-        if (error instanceof ApiError) return errorResponse(error.message, error.statusCode);
+        const statusCode = error?.statusCode || (error instanceof ApiError ? error.statusCode : 500);
         console.error("Superadmin overview stats error:", error);
-        return errorResponse("Internal server error", 500);
+        return errorResponse(error?.message || "Internal server error", statusCode);
     }
 }

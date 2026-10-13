@@ -25,10 +25,7 @@ export const getSuperadminSellers = async (req?: Request) => {
                     subscriptions: {
                         where: {
                             status: "ACTIVE",
-                            OR: [
-                                { validUntil: null },
-                                { validUntil: { gte: now } }
-                            ]
+                            validUntil: { gte: now }
                         },
                         orderBy: { validUntil: "desc" },
                         take: 1
