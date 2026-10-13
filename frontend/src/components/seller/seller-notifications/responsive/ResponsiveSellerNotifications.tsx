@@ -29,7 +29,7 @@ import {
 } from "../notificationData";
 import styles from "./ResponsiveSellerNotifications.module.css";
 
-type TabFilter = "all" | "unread" | "orders" | "stock" | "delivery" | "timings" | "bookings" | "reviews" | "settlements";
+type TabFilter = "all" | "unread" | "orders" | "stock" | "delivery" | "reviews" | "settlements";
 
 interface TabItem {
   id: TabFilter;
@@ -42,8 +42,6 @@ const TABS: TabItem[] = [
   { id: "orders", label: "Orders" },
   { id: "stock", label: "Stock" },
   { id: "delivery", label: "Delivery" },
-  { id: "timings", label: "Timings" },
-  { id: "bookings", label: "Bookings" },
   { id: "reviews", label: "Reviews" },
   { id: "settlements", label: "Settlements" },
 ];
@@ -138,8 +136,6 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
         tabParam === "orders" ||
         tabParam === "stock" ||
         tabParam === "delivery" ||
-        tabParam === "timings" ||
-        tabParam === "bookings" ||
         tabParam === "reviews" ||
         tabParam === "settlements"
       ) {
@@ -179,7 +175,7 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
   const handleDismiss = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     deleteNotification(id);
-    showToast("Notification dismissed");
+    showToast("Notification deleted permanently");
   };
 
   const toggleExpand = (id: string) => {
@@ -513,7 +509,7 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
         {/* Notification List */}
         <main className={styles.contentArea}>
           {filteredNotifications.length === 0 ? (
-            <div className={styles.emptyState}>
+            <div key={`empty-${activeTab}`} className={styles.emptyState}>
               <div className={styles.emptyIconWrapper}>
                 {searchQuery.trim() ? <Search size={24} color="#64748B" /> : <Inbox size={26} />}
               </div>
@@ -552,11 +548,11 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
               )}
             </div>
           ) : (
-            filteredNotifications.map((notif) => {
+            filteredNotifications.map((notif, idx) => {
               const isExpanded = expandedId === notif.id;
               return (
                 <div
-                  key={notif.id}
+                  key={`${notif.id}-${idx}`}
                   className={`${styles.notificationCard} ${!notif.isRead ? styles.unreadCard : ""}`}
                   style={{ cursor: "pointer" }}
                   onClick={(e) => {

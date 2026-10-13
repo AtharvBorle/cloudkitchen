@@ -1,6 +1,7 @@
 export type NotificationCategory =
   | "all"
   | "orders"
+  | "offers"
   | "stock"
   | "delivery"
   | "timings"
@@ -23,6 +24,7 @@ export interface SellerNotificationItem {
   severity: NotificationSeverity;
   actionLabel?: string;
   actionHref?: string;
+  metadata?: Record<string, any>;
 }
 
 export function formatNotificationTime(

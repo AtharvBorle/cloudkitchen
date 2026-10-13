@@ -21,7 +21,7 @@ import { useLocation } from "@/components/location-provider";
 import { fetchApi } from "@/lib/fetch-api";
 import { usePathname } from "next/navigation";
 import { HouseMapPicker } from "@/components/house-map-picker";
-import { getPincodeCoordinates, PINCODE_COORDINATES, formatShortDeliveryLocation } from "@/lib/geo-distance";
+import { getPincodeCoordinates, PINCODE_COORDINATES, formatShortDeliveryLocation, resolveLocationCoordinates } from "@/lib/geo-distance";
 import { findDuplicateAddress } from "@/lib/address-validation";
 import {
   fetchPlaceSuggestions,
@@ -166,8 +166,13 @@ export const LocationModal: React.FC = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const prevModalOpenRef = React.useRef(false);
+
   useEffect(() => {
-    if (isLocationModalOpen) {
+    const isOpening = isLocationModalOpen && !prevModalOpenRef.current;
+    prevModalOpenRef.current = isLocationModalOpen;
+
+    if (isOpening) {
       loadGoogleMapsScript().catch(() => {});
       const loadedRecents = getRecentSearches();
       setRecentSearches(loadedRecents);
@@ -285,13 +290,14 @@ export const LocationModal: React.FC = () => {
       }
     }
 
-    const finalLat = targetLat ?? 18.5204;
-    const finalLng = targetLng ?? 73.8567;
-    const pin = (details?.pincode || "").replace(/\D/g, "").slice(0, 6) || resolvedPincode || "411051";
+    const resolvedFromLoc = resolveLocationCoordinates(details?.locality || details?.formattedAddress || item.mainText || item.description);
+    const finalLat = targetLat ?? resolvedFromLoc?.lat ?? 18.5204;
+    const finalLng = targetLng ?? resolvedFromLoc?.lng ?? 73.8567;
+    const pin = (details?.pincode || "").replace(/\D/g, "").slice(0, 6) || resolvedFromLoc?.pincode || (resolvedPincode && resolvedPincode.replace(/\D/g, "").slice(0, 6)) || "411051";
     const formattedShort = formatShortDeliveryLocation({ ...details, pincode: pin });
     const locality = (formattedShort && formattedShort !== "Select Location")
       ? formattedShort
-      : (details?.locality || details?.street || item.mainText || item.description.split(",")[0] || "Pune");
+      : (details?.locality || details?.street || resolvedFromLoc?.locality || item.mainText || item.description.split(",")[0] || "Pune");
 
     setPincodeInput(locality.split(",")?.[0]?.trim() || pin);
     setResolvedPincode(pin);
@@ -429,19 +435,28 @@ export const LocationModal: React.FC = () => {
           streetName = matchedRecent.street;
           formattedAddr = matchedRecent.formattedAddress;
         } else {
-          // Check known Pune PINCODE_COORDINATES
-          for (const [pin, info] of Object.entries(PINCODE_COORDINATES)) {
-            const locLower = info.locality.toLowerCase();
-            const segments = locLower.split(/[\/,]/).map((s) => s.trim());
-            if (
-              locLower === lower ||
-              segments.some((seg) => seg && seg.toLowerCase() === lower)
-            ) {
-              cleanPin = pin;
-              localityName = `${info.locality}, ${info.city}`;
-              finalLat = info.lat;
-              finalLng = info.lng;
-              break;
+          // Check known Pune PINCODE_COORDINATES or locality keywords (e.g. "Hadapsar", "Hadapsar, Pune")
+          const resolved = resolveLocationCoordinates(raw);
+          if (resolved) {
+            cleanPin = resolved.pincode;
+            localityName = `${resolved.locality}, ${resolved.city}`;
+            finalLat = resolved.lat;
+            finalLng = resolved.lng;
+          } else {
+            for (const [pin, info] of Object.entries(PINCODE_COORDINATES)) {
+              const locLower = info.locality.toLowerCase();
+              const segments = locLower.split(/[\/,]/).map((s) => s.trim().toLowerCase());
+              if (
+                locLower === lower ||
+                lower.includes(locLower) ||
+                segments.some((seg) => seg && (seg === lower || lower.includes(seg) || seg.includes(lower)))
+              ) {
+                cleanPin = pin;
+                localityName = `${info.locality}, ${info.city}`;
+                finalLat = info.lat;
+                finalLng = info.lng;
+                break;
+              }
             }
           }
         }
@@ -537,7 +552,19 @@ export const LocationModal: React.FC = () => {
   const handleConfirmPinnedLocation = () => {
     setIsApplying(true);
     const typedPin = (pincodeInput || "").replace(/\D/g, "").slice(0, 6);
-    const cleanPin = typedPin.length === 6 ? typedPin : ((resolvedPincode || typedPin || "").replace(/\D/g, "").slice(0, 6) || "411051");
+    let cleanPin = typedPin.length === 6 ? typedPin : ((resolvedPincode || typedPin || "").replace(/\D/g, "").slice(0, 6) || "");
+
+    // If cleanPin is not set or default fallback, resolve from locality name or typed input
+    if (!cleanPin || cleanPin === "411051") {
+      const resolvedFromLoc = resolveLocationCoordinates(resolvedLocality || pincodeInput);
+      if (resolvedFromLoc?.pincode) {
+        cleanPin = resolvedFromLoc.pincode;
+      }
+    }
+    if (!cleanPin) {
+      cleanPin = "411051";
+    }
+
     const pinInfo = getPincodeCoordinates(cleanPin);
     const locName = (resolvedLocality && resolvedLocality !== "Pune, Pune" && resolvedLocality !== "Pune Area" && resolvedLocality !== "Pune")
       ? resolvedLocality
@@ -545,6 +572,10 @@ export const LocationModal: React.FC = () => {
     const city = "Pune";
     const finalLat = mapLat;
     const finalLng = mapLng;
+
+    if (typeof window !== "undefined") {
+      localStorage.setItem("user-manually-selected-location", "true");
+    }
 
     // 1. Optimistically set location immediately with exact GPS coordinates
     setGuestLocation(cleanPin, locName, city, finalLat, finalLng, street, resolvedLocality);
@@ -585,6 +616,10 @@ export const LocationModal: React.FC = () => {
 
   // 3. Handle GPS Auto Detection
   const handleDetectGps = () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("user-manually-selected-location");
+    }
+
     if (!navigator.geolocation) {
       showNotification("error", "Geolocation is not supported by your browser");
       return;
@@ -974,6 +1009,11 @@ export const LocationModal: React.FC = () => {
                   const p = details.pincode.replace(/\D/g, "").slice(0, 6);
                   if (p.length === 6) {
                     setResolvedPincode(p);
+                  }
+                } else {
+                  const resolvedLoc = resolveLocationCoordinates(details?.formattedAddress || details?.street || "");
+                  if (resolvedLoc?.pincode) {
+                    setResolvedPincode(resolvedLoc.pincode);
                   }
                 }
                 if (details?.street) {

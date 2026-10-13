@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { fetchApi } from "@/lib/fetch-api";
 import { useSession } from "next-auth/react";
 import { LocationModal } from "@/components/location-modal/LocationModal";
-import { getPincodeCoordinates, formatShortDeliveryLocation } from "@/lib/geo-distance";
+import { getPincodeCoordinates, formatShortDeliveryLocation, resolveLocationCoordinates } from "@/lib/geo-distance";
 import { reverseGeocodeCoords } from "@/lib/google-maps";
 
 export interface Address {
@@ -41,7 +41,7 @@ export interface LocationContextType {
     street?: string,
     formattedAddress?: string
   ) => void;
-  detectGpsLocation: () => Promise<boolean>;
+  detectGpsLocation: (isManualTrigger?: boolean) => Promise<boolean>;
 }
 
 const LocationContext = createContext<LocationContextType>({
@@ -99,17 +99,35 @@ export function LocationProvider({ children }: LocationProviderProps) {
   const closeLocationModal = () => setIsLocationModalOpen(false);
 
   // GPS Auto-Detection & Reverse Geocoding via Nominatim
-  const detectGpsLocation = useCallback(async (): Promise<boolean> => {
+  const detectGpsLocation = useCallback(async (isManualTrigger: boolean = false): Promise<boolean> => {
     if (shouldDisableLocation || typeof window === "undefined" || !navigator.geolocation) {
+      return false;
+    }
+
+    // Do not auto-detect or overwrite if user has explicitly manually selected their location
+    if (!isManualTrigger && localStorage.getItem("user-manually-selected-location") === "true") {
       return false;
     }
 
     return new Promise((resolve) => {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
+          // Re-check: if user selected a location while GPS was in flight, abort
+          if (!isManualTrigger && typeof window !== "undefined" && localStorage.getItem("user-manually-selected-location") === "true") {
+            resolve(false);
+            return;
+          }
+
           const { latitude, longitude } = position.coords;
           try {
             const details = await reverseGeocodeCoords(latitude, longitude);
+
+            // Re-check after async geocoding
+            if (!isManualTrigger && typeof window !== "undefined" && localStorage.getItem("user-manually-selected-location") === "true") {
+              resolve(false);
+              return;
+            }
+
             const pin = details.pincode || "";
             const formattedShort = formatShortDeliveryLocation({ ...details, pincode: pin });
             const locality = (formattedShort && formattedShort !== "Select Location")
@@ -170,18 +188,24 @@ export function LocationProvider({ children }: LocationProviderProps) {
     street?: string,
     formattedAddress?: string
   ) => {
-    const pinDigits = (pincode || "").replace(/\D/g, "").slice(0, 6);
-    const pinInfo = getPincodeCoordinates(pinDigits);
+    let pinDigits = (pincode || "").replace(/\D/g, "").slice(0, 6);
+    const resolvedLoc = resolveLocationCoordinates(pinDigits ? pinDigits : `${pincode} ${locality || ""}`);
+    if (!pinDigits && resolvedLoc) {
+      pinDigits = resolvedLoc.pincode;
+    }
+    const pinInfo = resolvedLoc || getPincodeCoordinates(pinDigits);
     const finalLat = (latitude != null && !isNaN(latitude)) ? latitude : (pinInfo?.lat ?? null);
     const finalLng = (longitude != null && !isNaN(longitude)) ? longitude : (pinInfo?.lng ?? null);
     const isGenericLoc = !locality || locality === "Pune" || locality === "Pune, Pune" || locality === "Current Location" || locality === "Pune Area";
     const finalLocality = !isGenericLoc ? locality : (pinInfo?.locality ? `${pinInfo.locality}` : `PIN ${pinDigits || pincode}`);
     const finalCity = city || pinInfo?.city || "Pune";
+    const effectivePincode = pinDigits || pincode;
 
     if (typeof window !== "undefined") {
+      localStorage.setItem("user-manually-selected-location", "true");
       localStorage.setItem("user-has-selected-location", "true");
-      localStorage.setItem("active-selected-pincode", pincode);
-      localStorage.setItem("guest-pincode", pincode);
+      localStorage.setItem("active-selected-pincode", effectivePincode);
+      localStorage.setItem("guest-pincode", effectivePincode);
       if (finalLocality) localStorage.setItem("guest-locality", finalLocality);
       if (finalCity) localStorage.setItem("guest-city", finalCity);
       if (street) localStorage.setItem("guest-street", street);
@@ -197,7 +221,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
     setDefaultAddress({
       id: "guest-location",
       type: "Current Location",
-      pincode: pincode,
+      pincode: effectivePincode,
       locality: finalLocality,
       city: finalCity,
       street: street || undefined,
@@ -219,6 +243,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
         const finalCity = target.city || pinInfo?.city || "Pune";
 
         if (typeof window !== "undefined") {
+          localStorage.setItem("user-manually-selected-location", "true");
           localStorage.setItem("user-has-selected-location", "true");
           localStorage.setItem("active-selected-pincode", target.pincode);
           localStorage.setItem("guest-pincode", target.pincode);
@@ -252,7 +277,8 @@ export function LocationProvider({ children }: LocationProviderProps) {
 
     if (status !== "authenticated") {
       // Guest / Non-logged in flow
-      const hasExplicitlySelected = typeof window !== "undefined" && localStorage.getItem("user-has-selected-location") === "true";
+      const hasManuallySelected = typeof window !== "undefined" && localStorage.getItem("user-manually-selected-location") === "true";
+      const hasExplicitlySelected = hasManuallySelected || (typeof window !== "undefined" && localStorage.getItem("user-has-selected-location") === "true");
       const guestPin = hasExplicitlySelected && typeof window !== "undefined"
         ? (localStorage.getItem("active-selected-pincode") || localStorage.getItem("guest-pincode"))
         : null;
@@ -300,7 +326,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
 
       // If user has NO location set, attempt GPS auto-detection once
       setDefaultAddress(null);
-      if (!hasAttemptedGpsRef.current && !shouldDisableLocation) {
+      if (!hasAttemptedGpsRef.current && !shouldDisableLocation && !hasManuallySelected) {
         hasAttemptedGpsRef.current = true;
         detectGpsLocation();
       }
@@ -311,7 +337,8 @@ export function LocationProvider({ children }: LocationProviderProps) {
     // Authenticated user flow
     setIsLoading(true);
     try {
-      const hasExplicitlySelected = typeof window !== "undefined" && localStorage.getItem("user-has-selected-location") === "true";
+      const hasManuallySelected = typeof window !== "undefined" && localStorage.getItem("user-manually-selected-location") === "true";
+      const hasExplicitlySelected = hasManuallySelected || (typeof window !== "undefined" && localStorage.getItem("user-has-selected-location") === "true");
       const userSelectedPin = hasExplicitlySelected && typeof window !== "undefined"
         ? (localStorage.getItem("active-selected-pincode") || localStorage.getItem("guest-pincode"))
         : null;
@@ -342,17 +369,17 @@ export function LocationProvider({ children }: LocationProviderProps) {
         const matchedSaved = addressList.find((a) => a.pincode === userSelectedPin);
         if (matchedSaved) {
           const pinCoords = getPincodeCoordinates(userSelectedPin);
-          const resolvedLat = (matchedSaved.latitude != null && !isNaN(Number(matchedSaved.latitude)))
-            ? Number(matchedSaved.latitude)
-            : (parsedLat && !isNaN(parsedLat) ? parsedLat : (pinCoords?.lat ?? null));
-          const resolvedLng = (matchedSaved.longitude != null && !isNaN(Number(matchedSaved.longitude)))
-            ? Number(matchedSaved.longitude)
-            : (parsedLng && !isNaN(parsedLng) ? parsedLng : (pinCoords?.lng ?? null));
+          const resolvedLat = (parsedLat && !isNaN(parsedLat))
+            ? parsedLat
+            : (matchedSaved.latitude != null && !isNaN(Number(matchedSaved.latitude)) ? Number(matchedSaved.latitude) : (pinCoords?.lat ?? null));
+          const resolvedLng = (parsedLng && !isNaN(parsedLng))
+            ? parsedLng
+            : (matchedSaved.longitude != null && !isNaN(Number(matchedSaved.longitude)) ? Number(matchedSaved.longitude) : (pinCoords?.lng ?? null));
           const isGenericSavedLoc = !matchedSaved.locality || matchedSaved.locality === "Pune" || matchedSaved.locality === "Pune, Pune" || matchedSaved.locality === "Current Location";
-          const resolvedLocality = !isGenericSavedLoc
-            ? matchedSaved.locality
-            : (matchedSaved.street || userLocality || pinCoords?.locality || `PIN ${userSelectedPin}`);
-          const resolvedCity = matchedSaved.city || userCity || pinCoords?.city || "Pune";
+          const resolvedLocality = userLocality && !userLocality.startsWith("Pune")
+            ? userLocality
+            : (!isGenericSavedLoc ? matchedSaved.locality : (matchedSaved.street || userLocality || pinCoords?.locality || `PIN ${userSelectedPin}`));
+          const resolvedCity = userCity || matchedSaved.city || pinCoords?.city || "Pune";
 
           setDefaultAddress({
             ...matchedSaved,
@@ -404,7 +431,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
       } else {
         // If user has no saved address, attempt GPS detection once
         setDefaultAddress(null);
-        if (!hasAttemptedGpsRef.current && !shouldDisableLocation) {
+        if (!hasAttemptedGpsRef.current && !shouldDisableLocation && !hasManuallySelected) {
           hasAttemptedGpsRef.current = true;
           detectGpsLocation();
         }

@@ -158,6 +158,18 @@ export const AddonCustomizationModal: React.FC<AddonCustomizationModalProps> = (
     }
   }, [isOpen, item?.id, resolvedDishName, initialSelectedAddons, parsedAddons, computeInitialIds]);
 
+  // Lock background scrolling while modal is open
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (isOpen) {
+      const prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prevOverflow;
+      };
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const toggleAddon = (addonId: string) => {
@@ -193,8 +205,16 @@ export const AddonCustomizationModal: React.FC<AddonCustomizationModalProps> = (
   };
 
   return (
-    <div className={styles.overlay} onClick={onClose}>
-      <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+    <div
+      className={styles.overlay}
+      onClick={onClose}
+      style={{ zIndex: 99999999 }}
+    >
+      <div
+        className={styles.modalCard}
+        onClick={(e) => e.stopPropagation()}
+        style={{ zIndex: 100000000 }}
+      >
         {/* Modal Header */}
         <div className={styles.header}>
           <div className={styles.headerLeft}>

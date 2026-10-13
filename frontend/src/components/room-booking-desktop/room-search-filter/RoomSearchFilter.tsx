@@ -160,7 +160,7 @@ export const RoomSearchFilter: React.FC<RoomSearchFilterProps> = ({
       try {
         const fullQuery = clean.toLowerCase().includes("pune") ? clean : `${clean}, Pune`;
         const geocoded = await geocodeWithGoogle(fullQuery);
-        if (geocoded) {
+        if (geocoded && geocoded.lat != null && geocoded.lng != null) {
           resolvedCoords = { lat: geocoded.lat, lng: geocoded.lng };
         }
       } catch (err) {

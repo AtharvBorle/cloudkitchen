@@ -198,10 +198,17 @@
 .notificationList {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  box-sizing: border-box;
   gap: 12px;
 }
 
 .notificationCard {
+  width: 100%;
+  box-sizing: border-box;
+  align-self: stretch;
+  text-align: left;
   background-color: #FFFFFF;
   border: 1px solid #E2E8F0;
   border-radius: 14px;
@@ -244,6 +251,11 @@
   color: #2563EB;
 }
 
+.iconOffers {
+  background-color: #FFF1F2;
+  color: #E11D48;
+}
+
 .iconDelivery {
   background-color: #ECFEFF;
   color: #0891B2;
@@ -272,6 +284,9 @@
 /* Notification Main Content */
 .cardContent {
   flex: 1;
+  min-width: 0;
+  width: 100%;
+  text-align: left;
   display: flex;
   flex-direction: column;
   gap: 6px;

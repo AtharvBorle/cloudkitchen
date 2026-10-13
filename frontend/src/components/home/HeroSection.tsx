@@ -23,6 +23,7 @@ import { HouseMapPicker } from "@/components/house-map-picker";
 import { matchesSearchQuery } from "@/lib/dietary-filter";
 import { useRoomModule } from "@/context/RoomModuleContext";
 import { reverseGeocodeCoords } from "@/lib/google-maps";
+import { getPincodeCoordinates } from "@/lib/geo-distance";
 
 interface SuggestionItem {
   id: string;
@@ -649,7 +650,8 @@ export default function HeroSection({
                         key={loc.name}
                         onClick={() => {
                           setSelectedLocation(loc.name);
-                          setGuestLocation(loc.pincode);
+                          const pinCoords = getPincodeCoordinates(loc.pincode);
+                          setGuestLocation(loc.pincode, loc.name, "Pune", pinCoords?.lat, pinCoords?.lng);
                           setIsLocationOpen(false);
                         }}
                         style={{

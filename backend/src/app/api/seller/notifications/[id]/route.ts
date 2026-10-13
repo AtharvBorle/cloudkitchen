@@ -1,4 +1,4 @@
-import { getAuthenticatedSeller } from "@/controllers/sellerNotificationController";
+import { getAuthenticatedSeller, dismissSellerNotification } from "@/controllers/sellerNotificationController";
 import { successResponse, errorResponse } from "@/lib/api-response";
 import { ApiError } from "@/lib/api-error";
 
@@ -30,15 +30,9 @@ export async function DELETE(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        await getAuthenticatedSeller();
         const { id } = await params;
-
-        return successResponse({
-            success: true,
-            message: `Notification ${id} dismissed`,
-            notificationId: id,
-            dismissed: true
-        });
+        const result = await dismissSellerNotification(id);
+        return successResponse(result);
     } catch (error: any) {
         if (error instanceof ApiError) return errorResponse(error.message, error.statusCode);
         console.error("Error dismissing notification:", error);
