@@ -2,53 +2,72 @@ import { NextRequest } from "next/server";
 import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { realtimeEmitter, RealtimeOrderPayload } from "@/lib/realtime-events";
+import { getCorsHeaders } from "@/lib/cors";
+import jwt from "jsonwebtoken";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export async function OPTIONS() {
+export async function OPTIONS(req: NextRequest) {
   return new Response(null, {
     status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization, Cookie, X-Requested-With",
-      "Access-Control-Allow-Credentials": "true",
-    },
+    headers: getCorsHeaders(req),
   });
 }
 
 export async function GET(req: NextRequest) {
+  const corsHeaders = getCorsHeaders(req);
   try {
-    const session = await getAuthSession();
-    if (!session?.user) {
+    let session = await getAuthSession();
+    let user = session?.user;
+
+    // Mobile fallback: allow query param token if EventSource cannot pass Authorization header
+    if (!user) {
+      const { searchParams } = new URL(req.url);
+      const queryToken = searchParams.get("token") || searchParams.get("accessToken");
+      if (queryToken) {
+        try {
+          const secret = process.env.NEXTAUTH_SECRET || "fallback_secret_for_development_only";
+          const decoded = jwt.verify(queryToken, secret) as any;
+          if (decoded?.id) {
+            const dbUser = await db.user.findUnique({
+              where: { id: decoded.id },
+              select: { id: true, role: true, email: true, name: true, isActive: true, deletedAt: true, isPermanentlyDeleted: true }
+            });
+            if (dbUser && dbUser.isActive && !dbUser.deletedAt && !dbUser.isPermanentlyDeleted) {
+              user = { id: dbUser.id, role: dbUser.role, email: dbUser.email, name: dbUser.name };
+            }
+          }
+        } catch {}
+      }
+    }
+
+    if (!user) {
       return new Response(JSON.stringify({ success: false, message: "Please log in first to connect to the kitchen order stream.", error: "Please log in first to connect to the kitchen order stream." }), {
         status: 401,
         headers: {
           "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Credentials": "true",
+          ...corsHeaders,
         },
       });
     }
-    if (session.user.role !== "SELLER") {
+    if (user.role !== "SELLER") {
       return new Response(JSON.stringify({ success: false, message: "Access denied. Seller account required.", error: "Access denied. Seller account required." }), {
         status: 403,
         headers: {
           "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Credentials": "true",
+          ...corsHeaders,
         },
       });
     }
 
     const sellerProfile = await db.sellerProfile.findUnique({
-      where: { userId: session.user.id },
+      where: { userId: user.id },
     });
 
-    const sellerId = sellerProfile?.id || session.user.id;
+    const sellerId = sellerProfile?.id || user.id;
     const sellerChannel = `seller:${sellerId}`;
-    const userChannel = `seller:${session.user.id}`;
+    const userChannel = `seller:${user.id}`;
 
     let cleanup = () => {};
 
@@ -124,15 +143,17 @@ export async function GET(req: NextRequest) {
         "Connection": "keep-alive",
         "Content-Encoding": "none",
         "X-Accel-Buffering": "no",
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Credentials": "true",
+        ...corsHeaders,
       },
     });
   } catch (error: any) {
     console.error("Seller SSE stream error:", error);
     return new Response(JSON.stringify({ error: "Failed to initialize real-time stream" }), {
       status: 500,
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...corsHeaders,
+      },
     });
   }
 }
