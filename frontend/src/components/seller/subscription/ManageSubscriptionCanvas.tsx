@@ -830,7 +830,7 @@ export default function ManageSubscriptionCanvas({
                 {plan.name}
               </h3>
               <span style={{ fontSize: "12px", color: "#94A3B8", fontWeight: 500 }}>
-                ID: #{plan.planId} • Active since {plan.deployedDate}
+                ID: #{plan.planId} • {plan.status === "Live" ? "Active" : "Inactive"} since {plan.deployedDate}
               </span>
 
               {/* Price Row */}

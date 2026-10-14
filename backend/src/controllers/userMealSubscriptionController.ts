@@ -94,16 +94,19 @@ export const getUserMealSubscriptions = async () => {
             parsedDailyDeliveries = [];
         }
 
+        const isPlanDeactivated = sub.plan?.status === "Inactive";
+        const effectiveStatus = isPlanDeactivated && sub.status === "ACTIVE" ? "INACTIVE" : sub.status;
+
         return {
             id: sub.id,
             userId: sub.userId,
             sellerId: sub.sellerId,
             planId: sub.planId,
-            status: sub.status,
+            status: effectiveStatus,
             tier: sub.tier,
             cycle: sub.cycle,
             pricePaid: sub.pricePaid,
-            isPaused: sub.isPaused,
+            isPaused: isPlanDeactivated ? false : sub.isPaused,
             pausedAt: sub.pausedAt ? sub.pausedAt.toISOString() : null,
             pauseEndDate: sub.pauseEndDate ? sub.pauseEndDate.toISOString() : null,
             usedPauseDays: sub.usedPauseDays || 0,
@@ -128,6 +131,7 @@ export const getUserMealSubscriptions = async () => {
                 features,
                 mealTimings,
                 status: sub.plan.status,
+                isActive: sub.plan.status === "Live",
                 allowCancel: sub.plan.allowCancel,
                 pauseBillingPeriod: sub.plan.pauseBillingPeriod,
                 allowPause: Boolean(

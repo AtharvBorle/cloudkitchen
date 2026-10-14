@@ -130,7 +130,13 @@ function MySubscriptionContent() {
   // Active Subscription State
   const [userSubs, setUserSubs] = useState<UserActiveMealSubscription[]>([]);
   const activeSubs = useMemo(
-    () => userSubs.filter((s) => s.status === "ACTIVE" || s.isPaused || s.status === "PAUSED"),
+    () =>
+      userSubs.filter(
+        (s) =>
+          !s.isPlanDeactivated &&
+          s.plan?.status !== "Inactive" &&
+          (s.status === "ACTIVE" || s.isPaused || s.status === "PAUSED")
+      ),
     [userSubs]
   );
   const [selectedSubFilter, setSelectedSubFilter] = useState<string>("all");
@@ -207,7 +213,12 @@ function MySubscriptionContent() {
       setIsLoadingActive(true);
       const subs = await fetchUserMealSubscriptions();
       setUserSubs(subs);
-      const activeList = subs.filter((s) => s.status === "ACTIVE" || s.isPaused || s.status === "PAUSED");
+      const activeList = subs.filter(
+        (s) =>
+          !s.isPlanDeactivated &&
+          s.plan?.status !== "Inactive" &&
+          (s.status === "ACTIVE" || s.isPaused || s.status === "PAUSED")
+      );
       if (activeList.length > 0) {
         const active = (selectedSubId ? activeList.find((s) => s.id === selectedSubId) : null) || activeList[0];
         setSubscription(active);
@@ -245,7 +256,8 @@ function MySubscriptionContent() {
 
       if (plansRes && plansRes.ok) {
         const plansJson = await plansRes.json();
-        plansData = plansJson.data || plansJson || [];
+        const rawPlans: PublicMealPlan[] = plansJson.data || plansJson || [];
+        plansData = rawPlans.filter((p: any) => p.status === "Live" || (p.status !== "Inactive" && p.isActive !== false));
       }
 
       if (exploreRes && exploreRes.ok) {
@@ -277,6 +289,7 @@ function MySubscriptionContent() {
   useLiveShopStream({
     onMealPlanUpdated: () => {
       loadPlansData();
+      loadUserSubs();
     },
     onMealSubscriptionUpdated: () => {
       loadUserSubs();
@@ -290,6 +303,7 @@ function MySubscriptionContent() {
   useEffect(() => {
     const handlePlansUpdated = () => {
       loadPlansData();
+      loadUserSubs();
     };
     const handleSubsUpdated = () => {
       loadUserSubs();
@@ -798,13 +812,13 @@ function MySubscriptionContent() {
   };
 
   const displayedSubs = useMemo(() => {
-    const list = activeSubs.length > 0 ? activeSubs : userSubs;
+    const list = userSubs;
     if (selectedSubFilter === "all") {
       return list;
     }
     const found = list.find((s) => s.id === selectedSubFilter);
     return found ? [found] : list;
-  }, [activeSubs, userSubs, selectedSubFilter]);
+  }, [userSubs, selectedSubFilter]);
 
   return (
     <div className={styles.pageWrapper}>
@@ -980,7 +994,7 @@ function MySubscriptionContent() {
                 ) : (
                   <>
                     {/* Multi-Subscription Filter Pills if user has more than 1 plan */}
-                    {activeSubs.length > 1 && (
+                    {userSubs.length > 1 && (
                       <div style={{ marginBottom: "20px" }}>
                         <div style={{
                           display: "flex",
@@ -991,7 +1005,7 @@ function MySubscriptionContent() {
                           gap: "8px",
                         }}>
                           <div style={{ fontSize: "0.84rem", fontWeight: 800, color: "#1E293B", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                            Active Meal Subscriptions ({activeSubs.length}) — All Plans Running:
+                            Meal Subscriptions ({userSubs.length}) — {activeSubs.length} Active:
                           </div>
                         </div>
                         <div style={{ display: "flex", gap: "10px", overflowX: "auto", paddingBottom: "6px" }}>
@@ -1011,11 +1025,12 @@ function MySubscriptionContent() {
                               boxShadow: selectedSubFilter === "all" ? "0 2px 8px rgba(255, 85, 0, 0.15)" : "none",
                             }}
                           >
-                            <span>🍱 View All Active Plans ({activeSubs.length})</span>
+                            <span>🍱 View All ({userSubs.length})</span>
                           </button>
 
-                          {activeSubs.map((s) => {
+                          {userSubs.map((s) => {
                             const isSelected = selectedSubFilter === s.id;
+                            const isInactive = s.isPlanDeactivated || s.plan?.status === "Inactive" || s.status === "INACTIVE";
                             return (
                               <button
                                 key={s.id}
@@ -1047,11 +1062,23 @@ function MySubscriptionContent() {
                                     padding: "2px 6px",
                                     borderRadius: "6px",
                                     fontWeight: 700,
-                                    backgroundColor: s.isPaused ? "#FEF3C7" : s.status === "ACTIVE" ? "#DCFCE7" : "#F1F5F9",
-                                    color: s.isPaused ? "#B45309" : s.status === "ACTIVE" ? "#15803D" : "#64748B",
+                                    backgroundColor: isInactive
+                                      ? "#F1F5F9"
+                                      : s.isPaused
+                                      ? "#FEF3C7"
+                                      : s.status === "ACTIVE"
+                                      ? "#DCFCE7"
+                                      : "#F1F5F9",
+                                    color: isInactive
+                                      ? "#64748B"
+                                      : s.isPaused
+                                      ? "#B45309"
+                                      : s.status === "ACTIVE"
+                                      ? "#15803D"
+                                      : "#64748B",
                                   }}
                                 >
-                                  {s.isPaused ? "Paused" : s.status}
+                                  {isInactive ? "Inactive" : s.isPaused ? "Paused" : s.status}
                                 </span>
                               </button>
                             );
@@ -1063,7 +1090,12 @@ function MySubscriptionContent() {
                     {/* Render each active meal plan separately with its details and status */}
                     <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
                       {displayedSubs.map((subItem) => {
+                        const isPlanInactive =
+                          subItem.isPlanDeactivated ||
+                          subItem.plan?.status === "Inactive" ||
+                          subItem.status === "INACTIVE";
                         const isPauseAllowed = (() => {
+                          if (isPlanInactive) return false;
                           const pausePeriod = (subItem.plan?.pauseBillingPeriod || "").trim().toLowerCase();
                           return !(
                             pausePeriod === "disabled" ||
@@ -1080,11 +1112,35 @@ function MySubscriptionContent() {
                             style={{
                               backgroundColor: "#FFFFFF",
                               borderRadius: "20px",
-                              border: "1.5px solid #E2E8F0",
+                              border: isPlanInactive ? "1.5px solid #CBD5E1" : "1.5px solid #E2E8F0",
                               padding: "24px",
                               boxShadow: "0 4px 18px rgba(0,0,0,0.04)",
                             }}
                           >
+                            {/* Inactive Plan Notice if Kitchen Deactivated it */}
+                            {isPlanInactive && (
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "10px",
+                                  padding: "12px 16px",
+                                  backgroundColor: "#FEF2F2",
+                                  borderRadius: "12px",
+                                  marginBottom: "16px",
+                                  border: "1px solid #FECACA",
+                                  color: "#991B1B",
+                                  fontSize: "0.86rem",
+                                  fontWeight: 500,
+                                }}
+                              >
+                                <AlertCircle size={18} color="#DC2626" style={{ flexShrink: 0 }} />
+                                <span>
+                                  This meal subscription plan has been deactivated by the kitchen partner. It is no longer active for renewals or new subscriptions.
+                                </span>
+                              </div>
+                            )}
+
                             {/* Plan Card */}
                             <SubscriptionPlanCard
                               title={subItem.plan?.name || "Daily Meal Plan"}
@@ -1094,10 +1150,10 @@ function MySubscriptionContent() {
                                   : "Standard Gourmet Kitchen"
                               }
                               tier={subItem.tier || subItem.plan?.tier || "Bronze"}
-                              statusText={subItem.status}
-                              isPaused={subItem.isPaused}
+                              statusText={isPlanInactive ? "INACTIVE" : subItem.status}
+                              isPaused={!isPlanInactive && subItem.isPaused}
                               startedOn={formatSubStartedOn(subItem)}
-                              renewalDate={formatSubRenewalDate(subItem)}
+                              renewalDate={isPlanInactive ? "Deactivated" : formatSubRenewalDate(subItem)}
                               planPrice={formatSubPrice(subItem)}
                             />
 
@@ -1132,9 +1188,13 @@ function MySubscriptionContent() {
                             {/* Pause Subscription Section */}
                             <PauseSubscription
                               isPaused={subItem.isPaused}
-                              disabled={subItem.status?.toUpperCase() === "CANCELLED"}
+                              disabled={isPlanInactive || subItem.status?.toUpperCase() === "CANCELLED"}
                               allowPause={isPauseAllowed}
-                              pausePolicyNote="Pausing is disabled for this meal plan by the kitchen partner."
+                              pausePolicyNote={
+                                isPlanInactive
+                                  ? "Subscription is inactive because this plan has been deactivated by the kitchen partner."
+                                  : "Pausing is disabled for this meal plan by the kitchen partner."
+                              }
                               pauseBillingPeriod={subItem.plan?.pauseBillingPeriod || "7 Days"}
                               usedPauseDays={subItem.usedPauseDays || 0}
                               pausedAt={subItem.pausedAt}

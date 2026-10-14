@@ -649,6 +649,51 @@ export const toggleSellerMealPlanStatus = async (req: Request, paramId?: string)
         data: { status: newStatus }
     });
 
+    // Synchronize associated user meal subscriptions when plan status changes
+    if (newStatus === "Inactive") {
+        await db.userMealSubscription.updateMany({
+            where: {
+                planId: existingPlan.id,
+                status: "ACTIVE"
+            },
+            data: {
+                status: "INACTIVE"
+            }
+        });
+    } else if (newStatus === "Live") {
+        await db.userMealSubscription.updateMany({
+            where: {
+                planId: existingPlan.id,
+                status: "INACTIVE"
+            },
+            data: {
+                status: "ACTIVE"
+            }
+        });
+    }
+
+    // Real-time synchronization to connected client SSE streams
+    try {
+        const affectedSubs = await db.userMealSubscription.findMany({
+            where: { planId: existingPlan.id },
+            select: { id: true, userId: true }
+        });
+        for (const sub of affectedSubs) {
+            emitMealSubscriptionUpdated(sellerProfile.id, sub.userId, "UPDATE", {
+                id: sub.id,
+                planId: existingPlan.id,
+                status: newStatus === "Live" ? "ACTIVE" : "INACTIVE",
+                plan: {
+                    ...updated,
+                    status: newStatus,
+                    isActive: newStatus === "Live",
+                }
+            });
+        }
+    } catch (err) {
+        console.error("Failed to emit subscription status updates to users:", err);
+    }
+
     emitMealPlanUpdated(sellerProfile.id, "TOGGLE", updated);
 
     return {
@@ -658,7 +703,7 @@ export const toggleSellerMealPlanStatus = async (req: Request, paramId?: string)
         isActive: updated.status === "Live",
         message: updated.status === "Live"
             ? "Meal subscription plan activated successfully. Users can now view and subscribe to it."
-            : "Meal subscription plan inactivated successfully. It is now hidden from users.",
+            : "Meal subscription plan inactivated successfully. Existing subscriptions are set to inactive and hidden from new subscribers.",
     };
 };
 
@@ -796,6 +841,8 @@ export const getPublicMealPlans = async (req: Request) => {
             duration: p.duration,
             features: parsedFeatures,
             mealTimings: parsedTimings,
+            status: p.status,
+            isActive: p.status === "Live",
             allowCancel: p.allowCancel,
             pauseBillingPeriod: allowPause ? p.pauseBillingPeriod : "None",
             allowPause,

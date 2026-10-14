@@ -97,6 +97,12 @@
   color: #ef4444;
 }
 
+.inactiveBadge {
+  background-color: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+}
+
 .statsRow {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
