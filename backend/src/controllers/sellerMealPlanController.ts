@@ -1,8 +1,9 @@
 import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
-import { getCategoryExpiries } from "@/lib/subscription";
 import { emitMealPlanUpdated, emitMealSubscriptionUpdated } from "@/lib/realtime-events";
+import { PREDEFINED_MEAL_SLOTS, normalizeMealSlotIds, getMealSlotDetails } from "@/lib/meal-slots";
+import { MealSubscriptionDeliveryService } from "@/services/mealSubscriptionDeliveryService";
 
 export const getAuthenticatedSellerProfile = async () => {
     const session = await getAuthSession();
@@ -50,8 +51,14 @@ export const getSellerMealPlans = async () => {
     const dbPlans = await db.sellerMealPlan.findMany({
         where: { sellerId: sellerProfile.id },
         include: {
+            slots: {
+                include: { slot: true }
+            },
             userSubscriptions: {
                 include: {
+                    slots: {
+                        include: { slot: true }
+                    },
                     user: {
                         select: {
                             id: true,
@@ -71,6 +78,9 @@ export const getSellerMealPlans = async () => {
     const directSubs = await db.userMealSubscription.findMany({
         where: { sellerId: sellerProfile.id },
         include: {
+            slots: {
+                include: { slot: true }
+            },
             user: {
                 select: {
                     id: true,
@@ -79,7 +89,13 @@ export const getSellerMealPlans = async () => {
                     email: true,
                 }
             },
-            plan: true
+            plan: {
+                include: {
+                    slots: {
+                        include: { slot: true }
+                    }
+                }
+            }
         },
         orderBy: { createdAt: "desc" }
     });
@@ -148,6 +164,14 @@ export const getSellerMealPlans = async () => {
 
         const pauseBillingPeriod = planObj?.pauseBillingPeriod || sub.plan?.pauseBillingPeriod || "7 Days";
 
+        const rawSubSlots = sub.slots && sub.slots.length > 0
+            ? sub.slots.map((s: any) => s.slotId)
+            : (planObj?.slots && planObj.slots.length > 0
+                ? planObj.slots.map((s: any) => s.slotId)
+                : parsedMealTimings);
+        const resolvedSlotIds = normalizeMealSlotIds(rawSubSlots);
+        const resolvedSlotDetails = resolvedSlotIds.map((id) => getMealSlotDetails(id));
+
         allSubscribers.push({
             id: sub.id,
             userId: sub.user?.id || sub.userId || "",
@@ -167,6 +191,8 @@ export const getSellerMealPlans = async () => {
             pauseHistory: parsedPauseHistory,
             dailyDeliveries: parsedDailyDeliveries,
             mealTimings: parsedMealTimings,
+            mealSlots: resolvedSlotDetails,
+            slotIds: resolvedSlotIds,
             pauseBillingPeriod,
             cycle: sub.cycle || "Weekly",
             startDate: sub.startDate instanceof Date ? sub.startDate.toISOString() : String(sub.startDate),
@@ -200,6 +226,11 @@ export const getSellerMealPlans = async () => {
         } catch {
             parsedTimings = [];
         }
+
+        const planSlotIds = plan.slots && plan.slots.length > 0
+            ? plan.slots.map((s: any) => s.slotId)
+            : normalizeMealSlotIds(parsedTimings);
+        const planSlotDetails = planSlotIds.map((id: string) => getMealSlotDetails(id));
 
         // Count active subscriptions for this specific plan (deduplicated by subscription ID)
         const planActiveSubIds = new Set<string>();
@@ -238,6 +269,8 @@ export const getSellerMealPlans = async () => {
             duration: plan.duration,
             features: parsedFeatures,
             mealTimings: parsedTimings,
+            mealSlots: planSlotDetails,
+            slotIds: planSlotIds,
             status: plan.status,
             allowCancel: plan.allowCancel,
             pauseBillingPeriod: plan.pauseBillingPeriod,
@@ -412,6 +445,13 @@ export const createSellerMealPlan = async (req: Request) => {
         pausePeriodInput === "disabled" ||
         pausePeriodInput === "false";
 
+    const rawSlotsInput = body.mealSlots ?? body.slotIds ?? body.mealTimings ?? mealTimings;
+    const normalizedSlotIds = normalizeMealSlotIds(Array.isArray(rawSlotsInput) ? rawSlotsInput : [rawSlotsInput]);
+
+    if (normalizedSlotIds.length === 0) {
+        throw new ApiError("Please select at least one meal slot for this subscription plan.", 400);
+    }
+
     const newPlan = await db.sellerMealPlan.create({
         data: {
             sellerId: sellerProfile.id,
@@ -424,14 +464,26 @@ export const createSellerMealPlan = async (req: Request) => {
             yearlyPrice: numericYearly,
             duration: duration || "1 Week",
             features: JSON.stringify(Array.isArray(features) ? features : []),
-            mealTimings: JSON.stringify(Array.isArray(mealTimings) ? mealTimings : []),
+            mealTimings: JSON.stringify(normalizedSlotIds),
             status: status || "Live",
             allowCancel: allowCancel !== undefined ? Boolean(allowCancel) : false,
             pauseBillingPeriod: isPauseDisabled ? "None" : (pauseBillingPeriod || "30 Days"),
+            slots: {
+                create: normalizedSlotIds.map((slotId) => ({
+                    slot: { connect: { id: slotId } },
+                })),
+            },
+        },
+        include: {
+            slots: {
+                include: { slot: true }
+            }
         }
     });
 
     emitMealPlanUpdated(sellerProfile.id, "CREATE", newPlan);
+
+    const planSlotDetails = newPlan.slots.map((s) => s.slot);
 
     return {
         id: newPlan.id,
@@ -445,7 +497,9 @@ export const createSellerMealPlan = async (req: Request) => {
         yearlyPrice: newPlan.yearlyPrice ? `₹${newPlan.yearlyPrice.toFixed(0)}` : "",
         duration: newPlan.duration,
         features: Array.isArray(features) ? features : [],
-        mealTimings: Array.isArray(mealTimings) ? mealTimings : [],
+        mealTimings: normalizedSlotIds,
+        mealSlots: planSlotDetails,
+        slotIds: normalizedSlotIds,
         status: newPlan.status,
         allowCancel: newPlan.allowCancel,
         pauseBillingPeriod: newPlan.pauseBillingPeriod,
@@ -517,8 +571,17 @@ export const updateSellerMealPlan = async (req: Request) => {
     if (body.features !== undefined) {
         updateData.features = JSON.stringify(Array.isArray(body.features) ? body.features : []);
     }
-    if (body.mealTimings !== undefined) {
-        updateData.mealTimings = JSON.stringify(Array.isArray(body.mealTimings) ? body.mealTimings : []);
+    if (body.mealSlots !== undefined || body.slotIds !== undefined || body.mealTimings !== undefined) {
+        const rawSlots = body.mealSlots ?? body.slotIds ?? body.mealTimings;
+        const normalizedSlotIds = normalizeMealSlotIds(Array.isArray(rawSlots) ? rawSlots : [rawSlots]);
+        if (normalizedSlotIds.length === 0) {
+            throw new ApiError("Please select at least one meal slot for this subscription plan.", 400);
+        }
+        updateData.mealTimings = JSON.stringify(normalizedSlotIds);
+        await db.sellerMealPlanSlot.deleteMany({ where: { planId: existingPlan.id } });
+        await db.sellerMealPlanSlot.createMany({
+            data: normalizedSlotIds.map((sId) => ({ planId: existingPlan.id, slotId: sId })),
+        });
     }
     if (body.status !== undefined) {
         updateData.status = body.status;
@@ -587,6 +650,13 @@ export const updateSellerMealPlan = async (req: Request) => {
         parsedTimings = [];
     }
 
+    const updatedPlanWithSlots = await db.sellerMealPlan.findUnique({
+        where: { id: existingPlan.id },
+        include: { slots: { include: { slot: true } } },
+    });
+    const planSlotIds = updatedPlanWithSlots?.slots.map((s) => s.slotId) || normalizeMealSlotIds(parsedTimings);
+    const planSlotDetails = planSlotIds.map((id) => getMealSlotDetails(id));
+
     emitMealPlanUpdated(sellerProfile.id, "UPDATE", updated);
 
     return {
@@ -599,7 +669,9 @@ export const updateSellerMealPlan = async (req: Request) => {
         monthlyPrice: updated.monthlyPrice ? `₹${updated.monthlyPrice.toFixed(0)}` : "",
         duration: updated.duration,
         features: parsedFeatures,
-        mealTimings: parsedTimings,
+        mealTimings: planSlotIds,
+        mealSlots: planSlotDetails,
+        slotIds: planSlotIds,
         status: updated.status,
         allowCancel: updated.allowCancel,
         pauseBillingPeriod: updated.pauseBillingPeriod,
@@ -809,61 +881,129 @@ export const getPublicMealPlans = async (req: Request) => {
 export const toggleSubscriberMealDeliveryStatus = async (
     subscriptionId: string,
     date: string,
-    status: "DELIVERED" | "NOT_DELIVERED",
-    note?: string
+    status: "DELIVERED" | "NOT_DELIVERED" | "PENDING",
+    note?: string,
+    slotId?: string
 ) => {
     const { sellerProfile } = await getAuthenticatedSellerProfile();
 
-    const sub = await db.userMealSubscription.findFirst({
-        where: {
-            id: subscriptionId,
-            sellerId: sellerProfile.id,
-        },
-        include: { user: true, plan: true }
-    });
-
-    if (!sub) {
-        throw new ApiError("Subscription not found or not assigned to your kitchen", 404);
+    let targetSlot = slotId ? normalizeMealSlotId(slotId) : null;
+    if (!targetSlot) {
+        const subSlots = await db.userSubscriptionMealSlot.findMany({
+            where: { subscriptionId },
+            include: { slot: true },
+            orderBy: { slot: { order: "asc" } },
+        });
+        targetSlot = subSlots[0]?.slotId || "breakfast";
     }
 
-    let deliveries: any[] = [];
-    try {
-        deliveries = typeof sub.dailyDeliveries === "string" ? JSON.parse(sub.dailyDeliveries) : (sub.dailyDeliveries || []);
-    } catch {
-        deliveries = [];
-    }
-
-    const existingIdx = deliveries.findIndex((d: any) => d.date === date);
-    const record = {
+    return await MealSubscriptionDeliveryService.recordDeliveryStatus(
+        sellerProfile.id,
+        subscriptionId,
         date,
+        targetSlot,
         status,
-        markedAt: new Date().toISOString(),
-        markedBy: sellerProfile.id,
-        note: note || undefined,
-    };
+        note
+    );
+};
 
-    if (existingIdx >= 0) {
-        deliveries[existingIdx] = { ...deliveries[existingIdx], ...record };
-    } else {
-        deliveries.unshift(record);
+export const getMealSubscriptionDeliveries = async (req: Request) => {
+    const { sellerProfile } = await getAuthenticatedSellerProfile();
+    const url = new URL(req.url);
+    const dateStr = url.searchParams.get("date") || new Date().toISOString().split("T")[0];
+    const slotId = url.searchParams.get("slotId") || undefined;
+    const status = url.searchParams.get("status") || undefined;
+    const search = url.searchParams.get("search") || undefined;
+
+    return await MealSubscriptionDeliveryService.getSellerDeliveries(sellerProfile.id, {
+        dateStr,
+        slotId,
+        status,
+        search,
+    });
+};
+
+export const getMealSlotsConfig = async () => {
+    const setting = await db.systemSettings.findUnique({
+        where: { key: "MEAL_SUBSCRIPTION_SLOTS" },
+    });
+    let customTimes: Record<string, string> = {};
+    if (setting?.value) {
+        try {
+            customTimes = JSON.parse(setting.value);
+        } catch {}
     }
 
-    const updated = await db.userMealSubscription.update({
-        where: { id: subscriptionId },
-        data: {
-            dailyDeliveries: JSON.stringify(deliveries),
-        },
-        include: { user: true, plan: true }
+    const dbSlots = await db.mealSlot.findMany({
+        where: { isActive: true },
+        orderBy: { order: "asc" },
     });
 
-    // Realtime notification
-    emitMealSubscriptionUpdated(sellerProfile.id, sub.userId, "UPDATE", updated);
+    const slots = (dbSlots.length > 0 ? dbSlots : PREDEFINED_MEAL_SLOTS).map((s) => ({
+        ...s,
+        defaultTimeRange: customTimes[s.id] || s.defaultTimeRange,
+    }));
+
+    return {
+        slots,
+        total: slots.length,
+    };
+};
+
+export const updateMealSlotsConfig = async (req: Request) => {
+    const session = await getAuthSession();
+    if (!session?.user) {
+        throw new ApiError("Please log in first to update meal slot timings.", 401);
+    }
+    if (session.user.role !== "SELLER" && session.user.role !== "ADMIN" && session.user.role !== "SUPERADMIN") {
+        throw new ApiError("Access denied. Authorized partner or admin account required.", 403);
+    }
+
+    const body = await req.json();
+    const { timings } = body;
+
+    if (!timings || typeof timings !== "object") {
+        throw new ApiError("A valid timings dictionary is required.", 400);
+    }
+
+    const existing = await db.systemSettings.findUnique({
+        where: { key: "MEAL_SUBSCRIPTION_SLOTS" },
+    });
+
+    let currentMap: Record<string, string> = {};
+    if (existing?.value) {
+        try {
+            currentMap = JSON.parse(existing.value);
+        } catch {}
+    }
+
+    const merged = { ...currentMap, ...timings };
+
+    await db.systemSettings.upsert({
+        where: { key: "MEAL_SUBSCRIPTION_SLOTS" },
+        create: {
+            id: "MEAL_SUBSCRIPTION_SLOTS",
+            key: "MEAL_SUBSCRIPTION_SLOTS",
+            value: JSON.stringify(merged),
+        },
+        update: {
+            value: JSON.stringify(merged),
+        },
+    });
+
+    for (const [slotId, timeRange] of Object.entries(timings)) {
+        if (typeof timeRange === "string" && timeRange.trim()) {
+            await db.mealSlot.update({
+                where: { id: slotId },
+                data: { defaultTimeRange: timeRange.trim() },
+            }).catch(() => {});
+        }
+    }
 
     return {
         success: true,
-        message: `Delivery status marked as ${status === "DELIVERED" ? "Delivered" : "Not Delivered"} for ${date}`,
-        subscription: updated,
-        dailyDeliveries: deliveries,
+        message: "Meal subscription timings updated successfully.",
+        timings: merged,
     };
 };
 

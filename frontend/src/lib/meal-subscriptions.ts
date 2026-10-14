@@ -1,6 +1,12 @@
 "use client";
 
 import { fetchApi } from "./fetch-api";
+import {
+  MealSlotDefinition,
+  PREDEFINED_MEAL_SLOTS,
+  normalizeMealSlotIds,
+  getMealSlotDetails,
+} from "./meal-slots";
 
 export interface MealSubscriptionPlan {
   id: string;
@@ -17,6 +23,8 @@ export interface MealSubscriptionPlan {
   duration: string;
   features: string[];
   mealTimings: string[];
+  slotIds?: string[];
+  mealSlots?: MealSlotDefinition[];
   subscribersCount: number;
   monthlyRevenue: string;
   status: "Live" | "Draft" | "Paused" | "Inactive" | string;
@@ -59,7 +67,51 @@ export interface MealSubscriber {
     note?: string;
   }>;
   mealTimings?: string[];
+  slotIds?: string[];
+  mealSlots?: MealSlotDefinition[];
   pauseBillingPeriod?: string;
+}
+
+export interface MealSlotDeliveryRecord {
+  id: string;
+  subscriptionId: string;
+  slotId: string;
+  slotName: string;
+  slotSubtitle: string;
+  scheduledTime: string;
+  sellerId: string;
+  userId: string;
+  scheduledDate: string;
+  status: "PENDING" | "DELIVERED" | "NOT_DELIVERED" | "SKIPPED_PAUSED" | "CANCELLED" | string;
+  deliveredAt: string | null;
+  markedBy: string | null;
+  note: string | null;
+  subscription: {
+    id: string;
+    tier: string;
+    status: string;
+    deliveryAddress: string;
+    contactPhone: string;
+    user: {
+      id: string;
+      name: string;
+      phone: string;
+      email: string;
+    };
+    plan: {
+      id: string;
+      name: string;
+      tier: string;
+    };
+  };
+}
+
+export interface MealDeliveriesResponse {
+  date: string;
+  slotId: string;
+  totalDeliveries: number;
+  slotCounts: Record<string, number>;
+  deliveries: MealSlotDeliveryRecord[];
 }
 
 export interface MealPlanMetrics {
@@ -143,6 +195,16 @@ export function formatMealPlan(rawPlan: any): MealSubscriptionPlan {
   const subscribersCount = rawPlan.subscribersCount || 0;
   const monthlyRevenue = `₹${(weeklyNum * subscribersCount).toLocaleString("en-IN")}`;
 
+  const slotIds: string[] = Array.isArray(rawPlan.slotIds)
+    ? rawPlan.slotIds
+    : Array.isArray(rawPlan.slots)
+    ? rawPlan.slots.map((s: any) => s.slotId || s.id || s.slot?.id).filter(Boolean)
+    : normalizeMealSlotIds(mealTimings);
+
+  const mealSlots: MealSlotDefinition[] = Array.isArray(rawPlan.mealSlots)
+    ? rawPlan.mealSlots
+    : (slotIds.length > 0 ? slotIds : normalizeMealSlotIds(mealTimings)).map((id: string) => getMealSlotDetails(id));
+
   return {
     id: rawPlan.id || `plan-${Date.now()}`,
     planId: rawPlan.planId || `PLN-${(rawPlan.id || "").substring(0, 4).toUpperCase() || "NEW"}`,
@@ -158,6 +220,8 @@ export function formatMealPlan(rawPlan: any): MealSubscriptionPlan {
     duration: rawPlan.duration || "1 Week",
     features: Array.isArray(features) ? features : [],
     mealTimings: Array.isArray(mealTimings) ? mealTimings : [],
+    slotIds,
+    mealSlots,
     subscribersCount,
     monthlyRevenue,
     status: rawPlan.status || "Live",
@@ -362,6 +426,7 @@ export async function saveMealPlan(
         duration: planData.duration || "1 Week",
         features: planData.features || [],
         mealTimings: planData.mealTimings || [],
+        slotIds: (planData as any).slotIds || undefined,
         status: planData.status || "Live",
         allowCancel: planData.allowCancel ?? false,
         pauseBillingPeriod: planData.pauseBillingPeriod || "30 Days",
@@ -426,6 +491,7 @@ export async function updateMealPlan(id: string, updates: Partial<MealSubscripti
     if (updates.duration !== undefined) payload.duration = updates.duration;
     if (updates.features !== undefined) payload.features = updates.features;
     if (updates.mealTimings !== undefined) payload.mealTimings = updates.mealTimings;
+    if (updates.slotIds !== undefined) payload.slotIds = updates.slotIds;
     if (updates.status !== undefined) payload.status = updates.status;
     if (updates.allowCancel !== undefined) payload.allowCancel = updates.allowCancel;
     if (updates.allowPause !== undefined) payload.allowPause = updates.allowPause;
@@ -744,13 +810,14 @@ export async function markSubscriberMealDeliveryStatus(
   subscriptionId: string,
   date: string,
   status: "DELIVERED" | "NOT_DELIVERED",
-  note?: string
-): Promise<{ success: boolean; message: string; dailyDeliveries?: any[] }> {
+  note?: string,
+  slotId?: string
+): Promise<{ success: boolean; message: string; dailyDeliveries?: any[]; delivery?: any }> {
   try {
     const res = await fetchApi("/api/seller/meal-plans/delivery-status", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ subscriptionId, date, status, note }),
+      body: JSON.stringify({ subscriptionId, date, status, note, slotId }),
     });
     const json = await res.json();
     if (!res.ok) {
@@ -763,11 +830,72 @@ export async function markSubscriberMealDeliveryStatus(
       success: true,
       message: json.message || "Delivery status updated",
       dailyDeliveries: json.data?.dailyDeliveries,
+      delivery: json.data?.delivery,
     };
   } catch (err: any) {
     console.error("Error updating subscriber meal delivery status:", err);
     throw err;
   }
+}
+
+/**
+ * Fetches organized deliveries by date and meal slot for seller.
+ */
+export async function fetchMealSubscriptionDeliveries(params?: {
+  date?: string;
+  slotId?: string;
+  status?: string;
+  search?: string;
+}): Promise<MealDeliveriesResponse> {
+  const query = new URLSearchParams();
+  if (params?.date) query.set("date", params.date);
+  if (params?.slotId) query.set("slotId", params.slotId);
+  if (params?.status) query.set("status", params.status);
+  if (params?.search) query.set("search", params.search);
+
+  const res = await fetchApi(`/api/seller/meal-plans/deliveries?${query.toString()}`);
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}));
+    throw new Error(json.message || "Failed to fetch meal subscription deliveries");
+  }
+  const json = await res.json();
+  return json.data || json;
+}
+
+/**
+ * Fetches centralized predefined meal slots.
+ */
+export async function fetchMealSlots(): Promise<MealSlotDefinition[]> {
+  try {
+    const res = await fetchApi("/api/public/meal-plans/slots");
+    if (res.ok) {
+      const json = await res.json();
+      const slots = json.data || json;
+      if (Array.isArray(slots) && slots.length > 0) return slots;
+    }
+  } catch (err) {
+    console.error("Failed to fetch slots from API, using defaults:", err);
+  }
+  return PREDEFINED_MEAL_SLOTS;
+}
+
+/**
+ * Updates central meal slot timing window.
+ */
+export async function updateMealSlotConfig(
+  slotId: string,
+  data: Partial<MealSlotDefinition>
+): Promise<MealSlotDefinition> {
+  const res = await fetchApi("/api/seller/meal-plans/timings", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ slotId, ...data }),
+  });
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error(json.message || "Failed to update meal slot timing");
+  }
+  return json.data?.slot || json.data;
 }
 
 export const loadRazorpayScript = (): Promise<boolean> => {

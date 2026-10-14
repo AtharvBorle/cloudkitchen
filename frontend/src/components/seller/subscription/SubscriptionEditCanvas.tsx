@@ -11,6 +11,7 @@ import {
   deleteMealPlan,
   MealSubscriptionPlan,
 } from "@/lib/meal-subscriptions";
+import { PREDEFINED_MEAL_SLOTS, normalizeMealSlotIds } from "@/lib/meal-slots";
 
 
 export interface PlanFeatureItem {
@@ -47,6 +48,7 @@ export interface SubscriptionPlanData {
   customFeature: string;
   planDuration: string;
   mealTimings: MealTimingItem[];
+  slotIds?: string[];
   allowCancelSubscription: boolean;
   allowPauseBilling: boolean;
   pauseBillingPeriod?: string;
@@ -82,6 +84,7 @@ const DEFAULT_DATA: SubscriptionPlanData = {
   customFeature: "",
   planDuration: "1 Week",
   mealTimings: DEFAULT_MEAL_TIMINGS,
+  slotIds: ["breakfast", "lunch", "dinner"],
   allowCancelSubscription: false,
   allowPauseBilling: true,
   metrics: {
@@ -152,6 +155,10 @@ export default function SubscriptionEditCanvas({
         const normalizedPausePeriod =
           isPauseEnabled && rawPauseLower !== "monthly" ? rawPause : "30 Days";
 
+        const normalizedSlots = found.slotIds && found.slotIds.length > 0
+          ? found.slotIds
+          : normalizeMealSlotIds(found.mealTimings || []);
+
         setFormData({
           planName: found.name,
           planTier: found.tier,
@@ -173,6 +180,7 @@ export default function SubscriptionEditCanvas({
               timing: timing || t,
             };
           }),
+          slotIds: normalizedSlots.length > 0 ? normalizedSlots : ["breakfast", "lunch", "dinner"],
           allowCancelSubscription: found.allowCancel ?? false,
           allowPauseBilling: isPauseEnabled,
           pauseBillingPeriod: normalizedPausePeriod,
@@ -291,6 +299,16 @@ export default function SubscriptionEditCanvas({
 
   const handleAddTimingItem = handleAddMealTiming;
 
+  const handleToggleSlot = (slotId: string) => {
+    setFormData((prev) => {
+      const current = prev.slotIds || [];
+      const next = current.includes(slotId)
+        ? current.filter((id) => id !== slotId)
+        : [...current, slotId];
+      return { ...prev, slotIds: next };
+    });
+  };
+
   const handleSave = async () => {
     const parsedPrice = parseFloat(formData.monthlyPrice.replace(/[^\d.]/g, ""));
     if (isNaN(parsedPrice) || parsedPrice <= 0) {
@@ -299,8 +317,16 @@ export default function SubscriptionEditCanvas({
       return;
     }
 
+    const currentSlotIds = formData.slotIds || [];
+    if (currentSlotIds.length === 0) {
+      setSaveStatus("Please select at least one Meal Slot for this plan.");
+      setTimeout(() => setSaveStatus(null), 3500);
+      return;
+    }
+
     if (targetPlanId) {
       const isWeekly = formData.planDuration.toLowerCase().includes("week");
+      const selectedSlots = PREDEFINED_MEAL_SLOTS.filter((s) => currentSlotIds.includes(s.id));
       await updateMealPlan(targetPlanId, {
         name: formData.planName,
         tier: formData.planTier,
@@ -310,7 +336,8 @@ export default function SubscriptionEditCanvas({
         yearlyPrice: isWeekly ? "" : formData.yearlyPrice,
         duration: formData.planDuration,
         features: formData.includedFeatures.filter((f) => f.checked !== false).map((f) => f.label),
-        mealTimings: formData.mealTimings.map((m) => `${m.mealName}: ${m.timing}`),
+        mealTimings: selectedSlots.map((m) => `${m.name}: ${m.defaultTimeRange}`),
+        slotIds: currentSlotIds,
         allowCancel: false,
         allowPause: formData.allowPauseBilling,
         allowPauseBilling: formData.allowPauseBilling,
@@ -1117,141 +1144,99 @@ export default function SubscriptionEditCanvas({
                   margin: 0,
                 }}
               >
-                Plan Timing & Schedule
+                Included Meal Slots
               </h2>
-              <button
-                type="button"
-                onClick={handleAddTimingItem}
+              <span
                 style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "4px",
-                  color: "#FF5500",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  padding: 0,
-                  fontFamily: "inherit",
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  color: (formData.slotIds?.length || 0) > 0 ? "#EA580C" : "#EF4444",
+                  backgroundColor: (formData.slotIds?.length || 0) > 0 ? "#FFF7ED" : "#FEF2F2",
+                  padding: "4px 10px",
+                  borderRadius: "6px",
+                  border: (formData.slotIds?.length || 0) > 0 ? "1px solid #FFEDD5" : "1px solid #FECACA",
                 }}
               >
-                <Plus size={14} strokeWidth={2.5} />
-                <span>Add</span>
-              </button>
+                {formData.slotIds?.length || 0} of 7 Selected
+              </span>
             </div>
 
-            {/* Meal Serving Timings */}
+            <p style={{ margin: "-8px 0 0 0", fontSize: "12px", color: "#64748B" }}>
+              Select all standardized meal occasions covered under this plan (minimum 1 required).
+            </p>
+
+            {/* Meal Slots List */}
             <div
               style={{
                 display: "flex",
                 flexDirection: "column",
-                gap: "10px",
+                gap: "8px",
                 marginTop: "4px",
               }}
             >
-              <label
-                style={{
-                  fontSize: "12.5px",
-                  fontWeight: 700,
-                  color: "#0F172A",
-                }}
-              >
-                Meal Serving Timings
-              </label>
-
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "10px",
-                }}
-              >
-                {formData.mealTimings.map((timing) => (
+              {PREDEFINED_MEAL_SLOTS.map((slot) => {
+                const isSelected = Boolean(formData.slotIds?.includes(slot.id));
+                return (
                   <div
-                    key={timing.id}
+                    key={slot.id}
+                    onClick={() => handleToggleSlot(slot.id)}
                     style={{
-                      border: "1px solid #E2E8F0",
-                      borderRadius: "8px",
-                      padding: "8px 12px",
+                      border: isSelected ? "1.5px solid #EA580C" : "1px solid #E2E8F0",
+                      borderRadius: "10px",
+                      padding: "10px 14px",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      backgroundColor: "#FFFFFF",
+                      backgroundColor: isSelected ? "#FFFDFB" : "#FFFFFF",
                       boxSizing: "border-box",
                       gap: "10px",
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
                     }}
                   >
-                    <input
-                      type="text"
-                      value={timing.mealName}
-                      onChange={(e) => handleMealNameChange(timing.id, e.target.value)}
-                      placeholder="Meal (e.g. Breakfast)"
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => {}}
+                        style={{
+                          width: "18px",
+                          height: "18px",
+                          accentColor: "#EA580C",
+                          cursor: "pointer",
+                        }}
+                      />
+                      <div>
+                        <div
+                          style={{
+                            fontSize: "13.5px",
+                            fontWeight: 700,
+                            color: isSelected ? "#0F172A" : "#334155",
+                          }}
+                        >
+                          {slot.name}
+                        </div>
+                        <div style={{ fontSize: "11.5px", color: "#64748B" }}>
+                          {slot.subtitle}
+                        </div>
+                      </div>
+                    </div>
+
+                    <span
                       style={{
-                        fontSize: "13px",
+                        fontSize: "11.5px",
                         fontWeight: 600,
-                        color: "#0F172A",
-                        minWidth: "120px",
-                        width: "140px",
-                        border: "1px solid #E2E8F0",
+                        color: isSelected ? "#C2410C" : "#64748B",
+                        backgroundColor: isSelected ? "#FFEDD5" : "#F1F5F9",
+                        padding: "3px 9px",
                         borderRadius: "6px",
-                        padding: "6px 10px",
-                        outline: "none",
-                        fontFamily: "inherit",
-                      }}
-                    />
-
-                    <input
-                      type="text"
-                      value={timing.timing}
-                      onChange={(e) => handleTimingChange(timing.id, e.target.value)}
-                      placeholder="e.g. 7:30 AM – 9:30 AM"
-                      style={{
-                        fontSize: "13px",
-                        color: "#334155",
-                        fontWeight: 500,
-                        flex: 1,
-                        border: "1px solid #E2E8F0",
-                        borderRadius: "6px",
-                        padding: "6px 10px",
-                        outline: "none",
-                        fontFamily: "inherit",
-                      }}
-                    />
-
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "6px",
                       }}
                     >
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteTiming(timing.id)}
-                        style={{
-                          width: "32px",
-                          height: "32px",
-                          borderRadius: "6px",
-                          border: "1px solid #FEE2E2",
-                          backgroundColor: "#FFF5F5",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: "#EF4444",
-                          cursor: "pointer",
-                          padding: 0,
-                          flexShrink: 0,
-                          transition: "background-color 0.15s ease",
-                        }}
-                        title="Delete Timing"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
+                      🕒 {slot.defaultTimeRange}
+                    </span>
                   </div>
-                ))}
-              </div>
+                );
+              })}
             </div>
           </div>
 
