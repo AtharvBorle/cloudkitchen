@@ -556,105 +556,136 @@ export function HouseMapPicker({
             )}
 
             {/* Location Search Bar & GPS Locate Action */}
-            <div ref={searchWrapperRef} style={{ position: "relative", width: "100%", zIndex: 30 }}>
-                <form
-                    onSubmit={handleSearch}
+            <div ref={searchWrapperRef} style={{ position: "relative", width: "100%", zIndex: 30, boxSizing: "border-box" }}>
+                <div
                     style={{
                         display: "flex",
                         alignItems: "center",
                         gap: "6px",
-                        backgroundColor: "#FFFFFF",
-                        border: "1px solid #CBD5E1",
-                        borderRadius: "8px",
-                        padding: "4px 8px",
-                        boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                        width: "100%",
+                        boxSizing: "border-box",
                     }}
                 >
-                    <Search size={16} color="#94A3B8" style={{ flexShrink: 0 }} />
-                    <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => handleQueryChange(e.target.value)}
-                        placeholder="Search area, landmark, street, or pincode..."
+                    <form
+                        onSubmit={handleSearch}
                         style={{
                             flex: 1,
-                            border: "none",
-                            outline: "none",
-                            fontSize: "0.85rem",
-                            color: "#1E293B",
-                            backgroundColor: "transparent",
-                            minWidth: "120px",
-                        }}
-                    />
-                    {searchQuery && (
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setSearchQuery("");
-                                setSearchResults([]);
-                                setShowResultsDropdown(false);
-                                setSearchError(null);
-                            }}
-                            style={{
-                                background: "none",
-                                border: "none",
-                                cursor: "pointer",
-                                padding: "2px",
-                                display: "flex",
-                                alignItems: "center",
-                                color: "#94A3B8",
-                            }}
-                            title="Clear search"
-                        >
-                            <X size={14} />
-                        </button>
-                    )}
-                    <button
-                        type="submit"
-                        disabled={isSearching || !searchQuery.trim()}
-                        style={{
-                            padding: "6px 12px",
-                            backgroundColor: isSearching || !searchQuery.trim() ? "#E2E8F0" : "#F97316",
-                            color: isSearching || !searchQuery.trim() ? "#94A3B8" : "#FFFFFF",
-                            border: "none",
-                            borderRadius: "6px",
-                            fontSize: "0.8rem",
-                            fontWeight: 600,
-                            cursor: isSearching || !searchQuery.trim() ? "not-allowed" : "pointer",
+                            minWidth: 0,
                             display: "flex",
                             alignItems: "center",
-                            gap: "4px",
-                            flexShrink: 0,
-                            transition: "background-color 0.15s ease",
+                            gap: "6px",
+                            backgroundColor: "#FFFFFF",
+                            border: "1.5px solid #CBD5E1",
+                            borderRadius: "8px",
+                            padding: "4px 8px",
+                            boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                            boxSizing: "border-box",
+                            height: "36px",
                         }}
                     >
-                        {isSearching ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
-                        <span>Search</span>
-                    </button>
+                        <Search size={15} color="#94A3B8" style={{ flexShrink: 0 }} />
+                        <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => handleQueryChange(e.target.value)}
+                            placeholder="Search area, landmark..."
+                            style={{
+                                flex: 1,
+                                minWidth: 0,
+                                border: "none",
+                                outline: "none",
+                                fontSize: "0.82rem",
+                                color: "#1E293B",
+                                backgroundColor: "transparent",
+                                width: "100%",
+                                padding: 0,
+                            }}
+                        />
+                        {searchQuery && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setSearchQuery("");
+                                    setSearchResults([]);
+                                    setShowResultsDropdown(false);
+                                    setSearchError(null);
+                                }}
+                                style={{
+                                    background: "none",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    padding: "2px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    color: "#94A3B8",
+                                    flexShrink: 0,
+                                }}
+                                title="Clear search"
+                            >
+                                <X size={14} />
+                            </button>
+                        )}
+                        <button
+                            type="submit"
+                            disabled={isSearching || !searchQuery.trim()}
+                            style={{
+                                padding: "4px 10px",
+                                backgroundColor: isSearching || !searchQuery.trim() ? "#F1F5F9" : "#FF6B00",
+                                color: isSearching || !searchQuery.trim() ? "#94A3B8" : "#FFFFFF",
+                                border: "none",
+                                borderRadius: "6px",
+                                fontSize: "0.78rem",
+                                fontWeight: 600,
+                                cursor: isSearching || !searchQuery.trim() ? "not-allowed" : "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                flexShrink: 0,
+                                whiteSpace: "nowrap",
+                                transition: "background-color 0.15s ease",
+                                height: "28px",
+                            }}
+                            title="Search address"
+                        >
+                            {isSearching ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
+                            <span>Search</span>
+                        </button>
+                    </form>
+
                     <button
                         type="button"
                         onClick={handleDetectCurrentLocation}
                         disabled={isLocatingGps}
                         style={{
-                            padding: "6px 10px",
-                            backgroundColor: "#F1F5F9",
-                            color: "#0F172A",
-                            border: "1px solid #CBD5E1",
-                            borderRadius: "6px",
-                            fontSize: "0.8rem",
-                            fontWeight: 600,
+                            padding: "0 12px",
+                            backgroundColor: "#EFF6FF",
+                            color: "#1D4ED8",
+                            border: "1.5px solid #BFDBFE",
+                            borderRadius: "8px",
+                            fontSize: "0.78rem",
+                            fontWeight: 700,
                             cursor: isLocatingGps ? "wait" : "pointer",
-                            display: "flex",
+                            display: "inline-flex",
                             alignItems: "center",
-                            gap: "4px",
+                            justifyContent: "center",
+                            gap: "5px",
                             flexShrink: 0,
+                            whiteSpace: "nowrap",
+                            height: "36px",
+                            boxSizing: "border-box",
+                            boxShadow: "0 1px 2px rgba(37,99,235,0.06)",
+                            transition: "all 0.15s ease",
                         }}
                         title="Locate with GPS"
                     >
-                        {isLocatingGps ? <Loader2 size={13} className="animate-spin" /> : <Crosshair size={13} color="#2563EB" />}
-                        <span style={{ display: "inline" }}>GPS</span>
+                        {isLocatingGps ? (
+                            <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                            <Crosshair size={14} color="#2563EB" strokeWidth={2.4} />
+                        )}
+                        <span>GPS</span>
                     </button>
-                </form>
+                </div>
 
                 {/* Search Error Notice */}
                 {searchError && (
