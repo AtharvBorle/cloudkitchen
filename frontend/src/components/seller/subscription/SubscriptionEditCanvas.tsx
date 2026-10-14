@@ -9,9 +9,10 @@ import {
   getStoredMealPlans,
   updateMealPlan,
   deleteMealPlan,
+  fetchMealSlots,
   MealSubscriptionPlan,
 } from "@/lib/meal-subscriptions";
-import { PREDEFINED_MEAL_SLOTS, normalizeMealSlotIds } from "@/lib/meal-slots";
+import { PREDEFINED_MEAL_SLOTS, MealSlotDefinition, normalizeMealSlotIds } from "@/lib/meal-slots";
 
 
 export interface PlanFeatureItem {
@@ -201,6 +202,18 @@ export default function SubscriptionEditCanvas({
     loadPlan();
   }, [planIdParam]);
 
+  const [slotsWithTimings, setSlotsWithTimings] = useState<MealSlotDefinition[]>(PREDEFINED_MEAL_SLOTS);
+
+  useEffect(() => {
+    fetchMealSlots()
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setSlotsWithTimings(data);
+        }
+      })
+      .catch((err) => console.error("Error fetching meal slots in edit:", err));
+  }, []);
+
   const [isDurationDropdownOpen, setIsDurationDropdownOpen] = useState(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
@@ -324,25 +337,43 @@ export default function SubscriptionEditCanvas({
       return;
     }
 
+    // Check if any selected slot is missing delivery timings
+    const missingTimingSlots = currentSlotIds
+      .map((id) => slotsWithTimings.find((s) => s.id === id) || PREDEFINED_MEAL_SLOTS.find((s) => s.id === id))
+      .filter((s) => !s || !s.defaultTimeRange || s.defaultTimeRange.trim() === "");
+
+    if (missingTimingSlots.length > 0) {
+      const names = missingTimingSlots.map((s) => s?.name || "Slot").join(", ");
+      setSaveStatus(`Delivery timing is not added for: ${names}. You need to add timings first in Manage Meal Subscription Timings before saving this plan.`);
+      setTimeout(() => setSaveStatus(null), 5000);
+      return;
+    }
+
     if (targetPlanId) {
       const isWeekly = formData.planDuration.toLowerCase().includes("week");
-      const selectedSlots = PREDEFINED_MEAL_SLOTS.filter((s) => currentSlotIds.includes(s.id));
-      await updateMealPlan(targetPlanId, {
-        name: formData.planName,
-        tier: formData.planTier,
-        weeklyPrice: String(parsedPrice),
-        monthlyPrice: formData.monthlyPrice,
-        quarterlyPrice: isWeekly ? "" : formData.quarterlyPrice,
-        yearlyPrice: isWeekly ? "" : formData.yearlyPrice,
-        duration: formData.planDuration,
-        features: formData.includedFeatures.filter((f) => f.checked !== false).map((f) => f.label),
-        mealTimings: selectedSlots.map((m) => `${m.name}: ${m.defaultTimeRange}`),
-        slotIds: currentSlotIds,
-        allowCancel: false,
-        allowPause: formData.allowPauseBilling,
-        allowPauseBilling: formData.allowPauseBilling,
-        pauseBillingPeriod: formData.allowPauseBilling ? (formData.pauseBillingPeriod || "30 Days") : "None",
-      });
+      const selectedSlots = slotsWithTimings.filter((s) => currentSlotIds.includes(s.id));
+      try {
+        await updateMealPlan(targetPlanId, {
+          name: formData.planName,
+          tier: formData.planTier,
+          weeklyPrice: String(parsedPrice),
+          monthlyPrice: formData.monthlyPrice,
+          quarterlyPrice: isWeekly ? "" : formData.quarterlyPrice,
+          yearlyPrice: isWeekly ? "" : formData.yearlyPrice,
+          duration: formData.planDuration,
+          features: formData.includedFeatures.filter((f) => f.checked !== false).map((f) => f.label),
+          mealTimings: selectedSlots.map((m) => `${m.name}: ${m.defaultTimeRange}`),
+          slotIds: currentSlotIds,
+          allowCancel: false,
+          allowPause: formData.allowPauseBilling,
+          allowPauseBilling: formData.allowPauseBilling,
+          pauseBillingPeriod: formData.allowPauseBilling ? (formData.pauseBillingPeriod || "30 Days") : "None",
+        });
+      } catch (err: any) {
+        setSaveStatus(err.message || "Failed to update plan");
+        setTimeout(() => setSaveStatus(null), 5000);
+        return;
+      }
     }
 
     if (onSave) {
@@ -1157,7 +1188,7 @@ export default function SubscriptionEditCanvas({
                   border: (formData.slotIds?.length || 0) > 0 ? "1px solid #FFEDD5" : "1px solid #FECACA",
                 }}
               >
-                {formData.slotIds?.length || 0} of 7 Selected
+                {formData.slotIds?.length || 0} of {slotsWithTimings.length} Selected
               </span>
             </div>
 
@@ -1174,14 +1205,17 @@ export default function SubscriptionEditCanvas({
                 marginTop: "4px",
               }}
             >
-              {PREDEFINED_MEAL_SLOTS.map((slot) => {
+              {slotsWithTimings.map((slot) => {
                 const isSelected = Boolean(formData.slotIds?.includes(slot.id));
+                const hasTiming = Boolean(slot.defaultTimeRange && slot.defaultTimeRange.trim().length > 0);
                 return (
                   <div
                     key={slot.id}
                     onClick={() => handleToggleSlot(slot.id)}
                     style={{
-                      border: isSelected ? "1.5px solid #EA580C" : "1px solid #E2E8F0",
+                      border: isSelected
+                        ? (hasTiming ? "1.5px solid #EA580C" : "1.5px solid #F59E0B")
+                        : "1px solid #E2E8F0",
                       borderRadius: "10px",
                       padding: "10px 14px",
                       display: "flex",
@@ -1222,18 +1256,49 @@ export default function SubscriptionEditCanvas({
                       </div>
                     </div>
 
-                    <span
-                      style={{
-                        fontSize: "11.5px",
-                        fontWeight: 600,
-                        color: isSelected ? "#C2410C" : "#64748B",
-                        backgroundColor: isSelected ? "#FFEDD5" : "#F1F5F9",
-                        padding: "3px 9px",
-                        borderRadius: "6px",
-                      }}
-                    >
-                      🕒 {slot.defaultTimeRange}
-                    </span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      {hasTiming ? (
+                        <span
+                          style={{
+                            fontSize: "11.5px",
+                            fontWeight: 600,
+                            color: isSelected ? "#C2410C" : "#64748B",
+                            backgroundColor: isSelected ? "#FFEDD5" : "#F1F5F9",
+                            padding: "3px 9px",
+                            borderRadius: "6px",
+                          }}
+                        >
+                          🕒 {slot.defaultTimeRange}
+                        </span>
+                      ) : (
+                        <span
+                          style={{
+                            fontSize: "11px",
+                            fontWeight: 700,
+                            color: "#D97706",
+                            backgroundColor: "#FEF3C7",
+                            padding: "3px 8px",
+                            borderRadius: "6px",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          ⚠️ Timing Not Added
+                        </span>
+                      )}
+                      <Link
+                        href="/seller/subscription/timings"
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          fontSize: "11px",
+                          fontWeight: 600,
+                          color: "#2563EB",
+                          textDecoration: "underline",
+                          padding: "2px 4px",
+                        }}
+                      >
+                        {hasTiming ? "Edit" : "Add Timing"}
+                      </Link>
+                    </div>
                   </div>
                 );
               })}

@@ -151,18 +151,15 @@ export class MealSubscriptionDeliveryService {
 
     const slotCounts: Record<string, number> = {
       all: allDeliveriesForDate.length,
-      breakfast: 0,
-      mid_morning_meal: 0,
-      mid_morning_snack: 0,
-      lunch: 0,
-      evening_snack: 0,
-      dinner: 0,
-      late_night_snack: 0,
     };
+    PREDEFINED_MEAL_SLOTS.forEach((s) => {
+      slotCounts[s.id] = 0;
+    });
 
     for (const d of allDeliveriesForDate) {
-      if (slotCounts[d.slotId] !== undefined) {
-        slotCounts[d.slotId]++;
+      const normSlot = normalizeMealSlotId(d.slotId);
+      if (normSlot && slotCounts[normSlot] !== undefined) {
+        slotCounts[normSlot]++;
       }
     }
 

@@ -19,13 +19,12 @@ async function runTests() {
     }
   }
 
-  // Test 1: Exactly 7 predefined meal slots
-  assert(PREDEFINED_MEAL_SLOTS.length === 7, "Exactly 7 predefined meal slots exist");
+  // Test 1: Exactly 6 predefined meal slots
+  assert(PREDEFINED_MEAL_SLOTS.length === 6, "Exactly 6 predefined meal slots exist");
 
   const expectedIds = [
     "breakfast",
-    "mid_morning_meal",
-    "mid_morning_snack",
+    "morning_meal",
     "lunch",
     "evening_snack",
     "dinner",

@@ -2,22 +2,29 @@
  * ==============================================================================
  * 🍱 Centralized Meal Slots Configuration & Helpers
  * ==============================================================================
- * Exactly 7 standardized predefined meal slots for the entire platform.
- * Sellers cannot create custom timing categories; all subscriptions and deliveries
- * reference these centralized slots.
+ * Exactly 6 standardized predefined meal slots for the entire platform:
+ * 1. Breakfast (Morning breakfast / Nasta)
+ * 2. Morning Meal (Morning meal)
+ * 3. Lunch (Afternoon meal)
+ * 4. Evening Snack (Evening snacks)
+ * 5. Dinner (Night meal)
+ * 6. Late-Night Snack (Late-night snacks)
+ *
+ * By default, slots do NOT have any delivery timing given.
+ * Sellers/users must configure delivery timings first before creating subscriptions.
  */
 
 export interface MealSlotDefinition {
-  id: string;             // Canonical stable ID: "breakfast", "mid_morning_meal", etc.
-  name: string;           // Display Name: "Breakfast", "Mid-Morning Meal", etc.
+  id: string;             // Canonical stable ID: "breakfast", "morning_meal", etc.
+  name: string;           // Display Name: "Breakfast", "Morning Meal", etc.
   subtitle: string;       // Subtitle: "Morning breakfast / Nasta", etc.
   description: string;    // Description
-  defaultTimeRange: string; // "7:30 AM – 9:30 AM"
-  startHour: number;      // 24-hr clock hour when slot window begins
-  startMinute: number;
-  endHour: number;        // 24-hr clock hour when slot window ends
-  endMinute: number;
-  order: number;          // Sort order (1 to 7)
+  defaultTimeRange: string; // Empty "" by default until configured by seller/user
+  startHour?: number;      // 24-hr clock hour when slot window begins
+  startMinute?: number;
+  endHour?: number;        // 24-hr clock hour when slot window ends
+  endMinute?: number;
+  order: number;          // Sort order (1 to 6)
 }
 
 export const PREDEFINED_MEAL_SLOTS: MealSlotDefinition[] = [
@@ -26,7 +33,7 @@ export const PREDEFINED_MEAL_SLOTS: MealSlotDefinition[] = [
     name: "Breakfast",
     subtitle: "Morning breakfast / Nasta",
     description: "Start the day with fresh morning breakfast and wholesome nasta dishes.",
-    defaultTimeRange: "7:30 AM – 9:30 AM",
+    defaultTimeRange: "",
     startHour: 7,
     startMinute: 30,
     endHour: 9,
@@ -34,11 +41,11 @@ export const PREDEFINED_MEAL_SLOTS: MealSlotDefinition[] = [
     order: 1,
   },
   {
-    id: "mid_morning_meal",
-    name: "Mid-Morning Meal",
+    id: "morning_meal",
+    name: "Morning Meal",
     subtitle: "Morning meal",
     description: "Hearty pre-lunch morning meal designed for early workers and students.",
-    defaultTimeRange: "10:30 AM – 11:30 AM",
+    defaultTimeRange: "",
     startHour: 10,
     startMinute: 30,
     endHour: 11,
@@ -46,64 +53,52 @@ export const PREDEFINED_MEAL_SLOTS: MealSlotDefinition[] = [
     order: 2,
   },
   {
-    id: "mid_morning_snack",
-    name: "Mid-Morning Snack",
-    subtitle: "Morning Nasta",
-    description: "Light mid-morning refreshments and healthy energy boosters.",
-    defaultTimeRange: "11:30 AM – 12:30 PM",
-    startHour: 11,
-    startMinute: 30,
-    endHour: 12,
-    endMinute: 30,
-    order: 3,
-  },
-  {
     id: "lunch",
     name: "Lunch",
     subtitle: "Afternoon meal",
     description: "Complete nutritious afternoon meal thali, mains, and freshly prepared sides.",
-    defaultTimeRange: "12:30 PM – 2:30 PM",
+    defaultTimeRange: "",
     startHour: 12,
     startMinute: 30,
     endHour: 14,
     endMinute: 30,
-    order: 4,
+    order: 3,
   },
   {
     id: "evening_snack",
     name: "Evening Snack",
     subtitle: "Evening snacks",
     description: "Warm evening refreshments, savory chai accompaniments, and snacks.",
-    defaultTimeRange: "4:30 PM – 6:30 PM",
+    defaultTimeRange: "",
     startHour: 16,
     startMinute: 30,
     endHour: 18,
     endMinute: 30,
-    order: 5,
+    order: 4,
   },
   {
     id: "dinner",
     name: "Dinner",
     subtitle: "Night meal",
     description: "Freshly prepared wholesome evening dinner thali and comfort meals.",
-    defaultTimeRange: "7:30 PM – 10:00 PM",
+    defaultTimeRange: "",
     startHour: 19,
     startMinute: 30,
     endHour: 22,
     endMinute: 0,
-    order: 6,
+    order: 5,
   },
   {
     id: "late_night_snack",
     name: "Late-Night Snack",
     subtitle: "Late-night snacks",
     description: "Convenient late-night bites and comfort food for night owls.",
-    defaultTimeRange: "10:30 PM – 12:30 AM",
+    defaultTimeRange: "",
     startHour: 22,
     startMinute: 30,
-    endHour: 24, // 00:30 next day
+    endHour: 24,
     endMinute: 30,
-    order: 7,
+    order: 6,
   },
 ];
 
@@ -114,8 +109,8 @@ export const MEAL_SLOTS_MAP = new Map<string, MealSlotDefinition>(
 );
 
 /**
- * Normalizes any legacy string (e.g. "Breakfast: 7:30 AM – 9:30 AM", "Lunch", "Evening Snacks")
- * into one of the 7 canonical slot IDs. Returns null if unrecognizable.
+ * Normalizes any legacy string (e.g. "Breakfast", "Mid-Morning Meal", "Mid-Morning Snack")
+ * into one of the 6 canonical slot IDs. Returns null if unrecognizable.
  */
 export function normalizeMealSlotId(raw: string | undefined | null): string | null {
   if (!raw || typeof raw !== "string") return null;
@@ -124,10 +119,10 @@ export function normalizeMealSlotId(raw: string | undefined | null): string | nu
   // Direct match
   if (MEAL_SLOTS_MAP.has(cleaned)) return cleaned;
 
-  // Fuzzy mapping for legacy timings
+  // Compatibility & aliases
+  if (cleaned === "mid_morning_meal" || cleaned === "morning_meal") return "morning_meal";
   if (cleaned.includes("breakfast") || cleaned.includes("nasta")) return "breakfast";
-  if (cleaned.includes("mid_morning_meal") || cleaned.includes("morning_meal")) return "mid_morning_meal";
-  if (cleaned.includes("mid_morning_snack") || cleaned.includes("morning_nasta") || cleaned.includes("morning_snack")) return "mid_morning_snack";
+  if (cleaned.includes("mid_morning") || cleaned.includes("morning_meal") || cleaned.includes("morning_snack")) return "morning_meal";
   if (cleaned.includes("lunch") || cleaned.includes("afternoon")) return "lunch";
   if (cleaned.includes("evening") || cleaned.includes("tea_snack") || cleaned.includes("evening_snack")) return "evening_snack";
   if (cleaned.includes("dinner") || cleaned.includes("night_meal")) return "dinner";

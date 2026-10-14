@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ChevronLeft,
@@ -14,8 +15,8 @@ import {
   CheckCircle2,
   Bell,
 } from "lucide-react";
-import { saveMealPlan } from "@/lib/meal-subscriptions";
-import { PREDEFINED_MEAL_SLOTS } from "@/lib/meal-slots";
+import { saveMealPlan, fetchMealSlots } from "@/lib/meal-subscriptions";
+import { PREDEFINED_MEAL_SLOTS, MealSlotDefinition } from "@/lib/meal-slots";
 import styles from "./ResSellerSubPlan.module.css";
 
 export interface MealTimingSlot {
@@ -39,13 +40,6 @@ export interface ResSellerSubPlanProps {
 
 const DEFAULT_FEATURES: string[] = [];
 
-const DEFAULT_MEAL_TIMINGS: MealTimingSlot[] = [
-  { id: "1", name: "Breakfast", time: "7:30 AM - 9:30 AM" },
-  { id: "2", name: "Lunch", time: "12:30 PM - 1:30 PM" },
-  { id: "3", name: "Evening Snacks", time: "5:30 PM - 6:30 PM" },
-  { id: "4", name: "Dinner", time: "8:30 PM - 9:30 PM" },
-];
-
 const DURATION_OPTIONS = [
   "1 Week",
   "2 Weeks",
@@ -58,7 +52,6 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
   initialPrice = "",
   initialFeatures = DEFAULT_FEATURES,
   initialDuration = "1 Week",
-  initialMealTimings = DEFAULT_MEAL_TIMINGS,
   initialAllowPauseBilling = true,
   onBack,
   onDeployPlan,
@@ -73,13 +66,20 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
   const [features, setFeatures] = useState<string[]>(initialFeatures);
   const [duration, setDuration] = useState(initialDuration);
   const [isDurationMenuOpen, setIsDurationMenuOpen] = useState(false);
-  const [selectedSlotIds, setSelectedSlotIds] = useState<string[]>([
-    "breakfast",
-    "lunch",
-    "dinner",
-  ]);
+  const [slotsWithTimings, setSlotsWithTimings] = useState<MealSlotDefinition[]>(PREDEFINED_MEAL_SLOTS);
+  const [selectedSlotIds, setSelectedSlotIds] = useState<string[]>([]);
   const [allowPauseBilling, setAllowPauseBilling] = useState(initialAllowPauseBilling);
   const [pauseBillingPeriod, setPauseBillingPeriod] = useState("30 Days");
+
+  useEffect(() => {
+    fetchMealSlots()
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setSlotsWithTimings(data);
+        }
+      })
+      .catch((err) => console.error("Error fetching meal slots on mobile:", err));
+  }, []);
 
   const handleToggleSlot = (slotId: string) => {
     setSelectedSlotIds((prev) =>
@@ -116,21 +116,6 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
     setFeatures((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleOpenEditTiming = (timing: MealTimingSlot) => {
-    setEditingTiming(timing);
-    setTimingTimeValue(timing.time);
-  };
-
-  const handleSaveTiming = () => {
-    if (!editingTiming) return;
-    setMealTimings((prev) =>
-      prev.map((t) =>
-        t.id === editingTiming.id ? { ...t, time: timingTimeValue.trim() || t.time } : t
-      )
-    );
-    setEditingTiming(null);
-  };
-
   const handleDiscard = () => {
     if (onDiscard) {
       onDiscard();
@@ -150,9 +135,21 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
       return;
     }
 
+    // Check if any selected slot is missing delivery timings
+    const missingTimingSlots = selectedSlotIds
+      .map((id) => slotsWithTimings.find((s) => s.id === id) || PREDEFINED_MEAL_SLOTS.find((s) => s.id === id))
+      .filter((s) => !s || !s.defaultTimeRange || s.defaultTimeRange.trim() === "");
+
+    if (missingTimingSlots.length > 0) {
+      const names = missingTimingSlots.map((s) => s?.name || "Slot").join(", ");
+      alert(`Delivery timing is not added for: ${names}. You need to add timings first in Manage Meal Subscription Timings before creating a meal subscription.`);
+      router.push("/seller/subscription/timings");
+      return;
+    }
+
     const validFeatures = features.map((f) => f.trim()).filter((f) => f.length > 0);
     const isWeekly = duration.toLowerCase().includes("week");
-    const selectedSlots = PREDEFINED_MEAL_SLOTS.filter((s) => selectedSlotIds.includes(s.id));
+    const selectedSlots = slotsWithTimings.filter((s) => selectedSlotIds.includes(s.id));
     const payload = {
       name: planName.trim() || "Bronze Plan",
       tier: planTier.trim() || "Bronze",
@@ -171,15 +168,19 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
       status: "Live" as const,
     };
 
-    await saveMealPlan(payload);
+    try {
+      await saveMealPlan(payload);
 
-    if (onDeployPlan) {
-      onDeployPlan(payload);
-    } else {
-      setToastMessage("Plan Created & Deployed Successfully!");
-      setTimeout(() => {
-        router.push("/seller/subscription");
-      }, 900);
+      if (onDeployPlan) {
+        onDeployPlan(payload);
+      } else {
+        setToastMessage("Plan Created & Deployed Successfully!");
+        setTimeout(() => {
+          router.push("/seller/subscription");
+        }, 900);
+      }
+    } catch (err: any) {
+      alert(err.message || "Failed to create subscription plan.");
     }
   };
 
@@ -419,7 +420,7 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
                   borderRadius: "6px",
                 }}
               >
-                {selectedSlotIds.length} of 7 Selected
+                {selectedSlotIds.length} of {slotsWithTimings.length} Selected
               </span>
             </div>
             <p style={{ fontSize: "11.5px", color: "#64748B", margin: "0 0 10px 0" }}>
@@ -427,8 +428,9 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
             </p>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              {PREDEFINED_MEAL_SLOTS.map((slot) => {
+              {slotsWithTimings.map((slot) => {
                 const isSelected = selectedSlotIds.includes(slot.id);
+                const hasTiming = Boolean(slot.defaultTimeRange && slot.defaultTimeRange.trim().length > 0);
                 return (
                   <div
                     key={slot.id}
@@ -439,7 +441,9 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
                       justifyContent: "space-between",
                       padding: "10px 12px",
                       borderRadius: "8px",
-                      border: isSelected ? "1.5px solid #EA580C" : "1px solid #E2E8F0",
+                      border: isSelected
+                        ? (hasTiming ? "1.5px solid #EA580C" : "1.5px solid #F59E0B")
+                        : "1px solid #E2E8F0",
                       backgroundColor: isSelected ? "#FFFDFB" : "#FFFFFF",
                       cursor: "pointer",
                     }}
@@ -460,19 +464,50 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
                         </div>
                       </div>
                     </div>
-                    <span
-                      style={{
-                        fontSize: "11px",
-                        fontWeight: 600,
-                        color: isSelected ? "#C2410C" : "#64748B",
-                        backgroundColor: isSelected ? "#FFEDD5" : "#F1F5F9",
-                        padding: "2px 8px",
-                        borderRadius: "5px",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {slot.defaultTimeRange}
-                    </span>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      {hasTiming ? (
+                        <span
+                          style={{
+                            fontSize: "11px",
+                            fontWeight: 600,
+                            color: isSelected ? "#C2410C" : "#64748B",
+                            backgroundColor: isSelected ? "#FFEDD5" : "#F1F5F9",
+                            padding: "2px 8px",
+                            borderRadius: "5px",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {slot.defaultTimeRange}
+                        </span>
+                      ) : (
+                        <span
+                          style={{
+                            fontSize: "10.5px",
+                            fontWeight: 700,
+                            color: "#D97706",
+                            backgroundColor: "#FEF3C7",
+                            padding: "2px 6px",
+                            borderRadius: "5px",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          ⚠️ No Timing
+                        </span>
+                      )}
+                      <Link
+                        href="/seller/subscription/timings"
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          fontSize: "10.5px",
+                          fontWeight: 600,
+                          color: "#2563EB",
+                          textDecoration: "underline",
+                        }}
+                      >
+                        {hasTiming ? "Edit" : "Add"}
+                      </Link>
+                    </div>
                   </div>
                 );
               })}
