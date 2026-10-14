@@ -355,7 +355,7 @@
 .cardTopMeta {
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: space-between;
   margin-bottom: 2px;
 }
 
@@ -364,8 +364,14 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.3px;
-  padding: 1.5px 6px;
+  padding: 2px 7px;
   border-radius: 4px;
+  min-width: 76px;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }
 
 .severityCritical {
