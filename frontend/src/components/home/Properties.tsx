@@ -1015,7 +1015,7 @@ export default function Properties({
                   className="place-card-skeleton"
                 >
                   <div
-                    className="skeleton-pulse"
+                    className="skeleton-pulse place-card-skeleton-image"
                     style={{
                       width: "100%",
                       height: "155px",
@@ -1030,6 +1030,7 @@ export default function Properties({
                       flex: 1,
                       justifyContent: "space-between",
                     }}
+                    className="place-card-content"
                   >
                     <div>
                       <div className="skeleton-pulse" style={{ width: "70%", height: "18px", borderRadius: "6px", marginBottom: "6px" }} />
@@ -1125,14 +1126,15 @@ export default function Properties({
                 >
                   {/* Card Food Image */}
                   <div
+                    className="place-card-image-box"
                     style={{
                       width: "100%",
                       height: "155px",
-                    position: "relative",
-                    overflow: "hidden",
-                    backgroundColor: "#F8FAFC",
-                  }}
-                >
+                      position: "relative",
+                      overflow: "hidden",
+                      backgroundColor: "#F8FAFC",
+                    }}
+                  >
                   <Image
                     src={place.imageUrl || "/images/places/place-pizza.png"}
                     alt={place.name}
@@ -1184,6 +1186,7 @@ export default function Properties({
 
                 {/* Card Content Footer */}
                 <div
+                  className="place-card-content"
                   style={{
                     padding: "12px 14px",
                     display: "flex",
@@ -1329,11 +1332,29 @@ export default function Properties({
         @media (max-width: 768px) {
           .PlacesGrid {
             grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 16px !important;
+          }
+          .place-card,
+          .place-card-skeleton {
+            height: auto !important;
+          }
+          .place-card-image-box,
+          .place-card-skeleton-image {
+            height: 180px !important;
           }
         }
-        @media (max-width: 480px) {
+        @media (max-width: 540px) {
           .PlacesGrid {
             grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+            gap: 16px !important;
+          }
+          .place-card,
+          .place-card-skeleton {
+            height: auto !important;
+          }
+          .place-card-image-box,
+          .place-card-skeleton-image {
+            height: 195px !important;
           }
         }
       `}</style>
