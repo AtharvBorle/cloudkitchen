@@ -29,7 +29,7 @@ import {
   MealSubscriber,
   MealPlanMetrics,
 } from "@/lib/meal-subscriptions";
-import { Trash2, Power, Eye, EyeOff } from "lucide-react";
+import { Trash2, Power, Eye, EyeOff, Pause } from "lucide-react";
 import PaginationControls from "../common/PaginationControls";
 
 export function formatDeliveryAddressDisplay(rawAddress?: string, roomNo?: string): string {
@@ -139,6 +139,39 @@ export default function ManageSubscriptionCanvas({
     }
   };
 
+  const handleTogglePlanPause = async (id: string) => {
+    const target = plans.find((p) => p.id === id || p.planId === id);
+    if (!target) return;
+    const currentlyAllowsPause = isPlanPaused(target);
+    const nextAllowPause = !currentlyAllowsPause;
+
+    setProcessingPlanId(target.id);
+    try {
+      const result = await updateMealPlan(target.id, {
+        allowPause: nextAllowPause,
+        allowPauseBilling: nextAllowPause,
+        pauseBillingPeriod: nextAllowPause
+          ? (target.pauseBillingPeriod && !["none", "disabled", "false"].includes(target.pauseBillingPeriod.toLowerCase())
+              ? target.pauseBillingPeriod
+              : "30 Days")
+          : "None",
+      });
+      if (result) {
+        showToast(
+          nextAllowPause
+            ? `Pause subscription enabled for '${target.name}'. Users can now pause their subscription.`
+            : `Pause subscription disabled for '${target.name}'.`,
+          "success"
+        );
+      } else {
+        showToast("Failed to update pause setting", "error");
+      }
+      await refreshData();
+    } finally {
+      setProcessingPlanId(null);
+    }
+  };
+
   const handleDeletePlan = async (id: string) => {
     const target = plans.find((p) => p.id === id || p.planId === id);
     if (!target) return;
@@ -183,7 +216,15 @@ export default function ManageSubscriptionCanvas({
 
   const isPlanPaused = (plan: PlanItem) => {
     const s = String(plan.status || "").toLowerCase().trim();
-    return s === "paused";
+    if (s === "paused") return true;
+    const pausePeriod = String(plan.pauseBillingPeriod || "").toLowerCase().trim();
+    const hasPausePeriod = Boolean(
+      pausePeriod &&
+      pausePeriod !== "none" &&
+      pausePeriod !== "disabled" &&
+      pausePeriod !== "false"
+    );
+    return Boolean(plan.allowPause || plan.allowPauseBilling || hasPausePeriod);
   };
 
   const isPlanInactive = (plan: PlanItem) => {
@@ -773,20 +814,43 @@ export default function ManageSubscriptionCanvas({
                   marginBottom: "14px",
                 }}
               >
-                <span
-                  style={{
-                    backgroundColor: plan.tierBg,
-                    color: plan.tierColor,
-                    fontSize: "11px",
-                    fontWeight: 700,
-                    padding: "4px 9px",
-                    borderRadius: "6px",
-                    letterSpacing: "0.5px",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  {plan.tier}
-                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span
+                    style={{
+                      backgroundColor: plan.tierBg,
+                      color: plan.tierColor,
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      padding: "4px 9px",
+                      borderRadius: "6px",
+                      letterSpacing: "0.5px",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {plan.tier}
+                  </span>
+
+                  {isPlanPaused(plan) && (
+                    <span
+                      style={{
+                        backgroundColor: "#FEF3C7",
+                        color: "#92400E",
+                        border: "1px solid #FDE68A",
+                        fontSize: "11px",
+                        fontWeight: 700,
+                        padding: "3px 8px",
+                        borderRadius: "6px",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                      }}
+                      title="User subscription pausing is allowed for this plan"
+                    >
+                      <Pause size={10} strokeWidth={2.6} />
+                      <span>Pause Allowed</span>
+                    </span>
+                  )}
+                </div>
 
                 <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                   <span
@@ -1000,6 +1064,35 @@ export default function ManageSubscriptionCanvas({
                   <Edit2 size={13} strokeWidth={2.4} />
                   <span>Edit Plan</span>
                 </Link>
+
+                {/* Dynamic Pause Subscription Toggle Button */}
+                <button
+                  type="button"
+                  disabled={processingPlanId === plan.id}
+                  onClick={() => handleTogglePlanPause(plan.id)}
+                  title={
+                    isPlanPaused(plan)
+                      ? "Click to disable subscription pausing for this plan"
+                      : "Click to allow customers to pause their subscription under this plan"
+                  }
+                  style={{
+                    backgroundColor: isPlanPaused(plan) ? "#FFFBEB" : "#F8FAFC",
+                    color: isPlanPaused(plan) ? "#B45309" : "#64748B",
+                    border: `1px solid ${isPlanPaused(plan) ? "#FDE68A" : "#CBD5E1"}`,
+                    padding: "9px 12px",
+                    borderRadius: "7px",
+                    fontSize: "12.5px",
+                    fontWeight: 700,
+                    cursor: processingPlanId === plan.id ? "not-allowed" : "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "5px",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  <Pause size={13} />
+                  <span>{isPlanPaused(plan) ? "Pause: On" : "Pause: Off"}</span>
+                </button>
 
                 {/* Activate / Inactivate Toggle Button */}
                 <button

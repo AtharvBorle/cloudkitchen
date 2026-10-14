@@ -62,6 +62,13 @@ export default function ResponsiveSellerSubscriptionPage() {
       });
       const effectiveSubscribersCount = activeUserKeys.size > 0 ? Math.max(activeUserKeys.size, p.subscribersCount || 0) : (p.subscribersCount || 0);
 
+      const isPauseAllowed = Boolean(
+        p.allowPause ||
+        p.allowPauseBilling ||
+        (p.pauseBillingPeriod &&
+          !["none", "disabled", "false"].includes(String(p.pauseBillingPeriod).trim().toLowerCase()))
+      );
+
       return {
         id: p.id,
         title: p.name || p.title || "Meal Plan",
@@ -70,6 +77,7 @@ export default function ResponsiveSellerSubscriptionPage() {
         price: formattedPrice,
         subscribersCount: effectiveSubscribersCount,
         status,
+        allowPause: isPauseAllowed,
         createdAt: formattedDate,
         billingCycle: p.duration?.toLowerCase().includes("month") ? "Monthly" : "Weekly",
         mealsPerDay: p.mealTimings && p.mealTimings.length > 0 ? p.mealTimings.length : 1,

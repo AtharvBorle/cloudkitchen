@@ -41,6 +41,7 @@ export interface ResponsiveSubscriptionPlan {
   mealsPerDay?: number;
   description?: string;
   mealTypes?: string[];
+  allowPause?: boolean;
 }
 
 export interface ResponsiveSellerSubscriptionProps {
@@ -226,6 +227,8 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
             if (planStatus !== "active" && planStatus !== "live") return false;
           } else if (targetStatus === "inactive") {
             if (planStatus !== "inactive" && planStatus !== "draft") return false;
+          } else if (targetStatus === "paused") {
+            if (planStatus !== "paused" && !plan.allowPause) return false;
           } else if (planStatus !== targetStatus) {
             return false;
           }
@@ -668,6 +671,11 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
                       <span className={`${styles.statusBadge} ${statusClass}`}>
                         {plan.status}
                       </span>
+                      {plan.allowPause && (
+                        <span className={`${styles.statusBadge} ${styles.statusPaused}`}>
+                          Pause Allowed
+                        </span>
+                      )}
                       <span className={styles.createdDateText}>
                         Created: {plan.createdAt}
                       </span>
