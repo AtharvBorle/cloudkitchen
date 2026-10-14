@@ -10,6 +10,7 @@ import {
   PlacePredictionItem,
   NormalizedAddressDetails,
 } from "@/lib/google-maps";
+import { getSafeCurrentPosition } from "@/lib/safe-geolocation";
 import styles from "./SellerMapPicker.module.css";
 
 export interface AddressDetails {
@@ -328,7 +329,7 @@ export const SellerMapPicker: React.FC<SellerMapPickerProps> = ({
     setIsLocating(true);
     setSearchError(null);
 
-    navigator.geolocation.getCurrentPosition(
+    getSafeCurrentPosition(
       (pos) => {
         if (!isMountedRef.current) return;
         setIsLocating(false);
@@ -357,7 +358,7 @@ export const SellerMapPicker: React.FC<SellerMapPickerProps> = ({
         console.warn("GPS Geolocation notice:", err);
         setSearchError("GPS access requires location permissions. You can also search an address or click directly on the map.");
       },
-      { enableHighAccuracy: true, timeout: 8000 }
+      { enableHighAccuracy: true, timeout: 5000 }
     );
   };
 

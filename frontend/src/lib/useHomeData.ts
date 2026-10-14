@@ -353,6 +353,15 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           return "🍽️";
         };
 
+        // Check if room module is enabled from backend response or localStorage
+        const isRoomEnabledSetting = Boolean(
+          exploreRes?.isRoomEnabled ??
+          exploreRes?.data?.isRoomEnabled ??
+          categoriesRes?.isRoomEnabled ??
+          categoriesRes?.data?.isRoomEnabled ??
+          (typeof window !== "undefined" ? localStorage.getItem("ENABLE_ROOM_MODULE") === "true" : false)
+        );
+
         // 1. Process Categories (Deduplicated)
         const categoryMap = new Map<string, DynamicCategory>();
         categoryMap.set("food", {
@@ -393,8 +402,11 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
             return;
           }
 
-          // Special case: Rooms
-          if (lower === "rooms" || lower === "room") {
+          // Special case: Rooms (only process if room module is enabled)
+          if (lower === "rooms" || lower === "room" || cleanKey === "rooms" || cleanKey === "room" || cleanKey === "rentproperty" || cleanKey === "property") {
+            if (!isRoomEnabledSetting) {
+              return;
+            }
             const existingRooms = categoryMap.get("rooms");
             categoryMap.set("rooms", {
               id: fc.id || existingRooms?.id || "rooms",
@@ -448,15 +460,23 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           categoriesRes.forEach(processCatEntry);
         }
 
-        // Add rooms if not present
-        if (!categoryMap.has("rooms")) {
-          categoryMap.set("rooms", {
-            id: "rooms",
-            name: "Rooms",
-            image: "/images/categories/cat-rooms.png",
-            emoji: "🛏️",
-            route: "/room-booking",
-          });
+        // Add rooms if not present ONLY if enabled
+        if (isRoomEnabledSetting) {
+          if (!categoryMap.has("rooms")) {
+            categoryMap.set("rooms", {
+              id: "rooms",
+              name: "Rooms",
+              image: "/images/categories/cat-rooms.png",
+              emoji: "🛏️",
+              route: "/room-booking",
+            });
+          }
+        } else {
+          categoryMap.delete("rooms");
+          categoryMap.delete("room");
+          categoryMap.delete("rentproperty");
+          categoryMap.delete("property");
+          categoryMap.delete("rent property");
         }
 
         const dbCategories: DynamicCategory[] = Array.from(categoryMap.values());
@@ -598,7 +618,7 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
             });
           });
         }
-        setRooms(rawRooms);
+        setRooms(isRoomEnabledSetting ? rawRooms : []);
 
         // 4. Process Coupons
         const rawCoupons: DynamicCoupon[] = [];

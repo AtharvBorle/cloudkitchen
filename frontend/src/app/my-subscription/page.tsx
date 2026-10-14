@@ -14,6 +14,7 @@ import { DeliveryTimes, DeliverySlot } from "@/components/my-subscription/delive
 import { SubscriptionBenefits } from "@/components/my-subscription/subscription-benefits";
 import { Footer } from "@/components/explore-desktop/footer";
 import { useLocation } from "@/components/location-provider";
+import { getSafeCurrentPosition } from "@/lib/safe-geolocation";
 import {
   fetchUserMealSubscriptions,
   togglePauseUserSubscription,
@@ -529,15 +530,10 @@ function MySubscriptionContent() {
 
   // Handle GPS Location Detection with Nominatim Reverse Geocoding
   const handleDetectGpsLocation = () => {
-    if (!navigator.geolocation) {
-      setSubErrorMsg("Geolocation is not supported by your browser.");
-      return;
-    }
-
     setIsDetectingGps(true);
     setSubErrorMsg(null);
 
-    navigator.geolocation.getCurrentPosition(
+    getSafeCurrentPosition(
       async (position) => {
         try {
           const { latitude, longitude } = position.coords;
@@ -575,7 +571,7 @@ function MySubscriptionContent() {
         setDeliveryAddressInput(fallback);
         setIsChangingAddress(false);
       },
-      { timeout: 8000, enableHighAccuracy: true }
+      { timeout: 5000, enableHighAccuracy: true }
     );
   };
 

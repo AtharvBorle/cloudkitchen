@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { getCategoryExpiries } from "@/lib/subscription";
-import { emitMealPlanUpdated } from "@/lib/realtime-events";
+import { emitMealPlanUpdated, emitMealSubscriptionUpdated } from "@/lib/realtime-events";
 
 export const getAuthenticatedSellerProfile = async () => {
     const session = await getAuthSession();
