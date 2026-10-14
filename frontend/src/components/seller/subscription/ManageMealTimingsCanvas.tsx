@@ -142,7 +142,7 @@ export default function ManageMealTimingsCanvas() {
                   Centralized Meal Timings Management
                 </h1>
                 <p style={{ fontSize: "14px", color: "#64748B", margin: 0 }}>
-                  Standardized 7 platform meal slots used across all plans, deliveries, and pause cycles.
+                  Standardized 6 platform meal slots used across all plans, deliveries, and pause cycles.
                 </p>
               </div>
 
@@ -188,12 +188,12 @@ export default function ManageMealTimingsCanvas() {
                 Platform-Wide Standardization Active
               </div>
               <p style={{ margin: 0, fontSize: "13px", color: "#1E3A8A", lineHeight: 1.5 }}>
-                To maintain operational reliability and coordinate delivery drivers efficiently, these <strong>7 distinct meal occasions</strong> are centrally defined and consistent across all kitchens and subscribers. Sellers cannot create custom timing categories, ensuring customer subscriptions, delivery windows, and pause cycles align accurately.
+                To maintain operational reliability and coordinate delivery drivers efficiently, these <strong>6 distinct meal occasions</strong> are centrally defined and consistent across all kitchens and subscribers. Sellers cannot create custom timing categories, ensuring customer subscriptions, delivery windows, and pause cycles align accurately.
               </p>
             </div>
           </div>
 
-          {/* 7 Predefined Slots Grid */}
+          {/* 6 Predefined Slots Grid */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: "20px" }}>
             {slots.map((slot, index) => {
               const isEditing = editingSlotId === slot.id;
@@ -324,15 +324,21 @@ export default function ManageMealTimingsCanvas() {
                     ) : (
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "7px", fontSize: "13.5px", fontWeight: 700, color: "#0F172A" }}>
-                          <Clock size={16} color="#EA580C" />
-                          <span>{slot.defaultTimeRange}</span>
+                          <Clock size={16} color={slot.defaultTimeRange && slot.defaultTimeRange.trim() ? "#EA580C" : "#94A3B8"} />
+                          {slot.defaultTimeRange && slot.defaultTimeRange.trim() ? (
+                            <span>{slot.defaultTimeRange}</span>
+                          ) : (
+                            <span style={{ color: "#D97706", fontWeight: 600, fontSize: "13px" }}>
+                              ⚠️ No timing configured
+                            </span>
+                          )}
                         </div>
                         <button
                           type="button"
                           onClick={() => handleStartEdit(slot)}
                           style={{
-                            background: "none",
-                            border: "none",
+                            background: slot.defaultTimeRange && slot.defaultTimeRange.trim() ? "none" : "#FFF7ED",
+                            border: slot.defaultTimeRange && slot.defaultTimeRange.trim() ? "none" : "1px solid #FFEDD5",
                             color: "#EA580C",
                             fontSize: "12.5px",
                             fontWeight: 600,
@@ -345,7 +351,7 @@ export default function ManageMealTimingsCanvas() {
                           }}
                         >
                           <Pencil size={13} />
-                          <span>Edit</span>
+                          <span>{slot.defaultTimeRange && slot.defaultTimeRange.trim() ? "Edit" : "Add Timing"}</span>
                         </button>
                       </div>
                     )}

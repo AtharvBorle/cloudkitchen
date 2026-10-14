@@ -452,6 +452,39 @@ export const createSellerMealPlan = async (req: Request) => {
         throw new ApiError("Please select at least one meal slot for this subscription plan.", 400);
     }
 
+    // Verify that every selected meal slot has delivery timings configured
+    const slotSetting = await db.systemSettings.findUnique({
+        where: { key: "MEAL_SUBSCRIPTION_SLOTS" },
+    });
+    let customTimes: Record<string, string> = {};
+    if (slotSetting?.value) {
+        try { customTimes = JSON.parse(slotSetting.value); } catch {}
+    }
+
+    const dbSlots = await db.mealSlot.findMany({
+        where: { id: { in: normalizedSlotIds } },
+    });
+
+    const missingSlots: string[] = [];
+    for (const slotId of normalizedSlotIds) {
+        const slotRecord = dbSlots.find((s) => s.id === slotId);
+        const configuredTime = (customTimes[slotId] || slotRecord?.defaultTimeRange || "").trim();
+        const inlineTimingMatch = Array.isArray(body.mealTimings)
+            ? body.mealTimings.find((t: string) => typeof t === "string" && normalizeMealSlotId(t) === slotId && t.includes(":"))
+            : null;
+        const inlineTime = inlineTimingMatch ? inlineTimingMatch.split(":").slice(1).join(":").trim() : "";
+        if (!configuredTime && !inlineTime) {
+            missingSlots.push(slotRecord?.name || getMealSlotDetails(slotId).name);
+        }
+    }
+
+    if (missingSlots.length > 0) {
+        throw new ApiError(
+            `Delivery timing is not configured for: ${missingSlots.join(", ")}. Please configure delivery timings in Manage Meal Subscription Timings first before creating this plan.`,
+            400
+        );
+    }
+
     const newPlan = await db.sellerMealPlan.create({
         data: {
             sellerId: sellerProfile.id,
@@ -577,6 +610,36 @@ export const updateSellerMealPlan = async (req: Request) => {
         if (normalizedSlotIds.length === 0) {
             throw new ApiError("Please select at least one meal slot for this subscription plan.", 400);
         }
+
+        const slotSetting = await db.systemSettings.findUnique({
+            where: { key: "MEAL_SUBSCRIPTION_SLOTS" },
+        });
+        let customTimes: Record<string, string> = {};
+        if (slotSetting?.value) {
+            try { customTimes = JSON.parse(slotSetting.value); } catch {}
+        }
+        const dbSlots = await db.mealSlot.findMany({
+            where: { id: { in: normalizedSlotIds } },
+        });
+        const missingSlots: string[] = [];
+        for (const slotId of normalizedSlotIds) {
+            const slotRecord = dbSlots.find((s) => s.id === slotId);
+            const configuredTime = (customTimes[slotId] || slotRecord?.defaultTimeRange || "").trim();
+            const inlineTimingMatch = Array.isArray(body.mealTimings)
+                ? body.mealTimings.find((t: string) => typeof t === "string" && normalizeMealSlotId(t) === slotId && t.includes(":"))
+                : null;
+            const inlineTime = inlineTimingMatch ? inlineTimingMatch.split(":").slice(1).join(":").trim() : "";
+            if (!configuredTime && !inlineTime) {
+                missingSlots.push(slotRecord?.name || getMealSlotDetails(slotId).name);
+            }
+        }
+        if (missingSlots.length > 0) {
+            throw new ApiError(
+                `Delivery timing is not configured for: ${missingSlots.join(", ")}. Please configure delivery timings in Manage Meal Subscription Timings first before saving this plan.`,
+                400
+            );
+        }
+
         updateData.mealTimings = JSON.stringify(normalizedSlotIds);
         await db.sellerMealPlanSlot.deleteMany({ where: { planId: existingPlan.id } });
         await db.sellerMealPlanSlot.createMany({

@@ -20,9 +20,11 @@ import {
   getStoredMealPlans,
   updateMealPlan,
   deleteMealPlan,
+  fetchMealSlots,
   MealSubscriptionPlan,
 } from "@/lib/meal-subscriptions";
-import { PREDEFINED_MEAL_SLOTS, normalizeMealSlotIds } from "@/lib/meal-slots";
+import { PREDEFINED_MEAL_SLOTS, MealSlotDefinition, normalizeMealSlotIds } from "@/lib/meal-slots";
+import Link from "next/link";
 import styles from "./ResSellerSubEdit.module.css";
 
 export interface MealServingTiming {
@@ -112,15 +114,21 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
   const [features, setFeatures] = useState<string[]>(initialFeatures);
   const [duration, setDuration] = useState(initialDuration);
   const [isDurationMenuOpen, setIsDurationMenuOpen] = useState(false);
-  const [mealTimings, setMealTimings] = useState<MealServingTiming[]>(initialMealTimings);
-  const [selectedSlotIds, setSelectedSlotIds] = useState<string[]>([
-    "breakfast",
-    "lunch",
-    "dinner",
-  ]);
+  const [slotsWithTimings, setSlotsWithTimings] = useState<MealSlotDefinition[]>(PREDEFINED_MEAL_SLOTS);
+  const [selectedSlotIds, setSelectedSlotIds] = useState<string[]>([]);
   const [allowPauseBilling, setAllowPauseBilling] = useState(initialAllowPauseBilling);
   const [pauseBillingPeriod, setPauseBillingPeriod] = useState("30 Days");
   const [metadata, setMetadata] = useState<PlanMetadataData>(initialMetadata);
+
+  useEffect(() => {
+    fetchMealSlots()
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setSlotsWithTimings(data);
+        }
+      })
+      .catch((err) => console.error("Error fetching meal slots in mobile edit:", err));
+  }, []);
 
   const handleToggleSlot = (slotId: string) => {
     setSelectedSlotIds((prev) =>
@@ -227,25 +235,6 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
     setFeatures((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleOpenEditTiming = (timing: MealServingTiming) => {
-    setEditingTiming(timing);
-    setTimingTimeValue(timing.time);
-  };
-
-  const handleDeleteTiming = (timingId: string) => {
-    setMealTimings((prev) => prev.filter((t) => t.id !== timingId));
-  };
-
-  const handleSaveTiming = () => {
-    if (!editingTiming) return;
-    setMealTimings((prev) =>
-      prev.map((t) =>
-        t.id === editingTiming.id ? { ...t, time: timingTimeValue.trim() || t.time } : t
-      )
-    );
-    setEditingTiming(null);
-  };
-
   const handleSave = async () => {
     const numPrice = parseFloat(price.replace(/[^\d.]/g, ""));
     if (isNaN(numPrice) || numPrice <= 0) {
@@ -260,26 +249,44 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
       return;
     }
 
+    // Check if any selected slot is missing delivery timings
+    const missingTimingSlots = selectedSlotIds
+      .map((id) => slotsWithTimings.find((s) => s.id === id) || PREDEFINED_MEAL_SLOTS.find((s) => s.id === id))
+      .filter((s) => !s || !s.defaultTimeRange || s.defaultTimeRange.trim() === "");
+
+    if (missingTimingSlots.length > 0) {
+      const names = missingTimingSlots.map((s) => s?.name || "Slot").join(", ");
+      alert(`Delivery timing is not added for: ${names}. You need to add timings first in Manage Meal Subscription Timings before saving this plan.`);
+      router.push("/seller/subscription/timings");
+      return;
+    }
+
     const validFeatures = features.map((f) => f.trim()).filter((f) => f.length > 0);
     const isWeekly = duration.toLowerCase().includes("week");
-    const selectedSlots = PREDEFINED_MEAL_SLOTS.filter((s) => selectedSlotIds.includes(s.id));
+    const selectedSlots = slotsWithTimings.filter((s) => selectedSlotIds.includes(s.id));
     if (targetPlanId) {
-      await updateMealPlan(targetPlanId, {
-        name: planName.trim() || "Bronze Plan",
-        tier: planTier.trim() || "Bronze",
-        weeklyPrice: isWeekly ? `₹${numPrice.toFixed(0)}` : "",
-        monthlyPrice: isWeekly ? "" : `₹${numPrice.toFixed(0)}`,
-        quarterlyPrice: "",
-        yearlyPrice: "",
-        duration,
-        features: validFeatures,
-        mealTimings: selectedSlots.map((m) => `${m.name}: ${m.defaultTimeRange}`),
-        slotIds: selectedSlotIds,
-        allowCancel: false,
-        allowPause: allowPauseBilling,
-        allowPauseBilling: allowPauseBilling,
-        pauseBillingPeriod: allowPauseBilling ? (pauseBillingPeriod || "30 Days") : "None",
-      });
+      try {
+        await updateMealPlan(targetPlanId, {
+          name: planName.trim() || "Bronze Plan",
+          tier: planTier.trim() || "Bronze",
+          weeklyPrice: isWeekly ? `₹${numPrice.toFixed(0)}` : "",
+          monthlyPrice: isWeekly ? "" : `₹${numPrice.toFixed(0)}`,
+          quarterlyPrice: "",
+          yearlyPrice: "",
+          duration,
+          features: validFeatures,
+          mealTimings: selectedSlots.map((m) => `${m.name}: ${m.defaultTimeRange}`),
+          slotIds: selectedSlotIds,
+          allowCancel: false,
+          allowPause: allowPauseBilling,
+          allowPauseBilling: allowPauseBilling,
+          pauseBillingPeriod: allowPauseBilling ? (pauseBillingPeriod || "30 Days") : "None",
+        });
+      } catch (err: any) {
+        setToastMessage(err.message || "Failed to update plan");
+        setTimeout(() => setToastMessage(null), 4000);
+        return;
+      }
     }
 
     const payload = {
@@ -570,16 +577,17 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
                   borderRadius: "6px",
                 }}
               >
-                {selectedSlotIds.length} of 7 Selected
+                {selectedSlotIds.length} of {slotsWithTimings.length} Selected
               </span>
             </div>
             <p style={{ fontSize: "11.5px", color: "#64748B", margin: "0 0 10px 0" }}>
-              Select all standardized slots included in this plan (minimum 1 required).
+              Select all standardized slots included in this plan (minimum 1 required). Delivery timings must be configured before saving.
             </p>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              {PREDEFINED_MEAL_SLOTS.map((slot) => {
+              {slotsWithTimings.map((slot) => {
                 const isSelected = selectedSlotIds.includes(slot.id);
+                const hasTiming = Boolean(slot.defaultTimeRange && slot.defaultTimeRange.trim().length > 0);
                 return (
                   <div
                     key={slot.id}
@@ -590,7 +598,9 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
                       justifyContent: "space-between",
                       padding: "10px 12px",
                       borderRadius: "8px",
-                      border: isSelected ? "1.5px solid #EA580C" : "1px solid #E2E8F0",
+                      border: isSelected
+                        ? (hasTiming ? "1.5px solid #EA580C" : "1.5px solid #F59E0B")
+                        : "1px solid #E2E8F0",
                       backgroundColor: isSelected ? "#FFFDFB" : "#FFFFFF",
                       cursor: "pointer",
                     }}
@@ -611,19 +621,50 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
                         </div>
                       </div>
                     </div>
-                    <span
-                      style={{
-                        fontSize: "11px",
-                        fontWeight: 600,
-                        color: isSelected ? "#C2410C" : "#64748B",
-                        backgroundColor: isSelected ? "#FFEDD5" : "#F1F5F9",
-                        padding: "2px 8px",
-                        borderRadius: "5px",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {slot.defaultTimeRange}
-                    </span>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      {hasTiming ? (
+                        <span
+                          style={{
+                            fontSize: "11px",
+                            fontWeight: 600,
+                            color: isSelected ? "#C2410C" : "#64748B",
+                            backgroundColor: isSelected ? "#FFEDD5" : "#F1F5F9",
+                            padding: "2px 8px",
+                            borderRadius: "5px",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {slot.defaultTimeRange}
+                        </span>
+                      ) : (
+                        <span
+                          style={{
+                            fontSize: "10.5px",
+                            fontWeight: 700,
+                            color: "#D97706",
+                            backgroundColor: "#FEF3C7",
+                            padding: "2px 6px",
+                            borderRadius: "5px",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          ⚠️ No Timing
+                        </span>
+                      )}
+                      <Link
+                        href="/seller/subscription/timings"
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          fontSize: "10.5px",
+                          fontWeight: 600,
+                          color: "#2563EB",
+                          textDecoration: "underline",
+                        }}
+                      >
+                        {hasTiming ? "Edit" : "Add"}
+                      </Link>
+                    </div>
                   </div>
                 );
               })}

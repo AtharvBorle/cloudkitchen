@@ -1,14 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Trash2, Pencil, CheckCircle2 } from 'lucide-react';
 import ConsoleSidebar from '../sidebar/Sidebar';
 import Topbar from '../nav/Topbar';
 import { useSellerProfile } from '@/hooks/useSellerProfile';
-import { saveMealPlan } from '@/lib/meal-subscriptions';
-import { PREDEFINED_MEAL_SLOTS } from '@/lib/meal-slots';
+import { saveMealPlan, fetchMealSlots } from '@/lib/meal-subscriptions';
+import { PREDEFINED_MEAL_SLOTS, MealSlotDefinition } from '@/lib/meal-slots';
 import styles from './CreateSubscriptionPlan.module.css';
 
 export interface CreateSubscriptionPlanProps {
@@ -52,11 +52,18 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
 
   // 4. Plan Timing & Schedule
   const [planDuration, setPlanDuration] = useState('1 Week');
-  const [selectedSlotIds, setSelectedSlotIds] = useState<string[]>([
-    'breakfast',
-    'lunch',
-    'dinner',
-  ]);
+  const [slotsWithTimings, setSlotsWithTimings] = useState<MealSlotDefinition[]>(PREDEFINED_MEAL_SLOTS);
+  const [selectedSlotIds, setSelectedSlotIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetchMealSlots()
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setSlotsWithTimings(data);
+        }
+      })
+      .catch((err) => console.error("Error fetching meal slots:", err));
+  }, []);
 
   // 5. Subscription Policies
   const [allowPauseSubscription, setAllowPauseSubscription] = useState(true);
@@ -350,14 +357,15 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
                       border: selectedSlotIds.length > 0 ? "1px solid #FFEDD5" : "1px solid #FECACA",
                     }}
                   >
-                    {selectedSlotIds.length} of 7 Selected
+                    {selectedSlotIds.length} of {slotsWithTimings.length} Selected
                   </span>
                 </div>
 
                 {/* Predefined Slots List */}
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "12px" }}>
-                  {PREDEFINED_MEAL_SLOTS.map((slot) => {
+                  {slotsWithTimings.map((slot) => {
                     const isSelected = selectedSlotIds.includes(slot.id);
+                    const hasTiming = Boolean(slot.defaultTimeRange && slot.defaultTimeRange.trim().length > 0);
                     return (
                       <div
                         key={slot.id}
@@ -368,7 +376,9 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
                           justifyContent: "space-between",
                           padding: "10px 14px",
                           borderRadius: "10px",
-                          border: isSelected ? "1.5px solid #EA580C" : "1px solid #E2E8F0",
+                          border: isSelected
+                            ? (hasTiming ? "1.5px solid #EA580C" : "1.5px solid #F59E0B")
+                            : "1px solid #E2E8F0",
                           backgroundColor: isSelected ? "#FFFDFB" : "#FFFFFF",
                           cursor: "pointer",
                           transition: "all 0.15s ease",
@@ -403,18 +413,49 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
                           </div>
                         </div>
 
-                        <span
-                          style={{
-                            fontSize: "11.5px",
-                            fontWeight: 600,
-                            color: isSelected ? "#C2410C" : "#64748B",
-                            backgroundColor: isSelected ? "#FFEDD5" : "#F1F5F9",
-                            padding: "3px 9px",
-                            borderRadius: "6px",
-                          }}
-                        >
-                          🕒 {slot.defaultTimeRange}
-                        </span>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          {hasTiming ? (
+                            <span
+                              style={{
+                                fontSize: "11.5px",
+                                fontWeight: 600,
+                                color: isSelected ? "#C2410C" : "#64748B",
+                                backgroundColor: isSelected ? "#FFEDD5" : "#F1F5F9",
+                                padding: "3px 9px",
+                                borderRadius: "6px",
+                              }}
+                            >
+                              🕒 {slot.defaultTimeRange}
+                            </span>
+                          ) : (
+                            <span
+                              style={{
+                                fontSize: "11px",
+                                fontWeight: 700,
+                                color: "#D97706",
+                                backgroundColor: "#FEF3C7",
+                                padding: "3px 8px",
+                                borderRadius: "6px",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              ⚠️ Timing Not Added
+                            </span>
+                          )}
+                          <Link
+                            href="/seller/subscription/timings"
+                            onClick={(e) => e.stopPropagation()}
+                            style={{
+                              fontSize: "11px",
+                              fontWeight: 600,
+                              color: "#2563EB",
+                              textDecoration: "underline",
+                              padding: "2px 4px",
+                            }}
+                          >
+                            {hasTiming ? "Edit" : "Add Timing"}
+                          </Link>
+                        </div>
                       </div>
                     );
                   })}
@@ -568,8 +609,34 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
                 </div>
 
                 {errorMessage && (
-                  <div style={{ padding: "10px 14px", backgroundColor: "#FEF2F2", color: "#EF4444", borderRadius: "8px", fontSize: "13px", fontWeight: 600 }}>
-                    {errorMessage}
+                  <div
+                    style={{
+                      padding: "12px 14px",
+                      backgroundColor: "#FEF2F2",
+                      color: "#DC2626",
+                      borderRadius: "8px",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      lineHeight: 1.5,
+                      border: "1px solid #FECACA",
+                    }}
+                  >
+                    <div>{errorMessage}</div>
+                    {errorMessage.includes("add timings first") && (
+                      <Link
+                        href="/seller/subscription/timings"
+                        style={{
+                          display: "inline-block",
+                          marginTop: "8px",
+                          color: "#EA580C",
+                          fontWeight: 700,
+                          textDecoration: "underline",
+                          fontSize: "12.5px",
+                        }}
+                      >
+                        Go to Manage Meal Subscription Timings →
+                      </Link>
+                    )}
                   </div>
                 )}
 
@@ -592,32 +659,49 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
                       return;
                     }
 
+                    // Check if any selected slot is missing delivery timings
+                    const missingTimingSlots = selectedSlotIds
+                      .map((id) => slotsWithTimings.find((s) => s.id === id) || PREDEFINED_MEAL_SLOTS.find((s) => s.id === id))
+                      .filter((s) => !s || !s.defaultTimeRange || s.defaultTimeRange.trim() === "");
+
+                    if (missingTimingSlots.length > 0) {
+                      const missingNames = missingTimingSlots.map((s) => s?.name || "Slot").join(", ");
+                      setErrorMessage(
+                        `Delivery timing is not added for: ${missingNames}. You need to add timings first in Manage Meal Subscription Timings before creating a meal subscription.`
+                      );
+                      return;
+                    }
+
                     setErrorMessage(null);
 
                     const durLower = planDuration.toLowerCase();
                     const isWeekly = durLower.includes("week");
-                    const selectedSlots = PREDEFINED_MEAL_SLOTS.filter((s) => selectedSlotIds.includes(s.id));
+                    const selectedSlots = slotsWithTimings.filter((s) => selectedSlotIds.includes(s.id));
 
-                    await saveMealPlan({
-                      name: planName.trim(),
-                      tier: planTier,
-                      weeklyPrice: isWeekly ? String(basePriceNum) : "",
-                      monthlyPrice: isWeekly ? "" : `₹${basePriceNum.toFixed(0)}`,
-                      quarterlyPrice: "",
-                      yearlyPrice: "",
-                      duration: planDuration,
-                      features: enabledFeatures.map((f) => f.label),
-                      mealTimings: selectedSlots.map((m) => `${m.name}: ${m.defaultTimeRange}`),
-                      slotIds: selectedSlotIds,
-                      status: 'Live',
-                      allowCancel: false,
-                      pauseBillingPeriod: allowPauseSubscription ? pauseBillingPeriod : "None",
-                    });
+                    try {
+                      await saveMealPlan({
+                        name: planName.trim(),
+                        tier: planTier,
+                        weeklyPrice: isWeekly ? String(basePriceNum) : "",
+                        monthlyPrice: isWeekly ? "" : `₹${basePriceNum.toFixed(0)}`,
+                        quarterlyPrice: "",
+                        yearlyPrice: "",
+                        duration: planDuration,
+                        features: enabledFeatures.map((f) => f.label),
+                        mealTimings: selectedSlots.map((m) => `${m.name}: ${m.defaultTimeRange}`),
+                        slotIds: selectedSlotIds,
+                        status: 'Live',
+                        allowCancel: false,
+                        pauseBillingPeriod: allowPauseSubscription ? pauseBillingPeriod : "None",
+                      });
 
-                    setToastMessage(`Plan "${planName}" created & deployed successfully!`);
-                    setTimeout(() => {
-                      router.push('/seller/subscription');
-                    }, 900);
+                      setToastMessage(`Plan "${planName}" created & deployed successfully!`);
+                      setTimeout(() => {
+                        router.push('/seller/subscription');
+                      }, 900);
+                    } catch (err: any) {
+                      setErrorMessage(err.message || 'Failed to create subscription plan.');
+                    }
                   }}
                 >
                   Create & Deploy Plan
