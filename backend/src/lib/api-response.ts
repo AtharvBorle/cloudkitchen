@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getCorsHeaders } from '@/lib/cors';
 
 export interface ApiResponse<T = any> {
     success: boolean;
@@ -7,16 +8,19 @@ export interface ApiResponse<T = any> {
     error?: string | any;
 }
 
-export function successResponse<T>(data: T, message?: string, statusCode = 200) {
+export function successResponse<T>(data: T, message?: string, statusCode = 200, req?: Request) {
     const payload: ApiResponse<T> = {
         success: true,
         data,
         message,
     };
-    return NextResponse.json(payload, { status: statusCode });
+    return NextResponse.json(payload, {
+        status: statusCode,
+        headers: getCorsHeaders(req),
+    });
 }
 
-export function errorResponse(error: string | any, statusCode = 400) {
+export function errorResponse(error: string | any, statusCode = 400, req?: Request) {
     let rawMessage = typeof error === 'string' ? error : error?.message || 'Something went wrong. Please try again.';
 
     // User-friendly custom translation for generic raw exception strings
@@ -41,5 +45,8 @@ export function errorResponse(error: string | any, statusCode = 400) {
     // Log the underlying error for debugging
     console.error(`[API Error ${statusCode}]:`, error);
 
-    return NextResponse.json(payload, { status: statusCode });
+    return NextResponse.json(payload, {
+        status: statusCode,
+        headers: getCorsHeaders(req),
+    });
 }

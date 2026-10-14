@@ -23,6 +23,7 @@ import { HouseMapPicker } from "@/components/house-map-picker";
 import { matchesSearchQuery } from "@/lib/dietary-filter";
 import { useRoomModule } from "@/context/RoomModuleContext";
 import { reverseGeocodeCoords } from "@/lib/google-maps";
+import { getSafeCurrentPosition } from "@/lib/safe-geolocation";
 import { getPincodeCoordinates } from "@/lib/geo-distance";
 
 interface SuggestionItem {
@@ -277,12 +278,8 @@ export default function HeroSection({
 
   // GPS Current Location Detection
   const handleDetectGPSLocation = () => {
-    if (!navigator.geolocation) {
-      alert("Geolocation is not supported by your browser.");
-      return;
-    }
     setIsDetectingLocation(true);
-    navigator.geolocation.getCurrentPosition(
+    getSafeCurrentPosition(
       async (position) => {
         try {
           const lat = position.coords.latitude;
@@ -310,7 +307,7 @@ export default function HeroSection({
         setIsDetectingLocation(false);
         alert("Unable to retrieve your location. Please select from the list or pick on map.");
       },
-      { timeout: 10000, enableHighAccuracy: true }
+      { timeout: 5000, enableHighAccuracy: true }
     );
   };
 

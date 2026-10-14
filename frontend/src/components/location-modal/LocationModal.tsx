@@ -32,6 +32,7 @@ import {
   PlacePredictionItem,
   NormalizedAddressDetails,
 } from "@/lib/google-maps";
+import { getSafeCurrentPosition } from "@/lib/safe-geolocation";
 import styles from "./LocationModal.module.css";
 
 export interface RecentSearchLocation {
@@ -626,7 +627,7 @@ export const LocationModal: React.FC = () => {
     }
 
     setIsLocatingGps(true);
-    navigator.geolocation.getCurrentPosition(
+    getSafeCurrentPosition(
       async (pos) => {
         const { latitude: lat, longitude: lng } = pos.coords;
         setMapLat(lat);
@@ -677,9 +678,9 @@ export const LocationModal: React.FC = () => {
       (error) => {
         setIsLocatingGps(false);
         console.warn("Geolocation permission error:", error);
-        showNotification("error", "Location permission denied. Please enter pincode or choose an area.");
+        showNotification("error", "Location unavailable. Please enter pincode or choose an area.");
       },
-      { enableHighAccuracy: true, timeout: 8000 }
+      { enableHighAccuracy: true, timeout: 5000 }
     );
   };
 

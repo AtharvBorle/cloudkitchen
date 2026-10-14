@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useRef, useState, useEffect, useCallback } from "react";
+import React, { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import Image from "next/image";
 import { ChevronRight, ChevronLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useRoomModule } from "@/context/RoomModuleContext";
 
 export interface CategoryItem {
   id: string;
@@ -30,7 +31,24 @@ export default function CategoryBar({
   const [canScrollLeft, setCanScrollLeft] = useState<boolean>(false);
   const [canScrollRight, setCanScrollRight] = useState<boolean>(true);
 
-  const displayCategories = items || [];
+  const { isRoomEnabled } = useRoomModule();
+
+  const displayCategories = useMemo(() => {
+    const list = items || [];
+    if (isRoomEnabled) return list;
+    return list.filter((cat) => {
+      const lowerId = (cat.id || "").toLowerCase();
+      const lowerName = (cat.name || "").toLowerCase();
+      const lowerRoute = (cat.route || "").toLowerCase();
+      return (
+        lowerId !== "rooms" &&
+        lowerId !== "room" &&
+        lowerName !== "rooms" &&
+        lowerName !== "room" &&
+        !lowerRoute.includes("room")
+      );
+    });
+  }, [items, isRoomEnabled]);
 
   const checkScrollPosition = useCallback(() => {
     if (scrollContainerRef.current) {

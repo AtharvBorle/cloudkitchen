@@ -7,6 +7,7 @@ import { useSession } from "next-auth/react";
 import { LocationModal } from "@/components/location-modal/LocationModal";
 import { getPincodeCoordinates, formatShortDeliveryLocation, resolveLocationCoordinates } from "@/lib/geo-distance";
 import { reverseGeocodeCoords } from "@/lib/google-maps";
+import { getSafeCurrentPosition } from "@/lib/safe-geolocation";
 
 export interface Address {
   id: string;
@@ -110,7 +111,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
     }
 
     return new Promise((resolve) => {
-      navigator.geolocation.getCurrentPosition(
+      getSafeCurrentPosition(
         async (position) => {
           // Re-check: if user selected a location while GPS was in flight, abort
           if (!isManualTrigger && typeof window !== "undefined" && localStorage.getItem("user-manually-selected-location") === "true") {

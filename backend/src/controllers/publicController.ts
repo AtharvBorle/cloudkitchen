@@ -6,9 +6,23 @@ import { getAuthSession } from "@/lib/auth";
 
 export const getPublicCategories = unstable_cache(
     async () => {
-        const categories = await db.category.findMany({
+        const roomSetting = await db.systemSettings.findUnique({
+            where: { key: "ENABLE_ROOM_MODULE" }
+        });
+        const isRoomEnabled = roomSetting?.value === "true";
+
+        let categories = await db.category.findMany({
             orderBy: { name: 'asc' }
         });
+
+        if (!isRoomEnabled) {
+            categories = categories.filter(c => 
+                c.type !== 'ROOM' && 
+                c.name.toLowerCase() !== 'room' && 
+                c.name.toLowerCase() !== 'rooms'
+            );
+        }
+
         const foodCategories = await db.foodCategory.findMany({
             include: {
                 categories: true,
@@ -19,10 +33,10 @@ export const getPublicCategories = unstable_cache(
             orderBy: { name: 'asc' }
         });
 
-        return { categories, foodCategories };
+        return { categories, foodCategories, isRoomEnabled };
     },
     ["public-categories"],
-    { revalidate: 60, tags: ["categories"] }
+    { revalidate: 10, tags: ["categories"] }
 );
 
 export const getPublicExploreData = unstable_cache(
@@ -208,7 +222,7 @@ export const getPublicExploreData = unstable_cache(
             }));
         }) : [];
 
-        return { foodItems, availableRooms, foodCategories, kitchens: activeSellersList };
+        return { foodItems, availableRooms, foodCategories, kitchens: activeSellersList, isRoomEnabled };
     },
     ["public-explore-data"],
     { revalidate: 30, tags: ["explore"] }

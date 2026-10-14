@@ -23,6 +23,7 @@ import {
   initiateMealSubscriptionPayment,
   verifyAndActivateMealSubscription,
 } from "@/lib/meal-subscriptions";
+import { getSafeCurrentPosition } from "@/lib/safe-geolocation";
 import { fetchApi } from "@/lib/fetch-api";
 import { useLocation } from "@/components/location-provider";
 import styles from "./SubscribeModal.module.css";
@@ -222,7 +223,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
     setIsDetectingGps(true);
     setErrorMsg(null);
 
-    navigator.geolocation.getCurrentPosition(
+    getSafeCurrentPosition(
       async (position) => {
         try {
           const { latitude, longitude } = position.coords;
@@ -260,7 +261,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({
         setDeliveryAddress(fallback);
         setIsChangingAddress(false);
       },
-      { timeout: 8000, enableHighAccuracy: true }
+      { timeout: 5000, enableHighAccuracy: true }
     );
   };
 

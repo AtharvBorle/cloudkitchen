@@ -18,6 +18,7 @@ import {
 import { HouseMapPicker } from "@/components/house-map-picker";
 import { getPincodeCoordinates } from "@/lib/geo-distance";
 import { reverseGeocodeWithGoogle, geocodeWithGoogle } from "@/lib/google-maps";
+import { getSafeCurrentPosition } from "@/lib/safe-geolocation";
 import styles from "./RoomSearchFilter.module.css";
 
 export interface LocationStatItem {
@@ -182,7 +183,7 @@ export const RoomSearchFilter: React.FC<RoomSearchFilterProps> = ({
     }
 
     setIsDetectingGps(true);
-    navigator.geolocation.getCurrentPosition(
+    getSafeCurrentPosition(
       async (pos) => {
         const { latitude: lat, longitude: lng } = pos.coords;
         try {
@@ -219,7 +220,7 @@ export const RoomSearchFilter: React.FC<RoomSearchFilterProps> = ({
         console.warn("GPS Permission error:", err);
         alert("Unable to access GPS location. Please choose from map or search by name.");
       },
-      { timeout: 10000, enableHighAccuracy: true }
+      { timeout: 5000, enableHighAccuracy: true }
     );
   };
 
