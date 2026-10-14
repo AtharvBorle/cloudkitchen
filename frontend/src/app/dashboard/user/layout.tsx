@@ -70,7 +70,7 @@ export function UserHeader() {
             <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-8)" }}>
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "2px" }}>
                     <Link href="/dashboard/user" style={{ fontSize: "1.5rem", fontWeight: "bold", color: "var(--primary)", lineHeight: 1 }}>
-                        Cloud Kitchen
+                        Neo Cloud Bites
                     </Link>
 
                     {isClient && (

@@ -598,7 +598,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
 
           <div className={styles.footerBrandRow}>
             <span className={styles.versionText}>v2.4.1 (124040)</span>
-            <span className={styles.footerBrandText}>CLOUD KITCHEN</span>
+            <span className={styles.footerBrandText}>NEO CLOUD BITES</span>
           </div>
         </div>
       </aside>

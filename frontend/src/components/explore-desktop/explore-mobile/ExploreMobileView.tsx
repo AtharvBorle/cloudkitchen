@@ -450,7 +450,7 @@ export const ExploreMobileView: React.FC = () => {
             <div className={styles.logoWrapper}>
               <Image
                 src={logoImg}
-                alt="Cloud Kitchen Logo"
+                alt="Neo Cloud Bites Logo"
                 width={40}
                 height={40}
                 className={styles.logoImage}
@@ -458,7 +458,7 @@ export const ExploreMobileView: React.FC = () => {
               />
             </div>
             <div className={styles.brandInfo}>
-              <span className={styles.brandTitle}>Cloud Kitchen</span>
+              <span className={styles.brandTitle}>Neo Cloud Bites</span>
               <div
                 className={styles.locationContainer}
                 onClick={(e) => {

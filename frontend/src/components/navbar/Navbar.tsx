@@ -681,7 +681,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
               <div className={styles.brandInfo}>
                 <span className={styles.desktopBrandTitle}>NEO CLOUD BITES</span>
-                <span className={styles.mobileBrandTitle}>Cloud Kitchen</span>
+                <span className={styles.mobileBrandTitle}>Neo Cloud Bites</span>
                 <div
                   className={styles.locationContainer}
                   title="Choose Delivery Location"

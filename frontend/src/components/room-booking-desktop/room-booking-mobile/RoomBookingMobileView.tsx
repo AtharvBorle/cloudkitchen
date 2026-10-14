@@ -260,7 +260,7 @@ export const RoomBookingMobileView: React.FC<RoomBookingMobileViewProps> = ({
             <div className={styles.logoWrapper}>
               <Image
                 src={logoImg}
-                alt="Cloud Kitchen Logo"
+                alt="Neo Cloud Bites Logo"
                 width={40}
                 height={40}
                 className={styles.logoImage}
@@ -268,7 +268,7 @@ export const RoomBookingMobileView: React.FC<RoomBookingMobileViewProps> = ({
               />
             </div>
             <div className={styles.brandInfo}>
-              <span className={styles.brandTitle}>Cloud Kitchen</span>
+              <span className={styles.brandTitle}>Neo Cloud Bites</span>
               <div className={styles.locationContainer}>
                 <span>Kothrud, Pune</span>
                 <ChevronDown size={14} />
