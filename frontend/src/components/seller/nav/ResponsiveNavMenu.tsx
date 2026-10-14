@@ -163,6 +163,10 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
       }
     }
 
+    if (item.id === "orders" && typeof window !== "undefined") {
+      sessionStorage.setItem("neo_seller_orders_active_section", "orders");
+    }
+
     onClose();
   };
 
