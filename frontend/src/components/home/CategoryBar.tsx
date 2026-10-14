@@ -30,7 +30,18 @@ export default function CategoryBar({
   const [canScrollLeft, setCanScrollLeft] = useState<boolean>(false);
   const [canScrollRight, setCanScrollRight] = useState<boolean>(true);
 
-  const displayCategories = items || [];
+  const displayCategories = (items || []).filter((cat) => {
+    const idLower = (cat.id || "").toLowerCase().trim();
+    const nameLower = (cat.name || "").toLowerCase().trim();
+    return (
+      idLower !== "rooms" &&
+      idLower !== "room" &&
+      nameLower !== "rooms" &&
+      nameLower !== "room" &&
+      !nameLower.includes("room") &&
+      !nameLower.includes("property")
+    );
+  });
 
   const checkScrollPosition = useCallback(() => {
     if (scrollContainerRef.current) {

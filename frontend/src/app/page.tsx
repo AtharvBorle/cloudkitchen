@@ -213,16 +213,29 @@ export default function Home() {
     setHomeSearchQuery(q);
   };
 
-  // Dynamic Categories without fallback
+  // Dynamic Categories without fallback (excluding non-food categories like rooms)
   const categoryItems = useMemo(() => {
     if (!homeData.categories || homeData.categories.length === 0) return [];
-    return homeData.categories.map((c) => ({
-      id: c.id,
-      name: c.name,
-      image: c.image || "/images/categories/cat-food.png",
-      emoji: c.emoji || "🍽️",
-      route: c.route,
-    }));
+    return homeData.categories
+      .filter((c) => {
+        const idLower = (c.id || "").toLowerCase().trim();
+        const nameLower = (c.name || "").toLowerCase().trim();
+        return (
+          idLower !== "rooms" &&
+          idLower !== "room" &&
+          nameLower !== "rooms" &&
+          nameLower !== "room" &&
+          !nameLower.includes("room") &&
+          !nameLower.includes("property")
+        );
+      })
+      .map((c) => ({
+        id: c.id,
+        name: c.name,
+        image: c.image || "/images/categories/cat-food.png",
+        emoji: c.emoji || "🍽️",
+        route: c.route,
+      }));
   }, [homeData.categories]);
 
   // Extract available cuisines from DB categories & items

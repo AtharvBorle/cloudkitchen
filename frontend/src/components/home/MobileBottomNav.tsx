@@ -5,14 +5,17 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Compass, ShoppingBag, BedDouble, Settings } from "lucide-react";
 
+import { useRoomModule } from "@/context/RoomModuleContext";
+
 export default function MobileBottomNav() {
   const pathname = usePathname();
+  const { isRoomEnabled } = useRoomModule();
 
   const navItems = [
     { label: "Home", href: "/", icon: Home },
     { label: "Explore", href: "/explore-desktop", icon: Compass },
     { label: "Orders", href: "/orders-desktop", icon: ShoppingBag },
-    { label: "Rooms", href: "/room-booking", icon: BedDouble },
+    ...(isRoomEnabled ? [{ label: "Rooms", href: "/room-booking", icon: BedDouble }] : []),
     { label: "Settings", href: "/settings-desktop", icon: Settings },
   ];
 

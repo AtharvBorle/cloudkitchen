@@ -393,16 +393,15 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
             return;
           }
 
-          // Special case: Rooms
-          if (lower === "rooms" || lower === "room") {
-            const existingRooms = categoryMap.get("rooms");
-            categoryMap.set("rooms", {
-              id: fc.id || existingRooms?.id || "rooms",
-              name: "Rooms",
-              image: dynamicImage || existingRooms?.image || "/images/categories/cat-rooms.png",
-              emoji: "🛏️",
-              route: "/room-booking",
-            });
+          // Ignore non-food room/property categories for shortcut keys
+          if (
+            lower === "rooms" ||
+            lower === "room" ||
+            cleanKey.includes("room") ||
+            lower === "rent property" ||
+            lower === "rentproperty" ||
+            lower === "property"
+          ) {
             return;
           }
 
@@ -448,16 +447,9 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           categoriesRes.forEach(processCatEntry);
         }
 
-        // Add rooms if not present
-        if (!categoryMap.has("rooms")) {
-          categoryMap.set("rooms", {
-            id: "rooms",
-            name: "Rooms",
-            image: "/images/categories/cat-rooms.png",
-            emoji: "🛏️",
-            route: "/room-booking",
-          });
-        }
+        // Ensure rooms or non-food categories are not included
+        categoryMap.delete("rooms");
+        categoryMap.delete("room");
 
         const dbCategories: DynamicCategory[] = Array.from(categoryMap.values());
         setCategories(dbCategories);
