@@ -7,28 +7,6 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  async headers() {
-    return [
-      {
-        source: "/api/:path*",
-        headers: [
-          { key: "Access-Control-Allow-Origin", value: "*" },
-          { key: "Access-Control-Allow-Methods", value: "GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD" },
-          { key: "Access-Control-Allow-Headers", value: "Content-Type, Authorization, Cookie, X-Requested-With, Accept, Origin, Cache-Control, Pragma, X-CSRF-Token, X-Api-Version, Range, Baggage, Sentry-Trace, *" },
-          { key: "Access-Control-Expose-Headers", value: "*" },
-          { key: "Access-Control-Max-Age", value: "86400" },
-        ],
-      },
-      {
-        source: "/:path*",
-        headers: [
-          { key: "Access-Control-Allow-Origin", value: "*" },
-          { key: "Access-Control-Allow-Methods", value: "GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD" },
-          { key: "Access-Control-Allow-Headers", value: "Content-Type, Authorization, Cookie, X-Requested-With, Accept, Origin, Cache-Control, Pragma, X-CSRF-Token, X-Api-Version, Range, Baggage, Sentry-Trace, *" },
-        ],
-      },
-    ];
-  },
   async rewrites() {
     return [
       { source: "/api/explore", destination: "/api/public/explore" },

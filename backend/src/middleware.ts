@@ -3,17 +3,6 @@ import type { NextRequest } from "next/server";
 import { getCorsHeaders } from "@/lib/cors";
 
 export function middleware(request: NextRequest) {
-    const corsHeaders = getCorsHeaders(request);
-
-    // Preflight OPTIONS requests - return 204 immediately with full CORS headers
-    if (request.method === "OPTIONS") {
-        const response = new NextResponse(null, { status: 204 });
-        for (const [key, val] of Object.entries(corsHeaders)) {
-            response.headers.set(key, val);
-        }
-        return response;
-    }
-
     const pathname = request.nextUrl.pathname;
 
     // Mobile client aliases & rewrites
@@ -30,19 +19,47 @@ export function middleware(request: NextRequest) {
         "/api/search": "/api/public/search",
     };
 
+    // In production on dev.api.neocloudbites.com, Nginx reverse proxy handles all CORS headers.
+    // Setting them here in Next.js results in duplicate headers ("origin, origin") which browsers reject.
+    // In local development (without Nginx), Next.js provides the CORS headers.
+    const isBehindNginx =
+        process.env.NODE_ENV === "production" ||
+        request.headers.has("x-real-ip") ||
+        request.headers.has("x-forwarded-for") ||
+        Boolean(request.headers.get("host")?.includes("neocloudbites.com")) ||
+        Boolean(request.headers.get("x-forwarded-host")?.includes("neocloudbites.com"));
+
+    // Preflight OPTIONS requests - return 204 immediately
+    if (request.method === "OPTIONS") {
+        const response = new NextResponse(null, { status: 204 });
+        if (!isBehindNginx) {
+            const corsHeaders = getCorsHeaders(request);
+            for (const [key, val] of Object.entries(corsHeaders)) {
+                response.headers.set(key, val);
+            }
+        }
+        return response;
+    }
+
     if (rewrites[pathname]) {
         const rewriteUrl = request.nextUrl.clone();
         rewriteUrl.pathname = rewrites[pathname];
         const response = NextResponse.rewrite(rewriteUrl);
-        for (const [key, val] of Object.entries(corsHeaders)) {
-            response.headers.set(key, val);
+        if (!isBehindNginx) {
+            const corsHeaders = getCorsHeaders(request);
+            for (const [key, val] of Object.entries(corsHeaders)) {
+                response.headers.set(key, val);
+            }
         }
         return response;
     }
 
     const response = NextResponse.next();
-    for (const [key, val] of Object.entries(corsHeaders)) {
-        response.headers.set(key, val);
+    if (!isBehindNginx) {
+        const corsHeaders = getCorsHeaders(request);
+        for (const [key, val] of Object.entries(corsHeaders)) {
+            response.headers.set(key, val);
+        }
     }
     return response;
 }

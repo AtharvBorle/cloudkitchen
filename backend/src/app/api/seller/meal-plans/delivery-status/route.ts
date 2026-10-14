@@ -1,16 +1,12 @@
 import { toggleSubscriberMealDeliveryStatus } from "@/controllers/sellerMealPlanController";
 import { successResponse, errorResponse } from "@/lib/api-response";
 import { ApiError } from "@/lib/api-error";
-import { getCorsHeaders } from "@/lib/cors";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-export async function OPTIONS(req: Request) {
-    return new NextResponse(null, {
-        status: 204,
-        headers: getCorsHeaders(req),
-    });
+export async function OPTIONS() {
+    return new NextResponse(null, { status: 204 });
 }
 
 async function handleDeliveryStatusUpdate(req: Request) {
