@@ -129,15 +129,23 @@ function MySubscriptionContent() {
 
   // Active Subscription State
   const [userSubs, setUserSubs] = useState<UserActiveMealSubscription[]>([]);
+  const isSubscriptionExpired = useCallback((s: UserActiveMealSubscription) => {
+    if (s.isExpired) return true;
+    if (s.status?.toUpperCase() === "EXPIRED") return true;
+    if (s.endDate && new Date(s.endDate) < new Date()) return true;
+    return false;
+  }, []);
+
   const activeSubs = useMemo(
     () =>
       userSubs.filter(
         (s) =>
           !s.isPlanDeactivated &&
           s.plan?.status !== "Inactive" &&
+          !isSubscriptionExpired(s) &&
           (s.status === "ACTIVE" || s.isPaused || s.status === "PAUSED")
       ),
-    [userSubs]
+    [userSubs, isSubscriptionExpired]
   );
   const [selectedSubFilter, setSelectedSubFilter] = useState<string>("all");
   const [selectedSubId, setSelectedSubId] = useState<string | null>(null);
@@ -217,6 +225,7 @@ function MySubscriptionContent() {
         (s) =>
           !s.isPlanDeactivated &&
           s.plan?.status !== "Inactive" &&
+          !isSubscriptionExpired(s) &&
           (s.status === "ACTIVE" || s.isPaused || s.status === "PAUSED")
       );
       if (activeList.length > 0) {
@@ -1030,7 +1039,8 @@ function MySubscriptionContent() {
 
                           {userSubs.map((s) => {
                             const isSelected = selectedSubFilter === s.id;
-                            const isInactive = s.isPlanDeactivated || s.plan?.status === "Inactive" || s.status === "INACTIVE";
+                            const isExpired = isSubscriptionExpired(s);
+                            const isInactive = !isExpired && (s.isPlanDeactivated || s.plan?.status === "Inactive" || s.status === "INACTIVE");
                             return (
                               <button
                                 key={s.id}
@@ -1062,14 +1072,18 @@ function MySubscriptionContent() {
                                     padding: "2px 6px",
                                     borderRadius: "6px",
                                     fontWeight: 700,
-                                    backgroundColor: isInactive
+                                    backgroundColor: isExpired
+                                      ? "#FEE2E2"
+                                      : isInactive
                                       ? "#F1F5F9"
                                       : s.isPaused
                                       ? "#FEF3C7"
                                       : s.status === "ACTIVE"
                                       ? "#DCFCE7"
                                       : "#F1F5F9",
-                                    color: isInactive
+                                    color: isExpired
+                                      ? "#DC2626"
+                                      : isInactive
                                       ? "#64748B"
                                       : s.isPaused
                                       ? "#B45309"
@@ -1078,7 +1092,7 @@ function MySubscriptionContent() {
                                       : "#64748B",
                                   }}
                                 >
-                                  {isInactive ? "Inactive" : s.isPaused ? "Paused" : s.status}
+                                  {isExpired ? "Expired" : isInactive ? "Inactive" : s.isPaused ? "Paused" : s.status}
                                 </span>
                               </button>
                             );
@@ -1090,12 +1104,14 @@ function MySubscriptionContent() {
                     {/* Render each active meal plan separately with its details and status */}
                     <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
                       {displayedSubs.map((subItem) => {
+                        const isExpired = isSubscriptionExpired(subItem);
                         const isPlanInactive =
-                          subItem.isPlanDeactivated ||
-                          subItem.plan?.status === "Inactive" ||
-                          subItem.status === "INACTIVE";
+                          !isExpired &&
+                          (subItem.isPlanDeactivated ||
+                            subItem.plan?.status === "Inactive" ||
+                            subItem.status === "INACTIVE");
                         const isPauseAllowed = (() => {
-                          if (isPlanInactive) return false;
+                          if (isExpired || isPlanInactive) return false;
                           const pausePeriod = (subItem.plan?.pauseBillingPeriod || "").trim().toLowerCase();
                           return !(
                             pausePeriod === "disabled" ||
@@ -1106,19 +1122,45 @@ function MySubscriptionContent() {
                           );
                         })();
 
+                        const resolvedStatus = isExpired ? "EXPIRED" : isPlanInactive ? "INACTIVE" : subItem.status;
+
                         return (
                           <div
                             key={subItem.id}
                             style={{
                               backgroundColor: "#FFFFFF",
                               borderRadius: "20px",
-                              border: isPlanInactive ? "1.5px solid #CBD5E1" : "1.5px solid #E2E8F0",
+                              border: isExpired ? "1.5px solid #FECACA" : isPlanInactive ? "1.5px solid #CBD5E1" : "1.5px solid #E2E8F0",
                               padding: "24px",
                               boxShadow: "0 4px 18px rgba(0,0,0,0.04)",
                             }}
                           >
+                            {/* Expired Subscription Notice when endDate has passed */}
+                            {isExpired && (
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "10px",
+                                  padding: "12px 16px",
+                                  backgroundColor: "#FEF2F2",
+                                  borderRadius: "12px",
+                                  marginBottom: "16px",
+                                  border: "1px solid #FECACA",
+                                  color: "#991B1B",
+                                  fontSize: "0.86rem",
+                                  fontWeight: 500,
+                                }}
+                              >
+                                <AlertCircle size={18} color="#DC2626" style={{ flexShrink: 0 }} />
+                                <span>
+                                  This meal subscription expired on {formatSubRenewalDate(subItem)}. Daily meal deliveries have ended. Browse subscription plans to renew.
+                                </span>
+                              </div>
+                            )}
+
                             {/* Inactive Plan Notice if Kitchen Deactivated it */}
-                            {isPlanInactive && (
+                            {!isExpired && isPlanInactive && (
                               <div
                                 style={{
                                   display: "flex",
@@ -1150,10 +1192,10 @@ function MySubscriptionContent() {
                                   : "Standard Gourmet Kitchen"
                               }
                               tier={subItem.tier || subItem.plan?.tier || "Bronze"}
-                              statusText={isPlanInactive ? "INACTIVE" : subItem.status}
-                              isPaused={!isPlanInactive && subItem.isPaused}
+                              statusText={resolvedStatus}
+                              isPaused={!isExpired && !isPlanInactive && subItem.isPaused}
                               startedOn={formatSubStartedOn(subItem)}
-                              renewalDate={isPlanInactive ? "Deactivated" : formatSubRenewalDate(subItem)}
+                              renewalDate={isExpired ? `${formatSubRenewalDate(subItem)} (Expired)` : isPlanInactive ? "Deactivated" : formatSubRenewalDate(subItem)}
                               planPrice={formatSubPrice(subItem)}
                             />
 
@@ -1188,10 +1230,12 @@ function MySubscriptionContent() {
                             {/* Pause Subscription Section */}
                             <PauseSubscription
                               isPaused={subItem.isPaused}
-                              disabled={isPlanInactive || subItem.status?.toUpperCase() === "CANCELLED"}
+                              disabled={isExpired || isPlanInactive || subItem.status?.toUpperCase() === "CANCELLED"}
                               allowPause={isPauseAllowed}
                               pausePolicyNote={
-                                isPlanInactive
+                                isExpired
+                                  ? "Subscription has expired. Pausing is unavailable for expired plans."
+                                  : isPlanInactive
                                   ? "Subscription is inactive because this plan has been deactivated by the kitchen partner."
                                   : "Pausing is disabled for this meal plan by the kitchen partner."
                               }

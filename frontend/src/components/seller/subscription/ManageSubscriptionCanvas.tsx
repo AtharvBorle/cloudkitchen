@@ -63,7 +63,7 @@ export default function ManageSubscriptionCanvas({
   const [plans, setPlans] = useState<PlanItem[]>([]);
   const [subscribers, setSubscribers] = useState<RecentSubscriber[]>([]);
   const [serverMetrics, setServerMetrics] = useState<MealPlanMetrics | null>(null);
-  const [activeTab, setActiveTab] = useState<"all" | "active" | "expired" | "paused">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "active" | "inactive" | "paused">("all");
   const [localSearchQuery, setLocalSearchQuery] = useState("");
   const searchQuery = externalSearchQuery !== undefined ? externalSearchQuery : localSearchQuery;
 
@@ -186,15 +186,15 @@ export default function ManageSubscriptionCanvas({
     return s === "paused";
   };
 
-  const isPlanExpired = (plan: PlanItem) => {
+  const isPlanInactive = (plan: PlanItem) => {
     const s = String(plan.status || "").toLowerCase().trim();
-    return s === "expired" || s === "inactive" || s === "draft";
+    return s === "inactive" || s === "draft";
   };
 
   const filteredPlans = plans.filter((plan) => {
     if (activeTab === "active" && !isPlanActive(plan)) return false;
     if (activeTab === "paused" && !isPlanPaused(plan)) return false;
-    if (activeTab === "expired" && !isPlanExpired(plan)) return false;
+    if (activeTab === "inactive" && !isPlanInactive(plan)) return false;
 
     const q = (searchQuery || "").toLowerCase().trim();
     if (!q) return true;
@@ -259,7 +259,7 @@ export default function ManageSubscriptionCanvas({
   }, [filteredSubscribers, subPage, subPageSize]);
 
   const activePlansCount = plans.filter(isPlanActive).length;
-  const expiredPlansCount = plans.filter(isPlanExpired).length;
+  const inactivePlansCount = plans.filter(isPlanInactive).length;
   const pausedPlansCount = plans.filter(isPlanPaused).length;
 
   // Helper to determine if a subscriber record represents a currently active subscription
@@ -575,20 +575,20 @@ export default function ManageSubscriptionCanvas({
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab("expired")}
+            onClick={() => setActiveTab("inactive")}
             style={{
               padding: "8px 16px",
               borderRadius: "6px",
               border: "none",
               fontSize: "13px",
-              fontWeight: activeTab === "expired" ? 700 : 500,
-              backgroundColor: activeTab === "expired" ? "#FF5500" : "transparent",
-              color: activeTab === "expired" ? "#FFFFFF" : "#64748B",
+              fontWeight: activeTab === "inactive" ? 700 : 500,
+              backgroundColor: activeTab === "inactive" ? "#FF5500" : "transparent",
+              color: activeTab === "inactive" ? "#FFFFFF" : "#64748B",
               cursor: "pointer",
               transition: "all 0.15s ease",
             }}
           >
-            Expired ({expiredPlansCount})
+            Inactive ({inactivePlansCount})
           </button>
           <button
             type="button"
@@ -653,8 +653,8 @@ export default function ManageSubscriptionCanvas({
               ? `No subscription plans matching "${searchQuery}"`
               : activeTab === "active"
               ? "No active subscription plans found"
-              : activeTab === "expired"
-              ? "No expired or inactive subscription plans found"
+              : activeTab === "inactive"
+              ? "No inactive subscription plans found"
               : activeTab === "paused"
               ? "No paused subscription plans found"
               : "No subscription plans found"}

@@ -28,6 +28,7 @@ export const SubscriptionPlanCard: React.FC<SubscriptionPlanCardProps> = ({
 }) => {
   const tierColors = getTierColors(tier);
   const isCancelled = statusText?.toUpperCase() === "CANCELLED";
+  const isExpired = statusText?.toUpperCase() === "EXPIRED";
   const isInactive = statusText?.toUpperCase() === "INACTIVE" || statusText?.toUpperCase() === "DEACTIVATED";
 
   return (
@@ -65,6 +66,8 @@ export const SubscriptionPlanCard: React.FC<SubscriptionPlanCardProps> = ({
           className={`${styles.activeBadge} ${
             isCancelled
               ? styles.cancelledBadge
+              : isExpired
+              ? styles.expiredBadge
               : isInactive
               ? styles.inactiveBadge
               : isPaused
@@ -72,7 +75,15 @@ export const SubscriptionPlanCard: React.FC<SubscriptionPlanCardProps> = ({
               : styles.activeBadgeGreen
           }`}
         >
-          {isCancelled ? "CANCELLED" : isInactive ? "INACTIVE" : isPaused ? "PAUSED" : statusText}
+          {isCancelled
+            ? "CANCELLED"
+            : isExpired
+            ? "EXPIRED"
+            : isInactive
+            ? "INACTIVE"
+            : isPaused
+            ? "PAUSED"
+            : statusText}
         </span>
       </div>
 

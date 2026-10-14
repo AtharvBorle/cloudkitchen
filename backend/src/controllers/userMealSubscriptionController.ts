@@ -32,7 +32,7 @@ export const getUserMealSubscriptions = async () => {
     });
 
     const now = new Date();
-    // Auto-resume subscriptions whose scheduled pause period has expired
+    // 1. Auto-resume subscriptions whose scheduled pause period has expired
     for (const sub of subscriptions) {
         if (sub.isPaused && sub.pauseEndDate && new Date(sub.pauseEndDate) <= now) {
             let history: any[] = [];
@@ -62,6 +62,19 @@ export const getUserMealSubscriptions = async () => {
             sub.pausedAt = null;
             sub.pauseEndDate = null;
             sub.pauseHistory = JSON.stringify(history);
+        }
+
+        // 2. Auto-expire user subscriptions whose duration / validity (endDate) has passed
+        if (sub.status !== "CANCELLED" && sub.status !== "EXPIRED" && sub.endDate && new Date(sub.endDate) < now) {
+            await db.userMealSubscription.update({
+                where: { id: sub.id },
+                data: {
+                    status: "EXPIRED",
+                    isPaused: false,
+                }
+            }).catch(() => {});
+            sub.status = "EXPIRED";
+            sub.isPaused = false;
         }
     }
 
@@ -95,7 +108,12 @@ export const getUserMealSubscriptions = async () => {
         }
 
         const isPlanDeactivated = sub.plan?.status === "Inactive";
-        const effectiveStatus = isPlanDeactivated && sub.status === "ACTIVE" ? "INACTIVE" : sub.status;
+        const isExpired = sub.status === "EXPIRED" || Boolean(sub.endDate && new Date(sub.endDate) < now);
+        const effectiveStatus = isExpired
+            ? "EXPIRED"
+            : isPlanDeactivated && sub.status === "ACTIVE"
+            ? "INACTIVE"
+            : sub.status;
 
         return {
             id: sub.id,
@@ -103,10 +121,12 @@ export const getUserMealSubscriptions = async () => {
             sellerId: sub.sellerId,
             planId: sub.planId,
             status: effectiveStatus,
+            isExpired,
+            isPlanDeactivated: Boolean(isPlanDeactivated),
             tier: sub.tier,
             cycle: sub.cycle,
             pricePaid: sub.pricePaid,
-            isPaused: isPlanDeactivated ? false : sub.isPaused,
+            isPaused: isPlanDeactivated || isExpired ? false : sub.isPaused,
             pausedAt: sub.pausedAt ? sub.pausedAt.toISOString() : null,
             pauseEndDate: sub.pauseEndDate ? sub.pauseEndDate.toISOString() : null,
             usedPauseDays: sub.usedPauseDays || 0,

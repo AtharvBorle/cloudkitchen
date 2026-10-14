@@ -24,7 +24,7 @@ import { useSellerNotifications } from "@/hooks/useSellerNotifications";
 import styles from "./ResponsiveSellerSubscription.module.css";
 
 
-export type PlanStatus = "All" | "Active" | "Expired" | "Paused" | "Draft";
+export type PlanStatus = "All" | "Active" | "Inactive" | "Paused" | "Draft";
 export type PlanTier = "All" | "Bronze" | "Silver" | "Gold" | "Starter" | "Professional" | "Enterprise";
 export type SortOption = "Newest" | "Subscribers" | "Price: Low to High" | "Price: High to Low";
 
@@ -35,7 +35,7 @@ export interface ResponsiveSubscriptionPlan {
   tierVariant?: "orange" | "purple" | "indigo" | "blue";
   price: string;
   subscribersCount: number;
-  status: "Active" | "Paused" | "Expired" | "Draft";
+  status: "Active" | "Paused" | "Inactive" | "Draft" | string;
   createdAt: string;
   billingCycle?: "Weekly" | "Monthly" | "Quarterly";
   mealsPerDay?: number;
@@ -60,7 +60,7 @@ const EMPTY_PLANS: ResponsiveSubscriptionPlan[] = [];
 const STATUS_OPTIONS: { label: string; value: PlanStatus }[] = [
   { label: "All Statuses", value: "All" },
   { label: "Active", value: "Active" },
-  { label: "Expired", value: "Expired" },
+  { label: "Inactive", value: "Inactive" },
   { label: "Paused", value: "Paused" },
 ];
 
@@ -224,8 +224,8 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
           const targetStatus = statusFilter.trim().toLowerCase();
           if (targetStatus === "active") {
             if (planStatus !== "active" && planStatus !== "live") return false;
-          } else if (targetStatus === "expired") {
-            if (planStatus !== "expired" && planStatus !== "inactive" && planStatus !== "draft") return false;
+          } else if (targetStatus === "inactive") {
+            if (planStatus !== "inactive" && planStatus !== "draft") return false;
           } else if (planStatus !== targetStatus) {
             return false;
           }
@@ -283,9 +283,11 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
   const getStatusBadgeClass = (status: string) => {
     switch (status.toLowerCase()) {
       case "active":
+      case "live":
         return styles.statusActive;
       case "paused":
         return styles.statusPaused;
+      case "inactive":
       default:
         return styles.statusDraft;
     }
