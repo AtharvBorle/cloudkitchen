@@ -976,7 +976,7 @@ export default function SubscriptionEditCanvas({
                     gap: "8px",
                   }}
                 >
-                  <span>No features added yet.</span>
+                  <span>No items added yet.</span>
                   <button
                     type="button"
                     onClick={handleAddFeatureDirect}
@@ -991,7 +991,7 @@ export default function SubscriptionEditCanvas({
                       cursor: "pointer",
                     }}
                   >
-                    + Add First Feature
+                    + Add Meal Item
                   </button>
                 </div>
               ) : (

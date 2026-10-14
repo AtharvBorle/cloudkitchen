@@ -24,6 +24,7 @@ import logoImg from "@/components/navbar/logo-nav.png";
 import { MobileSidebar } from "@/components/mobile-sidebar";
 import { fetchApi } from "@/lib/fetch-api";
 import { useLocation } from "@/components/location-provider";
+import { CustomerNotificationBell } from "@/components/notifications";
 
 const LANG_OPTIONS = [
   { id: "hi", label: "Hindi", code: "HI" },
@@ -298,13 +299,7 @@ export const RoomBookingMobileView: React.FC<RoomBookingMobileViewProps> = ({
 
         <div className={styles.navRightGroup}>
           {/* Notification Bell Button */}
-          <button
-            type="button"
-            className={styles.bellBtn}
-            aria-label="Notifications"
-          >
-            <Bell size={20} strokeWidth={2} />
-          </button>
+          <CustomerNotificationBell />
 
           {/* Language Selector Pill with Dropdown (Commented out for now) */}
           {/*
