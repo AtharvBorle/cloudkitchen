@@ -121,6 +121,9 @@ export default function HeroSection({
         ? `PIN: ${defaultAddress.pincode}`
         : "Select Location";
       setSelectedLocation(locStr || "Select Location");
+      if (defaultAddress.latitude && defaultAddress.longitude) {
+        setMapCoords({ lat: Number(defaultAddress.latitude), lng: Number(defaultAddress.longitude) });
+      }
     } else {
       setSelectedLocation("Select Location");
     }
@@ -1068,6 +1071,7 @@ export default function HeroSection({
               <HouseMapPicker
                 latitude={mapCoords.lat}
                 longitude={mapCoords.lng}
+                initialQuery={selectedLocation !== "Select Location" ? selectedLocation : ""}
                 onChange={(lat, lng, details) => {
                   setMapCoords({ lat, lng });
                   if (details) {

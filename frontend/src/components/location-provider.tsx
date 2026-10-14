@@ -104,16 +104,16 @@ export function LocationProvider({ children }: LocationProviderProps) {
       return false;
     }
 
-    // Do not auto-detect or overwrite if user has explicitly manually selected their location
-    if (!isManualTrigger && localStorage.getItem("user-manually-selected-location") === "true") {
+    // Do not auto-detect or overwrite if user has explicitly manually selected their location or is currently using location modal
+    if (!isManualTrigger && (isLocationModalOpen || localStorage.getItem("user-manually-selected-location") === "true")) {
       return false;
     }
 
     return new Promise((resolve) => {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
-          // Re-check: if user selected a location while GPS was in flight, abort
-          if (!isManualTrigger && typeof window !== "undefined" && localStorage.getItem("user-manually-selected-location") === "true") {
+          // Re-check: if user selected a location or opened modal while GPS was in flight, abort
+          if (!isManualTrigger && (isLocationModalOpen || (typeof window !== "undefined" && localStorage.getItem("user-manually-selected-location") === "true"))) {
             resolve(false);
             return;
           }
@@ -123,7 +123,7 @@ export function LocationProvider({ children }: LocationProviderProps) {
             const details = await reverseGeocodeCoords(latitude, longitude);
 
             // Re-check after async geocoding
-            if (!isManualTrigger && typeof window !== "undefined" && localStorage.getItem("user-manually-selected-location") === "true") {
+            if (!isManualTrigger && (isLocationModalOpen || (typeof window !== "undefined" && localStorage.getItem("user-manually-selected-location") === "true"))) {
               resolve(false);
               return;
             }

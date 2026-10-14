@@ -7,6 +7,7 @@ import {
     fetchPlaceSuggestions,
     fetchPlaceDetails,
     reverseGeocodeCoords,
+    geocodeAddressQuery,
     PlacePredictionItem,
     NormalizedAddressDetails,
 } from "@/lib/google-maps";
@@ -14,6 +15,8 @@ import {
 export interface AddressDetails {
     pincode?: string;
     street?: string;
+    locality?: string;
+    suburb?: string;
     landmark?: string;
     houseNumber?: string;
     city?: string;
@@ -28,6 +31,7 @@ interface HouseMapPickerProps {
     label?: string;
     height?: string;
     skipInitialReverseGeocode?: boolean;
+    initialQuery?: string;
 }
 
 function setSafeMarkerPosition(marker: any, pos: { lat: number; lng: number } | any) {
@@ -54,6 +58,7 @@ export function HouseMapPicker({
     label,
     height,
     skipInitialReverseGeocode = false,
+    initialQuery = "",
 }: HouseMapPickerProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const googleMapRef = useRef<any>(null);
@@ -62,11 +67,18 @@ export function HouseMapPicker({
     const leafletMarkerRef = useRef<any>(null);
     const isMountedRef = useRef<boolean>(true);
 
+    const onChangeRef = useRef(onChange);
+    onChangeRef.current = onChange;
+
+    // Track search selection to prevent touch synthetic ghost-clicks from reverting map
+    const isSelectingSearchRef = useRef(false);
+    const lastSearchedQueryRef = useRef<string>("");
+
     const [mapEngine, setMapEngine] = useState<"google" | "leaflet">("leaflet");
     const [mapLoaded, setMapLoaded] = useState(false);
 
     // Search state
-    const [searchQuery, setSearchQuery] = useState("");
+    const [searchQuery, setSearchQuery] = useState(initialQuery || "");
     const [isSearching, setIsSearching] = useState(false);
     const [searchResults, setSearchResults] = useState<PlacePredictionItem[]>([]);
     const [showResultsDropdown, setShowResultsDropdown] = useState(false);
@@ -74,6 +86,13 @@ export function HouseMapPicker({
     const [isLocatingGps, setIsLocatingGps] = useState(false);
     const searchWrapperRef = useRef<HTMLDivElement>(null);
     const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Sync external initialQuery if user hasn't actively searched
+    useEffect(() => {
+        if (initialQuery && !lastSearchedQueryRef.current && !searchQuery) {
+            setSearchQuery(initialQuery);
+        }
+    }, [initialQuery]);
 
     // Close dropdown on outside click
     useEffect(() => {
@@ -90,12 +109,25 @@ export function HouseMapPicker({
     const handleReverseGeocode = useCallback(
         async (newLat: number, newLng: number) => {
             if (!isMountedRef.current) return;
+            // Never overwrite active search selection with ghost clicks
+            if (isSelectingSearchRef.current) return;
+
             try {
                 const details = await reverseGeocodeCoords(newLat, newLng);
-                if (isMountedRef.current) {
-                    onChange(newLat, newLng, {
+                if (isMountedRef.current && !isSelectingSearchRef.current) {
+                    // Only update searchQuery if user didn't explicitly search via the search bar
+                    if (!lastSearchedQueryRef.current) {
+                        const locName = details.locality || details.street || "";
+                        if (locName) {
+                            setSearchQuery(locName);
+                        }
+                    }
+
+                    onChangeRef.current(newLat, newLng, {
                         pincode: details.pincode || "",
                         street: details.street || "",
+                        locality: details.locality || "",
+                        suburb: (details as any).suburb || "",
                         landmark: details.landmark || "",
                         houseNumber: details.houseNumber || "",
                         city: details.city || "Pune",
@@ -107,7 +139,7 @@ export function HouseMapPicker({
                 console.warn("Reverse geocode warning:", err);
             }
         },
-        [onChange]
+        []
     );
 
     // Initialize Map (Google Maps or Leaflet Fallback)
@@ -153,6 +185,8 @@ export function HouseMapPicker({
                             });
 
                             const handleDragEnd = () => {
+                                if (isSelectingSearchRef.current) return;
+                                lastSearchedQueryRef.current = "";
                                 const pos = marker.position;
                                 if (pos) {
                                     const curLat = typeof pos.lat === "function" ? pos.lat() : pos.lat;
@@ -168,6 +202,8 @@ export function HouseMapPicker({
                             }
 
                             map.addListener("click", (e: any) => {
+                                if (isSelectingSearchRef.current) return;
+                                lastSearchedQueryRef.current = "";
                                 if (e.latLng) {
                                     marker.position = e.latLng;
                                     const curLat = e.latLng.lat();
@@ -190,6 +226,8 @@ export function HouseMapPicker({
                         });
 
                         marker.addListener("dragend", () => {
+                            if (isSelectingSearchRef.current) return;
+                            lastSearchedQueryRef.current = "";
                             const pos = marker.getPosition();
                             if (pos) {
                                 const curLat = pos.lat();
@@ -199,6 +237,8 @@ export function HouseMapPicker({
                         });
 
                         map.addListener("click", (e: any) => {
+                            if (isSelectingSearchRef.current) return;
+                            lastSearchedQueryRef.current = "";
                             if (e.latLng) {
                                 const curLat = e.latLng.lat();
                                 const curLng = e.latLng.lng();
@@ -270,11 +310,15 @@ export function HouseMapPicker({
                     leafletMarkerRef.current = marker;
 
                     marker.on("dragend", () => {
+                        if (isSelectingSearchRef.current) return;
+                        lastSearchedQueryRef.current = "";
                         const pos = marker.getLatLng();
                         handleReverseGeocode(pos.lat, pos.lng);
                     });
 
                     map.on("click", (e: any) => {
+                        if (isSelectingSearchRef.current) return;
+                        lastSearchedQueryRef.current = "";
                         const { lat: clickLat, lng: clickLng } = e.latlng;
                         marker.setLatLng([clickLat, clickLng]);
                         handleReverseGeocode(clickLat, clickLng);
@@ -338,7 +382,7 @@ export function HouseMapPicker({
                 delete (mapContainerRef.current as any)._leaflet_id;
             }
         };
-    }, [handleReverseGeocode, skipInitialReverseGeocode, latitude, longitude]);
+    }, [skipInitialReverseGeocode]);
 
     // Update marker position and center map when latitude/longitude change from parent
     useEffect(() => {
@@ -411,6 +455,7 @@ export function HouseMapPicker({
         const query = searchQuery.trim();
         if (!query) return;
 
+        lastSearchedQueryRef.current = query;
         setIsSearching(true);
         setSearchError(null);
 
@@ -420,14 +465,26 @@ export function HouseMapPicker({
             const suggestions = await fetchPlaceSuggestions(query, { lat: centerLat, lng: centerLng });
 
             if (suggestions.length > 0) {
-                if (suggestions.length === 1) {
-                    selectLocation(suggestions[0]);
-                } else {
+                selectLocation(suggestions[0]);
+                if (suggestions.length > 1) {
                     setSearchResults(suggestions);
                     setShowResultsDropdown(true);
                 }
             } else {
-                setSearchError(`No locations found for "${query}". Try searching with landmark or pincode.`);
+                const geocoded = await geocodeAddressQuery(query);
+                if (geocoded && geocoded.lat && geocoded.lng) {
+                    selectLocation({
+                        placeId: "",
+                        description: geocoded.formattedAddress || query,
+                        mainText: geocoded.locality || query,
+                        secondaryText: geocoded.city || "Pune",
+                        lat: geocoded.lat,
+                        lng: geocoded.lng,
+                        details: geocoded,
+                    });
+                } else {
+                    setSearchError(`No locations found for "${query}". Try searching with landmark or pincode.`);
+                }
             }
         } catch (err) {
             console.error("Location search error:", err);
@@ -439,10 +496,18 @@ export function HouseMapPicker({
 
     // Apply selected location from search dropdown
     const selectLocation = async (item: PlacePredictionItem) => {
+        // Prevent touch synthetic ghost clicks on underlying map canvas
+        isSelectingSearchRef.current = true;
+        setTimeout(() => {
+            isSelectingSearchRef.current = false;
+        }, 1200);
+
         setShowResultsDropdown(false);
         setSearchResults([]);
         setSearchError(null);
-        setSearchQuery(item.mainText || item.description.split(",")[0]);
+        const locName = item.mainText || item.description.split(",")[0] || item.description;
+        setSearchQuery(locName);
+        lastSearchedQueryRef.current = locName;
 
         let targetLat = item.lat;
         let targetLng = item.lng;
@@ -461,13 +526,23 @@ export function HouseMapPicker({
         }
 
         if (targetLat === undefined || targetLng === undefined) {
-            // Reverse geocode fallback
-            return;
+            const geocoded = await geocodeAddressQuery(item.description || locName);
+            if (geocoded && geocoded.lat && geocoded.lng) {
+                targetLat = geocoded.lat;
+                targetLng = geocoded.lng;
+                details = geocoded;
+            } else {
+                return;
+            }
         }
+
+        const finalLat = targetLat;
+        const finalLng = targetLng;
+        if (finalLat === undefined || finalLng === undefined) return;
 
         // Reposition Google Map or Leaflet
         if (googleMapRef.current && googleMarkerRef.current) {
-            const pos = { lat: targetLat, lng: targetLng };
+            const pos = { lat: finalLat, lng: finalLng };
             setSafeMarkerPosition(googleMarkerRef.current, pos);
             if (typeof googleMapRef.current.panTo === "function") {
                 googleMapRef.current.panTo(pos);
@@ -476,18 +551,20 @@ export function HouseMapPicker({
                 googleMapRef.current.setZoom(16);
             }
         } else if (leafletMapRef.current && leafletMarkerRef.current) {
-            leafletMarkerRef.current.setLatLng([targetLat, targetLng]);
+            leafletMarkerRef.current.setLatLng([finalLat, finalLng]);
             if (typeof leafletMapRef.current.flyTo === "function") {
-                leafletMapRef.current.flyTo([targetLat, targetLng], 16, { animate: true, duration: 0.6 });
+                leafletMapRef.current.flyTo([finalLat, finalLng], 16, { animate: true, duration: 0.6 });
             } else {
-                leafletMapRef.current.setView([targetLat, targetLng], 16);
+                leafletMapRef.current.setView([finalLat, finalLng], 16);
             }
         }
 
         if (details) {
-            onChange(targetLat, targetLng, {
+            onChangeRef.current(finalLat, finalLng, {
                 pincode: details.pincode || "",
                 street: details.street || "",
+                locality: details.locality || locName || "",
+                suburb: (details as any).suburb || "",
                 landmark: details.landmark || "",
                 houseNumber: details.houseNumber || "",
                 city: details.city || "Pune",
@@ -495,7 +572,7 @@ export function HouseMapPicker({
                 formattedAddress: details.formattedAddress || item.description,
             });
         } else {
-            handleReverseGeocode(targetLat, targetLng);
+            handleReverseGeocode(finalLat, finalLng);
         }
     };
 
@@ -605,6 +682,7 @@ export function HouseMapPicker({
                             <button
                                 type="button"
                                 onClick={() => {
+                                    lastSearchedQueryRef.current = "";
                                     setSearchQuery("");
                                     setSearchResults([]);
                                     setShowResultsDropdown(false);
@@ -724,7 +802,17 @@ export function HouseMapPicker({
                         {searchResults.map((item, index) => (
                             <div
                                 key={item.placeId || index}
-                                onClick={() => selectLocation(item)}
+                                onPointerDown={(e) => {
+                                    e.stopPropagation();
+                                }}
+                                onTouchStart={(e) => {
+                                    e.stopPropagation();
+                                }}
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    selectLocation(item);
+                                }}
                                 style={{
                                     padding: "8px 12px",
                                     borderBottom: index < searchResults.length - 1 ? "1px solid #F1F5F9" : "none",

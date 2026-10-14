@@ -206,7 +206,7 @@ export const LocationModal: React.FC = () => {
       setSuggestions([]);
       setShowSuggestions(false);
     }
-  }, [isLocationModalOpen, defaultAddress]);
+  }, [isLocationModalOpen]);
 
   if (!isLocationModalOpen) return null;
 
@@ -547,6 +547,44 @@ export const LocationModal: React.FC = () => {
       showNotification("success", `PIN Code updated to ${effectivePin} (${effectiveLocality}). Adjust doorstep pin below if needed.`);
     }
   };
+
+  const handleHouseMapChange = React.useCallback((newLat: number, newLng: number, details?: any) => {
+    setMapLat(newLat);
+    setMapLng(newLng);
+    setLatitude(newLat);
+    setLongitude(newLng);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("user-manually-selected-location", "true");
+    }
+    if (details?.pincode) {
+      const p = details.pincode.replace(/\D/g, "").slice(0, 6);
+      if (p.length === 6) {
+        setResolvedPincode(p);
+      }
+    } else {
+      const resolvedLoc = resolveLocationCoordinates(details?.formattedAddress || details?.street || details?.locality || "");
+      if (resolvedLoc?.pincode) {
+        setResolvedPincode(resolvedLoc.pincode);
+      }
+    }
+    if (details?.street) {
+      setStreet(details.street);
+    }
+    const shortFormatted = formatShortDeliveryLocation(details as any);
+    if (shortFormatted && shortFormatted !== "Select Location") {
+      setResolvedLocality(shortFormatted);
+      setPincodeInput(shortFormatted.split(",")?.[0]?.trim() || details?.pincode || "");
+    } else {
+      const streetName = details?.street;
+      const suburb = (details as any)?.suburb;
+      const locality = (details as any)?.locality || (details as any)?.city;
+      const loc = streetName || suburb || locality || "";
+      if (loc) {
+        setResolvedLocality(loc);
+        setPincodeInput(loc.split(",")?.[0]?.trim() || "");
+      }
+    }
+  }, []);
 
   // 2. Handle Confirming Pinned Delivery Location
   const handleConfirmPinnedLocation = () => {
@@ -1000,40 +1038,8 @@ export const LocationModal: React.FC = () => {
               latitude={mapLat}
               longitude={mapLng}
               height="200px"
-              onChange={(newLat, newLng, details) => {
-                setMapLat(newLat);
-                setMapLng(newLng);
-                setLatitude(newLat);
-                setLongitude(newLng);
-                if (details?.pincode) {
-                  const p = details.pincode.replace(/\D/g, "").slice(0, 6);
-                  if (p.length === 6) {
-                    setResolvedPincode(p);
-                  }
-                } else {
-                  const resolvedLoc = resolveLocationCoordinates(details?.formattedAddress || details?.street || "");
-                  if (resolvedLoc?.pincode) {
-                    setResolvedPincode(resolvedLoc.pincode);
-                  }
-                }
-                if (details?.street) {
-                  setStreet(details.street);
-                }
-                const shortFormatted = formatShortDeliveryLocation(details as any);
-                if (shortFormatted && shortFormatted !== "Select Location") {
-                  setResolvedLocality(shortFormatted);
-                  setPincodeInput(shortFormatted.split(",")?.[0]?.trim() || details?.pincode || "");
-                } else {
-                  const streetName = details?.street;
-                  const suburb = (details as any)?.suburb;
-                  const locality = (details as any)?.locality || (details as any)?.city;
-                  const loc = streetName || suburb || locality || "";
-                  if (loc) {
-                    setResolvedLocality(loc);
-                    setPincodeInput(loc.split(",")?.[0]?.trim() || "");
-                  }
-                }
-              }}
+              initialQuery={resolvedLocality || pincodeInput}
+              onChange={handleHouseMapChange}
             />
 
             <div className={styles.mapPinInfoCard}>
