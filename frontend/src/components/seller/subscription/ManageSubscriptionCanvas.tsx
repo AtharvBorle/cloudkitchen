@@ -29,7 +29,7 @@ import {
   MealSubscriber,
   MealPlanMetrics,
 } from "@/lib/meal-subscriptions";
-import { Trash2, Power, Eye, EyeOff, Pause } from "lucide-react";
+import { Trash2, Power, Eye, EyeOff } from "lucide-react";
 import PaginationControls from "../common/PaginationControls";
 
 export function formatDeliveryAddressDisplay(rawAddress?: string, roomNo?: string): string {
@@ -63,7 +63,7 @@ export default function ManageSubscriptionCanvas({
   const [plans, setPlans] = useState<PlanItem[]>([]);
   const [subscribers, setSubscribers] = useState<RecentSubscriber[]>([]);
   const [serverMetrics, setServerMetrics] = useState<MealPlanMetrics | null>(null);
-  const [activeTab, setActiveTab] = useState<"all" | "active" | "inactive" | "paused">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "active" | "inactive">("all");
   const [localSearchQuery, setLocalSearchQuery] = useState("");
   const searchQuery = externalSearchQuery !== undefined ? externalSearchQuery : localSearchQuery;
 
@@ -181,19 +181,6 @@ export default function ManageSubscriptionCanvas({
     return s === "live" || s === "active";
   };
 
-  const isPlanPaused = (plan: PlanItem) => {
-    const s = String(plan.status || "").toLowerCase().trim();
-    if (s === "paused") return true;
-    const pausePeriod = String(plan.pauseBillingPeriod || "").toLowerCase().trim();
-    const hasPausePeriod = Boolean(
-      pausePeriod &&
-      pausePeriod !== "none" &&
-      pausePeriod !== "disabled" &&
-      pausePeriod !== "false"
-    );
-    return Boolean(plan.allowPause || plan.allowPauseBilling || hasPausePeriod);
-  };
-
   const isPlanInactive = (plan: PlanItem) => {
     const s = String(plan.status || "").toLowerCase().trim();
     return s === "inactive" || s === "draft";
@@ -201,7 +188,6 @@ export default function ManageSubscriptionCanvas({
 
   const filteredPlans = plans.filter((plan) => {
     if (activeTab === "active" && !isPlanActive(plan)) return false;
-    if (activeTab === "paused" && !isPlanPaused(plan)) return false;
     if (activeTab === "inactive" && !isPlanInactive(plan)) return false;
 
     const q = (searchQuery || "").toLowerCase().trim();
@@ -268,7 +254,6 @@ export default function ManageSubscriptionCanvas({
 
   const activePlansCount = plans.filter(isPlanActive).length;
   const inactivePlansCount = plans.filter(isPlanInactive).length;
-  const pausedPlansCount = plans.filter(isPlanPaused).length;
 
   // Helper to determine if a subscriber record represents a currently active subscription
   const now = new Date();
@@ -598,23 +583,6 @@ export default function ManageSubscriptionCanvas({
           >
             Inactive ({inactivePlansCount})
           </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("paused")}
-            style={{
-              padding: "8px 16px",
-              borderRadius: "6px",
-              border: "none",
-              fontSize: "13px",
-              fontWeight: activeTab === "paused" ? 700 : 500,
-              backgroundColor: activeTab === "paused" ? "#FF5500" : "transparent",
-              color: activeTab === "paused" ? "#FFFFFF" : "#64748B",
-              cursor: "pointer",
-              transition: "all 0.15s ease",
-            }}
-          >
-            Paused ({pausedPlansCount})
-          </button>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
@@ -663,8 +631,6 @@ export default function ManageSubscriptionCanvas({
               ? "No active subscription plans found"
               : activeTab === "inactive"
               ? "No inactive subscription plans found"
-              : activeTab === "paused"
-              ? "No paused subscription plans found"
               : "No subscription plans found"}
           </h3>
           <p style={{ fontSize: "13.5px", color: "#64748B", margin: 0, maxWidth: "440px" }}>
@@ -781,43 +747,20 @@ export default function ManageSubscriptionCanvas({
                   marginBottom: "14px",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span
-                    style={{
-                      backgroundColor: plan.tierBg,
-                      color: plan.tierColor,
-                      fontSize: "11px",
-                      fontWeight: 700,
-                      padding: "4px 9px",
-                      borderRadius: "6px",
-                      letterSpacing: "0.5px",
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    {plan.tier}
-                  </span>
-
-                  {isPlanPaused(plan) && (
-                    <span
-                      style={{
-                        backgroundColor: "#FEF3C7",
-                        color: "#92400E",
-                        border: "1px solid #FDE68A",
-                        fontSize: "11px",
-                        fontWeight: 700,
-                        padding: "3px 8px",
-                        borderRadius: "6px",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "4px",
-                      }}
-                      title="User subscription pausing is allowed for this plan"
-                    >
-                      <Pause size={10} strokeWidth={2.6} />
-                      <span>Pause Allowed</span>
-                    </span>
-                  )}
-                </div>
+                <span
+                  style={{
+                    backgroundColor: plan.tierBg,
+                    color: plan.tierColor,
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    padding: "4px 9px",
+                    borderRadius: "6px",
+                    letterSpacing: "0.5px",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {plan.tier}
+                </span>
 
                 <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                   <span
@@ -825,11 +768,7 @@ export default function ManageSubscriptionCanvas({
                       width: "8px",
                       height: "8px",
                       borderRadius: "50%",
-                      backgroundColor: isPlanActive(plan)
-                        ? "#22C55E"
-                        : isPlanPaused(plan)
-                        ? "#F59E0B"
-                        : "#94A3B8",
+                      backgroundColor: isPlanActive(plan) ? "#22C55E" : "#94A3B8",
                       display: "inline-block",
                     }}
                   />
@@ -837,11 +776,7 @@ export default function ManageSubscriptionCanvas({
                     style={{
                       fontSize: "12px",
                       fontWeight: 600,
-                      color: isPlanActive(plan)
-                        ? "#16A34A"
-                        : isPlanPaused(plan)
-                        ? "#D97706"
-                        : "#64748B",
+                      color: isPlanActive(plan) ? "#16A34A" : "#64748B",
                     }}
                   >
                     {plan.status}
