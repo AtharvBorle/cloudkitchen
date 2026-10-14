@@ -8,6 +8,7 @@ import {
   getStoredMealSubscribers,
   MealSubscriber,
 } from "@/lib/meal-subscriptions";
+import { getMealSlotDetails } from "@/lib/meal-slots";
 import { formatDeliveryAddressDisplay } from "./ManageSubscriptionCanvas";
 import PaginationControls from "../common/PaginationControls";
 
@@ -575,7 +576,28 @@ export default function SubscribersCanvas({
                           whiteSpace: "nowrap",
                         }}
                       >
-                        {sub.planName}
+                        <div style={{ fontWeight: 600 }}>{sub.planName}</div>
+                        <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", marginTop: "4px" }}>
+                          {(sub.mealSlots && sub.mealSlots.length > 0
+                            ? sub.mealSlots
+                            : (sub.slotIds || []).map((id) => getMealSlotDetails(id))
+                          ).map((slot) => (
+                            <span
+                              key={slot.id}
+                              style={{
+                                fontSize: "10px",
+                                fontWeight: 700,
+                                backgroundColor: "#FFF7ED",
+                                color: "#EA580C",
+                                padding: "1px 6px",
+                                borderRadius: "4px",
+                                border: "1px solid #FFEDD5",
+                              }}
+                            >
+                              {slot.name}
+                            </span>
+                          ))}
+                        </div>
                       </td>
                       <td
                         style={{

@@ -33,6 +33,12 @@ import {
   MealSubscriber,
   getTierColors,
 } from "@/lib/meal-subscriptions";
+import {
+  PREDEFINED_MEAL_SLOTS,
+  normalizeMealSlotIds,
+  getMealSlotDetails,
+  MealSlotDefinition,
+} from "@/lib/meal-slots";
 import styles from "./ResponsiveSellerOrders.module.css";
 
 export type OrderFilterTab = "New" | "Preparing" | "Out" | "Done" | "Cancelled" | "All";
@@ -128,6 +134,7 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
   const [subscribers, setSubscribers] = useState<MealSubscriber[]>([]);
   const [loadingSubs, setLoadingSubs] = useState(false);
   const [subscribersTab, setSubscribersTab] = useState<"today" | "paused" | "all">("today");
+  const [subMealSlotFilter, setSubMealSlotFilter] = useState<string>("ALL");
 
   const todayDateStr = React.useMemo(() => new Date().toISOString().split("T")[0], []);
 
@@ -170,6 +177,14 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
     }
   };
 
+  const getSubscriberSlots = React.useCallback((s: MealSubscriber): MealSlotDefinition[] => {
+    if (s.mealSlots && s.mealSlots.length > 0) return s.mealSlots;
+    if (s.slotIds && s.slotIds.length > 0) return s.slotIds.map((id) => getMealSlotDetails(id));
+    const normalized = normalizeMealSlotIds(s.mealTimings || []);
+    if (normalized.length > 0) return normalized.map((id) => getMealSlotDetails(id));
+    return [getMealSlotDetails("lunch")];
+  }, []);
+
   const pausedSubscribers = React.useMemo(() => {
     return subscribers.filter((s) => Boolean(s.isPaused));
   }, [subscribers]);
@@ -186,7 +201,20 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
     });
   }, [subscribers]);
 
-  const mealsToDeliverTodayCount = todayDeliverySubscribers.length;
+  const slotCounts = React.useMemo(() => {
+    const counts: Record<string, number> = { ALL: 0 };
+    PREDEFINED_MEAL_SLOTS.forEach((slot) => { counts[slot.id] = 0; });
+    todayDeliverySubscribers.forEach((s) => {
+      const slots = getSubscriberSlots(s);
+      counts.ALL += slots.length;
+      slots.forEach((slot) => {
+        counts[slot.id] = (counts[slot.id] || 0) + 1;
+      });
+    });
+    return counts;
+  }, [todayDeliverySubscribers, getSubscriberSlots]);
+
+  const mealsToDeliverTodayCount = slotCounts.ALL || todayDeliverySubscribers.length;
   const deliveredTodayCount = React.useMemo(() => {
     return todayDeliverySubscribers.filter((s) => {
       const todayRec = s.dailyDeliveries?.find((d: any) => d.date === todayDateStr);
@@ -198,21 +226,43 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
   const totalSubscribersCount = subscribers.length;
 
   const displayedSubscribers = React.useMemo(() => {
-    if (subscribersTab === "today") return todayDeliverySubscribers;
-    if (subscribersTab === "paused") return pausedSubscribers;
-    return subscribers;
-  }, [subscribersTab, todayDeliverySubscribers, pausedSubscribers, subscribers]);
+    let list =
+      subscribersTab === "today"
+        ? todayDeliverySubscribers
+        : subscribersTab === "paused"
+        ? pausedSubscribers
+        : subscribers;
 
-  const handleToggleDelivery = async (sub: MealSubscriber) => {
-    const isCurrentlyDelivered = sub.dailyDeliveries?.find((d: any) => d.date === todayDateStr)?.status === "DELIVERED";
+    if (subscribersTab === "today" && subMealSlotFilter !== "ALL") {
+      list = list.filter((s) => {
+        const slots = getSubscriberSlots(s);
+        return slots.some((slot) => slot.id === subMealSlotFilter);
+      });
+    }
+
+    return list;
+  }, [subscribersTab, todayDeliverySubscribers, pausedSubscribers, subscribers, subMealSlotFilter, getSubscriberSlots]);
+
+  const handleToggleDelivery = async (sub: MealSubscriber, slotId?: string) => {
+    const targetSlotId = slotId || (getSubscriberSlots(sub)[0]?.id || "breakfast");
+    const isCurrentlyDelivered = sub.dailyDeliveries?.some(
+      (d: any) => d.date === todayDateStr && (d.slotId === targetSlotId || !d.slotId) && d.status === "DELIVERED"
+    );
     const nextStatus: "DELIVERED" | "NOT_DELIVERED" = isCurrentlyDelivered ? "NOT_DELIVERED" : "DELIVERED";
 
     setSubscribers((prev) =>
       prev.map((s) => {
         if (s.id !== sub.id) return s;
         const currentDeliveries = Array.isArray(s.dailyDeliveries) ? [...s.dailyDeliveries] : [];
-        const idx = currentDeliveries.findIndex((d: any) => d.date === todayDateStr);
-        const rec = { date: todayDateStr, status: nextStatus, markedAt: new Date().toISOString() };
+        const idx = currentDeliveries.findIndex(
+          (d: any) => d.date === todayDateStr && (d.slotId === targetSlotId || !d.slotId)
+        );
+        const rec = {
+          date: todayDateStr,
+          slotId: targetSlotId,
+          status: nextStatus,
+          markedAt: new Date().toISOString(),
+        };
         if (idx >= 0) currentDeliveries[idx] = rec;
         else currentDeliveries.unshift(rec);
         return { ...s, dailyDeliveries: currentDeliveries };
@@ -220,10 +270,11 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
     );
 
     try {
-      await markSubscriberMealDeliveryStatus(sub.id, todayDateStr, nextStatus);
+      await markSubscriberMealDeliveryStatus(sub.id, todayDateStr, nextStatus, undefined, targetSlotId);
+      const slotObj = getMealSlotDetails(targetSlotId);
       setToast({
         type: "success",
-        text: `Meal marked as ${nextStatus === "DELIVERED" ? "Delivered" : "Pending"} for ${sub.customerName || "Customer"}`,
+        text: `${slotObj.name} marked as ${nextStatus === "DELIVERED" ? "Delivered" : "Pending"} for ${sub.customerName || "Customer"}`,
       });
     } catch (err: any) {
       setToast({ type: "error", text: err.message || "Failed to update delivery status" });
@@ -713,6 +764,93 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
           </button>
         </div>
 
+        {/* 7 Predefined Meal Slot Filter Tabs on Mobile */}
+        {subscribersTab === "today" && (
+          <div
+            style={{
+              display: "flex",
+              gap: "6px",
+              overflowX: "auto",
+              padding: "4px 0 10px 0",
+              scrollbarWidth: "none",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setSubMealSlotFilter("ALL")}
+              style={{
+                padding: "5px 12px",
+                borderRadius: "9999px",
+                fontSize: "0.78rem",
+                fontWeight: subMealSlotFilter === "ALL" ? 800 : 600,
+                border: subMealSlotFilter === "ALL" ? "1.5px solid #EA580C" : "1px solid #E2E8F0",
+                backgroundColor: subMealSlotFilter === "ALL" ? "#FFF7ED" : "#FFFFFF",
+                color: subMealSlotFilter === "ALL" ? "#C2410C" : "#475569",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "5px",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+              }}
+            >
+              <span>All Slots</span>
+              <span
+                style={{
+                  fontSize: "0.7rem",
+                  padding: "1px 6px",
+                  borderRadius: "9999px",
+                  backgroundColor: subMealSlotFilter === "ALL" ? "#FFEDD5" : "#F1F5F9",
+                  color: subMealSlotFilter === "ALL" ? "#C2410C" : "#64748B",
+                  fontWeight: 700,
+                }}
+              >
+                {slotCounts.ALL || 0}
+              </span>
+            </button>
+            {PREDEFINED_MEAL_SLOTS.map((slot) => {
+              const isSelected = subMealSlotFilter === slot.id;
+              const count = slotCounts[slot.id] || 0;
+              return (
+                <button
+                  key={slot.id}
+                  type="button"
+                  onClick={() => setSubMealSlotFilter(slot.id)}
+                  style={{
+                    padding: "5px 12px",
+                    borderRadius: "9999px",
+                    fontSize: "0.78rem",
+                    fontWeight: isSelected ? 800 : 600,
+                    border: isSelected ? "1.5px solid #EA580C" : "1px solid #E2E8F0",
+                    backgroundColor: isSelected ? "#FFF7ED" : "#FFFFFF",
+                    color: isSelected ? "#C2410C" : "#475569",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "5px",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                  }}
+                >
+                  <span>{slot.name}</span>
+                  <span
+                    style={{
+                      fontSize: "0.7rem",
+                      padding: "1px 6px",
+                      borderRadius: "9999px",
+                      backgroundColor: isSelected ? "#FFEDD5" : "#F1F5F9",
+                      color: isSelected ? "#C2410C" : "#64748B",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* If Paused Tab, Info Banner */}
         {subscribersTab === "paused" && (
           <div className={styles.pausedWindowBannerMobile}>
@@ -756,9 +894,8 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
           <div>
             {displayedSubscribers.map((sub) => {
               const tierColors = getTierColors(sub.tier || "Bronze");
-              const todayRec = sub.dailyDeliveries?.find((d: any) => d.date === todayDateStr);
-              const isDelivered = todayRec?.status === "DELIVERED";
               const initialLetter = (sub.customerName || "Customer").charAt(0).toUpperCase();
+              const subSlots = getSubscriberSlots(sub);
 
               return (
                 <article key={sub.id} className={styles.subCardMobile}>
@@ -814,11 +951,32 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
                       <MapPin size={13} color="#EA580C" style={{ flexShrink: 0, marginTop: "2px" }} />
                       <span style={{ color: "#334155" }}>{sub.deliveryAddress || "Address provided at checkout"}</span>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <Clock size={13} color="#64748B" />
-                      <span style={{ color: "#334155" }}>
-                        Slot: {sub.mealTimings && sub.mealTimings.length > 0 ? sub.mealTimings.join(", ") : "Standard Delivery Window"}
-                      </span>
+                    <div>
+                      <div style={{ fontSize: "0.75rem", color: "#64748B", fontWeight: 600, marginBottom: "4px" }}>
+                        Meal Slots:
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                        {subSlots.map((slot) => (
+                          <span
+                            key={slot.id}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "3px",
+                              padding: "2px 6px",
+                              borderRadius: "4px",
+                              fontSize: "0.72rem",
+                              fontWeight: 700,
+                              backgroundColor: "#EFF6FF",
+                              color: "#1D4ED8",
+                              border: "1px solid #BFDBFE",
+                            }}
+                          >
+                            <Clock size={10} />
+                            {slot.name}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                       <Calendar size={13} color="#64748B" />
@@ -840,30 +998,42 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
                     )}
                   </div>
 
-                  {/* Delivery Action Button (Only for today's deliveries tab) */}
+                  {/* Slot-level Delivery Action Buttons (Only for today's deliveries tab) */}
                   {subscribersTab === "today" && (
-                    <button
-                      type="button"
-                      className={styles.deliveryActionBtnMobile}
-                      style={{
-                        backgroundColor: isDelivered ? "#F0FDF4" : "#EA580C",
-                        color: isDelivered ? "#15803D" : "#FFFFFF",
-                        border: isDelivered ? "1px solid #BBF7D0" : "none",
-                      }}
-                      onClick={() => handleToggleDelivery(sub)}
-                    >
-                      {isDelivered ? (
-                        <>
-                          <CheckCircle2 size={16} />
-                          <span>Delivered Today (Tap to change)</span>
-                        </>
-                      ) : (
-                        <>
-                          <PackageCheck size={16} />
-                          <span>Mark Today&apos;s Meal Delivered</span>
-                        </>
-                      )}
-                    </button>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "10px" }}>
+                      {subSlots.map((slot) => {
+                        const isSlotDelivered = sub.dailyDeliveries?.some(
+                          (d: any) => d.date === todayDateStr && (d.slotId === slot.id || !d.slotId) && d.status === "DELIVERED"
+                        );
+                        return (
+                          <button
+                            key={slot.id}
+                            type="button"
+                            className={styles.deliveryActionBtnMobile}
+                            style={{
+                              backgroundColor: isSlotDelivered ? "#F0FDF4" : "#EA580C",
+                              color: isSlotDelivered ? "#15803D" : "#FFFFFF",
+                              border: isSlotDelivered ? "1px solid #BBF7D0" : "none",
+                              padding: "8px 12px",
+                              fontSize: "0.8rem",
+                            }}
+                            onClick={() => handleToggleDelivery(sub, slot.id)}
+                          >
+                            {isSlotDelivered ? (
+                              <>
+                                <CheckCircle2 size={15} />
+                                <span>{slot.name}: Delivered (Tap to Undo)</span>
+                              </>
+                            ) : (
+                              <>
+                                <PackageCheck size={15} />
+                                <span>{slot.name}: Mark Delivered</span>
+                              </>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
                   )}
                 </article>
               );

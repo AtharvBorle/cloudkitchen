@@ -15,6 +15,7 @@ import {
   Bell,
 } from "lucide-react";
 import { saveMealPlan } from "@/lib/meal-subscriptions";
+import { PREDEFINED_MEAL_SLOTS } from "@/lib/meal-slots";
 import styles from "./ResSellerSubPlan.module.css";
 
 export interface MealTimingSlot {
@@ -72,13 +73,19 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
   const [features, setFeatures] = useState<string[]>(initialFeatures);
   const [duration, setDuration] = useState(initialDuration);
   const [isDurationMenuOpen, setIsDurationMenuOpen] = useState(false);
-  const [mealTimings, setMealTimings] = useState<MealTimingSlot[]>(initialMealTimings);
+  const [selectedSlotIds, setSelectedSlotIds] = useState<string[]>([
+    "breakfast",
+    "lunch",
+    "dinner",
+  ]);
   const [allowPauseBilling, setAllowPauseBilling] = useState(initialAllowPauseBilling);
   const [pauseBillingPeriod, setPauseBillingPeriod] = useState("30 Days");
 
-  // Edit Timing Modal State
-  const [editingTiming, setEditingTiming] = useState<MealTimingSlot | null>(null);
-  const [timingTimeValue, setTimingTimeValue] = useState("");
+  const handleToggleSlot = (slotId: string) => {
+    setSelectedSlotIds((prev) =>
+      prev.includes(slotId) ? prev.filter((id) => id !== slotId) : [...prev, slotId]
+    );
+  };
 
   // Toast State
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -138,9 +145,14 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
       alert(`Please enter a valid positive Price (₹) greater than 0 for ${duration}.`);
       return;
     }
+    if (selectedSlotIds.length === 0) {
+      alert("Please select at least one Meal Slot for this subscription plan.");
+      return;
+    }
 
     const validFeatures = features.map((f) => f.trim()).filter((f) => f.length > 0);
     const isWeekly = duration.toLowerCase().includes("week");
+    const selectedSlots = PREDEFINED_MEAL_SLOTS.filter((s) => selectedSlotIds.includes(s.id));
     const payload = {
       name: planName.trim() || "Bronze Plan",
       tier: planTier.trim() || "Bronze",
@@ -150,7 +162,8 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
       yearlyPrice: "",
       duration,
       features: validFeatures,
-      mealTimings: mealTimings.map((m) => `${m.name}: ${m.time}`),
+      mealTimings: selectedSlots.map((m) => `${m.name}: ${m.defaultTimeRange}`),
+      slotIds: selectedSlotIds,
       allowCancel: false,
       allowPause: allowPauseBilling,
       allowPauseBilling: allowPauseBilling,
@@ -392,32 +405,77 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
             </div>
           </section>
 
-          {/* Section 4: Plan Timing & Schedule */}
+          {/* Section 4: Predefined Meal Slots */}
           <section className={styles.card}>
-            <h2 className={styles.cardTitle}>Plan Timing &amp; Schedule</h2>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+              <h2 className={styles.cardTitle} style={{ margin: 0 }}>Included Meal Slots</h2>
+              <span
+                style={{
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  color: selectedSlotIds.length > 0 ? "#EA580C" : "#EF4444",
+                  backgroundColor: selectedSlotIds.length > 0 ? "#FFF7ED" : "#FEF2F2",
+                  padding: "3px 8px",
+                  borderRadius: "6px",
+                }}
+              >
+                {selectedSlotIds.length} of 7 Selected
+              </span>
+            </div>
+            <p style={{ fontSize: "11.5px", color: "#64748B", margin: "0 0 10px 0" }}>
+              Select all standardized slots included in this plan (minimum 1 required).
+            </p>
 
-            {/* Meal Timings List */}
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Meal Timings</label>
-              <div className={styles.mealTimingsList}>
-                {mealTimings.map((slot) => (
-                  <div key={slot.id} className={styles.mealTimingSlot}>
-                    <span className={styles.mealName}>{slot.name}</span>
-                    <div className={styles.mealRight}>
-                      <span className={styles.mealTimingText}>{slot.time}</span>
-                      <button
-                        type="button"
-                        className={styles.editTimingBtn}
-                        onClick={() => handleOpenEditTiming(slot)}
-                        aria-label={`Edit ${slot.name} timing`}
-                        title="Edit Timing"
-                      >
-                        <Pencil size={15} />
-                      </button>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              {PREDEFINED_MEAL_SLOTS.map((slot) => {
+                const isSelected = selectedSlotIds.includes(slot.id);
+                return (
+                  <div
+                    key={slot.id}
+                    onClick={() => handleToggleSlot(slot.id)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "10px 12px",
+                      borderRadius: "8px",
+                      border: isSelected ? "1.5px solid #EA580C" : "1px solid #E2E8F0",
+                      backgroundColor: isSelected ? "#FFFDFB" : "#FFFFFF",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => {}}
+                        style={{ width: "16px", height: "16px", accentColor: "#EA580C" }}
+                      />
+                      <div>
+                        <div style={{ fontSize: "13px", fontWeight: 700, color: isSelected ? "#0F172A" : "#334155" }}>
+                          {slot.name}
+                        </div>
+                        <div style={{ fontSize: "11px", color: "#64748B" }}>
+                          {slot.subtitle}
+                        </div>
+                      </div>
                     </div>
+                    <span
+                      style={{
+                        fontSize: "11px",
+                        fontWeight: 600,
+                        color: isSelected ? "#C2410C" : "#64748B",
+                        backgroundColor: isSelected ? "#FFEDD5" : "#F1F5F9",
+                        padding: "2px 8px",
+                        borderRadius: "5px",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {slot.defaultTimeRange}
+                    </span>
                   </div>
-                ))}
-              </div>
+                );
+              })}
             </div>
           </section>
 
@@ -543,61 +601,6 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
           </footer>
         </main>
 
-
-        {/* Edit Timing Modal */}
-        {editingTiming && (
-          <div
-            className={styles.modalOverlay}
-            onClick={() => setEditingTiming(null)}
-          >
-            <div
-              className={styles.modalCard}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className={styles.modalHeader}>
-                <h3 className={styles.modalTitle}>
-                  Edit {editingTiming.name} Timing
-                </h3>
-                <button
-                  type="button"
-                  className={styles.modalCloseBtn}
-                  onClick={() => setEditingTiming(null)}
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Slot Timing</label>
-                <input
-                  type="text"
-                  className={styles.input}
-                  value={timingTimeValue}
-                  onChange={(e) => setTimingTimeValue(e.target.value)}
-                  placeholder="e.g. 7:30 AM - 9:30 AM"
-                  autoFocus
-                />
-              </div>
-
-              <div className={styles.modalActionRow}>
-                <button
-                  type="button"
-                  className={styles.cancelModalBtn}
-                  onClick={() => setEditingTiming(null)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className={styles.saveModalBtn}
-                  onClick={handleSaveTiming}
-                >
-                  Save Timing
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Toast Alert */}
         {toastMessage && (

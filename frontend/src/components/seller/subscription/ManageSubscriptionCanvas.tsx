@@ -403,7 +403,49 @@ export default function ManageSubscriptionCanvas({
         </div>
 
         {/* Top Action Buttons */}
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          <Link
+            href="/seller/subscription/deliveries"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "7px",
+              backgroundColor: "#FFFFFF",
+              color: "#334155",
+              border: "1.5px solid #CBD5E1",
+              padding: "9px 16px",
+              borderRadius: "8px",
+              fontSize: "13.5px",
+              fontWeight: 700,
+              textDecoration: "none",
+              transition: "all 0.15s ease",
+            }}
+          >
+            <Calendar size={16} color="#EA580C" />
+            <span>Deliveries Roster</span>
+          </Link>
+
+          <Link
+            href="/seller/subscription/timings"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "7px",
+              backgroundColor: "#FFFFFF",
+              color: "#334155",
+              border: "1.5px solid #CBD5E1",
+              padding: "9px 16px",
+              borderRadius: "8px",
+              fontSize: "13.5px",
+              fontWeight: 700,
+              textDecoration: "none",
+              transition: "all 0.15s ease",
+            }}
+          >
+            <Clock size={16} color="#EA580C" />
+            <span>Manage Timings</span>
+          </Link>
+
           <Link
             href="/seller/subscription/add"
             style={{
@@ -925,27 +967,50 @@ export default function ManageSubscriptionCanvas({
                     letterSpacing: "0.5px",
                   }}
                 >
-                  Scheduled Timings:
+                  Covered Meal Slots:
                 </span>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "6px" }}>
-                  {plan.mealTimings.map((t, idx) => (
-                    <span
-                      key={idx}
-                      style={{
-                        fontSize: "11.5px",
-                        backgroundColor: "#F1F5F9",
-                        color: "#475569",
-                        padding: "3px 8px",
-                        borderRadius: "5px",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "4px",
-                      }}
-                    >
-                      <Clock size={11} />
-                      {t}
-                    </span>
-                  ))}
+                  {plan.mealSlots && plan.mealSlots.length > 0 ? (
+                    plan.mealSlots.map((slot) => (
+                      <span
+                        key={slot.id}
+                        style={{
+                          fontSize: "11.5px",
+                          fontWeight: 600,
+                          backgroundColor: "#FFF7ED",
+                          color: "#C2410C",
+                          border: "1px solid #FFEDD5",
+                          padding: "3px 8px",
+                          borderRadius: "6px",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
+                        }}
+                      >
+                        <Clock size={11} color="#EA580C" />
+                        <span>{slot.name}</span>
+                      </span>
+                    ))
+                  ) : (
+                    plan.mealTimings.map((t, idx) => (
+                      <span
+                        key={idx}
+                        style={{
+                          fontSize: "11.5px",
+                          backgroundColor: "#F1F5F9",
+                          color: "#475569",
+                          padding: "3px 8px",
+                          borderRadius: "5px",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
+                        }}
+                      >
+                        <Clock size={11} />
+                        {t}
+                      </span>
+                    ))
+                  )}
                 </div>
               </div>
             </div>
