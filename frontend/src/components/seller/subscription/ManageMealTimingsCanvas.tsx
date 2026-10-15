@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Clock,
   ChevronLeft,
@@ -55,6 +56,10 @@ function parseTimeRange(rangeStr?: string): { start: string; end: string } {
 }
 
 export default function ManageMealTimingsCanvas() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnTo = searchParams ? searchParams.get("returnTo") : null;
+
   const seller = useSellerProfile();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [slots, setSlots] = useState<MealSlotDefinition[]>(PREDEFINED_MEAL_SLOTS);
@@ -125,7 +130,14 @@ export default function ManageMealTimingsCanvas() {
         prev.map((s) => (s.id === slotId ? { ...s, defaultTimeRange: formattedTimeRange } : s))
       );
       setEditingSlotId(null);
-      showToast("Meal slot delivery timing updated successfully!", "success");
+      if (returnTo) {
+        showToast("Meal slot timing saved! Returning to your subscription form...", "success");
+        setTimeout(() => {
+          router.push(returnTo);
+        }, 1200);
+      } else {
+        showToast("Meal slot delivery timing updated successfully!", "success");
+      }
     } catch (err: any) {
       showToast(err.message || "Failed to update slot timing.", "error");
     } finally {
@@ -183,28 +195,99 @@ export default function ManageMealTimingsCanvas() {
                 </p>
               </div>
 
-              <Link
-                href="/seller/subscription"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: "9px 16px",
-                  borderRadius: "8px",
-                  border: "1px solid #CBD5E1",
-                  backgroundColor: "#FFFFFF",
-                  color: "#334155",
-                  fontSize: "13.5px",
-                  fontWeight: 600,
-                  textDecoration: "none",
-                  transition: "all 0.15s ease",
-                }}
-              >
-                <ChevronLeft size={16} />
-                <span>Back to Plans</span>
-              </Link>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                {returnTo && (
+                  <button
+                    type="button"
+                    onClick={() => router.push(returnTo)}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "9px 18px",
+                      borderRadius: "8px",
+                      backgroundColor: "#FF5500",
+                      color: "#FFFFFF",
+                      border: "none",
+                      fontSize: "13.5px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      boxShadow: "0 2px 4px rgba(255, 85, 0, 0.2)",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    <span>← Return to Plan Form</span>
+                  </button>
+                )}
+                <Link
+                  href="/seller/subscription"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    padding: "9px 16px",
+                    borderRadius: "8px",
+                    border: "1px solid #CBD5E1",
+                    backgroundColor: "#FFFFFF",
+                    color: "#334155",
+                    fontSize: "13.5px",
+                    fontWeight: 600,
+                    textDecoration: "none",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  <ChevronLeft size={16} />
+                  <span>{returnTo ? "All Plans" : "Back to Plans"}</span>
+                </Link>
+              </div>
             </div>
           </div>
+
+          {/* If returning from creating/editing a plan, show context notice */}
+          {returnTo && (
+            <div
+              style={{
+                backgroundColor: "#FFF7ED",
+                border: "1.5px solid #FFEDD5",
+                borderRadius: "12px",
+                padding: "14px 20px",
+                marginBottom: "20px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                flexWrap: "wrap",
+                gap: "12px",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <span style={{ fontSize: "20px" }}>📝</span>
+                <div>
+                  <strong style={{ fontSize: "14px", color: "#C2410C" }}>
+                    Configuring Timings for Meal Subscription
+                  </strong>
+                  <p style={{ margin: 0, fontSize: "12.5px", color: "#9A3412" }}>
+                    Your subscription plan draft is preserved. Configure the desired meal timings below and return when ready.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => router.push(returnTo)}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: "8px",
+                  backgroundColor: "#EA580C",
+                  color: "#FFFFFF",
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                Return to Plan Form →
+              </button>
+            </div>
+          )}
 
           {/* Centralized Policy Notice Banner */}
           <div

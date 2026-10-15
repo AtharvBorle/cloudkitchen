@@ -1,6 +1,9 @@
 export function getCategoryExpiries(activeSubs: any[]) {
-    const foodSubs = activeSubs.filter((s: any) => !s.plan?.category || s.plan?.category === 'FOOD' || s.plan?.category === 'BOTH');
-    const propertySubs = activeSubs.filter((s: any) => !s.plan?.category || s.plan?.category === 'PROPERTY' || s.plan?.category === 'BOTH');
+    if (!Array.isArray(activeSubs)) {
+        return { foodExpiry: null, propertyExpiry: null };
+    }
+    const foodSubs = activeSubs.filter((s: any) => s && (!s.plan?.category || s.plan?.category === 'FOOD' || s.plan?.category === 'BOTH'));
+    const propertySubs = activeSubs.filter((s: any) => s && (!s.plan?.category || s.plan?.category === 'PROPERTY' || s.plan?.category === 'BOTH'));
 
     const getStackedSubs = (subsList: any[]) => {
         const sorted = [...subsList].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());

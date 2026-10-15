@@ -438,7 +438,7 @@ export default function DeliveriesCanvas() {
             <span>
               {activeSlotId === "all" ? (
                 <>
-                  Showing all scheduled deliveries for <strong>{new Date(selectedDate).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })}</strong> across all 7 predefined meal slots.
+                  Showing all scheduled deliveries for <strong>{new Date(selectedDate).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })}</strong> across all 6 predefined meal slots.
                 </>
               ) : (
                 <>
