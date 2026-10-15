@@ -23,23 +23,42 @@ export function extractAttachments(text: string): {
   const attachments: ExtractedAttachment[] = [];
   let clean = text;
 
-  // 1. Markdown image syntax: ![alt](url)
-  const markdownImgRegex = /!\[(.*?)\]\((data:image\/[^)]+|https?:\/\/[^)]+)\)/g;
+  // 1. Explicit Attachment syntax: [Attachment: name|type]\n(url or data:image/...)
+  const attachmentTagRegex = /\[Attachment:\s*([^\]|]+)(?:\|([^\]]+))?\]\s*(data:image\/[a-zA-Z0-9+.-]+;base64,[A-Za-z0-9+/=]+|https?:\/\/[^\s\n]+)/gi;
   let match: RegExpExecArray | null;
-  while ((match = markdownImgRegex.exec(text)) !== null) {
+  while ((match = attachmentTagRegex.exec(text)) !== null) {
+    const name = match[1]?.trim() || "Attached_Image.png";
+    const type = match[2]?.trim() || "";
+    const url = match[3]?.trim();
+    if (url && !attachments.some((a) => a.url === url)) {
+      attachments.push({
+        name,
+        url,
+        isImage: type ? type.startsWith("image/") : (url.startsWith("data:image/") || /\.(png|jpe?g|gif|webp|svg)/i.test(name)),
+      });
+    }
+  }
+  clean = clean.replace(attachmentTagRegex, "");
+  clean = clean.replace(/\[Attachment:\s*[^\]]+\]\s*/gi, "");
+
+  // 2. Markdown image syntax: ![alt](url)
+  const markdownImgRegex = /!\[(.*?)\]\((data:image\/[^)]+|https?:\/\/[^)]+)\)/g;
+  while ((match = markdownImgRegex.exec(clean)) !== null) {
     const name = match[1] || "Attached_Image.png";
     const url = match[2];
-    attachments.push({
-      name,
-      url,
-      isImage: true,
-    });
+    if (!attachments.some((a) => a.url === url)) {
+      attachments.push({
+        name,
+        url,
+        isImage: true,
+      });
+    }
   }
   clean = clean.replace(markdownImgRegex, "");
 
-  // 2. Data URL detection: data:image/...
+  // 3. Raw Data URL detection: data:image/...
   const dataUrlRegex = /(data:image\/[a-zA-Z0-9+.-]+;base64,[A-Za-z0-9+/=]+)/g;
-  while ((match = dataUrlRegex.exec(text)) !== null) {
+  while ((match = dataUrlRegex.exec(clean)) !== null) {
     const url = match[1];
     if (!attachments.some((a) => a.url === url)) {
       attachments.push({

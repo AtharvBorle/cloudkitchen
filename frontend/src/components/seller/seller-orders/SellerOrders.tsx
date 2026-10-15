@@ -1865,7 +1865,7 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
                                     {slot.name}
                                   </span>
                                   <span style={{ fontSize: "0.75rem", color: "#64748B" }}>
-                                    ({slot.deliveryWindow || slot.time})
+                                    ({slot.defaultTimeRange || (slot as any).deliveryWindow || (slot as any).time})
                                   </span>
                                   {isSlotDelivered ? (
                                     <span

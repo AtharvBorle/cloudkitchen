@@ -37,7 +37,13 @@ export const getAuthenticatedSellerProfile = async () => {
         }
     });
 
-    const { foodExpiry } = getCategoryExpiries(activeSubs);
+    let foodExpiry: Date | null = null;
+    try {
+        const expiries = getCategoryExpiries(activeSubs);
+        foodExpiry = expiries?.foodExpiry ?? null;
+    } catch (e) {
+        console.error("Error calculating subscription category expiries:", e);
+    }
     const isFoodActive = (foodExpiry ? foodExpiry > new Date() : false) && sellerProfile.foodVerificationStatus === "APPROVED";
 
     if (!isFoodActive && sellerProfile.verificationStatus !== "APPROVED") {
@@ -157,7 +163,21 @@ export const getSellerMealPlans = async () => {
             sub.status = "ACTIVE";
         }
         // Check if subscription expired naturally
-        if (sub.endDate && new Date(sub.endDate) < now) {
+        const isSubEndReached = (() => {
+            if (!sub.endDate) return false;
+            const end = new Date(sub.endDate);
+            if (isNaN(end.getTime())) return false;
+            if (end <= now) return true;
+            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+            const endDayStart = new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime();
+            return endDayStart <= todayStart;
+        })();
+
+        if (sub.status !== "CANCELLED" && sub.status !== "EXPIRED" && isSubEndReached) {
+            db.userMealSubscription.update({
+                where: { id: sub.id },
+                data: { status: "EXPIRED", isPaused: false }
+            }).catch(() => {});
             sub.isPaused = false;
             sub.status = "EXPIRED";
         }

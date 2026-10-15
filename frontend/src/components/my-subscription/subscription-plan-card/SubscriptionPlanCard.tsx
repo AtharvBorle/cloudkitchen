@@ -11,6 +11,7 @@ export interface SubscriptionPlanCardProps {
   tier?: string;
   statusText?: string;
   isPaused?: boolean;
+  isExpired?: boolean;
   startedOn?: string;
   renewalDate?: string;
   planPrice?: string;
@@ -22,23 +23,59 @@ export const SubscriptionPlanCard: React.FC<SubscriptionPlanCardProps> = ({
   tier = "Bronze",
   statusText = "ACTIVE",
   isPaused = false,
+  isExpired: isExpiredProp,
   startedOn = "05 Jan, 2026",
   renewalDate = "05 Feb, 2026",
   planPrice = "₹2,999/month",
 }) => {
   const tierColors = getTierColors(tier);
   const isCancelled = statusText?.toUpperCase() === "CANCELLED";
-  const isExpired = statusText?.toUpperCase() === "EXPIRED";
-  const isInactive = statusText?.toUpperCase() === "INACTIVE" || statusText?.toUpperCase() === "DEACTIVATED";
+
+  // Check if renewal/expiry date has reached or passed
+  const isDateReached = (() => {
+    if (isExpiredProp) return true;
+    if (statusText?.toUpperCase() === "EXPIRED") return true;
+    if (!renewalDate) return false;
+    if (renewalDate.toLowerCase().includes("expired")) return true;
+    const cleanDateStr = renewalDate.replace(/\(expired\)/i, "").trim();
+    const parsed = new Date(cleanDateStr);
+    if (!isNaN(parsed.getTime())) {
+      const today = new Date();
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+      const parsedDayStart = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate()).getTime();
+      return parsedDayStart <= todayStart || parsed <= today;
+    }
+    return false;
+  })();
+
+  const isExpired = Boolean(isExpiredProp) || statusText?.toUpperCase() === "EXPIRED" || isDateReached;
+  const isInactive = !isExpired && (statusText?.toUpperCase() === "INACTIVE" || statusText?.toUpperCase() === "DEACTIVATED");
+  const isEffectivelyPaused = !isExpired && !isCancelled && !isInactive && isPaused;
+
+  const displayStatus = isCancelled
+    ? "CANCELLED"
+    : isExpired
+    ? "EXPIRED"
+    : isInactive
+    ? "INACTIVE"
+    : isEffectivelyPaused
+    ? "PAUSED"
+    : (statusText?.toUpperCase() === "EXPIRED" ? "EXPIRED" : statusText || "ACTIVE");
+
+  const displayRenewalDate = isExpired && renewalDate && !renewalDate.includes("(Expired)")
+    ? `${renewalDate} (Expired)`
+    : renewalDate;
 
   return (
     <div className={styles.cardContainer}>
-      {/* Top Row: Plan Info + ACTIVE badge */}
+      {/* Top Row: Plan Info + Status badge */}
       <div className={styles.topRow}>
         <div className={styles.leftInfo}>
           <div className={styles.iconCircle}>
-            {isPaused ? (
+            {isEffectivelyPaused ? (
               <PauseCircle size={24} className={styles.pauseIcon} />
+            ) : isExpired ? (
+              <AlertCircle size={22} className={styles.icon} color="#DC2626" />
             ) : (
               <Utensils size={22} className={styles.icon} />
             )}
@@ -70,20 +107,12 @@ export const SubscriptionPlanCard: React.FC<SubscriptionPlanCardProps> = ({
               ? styles.expiredBadge
               : isInactive
               ? styles.inactiveBadge
-              : isPaused
+              : isEffectivelyPaused
               ? styles.pausedBadge
               : styles.activeBadgeGreen
           }`}
         >
-          {isCancelled
-            ? "CANCELLED"
-            : isExpired
-            ? "EXPIRED"
-            : isInactive
-            ? "INACTIVE"
-            : isPaused
-            ? "PAUSED"
-            : statusText}
+          {displayStatus}
         </span>
       </div>
 
@@ -96,7 +125,7 @@ export const SubscriptionPlanCard: React.FC<SubscriptionPlanCardProps> = ({
 
         <div className={styles.statCol}>
           <span className={styles.statLabel}>RENEWAL DATE</span>
-          <span className={styles.statValue}>{renewalDate}</span>
+          <span className={styles.statValue}>{displayRenewalDate}</span>
         </div>
 
         <div className={styles.statCol}>

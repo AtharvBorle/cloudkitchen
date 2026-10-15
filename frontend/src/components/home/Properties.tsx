@@ -225,12 +225,14 @@ export default function Properties({
       try {
         const saved = localStorage.getItem("cloudkitchen_diet_preference");
         if (saved === "pure_veg" || saved === "pureveg") return ["pure_veg"];
+        if (saved === "veg") return ["veg"];
         if (saved === "non-veg" || saved === "non_veg") return ["non-veg"];
         if (saved === "vegan") return ["vegan"];
         if (saved === "jain") return ["jain"];
+        if (saved === "all") return [];
       } catch {}
     }
-    return [];
+    return ["veg"];
   });
   const [maxPrice, setMaxPrice] = useState<number>(() => {
     if (typeof window !== "undefined") {

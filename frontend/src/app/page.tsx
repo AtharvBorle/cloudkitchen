@@ -49,17 +49,18 @@ function getInitialDietPreference(): "all" | "veg" | "pure_veg" | "non_veg" | "v
         if (lower === "all") return "all";
       }
       const storedVeg = localStorage.getItem("cloudkitchen_veg_preference");
+      if (storedVeg === "false") return "all";
       if (storedVeg === "true") return "veg";
     } catch {}
   }
-  return "all";
+  return "veg";
 }
 
 export default function Home() {
   const { isRoomEnabled } = useRoomModule();
   const [selectedCategory, setSelectedCategory] = useState("food");
   const [activeFilters, setActiveFilters] = useState<ActiveHomeFilters>(() => {
-    let initialDiet: "all" | "veg" | "pure_veg" | "non_veg" | "vegan" | "jain" = "all";
+    let initialDiet: "all" | "veg" | "pure_veg" | "non_veg" | "vegan" | "jain" = "veg";
     let initialPriceTier: "all" | "under-150" | "150-300" | "300-plus" | null = null;
     if (typeof window !== "undefined") {
       try {
@@ -704,7 +705,7 @@ export default function Home() {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        overflowX: "hidden",
+        overflowX: "clip",
       }}
     >
       <PopupBannerDisplay />

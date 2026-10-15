@@ -77,6 +77,104 @@ export const SupportTickets: React.FC = () => {
   const [newDescription, setNewDescription] = useState<string>("");
   const [submittingTicket, setSubmittingTicket] = useState<boolean>(false);
 
+  // Attachment State for Create Modal
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
+  const [attachedPreview, setAttachedPreview] = useState<string | null>(null);
+  const [attachedDataUrl, setAttachedDataUrl] = useState<string | null>(null);
+
+  // Attachment State for Chat Reply
+  const [replyAttachedFile, setReplyAttachedFile] = useState<File | null>(null);
+  const [replyAttachedPreview, setReplyAttachedPreview] = useState<string | null>(null);
+  const [replyAttachedDataUrl, setReplyAttachedDataUrl] = useState<string | null>(null);
+
+  const processImageFile = (
+    file: File,
+    onSuccess: (dataUrl: string, preview: string) => void
+  ) => {
+    if (!file.type.startsWith("image/")) {
+      showToast("Please select a valid image file (PNG, JPG, JPEG, WEBP).", "warning");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showToast("File size exceeds 5MB limit. Please select a smaller image.", "error");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      if (file.size > 500 * 1024) {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const maxDim = 1280;
+          let width = img.width;
+          let height = img.height;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressed = canvas.toDataURL("image/jpeg", 0.82);
+            onSuccess(compressed, compressed);
+            return;
+          }
+          onSuccess(result, result);
+        };
+        img.onerror = () => {
+          onSuccess(result, result);
+        };
+        img.src = result;
+      } else {
+        onSuccess(result, result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleModalFileSelected = (file: File) => {
+    processImageFile(file, (dataUrl, preview) => {
+      setAttachedFile(file);
+      setAttachedPreview(preview);
+      setAttachedDataUrl(dataUrl);
+    });
+  };
+
+  const removeModalAttachment = () => {
+    setAttachedFile(null);
+    setAttachedPreview(null);
+    setAttachedDataUrl(null);
+    if (createFileInputRef.current) {
+      createFileInputRef.current.value = "";
+    }
+  };
+
+  const handleReplyFileSelected = (file: File) => {
+    processImageFile(file, (dataUrl, preview) => {
+      setReplyAttachedFile(file);
+      setReplyAttachedPreview(preview);
+      setReplyAttachedDataUrl(dataUrl);
+    });
+  };
+
+  const removeReplyAttachment = () => {
+    setReplyAttachedFile(null);
+    setReplyAttachedPreview(null);
+    setReplyAttachedDataUrl(null);
+    if (replyFileInputRef.current) {
+      replyFileInputRef.current.value = "";
+    }
+  };
+
   // Resolve Confirmation Modal State
   const [isResolveModalOpen, setIsResolveModalOpen] = useState<boolean>(false);
   const [ticketToResolve, setTicketToResolve] = useState<SupportTicket | null>(null);
@@ -146,11 +244,18 @@ export const SupportTickets: React.FC = () => {
 
   const handleSendReply = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!replyText.trim() || !selectedTicket) return;
+    if ((!replyText.trim() && !replyAttachedDataUrl) || !selectedTicket) return;
 
-    if (replyText.trim().length < 2) {
+    if (!replyAttachedDataUrl && replyText.trim().length < 2) {
       showToast("Reply message must be at least 2 characters long.", "warning");
       return;
+    }
+
+    let finalMessage = replyText.trim();
+    if (replyAttachedDataUrl && replyAttachedFile) {
+      finalMessage = finalMessage
+        ? `${finalMessage}\n\n[Attachment: ${replyAttachedFile.name}|${replyAttachedFile.type || "image/jpeg"}]\n${replyAttachedDataUrl}`
+        : `[Attachment: ${replyAttachedFile.name}|${replyAttachedFile.type || "image/jpeg"}]\n${replyAttachedDataUrl}`;
     }
 
     setSubmittingReply(true);
@@ -158,10 +263,11 @@ export const SupportTickets: React.FC = () => {
       const res = await fetchApi(`/api/tickets/${selectedTicket.id}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: replyText.trim() }),
+        body: JSON.stringify({ message: finalMessage }),
       });
       if (res.ok) {
         setReplyText("");
+        removeReplyAttachment();
         await fetchTicketDetails(selectedTicket.id);
         await fetchTickets(selectedTicket.id);
       } else {
@@ -284,6 +390,11 @@ export const SupportTickets: React.FC = () => {
       return;
     }
 
+    const finalDescription =
+      attachedDataUrl && attachedFile
+        ? `${newDescription.trim()}\n\n[Attachment: ${attachedFile.name}|${attachedFile.type || "image/jpeg"}]\n${attachedDataUrl}`
+        : newDescription.trim();
+
     setSubmittingTicket(true);
     try {
       const res = await fetchApi("/api/tickets", {
@@ -291,7 +402,7 @@ export const SupportTickets: React.FC = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: newTitle.trim(),
-          description: newDescription.trim(),
+          description: finalDescription,
           category: newCategory,
         }),
       });
@@ -299,10 +410,14 @@ export const SupportTickets: React.FC = () => {
       if (res.ok) {
         setNewTitle("");
         setNewDescription("");
+        removeModalAttachment();
         setIsCreateModalOpen(false);
         showToast("Support ticket raised successfully!", "success");
         const createdId = data.id || data.data?.id;
         await fetchTickets(createdId);
+        if (createdId) {
+          fetchTicketDetails(createdId);
+        }
       } else {
         showToast(data.message || "Failed to raise support ticket.", "error");
       }
@@ -315,12 +430,26 @@ export const SupportTickets: React.FC = () => {
   };
 
   const filteredTickets = tickets.filter((t) => {
-    const q = searchQuery.toLowerCase().trim();
+    const normalizedQuery = searchQuery.toLowerCase().trim().replace(/\s+/g, " ");
+    const queryWords = normalizedQuery.split(" ").filter(Boolean);
+
+    const targetName = ((t as any).user?.name || (t as any).userName || (t as any).customerName || "").toLowerCase().trim();
+    const targetEmail = ((t as any).user?.email || (t as any).userEmail || (t as any).customerEmail || (t as any).email || "").toLowerCase().trim();
+    const targetPhone = ((t as any).user?.phone || (t as any).userPhone || (t as any).phone || "").toLowerCase().trim();
+    const targetRole = ((t as any).user?.role || "").toLowerCase().trim();
+    const targetTitle = (t.title || "").toLowerCase().trim();
+    const targetCategory = (t.category || "").toLowerCase().trim();
+    const targetDesc = (t.description || "").toLowerCase().trim();
+    const targetId = (t.id || "").toLowerCase().trim();
+
+    const fullSearchable = `${targetName} ${targetEmail} ${targetPhone} ${targetRole} ${targetTitle} ${targetCategory} ${targetDesc} ${targetId}`;
+
     const matchesSearch =
-      !q ||
-      t.title.toLowerCase().includes(q) ||
-      t.description.toLowerCase().includes(q) ||
-      t.id.toLowerCase().includes(q);
+      !normalizedQuery ||
+      fullSearchable.includes(normalizedQuery) ||
+      targetName.includes(normalizedQuery) ||
+      targetEmail.includes(normalizedQuery) ||
+      (queryWords.length > 1 && queryWords.every((word) => fullSearchable.includes(word)));
 
     const matchesStatus = statusFilter === "ALL" || t.status === statusFilter;
     const matchesCategory = categoryFilter === "ALL" || t.category === categoryFilter;
@@ -481,7 +610,7 @@ export const SupportTickets: React.FC = () => {
               <Search size={15} color="#94A3B8" />
               <input
                 type="text"
-                placeholder="Search tickets by title or ID..."
+                placeholder="Search by title, user, email or ID..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className={styles.searchInput}
@@ -701,69 +830,133 @@ export const SupportTickets: React.FC = () => {
 
               {/* Bottom Reply Box / Resolved State Card */}
               {selectedTicket.status === "OPEN" || selectedTicket.status === "IN_PROGRESS" ? (
-                <form onSubmit={handleSendReply} className={styles.replyBar}>
-                  <input
-                    type="file"
-                    ref={replyFileInputRef}
-                    accept="image/*"
-                    style={{ display: "none" }}
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        const file = e.target.files[0];
-                        const reader = new FileReader();
-                        reader.onload = () => {
-                          const dataUrl = reader.result as string;
-                          setReplyText(prev => (prev ? `${prev}\n\n![${file.name}](${dataUrl})` : `![${file.name}](${dataUrl})`));
-                        };
-                        reader.readAsDataURL(file);
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => replyFileInputRef.current?.click()}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      color: "#64748B",
-                      cursor: "pointer",
-                      padding: "6px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      borderRadius: "8px",
-                      transition: "all 0.15s ease",
-                    }}
-                    title="Attach screenshot/image"
-                  >
-                    <Paperclip size={18} />
-                  </button>
-                  <textarea
-                    rows={1}
-                    placeholder="Type your reply to the support team..."
-                    value={replyText}
-                    onChange={(e) => setReplyText(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendReply(e);
-                      }
-                    }}
-                    className={styles.replyInput}
-                  />
-                  <button
-                    type="submit"
-                    disabled={submittingReply || !replyText.trim()}
-                    className={styles.sendBtn}
-                    title="Send Message"
-                  >
-                    {submittingReply ? (
-                      <Loader2 className="animate-spin" size={17} />
-                    ) : (
-                      <Send size={17} />
-                    )}
-                  </button>
-                </form>
+                <div style={{ display: "flex", flexDirection: "column" }}>
+                  {/* Reply Attachment Preview Chip */}
+                  {replyAttachedFile && (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "6px 12px",
+                        backgroundColor: "#FFF7ED",
+                        borderTop: "1px solid #FFEDD5",
+                        borderLeft: "1px solid #FFEDD5",
+                        borderRight: "1px solid #FFEDD5",
+                        borderRadius: "10px 10px 0 0",
+                        gap: "8px",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", overflow: "hidden" }}>
+                        {replyAttachedPreview && (
+                          <img
+                            src={replyAttachedPreview}
+                            alt={replyAttachedFile.name}
+                            style={{
+                              width: "28px",
+                              height: "28px",
+                              objectFit: "cover",
+                              borderRadius: "4px",
+                              border: "1px solid #FED7AA",
+                              flexShrink: 0,
+                            }}
+                          />
+                        )}
+                        <span
+                          style={{
+                            fontSize: "0.78rem",
+                            fontWeight: 600,
+                            color: "#9A3412",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            maxWidth: "220px",
+                          }}
+                          title={replyAttachedFile.name}
+                        >
+                          {replyAttachedFile.name}
+                        </span>
+                        <span style={{ fontSize: "0.7rem", color: "#C2410C" }}>
+                          ({(replyAttachedFile.size / 1024).toFixed(1)} KB)
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={removeReplyAttachment}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "#9A3412",
+                          cursor: "pointer",
+                          padding: "2px",
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                        title="Remove attachment"
+                      >
+                        <X size={15} />
+                      </button>
+                    </div>
+                  )}
+
+                  <form onSubmit={handleSendReply} className={styles.replyBar}>
+                    <input
+                      type="file"
+                      ref={replyFileInputRef}
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          handleReplyFileSelected(e.target.files[0]);
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => replyFileInputRef.current?.click()}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: replyAttachedFile ? "#FF5500" : "#64748B",
+                        cursor: "pointer",
+                        padding: "6px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        borderRadius: "8px",
+                        transition: "all 0.15s ease",
+                      }}
+                      title="Attach screenshot/image"
+                    >
+                      <Paperclip size={18} />
+                    </button>
+                    <textarea
+                      rows={1}
+                      placeholder="Type your reply to the support team..."
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendReply(e);
+                        }
+                      }}
+                      className={styles.replyInput}
+                    />
+                    <button
+                      type="submit"
+                      disabled={submittingReply || (!replyText.trim() && !replyAttachedFile)}
+                      className={styles.sendBtn}
+                      title="Send Message"
+                    >
+                      {submittingReply ? (
+                        <Loader2 className="animate-spin" size={17} />
+                      ) : (
+                        <Send size={17} />
+                      )}
+                    </button>
+                  </form>
+                </div>
               ) : (
                 <div className={styles.resolvedCardFooter}>
                   <div className={styles.resolvedCardTop}>
@@ -821,14 +1014,23 @@ export const SupportTickets: React.FC = () => {
 
       {/* 3. Raise Support Ticket Modal */}
       {isCreateModalOpen && (
-        <div className={styles.modalBackdrop} onClick={() => setIsCreateModalOpen(false)}>
+        <div
+          className={styles.modalBackdrop}
+          onClick={() => {
+            setIsCreateModalOpen(false);
+            removeModalAttachment();
+          }}
+        >
           <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
               <h3 className={styles.modalTitle}>Raise a Support Ticket</h3>
               <button
                 type="button"
                 className={styles.modalCloseBtn}
-                onClick={() => setIsCreateModalOpen(false)}
+                onClick={() => {
+                  setIsCreateModalOpen(false);
+                  removeModalAttachment();
+                }}
               >
                 <X size={18} />
               </button>
@@ -870,13 +1072,7 @@ export const SupportTickets: React.FC = () => {
                     style={{ display: "none" }}
                     onChange={(e) => {
                       if (e.target.files && e.target.files[0]) {
-                        const file = e.target.files[0];
-                        const reader = new FileReader();
-                        reader.onload = () => {
-                          const dataUrl = reader.result as string;
-                          setNewDescription(prev => (prev ? `${prev}\n\n![${file.name}](${dataUrl})` : `![${file.name}](${dataUrl})`));
-                        };
-                        reader.readAsDataURL(file);
+                        handleModalFileSelected(e.target.files[0]);
                       }
                     }}
                   />
@@ -896,7 +1092,7 @@ export const SupportTickets: React.FC = () => {
                     }}
                   >
                     <Paperclip size={13} />
-                    <span>Attach Image</span>
+                    <span>{attachedFile ? "Change Image" : "Attach Image"}</span>
                   </button>
                 </div>
                 <textarea
@@ -906,13 +1102,102 @@ export const SupportTickets: React.FC = () => {
                   onChange={(e) => setNewDescription(e.target.value)}
                   className={styles.formTextarea}
                 />
+
+                {/* Attachment Status / Preview Card */}
+                {attachedFile && (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "8px 12px",
+                      backgroundColor: "#FFF7ED",
+                      border: "1px solid #FFEDD5",
+                      borderRadius: "10px",
+                      marginTop: "6px",
+                      gap: "10px",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px", overflow: "hidden" }}>
+                      {attachedPreview ? (
+                        <img
+                          src={attachedPreview}
+                          alt={attachedFile.name}
+                          style={{
+                            width: "38px",
+                            height: "38px",
+                            objectFit: "cover",
+                            borderRadius: "6px",
+                            border: "1px solid #FED7AA",
+                            flexShrink: 0,
+                          }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            width: "38px",
+                            height: "38px",
+                            borderRadius: "6px",
+                            backgroundColor: "#FFEDD5",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <Paperclip size={18} color="#FF5500" />
+                        </div>
+                      )}
+                      <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+                        <span
+                          style={{
+                            fontSize: "0.82rem",
+                            fontWeight: 600,
+                            color: "#9A3412",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            maxWidth: "260px",
+                          }}
+                          title={attachedFile.name}
+                        >
+                          {attachedFile.name}
+                        </span>
+                        <span style={{ fontSize: "0.72rem", color: "#C2410C" }}>
+                          {(attachedFile.size / 1024).toFixed(1)} KB • Attached image
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={removeModalAttachment}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "#9A3412",
+                        cursor: "pointer",
+                        padding: "4px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        borderRadius: "4px",
+                      }}
+                      title="Remove attachment"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className={styles.modalActions}>
                 <button
                   type="button"
                   className={styles.cancelBtn}
-                  onClick={() => setIsCreateModalOpen(false)}
+                  onClick={() => {
+                    setIsCreateModalOpen(false);
+                    removeModalAttachment();
+                  }}
                 >
                   Cancel
                 </button>

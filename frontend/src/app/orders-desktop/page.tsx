@@ -7,7 +7,7 @@ import { Footer } from "@/components/explore-desktop/footer";
 
 export default function OrdersDesktopPage() {
   return (
-    <div style={{ width: "100%", minHeight: "100vh", backgroundColor: "#FDF8F4", overflowX: "hidden" }}>
+    <div style={{ width: "100%", minHeight: "100vh", backgroundColor: "#FDF8F4", overflowX: "clip" }}>
       {/* 1. Shared Desktop Navbar Component */}
       <Navbar />
 

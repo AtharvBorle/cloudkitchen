@@ -29,6 +29,7 @@ import {
   Calendar,
   MapPin,
   Users,
+  User,
   ShieldCheck,
   ExternalLink,
 } from "lucide-react";

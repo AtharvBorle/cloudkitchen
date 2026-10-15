@@ -264,7 +264,7 @@ export const SavedAddresses: React.FC<SavedAddressesProps> = ({
             </div>
           </div>
         );
-      })}
+      }))}
     </div>
   );
 };

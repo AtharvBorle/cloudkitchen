@@ -54,6 +54,7 @@ export const UpiIds: React.FC = () => {
             </div>
           ))}
         </div>
+        )}
       </div>
     </div>
   );

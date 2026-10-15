@@ -69,7 +69,7 @@ function FoodExploreContent() {
   const searchParams = useSearchParams();
   const categoryParam = searchParams.get("category") || "";
   const queryParam = searchParams.get("query") || searchParams.get("search") || "";
-  const dietaryParam = (searchParams.get("dietary") as any) || "all";
+  const dietaryParam = (searchParams.get("dietary") as any);
   const priceParam = (searchParams.get("price") as any) || "all";
   const offersParam = searchParams.get("offers") === "true";
   const sortParam = searchParams.get("sort") || "";
@@ -81,9 +81,20 @@ function FoodExploreContent() {
   // Local Filter States
   const [searchQuery, setSearchQuery] = useState(queryParam);
   const [selectedCategory, setSelectedCategory] = useState(categoryParam);
-  const [selectedDiet, setSelectedDiet] = useState<"all" | "veg" | "non_veg" | "vegan" | "jain">(
-    ["all", "veg", "non_veg", "vegan", "jain"].includes(dietaryParam) ? dietaryParam : "all"
-  );
+  const [selectedDiet, setSelectedDiet] = useState<"all" | "veg" | "non_veg" | "vegan" | "jain">(() => {
+    if (dietaryParam && ["all", "veg", "non_veg", "vegan", "jain"].includes(dietaryParam)) {
+      return dietaryParam;
+    }
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("cloudkitchen_diet_preference");
+        if (stored && ["all", "veg", "non_veg", "vegan", "jain"].includes(stored)) {
+          return stored as any;
+        }
+      } catch {}
+    }
+    return "veg";
+  });
   const [selectedPrice, setSelectedPrice] = useState<"all" | "under-150" | "150-300" | "300-plus">(
     ["all", "under-150", "150-300", "300-plus"].includes(priceParam) ? priceParam : "all"
   );
