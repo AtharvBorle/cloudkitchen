@@ -1531,7 +1531,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             ? "My Orders"
             : currentActiveItem
         }
-        userName={session?.user?.name || "Siddharth Sharma"}
+        userName={session?.user?.name || ""}
         isGoldMember={true}
       />
     </header>

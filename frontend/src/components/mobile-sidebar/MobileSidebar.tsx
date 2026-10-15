@@ -98,7 +98,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
   const [isRoomsDropdownOpen, setIsRoomsDropdownOpen] = useState<boolean>(isRoomRoute);
   const [isSettingsDropdownOpen, setIsSettingsDropdownOpen] = useState<boolean>(isSettingsRoute);
 
-  const userName = customUserName || session?.user?.name || (session ? "User" : "Guest User");
+  const userName = customUserName || session?.user?.name || (session ? "User" : "");
 
   // Lock body scroll and sync dropdown state when drawer is opened
   useEffect(() => {
@@ -416,13 +416,13 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
             {session?.user?.image ? (
               <Image
                 src={session.user.image}
-                alt={userName}
+                alt={userName || "User"}
                 fill
                 className={styles.avatarImg}
               />
             ) : session?.user ? (
               <div className={styles.avatarInitial}>
-                {userName.trim().charAt(0).toUpperCase()}
+                {(userName || session.user.name || "U").trim().charAt(0).toUpperCase()}
               </div>
             ) : (
               <div className={styles.avatarGuest}>
@@ -431,28 +431,32 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
             )}
           </div>
           <div className={styles.userInfo}>
-            <h3 className={styles.userName}>{userName}</h3>
-            {isSeller ? (
-              <div className={styles.roleBadge} style={{ background: '#FF6B00', color: '#FFFFFF' }}>
-                <Utensils size={11} fill="#FFFFFF" color="#FFFFFF" />
-                <span>Seller Account</span>
-              </div>
-            ) : isAdmin ? (
-              <div className={styles.roleBadge} style={{ background: '#7C3AED', color: '#FFFFFF' }}>
-                <Shield size={11} fill="#FFFFFF" color="#FFFFFF" />
-                <span>Admin</span>
-              </div>
-            ) : isDelivery ? (
-              <div className={styles.roleBadge} style={{ background: '#059669', color: '#FFFFFF' }}>
-                <Utensils size={11} fill="#FFFFFF" color="#FFFFFF" />
-                <span>Delivery Partner</span>
-              </div>
-            ) : session?.user ? (
-              <span style={{ fontSize: "12px", color: "#64748B", fontWeight: 500 }}>
-                {session.user.email || "Customer Account"}
-              </span>
+            {session?.user ? (
+              <>
+                <h3 className={styles.userName}>{userName || session.user.name || "User"}</h3>
+                {isSeller ? (
+                  <div className={styles.roleBadge} style={{ background: '#FF6B00', color: '#FFFFFF' }}>
+                    <Utensils size={11} fill="#FFFFFF" color="#FFFFFF" />
+                    <span>Seller Account</span>
+                  </div>
+                ) : isAdmin ? (
+                  <div className={styles.roleBadge} style={{ background: '#7C3AED', color: '#FFFFFF' }}>
+                    <Shield size={11} fill="#FFFFFF" color="#FFFFFF" />
+                    <span>Admin</span>
+                  </div>
+                ) : isDelivery ? (
+                  <div className={styles.roleBadge} style={{ background: '#059669', color: '#FFFFFF' }}>
+                    <Utensils size={11} fill="#FFFFFF" color="#FFFFFF" />
+                    <span>Delivery Partner</span>
+                  </div>
+                ) : (
+                  <span style={{ fontSize: "12px", color: "#64748B", fontWeight: 500 }}>
+                    {session.user.email || "Customer Account"}
+                  </span>
+                )}
+              </>
             ) : (
-              <span style={{ fontSize: "12px", color: "#FF6B00", fontWeight: 600 }}>
+              <span style={{ fontSize: "14.5px", color: "#FF6B00", fontWeight: 700, lineHeight: 1.3 }}>
                 Tap to sign in / register
               </span>
             )}
