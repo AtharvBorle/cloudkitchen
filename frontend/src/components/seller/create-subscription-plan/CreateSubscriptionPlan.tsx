@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Trash2, Pencil, CheckCircle2 } from 'lucide-react';
@@ -10,6 +10,8 @@ import { useSellerProfile } from '@/hooks/useSellerProfile';
 import { saveMealPlan, fetchMealSlots } from '@/lib/meal-subscriptions';
 import { PREDEFINED_MEAL_SLOTS, MealSlotDefinition } from '@/lib/meal-slots';
 import styles from './CreateSubscriptionPlan.module.css';
+
+const DRAFT_STORAGE_KEY = "seller_meal_plan_draft_create";
 
 export interface CreateSubscriptionPlanProps {
   ownerName?: string;
@@ -55,6 +57,32 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
   const [slotsWithTimings, setSlotsWithTimings] = useState<MealSlotDefinition[]>(PREDEFINED_MEAL_SLOTS);
   const [selectedSlotIds, setSelectedSlotIds] = useState<string[]>([]);
 
+  const isHydratedRef = useRef(false);
+
+  // Restore draft from sessionStorage if returning from Manage Meal Timings
+  useEffect(() => {
+    try {
+      if (typeof window !== "undefined") {
+        const raw = sessionStorage.getItem(DRAFT_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (typeof parsed.planName === "string") setPlanName(parsed.planName);
+          if (typeof parsed.planTier === "string") setPlanTier(parsed.planTier);
+          if (typeof parsed.weeklyPrice === "string") setWeeklyPrice(parsed.weeklyPrice);
+          if (Array.isArray(parsed.features)) setFeatures(parsed.features);
+          if (typeof parsed.planDuration === "string") setPlanDuration(parsed.planDuration);
+          if (Array.isArray(parsed.selectedSlotIds)) setSelectedSlotIds(parsed.selectedSlotIds);
+          if (typeof parsed.allowPauseSubscription === "boolean") setAllowPauseSubscription(parsed.allowPauseSubscription);
+          if (typeof parsed.pauseBillingPeriod === "string") setPauseBillingPeriod(parsed.pauseBillingPeriod);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to restore meal subscription draft:", e);
+    } finally {
+      isHydratedRef.current = true;
+    }
+  }, []);
+
   useEffect(() => {
     const loadSlots = () => {
       fetchMealSlots()
@@ -78,6 +106,33 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
   // 5. Subscription Policies
   const [allowPauseSubscription, setAllowPauseSubscription] = useState(true);
   const [pauseBillingPeriod, setPauseBillingPeriod] = useState('30 Days');
+
+  // Synchronize form draft to sessionStorage on every change
+  useEffect(() => {
+    if (!isHydratedRef.current || typeof window === "undefined") return;
+    try {
+      const draft = {
+        planName,
+        planTier,
+        weeklyPrice,
+        features,
+        planDuration,
+        selectedSlotIds,
+        allowPauseSubscription,
+        pauseBillingPeriod,
+      };
+      sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+    } catch (e) {}
+  }, [
+    planName,
+    planTier,
+    weeklyPrice,
+    features,
+    planDuration,
+    selectedSlotIds,
+    allowPauseSubscription,
+    pauseBillingPeriod,
+  ]);
 
   const handleToggleSlot = (slotId: string) => {
     setSelectedSlotIds((prev) =>
@@ -453,8 +508,25 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
                             </span>
                           )}
                           <Link
-                            href="/seller/subscription/timings"
-                            onClick={(e) => e.stopPropagation()}
+                            href="/seller/subscription/timings?returnTo=/seller/subscription/add"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (typeof window !== "undefined") {
+                                sessionStorage.setItem(
+                                  DRAFT_STORAGE_KEY,
+                                  JSON.stringify({
+                                    planName,
+                                    planTier,
+                                    weeklyPrice,
+                                    features,
+                                    planDuration,
+                                    selectedSlotIds,
+                                    allowPauseSubscription,
+                                    pauseBillingPeriod,
+                                  })
+                                );
+                              }
+                            }}
                             style={{
                               fontSize: "11px",
                               fontWeight: 600,
@@ -634,7 +706,24 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
                     <div>{errorMessage}</div>
                     {errorMessage.includes("add timings first") && (
                       <Link
-                        href="/seller/subscription/timings"
+                        href="/seller/subscription/timings?returnTo=/seller/subscription/add"
+                        onClick={() => {
+                          if (typeof window !== "undefined") {
+                            sessionStorage.setItem(
+                              DRAFT_STORAGE_KEY,
+                              JSON.stringify({
+                                planName,
+                                planTier,
+                                weeklyPrice,
+                                features,
+                                planDuration,
+                                selectedSlotIds,
+                                allowPauseSubscription,
+                                pauseBillingPeriod,
+                              })
+                            );
+                          }
+                        }}
                         style={{
                           display: "inline-block",
                           marginTop: "8px",
@@ -705,6 +794,9 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
                         pauseBillingPeriod: allowPauseSubscription ? pauseBillingPeriod : "None",
                       });
 
+                      if (typeof window !== "undefined") {
+                        sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+                      }
                       setToastMessage(`Plan "${planName}" created & deployed successfully!`);
                       setTimeout(() => {
                         router.push('/seller/subscription');

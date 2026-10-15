@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -18,6 +18,8 @@ import {
 import { saveMealPlan, fetchMealSlots } from "@/lib/meal-subscriptions";
 import { PREDEFINED_MEAL_SLOTS, MealSlotDefinition } from "@/lib/meal-slots";
 import styles from "./ResSellerSubPlan.module.css";
+
+const DRAFT_STORAGE_KEY = "seller_meal_plan_draft_create";
 
 export interface MealTimingSlot {
   id: string;
@@ -70,6 +72,63 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
   const [selectedSlotIds, setSelectedSlotIds] = useState<string[]>([]);
   const [allowPauseBilling, setAllowPauseBilling] = useState(initialAllowPauseBilling);
   const [pauseBillingPeriod, setPauseBillingPeriod] = useState("30 Days");
+
+  const isHydratedRef = useRef(false);
+
+  // Restore draft from sessionStorage if returning from Manage Meal Timings
+  useEffect(() => {
+    try {
+      if (typeof window !== "undefined") {
+        const raw = sessionStorage.getItem(DRAFT_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (typeof parsed.planName === "string") setPlanName(parsed.planName);
+          if (typeof parsed.planTier === "string") setPlanTier(parsed.planTier);
+          if (typeof parsed.weeklyPrice === "string") setPrice(parsed.weeklyPrice);
+          if (Array.isArray(parsed.features)) {
+            setFeatures(
+              parsed.features.map((f: any) => (typeof f === "string" ? f : f.label || ""))
+            );
+          }
+          if (typeof parsed.planDuration === "string") setDuration(parsed.planDuration);
+          if (Array.isArray(parsed.selectedSlotIds)) setSelectedSlotIds(parsed.selectedSlotIds);
+          if (typeof parsed.allowPauseSubscription === "boolean") setAllowPauseBilling(parsed.allowPauseSubscription);
+          if (typeof parsed.pauseBillingPeriod === "string") setPauseBillingPeriod(parsed.pauseBillingPeriod);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to restore mobile meal plan draft:", e);
+    } finally {
+      isHydratedRef.current = true;
+    }
+  }, []);
+
+  // Synchronize form draft to sessionStorage on change
+  useEffect(() => {
+    if (!isHydratedRef.current || typeof window === "undefined") return;
+    try {
+      const draft = {
+        planName,
+        planTier,
+        weeklyPrice: price,
+        features,
+        planDuration: duration,
+        selectedSlotIds,
+        allowPauseSubscription: allowPauseBilling,
+        pauseBillingPeriod,
+      };
+      sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+    } catch (e) {}
+  }, [
+    planName,
+    planTier,
+    price,
+    features,
+    duration,
+    selectedSlotIds,
+    allowPauseBilling,
+    pauseBillingPeriod,
+  ]);
 
   useEffect(() => {
     const loadSlots = () => {
@@ -153,7 +212,22 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
     if (missingTimingSlots.length > 0) {
       const names = missingTimingSlots.map((s) => s?.name || "Slot").join(", ");
       alert(`Delivery timing is not added for: ${names}. You need to add timings first in Manage Meal Subscription Timings before creating a meal subscription.`);
-      router.push("/seller/subscription/timings");
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem(
+          DRAFT_STORAGE_KEY,
+          JSON.stringify({
+            planName,
+            planTier,
+            weeklyPrice: price,
+            features,
+            planDuration: duration,
+            selectedSlotIds,
+            allowPauseSubscription: allowPauseBilling,
+            pauseBillingPeriod,
+          })
+        );
+      }
+      router.push("/seller/subscription/timings?returnTo=/seller/subscription/newPlan");
       return;
     }
 
@@ -181,6 +255,9 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
     try {
       await saveMealPlan(payload);
 
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+      }
       if (onDeployPlan) {
         onDeployPlan(payload);
       } else {
@@ -506,8 +583,25 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
                         </span>
                       )}
                       <Link
-                        href="/seller/subscription/timings"
-                        onClick={(e) => e.stopPropagation()}
+                        href="/seller/subscription/timings?returnTo=/seller/subscription/newPlan"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (typeof window !== "undefined") {
+                            sessionStorage.setItem(
+                              DRAFT_STORAGE_KEY,
+                              JSON.stringify({
+                                planName,
+                                planTier,
+                                weeklyPrice: price,
+                                features,
+                                planDuration: duration,
+                                selectedSlotIds,
+                                allowPauseSubscription: allowPauseBilling,
+                                pauseBillingPeriod,
+                              })
+                            );
+                          }
+                        }}
                         style={{
                           fontSize: "10.5px",
                           fontWeight: 600,

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ChevronLeft,
@@ -172,6 +172,29 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
 
       if (found) {
         setTargetPlanId(found.id);
+
+        const activeDraftKey = `seller_meal_plan_draft_edit_${found.id}`;
+        let draftData: any = null;
+        if (typeof window !== "undefined") {
+          try {
+            const rawDraft = sessionStorage.getItem(activeDraftKey);
+            if (rawDraft) draftData = JSON.parse(rawDraft);
+          } catch (e) {}
+        }
+
+        if (draftData) {
+          if (draftData.planName !== undefined) setPlanName(draftData.planName);
+          if (draftData.planTier !== undefined) setPlanTier(draftData.planTier);
+          if (draftData.price !== undefined) setPrice(draftData.price);
+          if (Array.isArray(draftData.features)) setFeatures(draftData.features);
+          if (draftData.duration !== undefined) setDuration(draftData.duration);
+          if (Array.isArray(draftData.selectedSlotIds)) setSelectedSlotIds(draftData.selectedSlotIds);
+          if (draftData.allowPauseBilling !== undefined) setAllowPauseBilling(draftData.allowPauseBilling);
+          if (draftData.pauseBillingPeriod !== undefined) setPauseBillingPeriod(draftData.pauseBillingPeriod);
+          isHydratedRef.current = true;
+          return;
+        }
+
         setPlanName(found.name);
         setPlanTier(found.tier);
         setPrice(found.weeklyPrice ? found.weeklyPrice.replace(/[^\d.]/g, "") : "499.00");
@@ -213,11 +236,43 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
           deployedDate: found.deployedDate,
           taxCode: "GST 18% Extra",
         });
+        isHydratedRef.current = true;
       }
     };
 
     loadPlan();
   }, [planIdParam]);
+
+  const isHydratedRef = useRef(false);
+
+  // Synchronize form draft to sessionStorage on change
+  useEffect(() => {
+    if (!isHydratedRef.current || !targetPlanId || typeof window === "undefined") return;
+    try {
+      const draftKey = `seller_meal_plan_draft_edit_${targetPlanId}`;
+      const draft = {
+        planName,
+        planTier,
+        price,
+        features,
+        duration,
+        selectedSlotIds,
+        allowPauseBilling,
+        pauseBillingPeriod,
+      };
+      sessionStorage.setItem(draftKey, JSON.stringify(draft));
+    } catch (e) {}
+  }, [
+    planName,
+    planTier,
+    price,
+    features,
+    duration,
+    selectedSlotIds,
+    allowPauseBilling,
+    pauseBillingPeriod,
+    targetPlanId,
+  ]);
 
   const handleBack = () => {
     if (onBack) {
@@ -267,7 +322,22 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
     if (missingTimingSlots.length > 0) {
       const names = missingTimingSlots.map((s) => s?.name || "Slot").join(", ");
       alert(`Delivery timing is not added for: ${names}. You need to add timings first in Manage Meal Subscription Timings before saving this plan.`);
-      router.push("/seller/subscription/timings");
+      if (typeof window !== "undefined" && targetPlanId) {
+        sessionStorage.setItem(
+          `seller_meal_plan_draft_edit_${targetPlanId}`,
+          JSON.stringify({
+            planName,
+            planTier,
+            price,
+            features,
+            duration,
+            selectedSlotIds,
+            allowPauseBilling,
+            pauseBillingPeriod,
+          })
+        );
+      }
+      router.push(`/seller/subscription/timings?returnTo=${encodeURIComponent(`/seller/subscription/editPlan?id=${targetPlanId || planIdParam || ""}`)}`);
       return;
     }
 
@@ -311,6 +381,9 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
       metadata,
     };
 
+    if (typeof window !== "undefined" && targetPlanId) {
+      sessionStorage.removeItem(`seller_meal_plan_draft_edit_${targetPlanId}`);
+    }
     if (onSaveChanges) {
       onSaveChanges(payload);
     } else {
@@ -322,6 +395,9 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
   };
 
   const handleDiscard = () => {
+    if (typeof window !== "undefined" && targetPlanId) {
+      sessionStorage.removeItem(`seller_meal_plan_draft_edit_${targetPlanId}`);
+    }
     if (onDiscard) {
       onDiscard();
     } else {
@@ -663,8 +739,25 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
                         </span>
                       )}
                       <Link
-                        href="/seller/subscription/timings"
-                        onClick={(e) => e.stopPropagation()}
+                        href={`/seller/subscription/timings?returnTo=${encodeURIComponent(`/seller/subscription/editPlan?id=${targetPlanId || planIdParam || ""}`)}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (typeof window !== "undefined" && targetPlanId) {
+                            sessionStorage.setItem(
+                              `seller_meal_plan_draft_edit_${targetPlanId}`,
+                              JSON.stringify({
+                                planName,
+                                planTier,
+                                price,
+                                features,
+                                duration,
+                                selectedSlotIds,
+                                allowPauseBilling,
+                                pauseBillingPeriod,
+                              })
+                            );
+                          }
+                        }}
                         style={{
                           fontSize: "10.5px",
                           fontWeight: 600,

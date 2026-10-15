@@ -17,6 +17,8 @@ import {
   Bell,
   Check,
   Search,
+  Calendar,
+  Clock,
 } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
@@ -368,6 +370,52 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
             <Plus size={20} strokeWidth={2.8} />
             <span>Create New Plan</span>
           </button>
+
+          {/* Quick Action Navigation Buttons */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "12px" }}>
+            <Link
+              href="/seller/subscription/deliveries"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "6px",
+                padding: "10px 8px",
+                backgroundColor: "#FFFFFF",
+                color: "#1E293B",
+                borderRadius: "10px",
+                border: "1px solid #E2E8F0",
+                fontSize: "12.5px",
+                fontWeight: 600,
+                textDecoration: "none",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
+              }}
+            >
+              <Calendar size={15} color="#EA580C" />
+              <span>Deliveries Roster</span>
+            </Link>
+            <Link
+              href="/seller/subscription/timings"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "6px",
+                padding: "10px 8px",
+                backgroundColor: "#FFFFFF",
+                color: "#1E293B",
+                borderRadius: "10px",
+                border: "1px solid #E2E8F0",
+                fontSize: "12.5px",
+                fontWeight: 600,
+                textDecoration: "none",
+                boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
+              }}
+            >
+              <Clock size={15} color="#2563EB" />
+              <span>Meal Timings</span>
+            </Link>
+          </div>
 
           {/* Search Bar */}
           <div style={{ position: "relative", marginBottom: "12px", width: "100%" }}>

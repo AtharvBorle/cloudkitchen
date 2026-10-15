@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, Trash2, Edit2, Plus, ChevronLeft, CheckCircle2 } from "lucide-react";
@@ -143,6 +143,22 @@ export default function SubscriptionEditCanvas({
 
       if (found) {
         setTargetPlanId(found.id);
+
+        const activeDraftKey = `seller_meal_plan_draft_edit_${found.id}`;
+        let draftData: SubscriptionPlanData | null = null;
+        if (typeof window !== "undefined") {
+          try {
+            const rawDraft = sessionStorage.getItem(activeDraftKey);
+            if (rawDraft) draftData = JSON.parse(rawDraft);
+          } catch (e) {}
+        }
+
+        if (draftData) {
+          setFormData(draftData);
+          isHydratedRef.current = true;
+          return;
+        }
+
         const rawPause = (found.pauseBillingPeriod || "").trim();
         const rawPauseLower = rawPause.toLowerCase();
         const isPauseEnabled = Boolean(
@@ -196,11 +212,23 @@ export default function SubscriptionEditCanvas({
             tierBadgeText: `${found.tier.toUpperCase()} TIER`,
           },
         });
+        isHydratedRef.current = true;
       }
     };
 
     loadPlan();
   }, [planIdParam]);
+
+  const isHydratedRef = useRef(false);
+
+  // Synchronize form draft to sessionStorage on change
+  useEffect(() => {
+    if (!isHydratedRef.current || !targetPlanId || typeof window === "undefined") return;
+    try {
+      const draftKey = `seller_meal_plan_draft_edit_${targetPlanId}`;
+      sessionStorage.setItem(draftKey, JSON.stringify(formData));
+    } catch (e) {}
+  }, [formData, targetPlanId]);
 
   const [slotsWithTimings, setSlotsWithTimings] = useState<MealSlotDefinition[]>(PREDEFINED_MEAL_SLOTS);
 
@@ -386,6 +414,9 @@ export default function SubscriptionEditCanvas({
       }
     }
 
+    if (typeof window !== "undefined" && targetPlanId) {
+      sessionStorage.removeItem(`seller_meal_plan_draft_edit_${targetPlanId}`);
+    }
     if (onSave) {
       onSave(formData);
     }
@@ -397,6 +428,9 @@ export default function SubscriptionEditCanvas({
   };
 
   const handleDiscard = () => {
+    if (typeof window !== "undefined" && targetPlanId) {
+      sessionStorage.removeItem(`seller_meal_plan_draft_edit_${targetPlanId}`);
+    }
     if (onDiscard) {
       onDiscard();
     } else {
@@ -1296,8 +1330,16 @@ export default function SubscriptionEditCanvas({
                         </span>
                       )}
                       <Link
-                        href="/seller/subscription/timings"
-                        onClick={(e) => e.stopPropagation()}
+                        href={`/seller/subscription/timings?returnTo=${encodeURIComponent(`/seller/subscription/edit?id=${targetPlanId || planIdParam || ""}`)}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (typeof window !== "undefined" && targetPlanId) {
+                            sessionStorage.setItem(
+                              `seller_meal_plan_draft_edit_${targetPlanId}`,
+                              JSON.stringify(formData)
+                            );
+                          }
+                        }}
                         style={{
                           fontSize: "11px",
                           fontWeight: 600,
