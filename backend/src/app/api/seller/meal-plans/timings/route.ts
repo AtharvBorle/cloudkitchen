@@ -28,3 +28,11 @@ export async function PUT(req: Request) {
     return errorResponse(error.message || "Failed to update meal timings", 500);
   }
 }
+
+export async function PATCH(req: Request) {
+  return PUT(req);
+}
+
+export async function POST(req: Request) {
+  return PUT(req);
+}

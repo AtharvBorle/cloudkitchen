@@ -886,16 +886,25 @@ export async function updateMealSlotConfig(
   slotId: string,
   data: Partial<MealSlotDefinition>
 ): Promise<MealSlotDefinition> {
+  const timeRange = data.defaultTimeRange ?? "";
+  const payload = {
+    slotId,
+    defaultTimeRange: timeRange,
+    timings: timeRange ? { [slotId]: timeRange } : {},
+    ...data,
+  };
+
   const res = await fetchApi("/api/seller/meal-plans/timings", {
-    method: "PATCH",
+    method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ slotId, ...data }),
+    body: JSON.stringify(payload),
   });
+
   const json = await res.json();
   if (!res.ok) {
-    throw new Error(json.message || "Failed to update meal slot timing");
+    throw new Error(json.message || json.error || "Failed to update meal slot timing");
   }
-  return json.data?.slot || json.data;
+  return json.data?.slot || json.slot || json.data || { id: slotId, ...data };
 }
 
 export const loadRazorpayScript = (): Promise<boolean> => {

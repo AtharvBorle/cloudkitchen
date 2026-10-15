@@ -1018,15 +1018,21 @@ export const updateMealSlotsConfig = async (req: Request) => {
     if (!session?.user) {
         throw new ApiError("Please log in first to update meal slot timings.", 401);
     }
-    if (session.user.role !== "SELLER" && session.user.role !== "ADMIN" && session.user.role !== "SUPERADMIN") {
+    const userRole = (session.user.role || "").toUpperCase();
+    if (userRole !== "SELLER" && userRole !== "ADMIN" && userRole !== "SUPERADMIN") {
         throw new ApiError("Access denied. Authorized partner or admin account required.", 403);
     }
 
     const body = await req.json();
-    const { timings } = body;
+    let slotUpdates: Record<string, string> = {};
 
-    if (!timings || typeof timings !== "object") {
-        throw new ApiError("A valid timings dictionary is required.", 400);
+    if (body.timings && typeof body.timings === "object") {
+        slotUpdates = { ...body.timings };
+    } else if (body.slotId) {
+        const timeRange = body.defaultTimeRange ?? body.timeRange ?? body.timing ?? "";
+        slotUpdates[body.slotId] = typeof timeRange === "string" ? timeRange.trim() : String(timeRange);
+    } else {
+        throw new ApiError("A valid slotId or timings dictionary is required.", 400);
     }
 
     const existing = await db.systemSettings.findUnique({
@@ -1040,7 +1046,7 @@ export const updateMealSlotsConfig = async (req: Request) => {
         } catch {}
     }
 
-    const merged = { ...currentMap, ...timings };
+    const merged = { ...currentMap, ...slotUpdates };
 
     await db.systemSettings.upsert({
         where: { key: "MEAL_SUBSCRIPTION_SLOTS" },
@@ -1054,11 +1060,22 @@ export const updateMealSlotsConfig = async (req: Request) => {
         },
     });
 
-    for (const [slotId, timeRange] of Object.entries(timings)) {
-        if (typeof timeRange === "string" && timeRange.trim()) {
-            await db.mealSlot.update({
+    for (const [slotId, timeRange] of Object.entries(slotUpdates)) {
+        if (typeof timeRange === "string") {
+            const trimmed = timeRange.trim();
+            await db.mealSlot.upsert({
                 where: { id: slotId },
-                data: { defaultTimeRange: timeRange.trim() },
+                create: {
+                    id: slotId,
+                    name: slotId,
+                    subtitle: "",
+                    defaultTimeRange: trimmed,
+                    order: 99,
+                    isActive: true,
+                },
+                update: {
+                    defaultTimeRange: trimmed,
+                },
             }).catch(() => {});
         }
     }
@@ -1067,6 +1084,9 @@ export const updateMealSlotsConfig = async (req: Request) => {
         success: true,
         message: "Meal subscription timings updated successfully.",
         timings: merged,
+        slot: body.slotId
+            ? { id: body.slotId, defaultTimeRange: slotUpdates[body.slotId] }
+            : undefined,
     };
 };
 

@@ -26,13 +26,34 @@ import {
   updateMealSlotConfig,
 } from "@/lib/meal-subscriptions";
 
+// 30-minute intervals: 12:00 AM, 12:30 AM, ..., 11:30 PM
+const TIME_OPTIONS: string[] = [];
+for (let h = 0; h < 24; h++) {
+  for (const m of [0, 30]) {
+    const period = h < 12 ? "AM" : "PM";
+    const displayH = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    const displayM = m === 0 ? "00" : "30";
+    TIME_OPTIONS.push(`${displayH}:${displayM} ${period}`);
+  }
+}
+
+function parseTimeRange(rangeStr?: string): { start: string; end: string } {
+  if (!rangeStr) return { start: "", end: "" };
+  const parts = rangeStr.split(/\s*(?:–|-|\bto\b)\s*/i);
+  return {
+    start: parts[0]?.trim() || "",
+    end: parts[1]?.trim() || "",
+  };
+}
+
 export default function ManageMealTimingsCanvas() {
   const seller = useSellerProfile();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [slots, setSlots] = useState<MealSlotDefinition[]>(PREDEFINED_MEAL_SLOTS);
   const [loading, setLoading] = useState(true);
   const [editingSlotId, setEditingSlotId] = useState<string | null>(null);
-  const [editTimeRange, setEditTimeRange] = useState("");
+  const [editStartTime, setEditStartTime] = useState("");
+  const [editEndTime, setEditEndTime] = useState("");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastType, setToastType] = useState<"success" | "error">("success");
   const [savingSlotId, setSavingSlotId] = useState<string | null>(null);
@@ -64,28 +85,32 @@ export default function ManageMealTimingsCanvas() {
   }, []);
 
   const handleStartEdit = (slot: MealSlotDefinition) => {
+    const { start, end } = parseTimeRange(slot.defaultTimeRange);
     setEditingSlotId(slot.id);
-    setEditTimeRange(slot.defaultTimeRange);
+    setEditStartTime(start);
+    setEditEndTime(end);
   };
 
   const handleCancelEdit = () => {
     setEditingSlotId(null);
-    setEditTimeRange("");
+    setEditStartTime("");
+    setEditEndTime("");
   };
 
   const handleSaveSlotTiming = async (slotId: string) => {
-    if (!editTimeRange.trim()) {
-      showToast("Delivery window cannot be empty.", "error");
+    if (!editStartTime.trim() || !editEndTime.trim()) {
+      showToast("Please select both start time and end time from the dropdowns.", "error");
       return;
     }
 
+    const formattedTimeRange = `${editStartTime.trim()} – ${editEndTime.trim()}`;
     setSavingSlotId(slotId);
     try {
       await updateMealSlotConfig(slotId, {
-        defaultTimeRange: editTimeRange.trim(),
+        defaultTimeRange: formattedTimeRange,
       });
       setSlots((prev) =>
-        prev.map((s) => (s.id === slotId ? { ...s, defaultTimeRange: editTimeRange.trim() } : s))
+        prev.map((s) => (s.id === slotId ? { ...s, defaultTimeRange: formattedTimeRange } : s))
       );
       setEditingSlotId(null);
       showToast("Meal slot delivery timing updated successfully!", "success");
@@ -267,59 +292,135 @@ export default function ManageMealTimingsCanvas() {
                     </div>
 
                     {isEditing ? (
-                      <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                        <input
-                          type="text"
-                          value={editTimeRange}
-                          onChange={(e) => setEditTimeRange(e.target.value)}
-                          placeholder="e.g. 7:30 AM – 9:30 AM"
-                          style={{
-                            flex: 1,
-                            fontSize: "13px",
-                            padding: "8px 12px",
-                            borderRadius: "6px",
-                            border: "1.5px solid #EA580C",
-                            outline: "none",
-                            backgroundColor: "#FFFFFF",
-                            fontFamily: "inherit",
-                          }}
-                          autoFocus
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleSaveSlotTiming(slot.id)}
-                          disabled={isSaving}
-                          style={{
-                            padding: "8px 14px",
-                            borderRadius: "6px",
-                            backgroundColor: "#EA580C",
-                            color: "#FFFFFF",
-                            border: "none",
-                            fontSize: "12.5px",
-                            fontWeight: 700,
-                            cursor: "pointer",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "5px",
-                          }}
-                        >
-                          <Save size={14} />
-                          <span>{isSaving ? "Saving..." : "Save"}</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleCancelEdit}
-                          style={{
-                            padding: "8px 10px",
-                            borderRadius: "6px",
-                            backgroundColor: "#F1F5F9",
-                            color: "#64748B",
-                            border: "none",
-                            cursor: "pointer",
-                          }}
-                        >
-                          <X size={14} />
-                        </button>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          {/* Start Time Dropdown */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "#475569", marginBottom: "4px" }}>
+                              Start Time
+                            </label>
+                            <select
+                              value={editStartTime}
+                              onChange={(e) => setEditStartTime(e.target.value)}
+                              style={{
+                                width: "100%",
+                                fontSize: "12.5px",
+                                fontWeight: 600,
+                                padding: "7px 8px",
+                                borderRadius: "6px",
+                                border: "1.5px solid #EA580C",
+                                outline: "none",
+                                backgroundColor: "#FFFFFF",
+                                color: "#0F172A",
+                                cursor: "pointer",
+                              }}
+                            >
+                              <option value="">-- Start Time --</option>
+                              {editStartTime && !TIME_OPTIONS.includes(editStartTime) && (
+                                <option value={editStartTime}>{editStartTime}</option>
+                              )}
+                              {TIME_OPTIONS.map((time) => (
+                                <option key={`start-${time}`} value={time}>
+                                  {time}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {/* "to" separator */}
+                          <span
+                            style={{
+                              fontSize: "12px",
+                              fontWeight: 800,
+                              color: "#64748B",
+                              alignSelf: "flex-end",
+                              paddingBottom: "8px",
+                              textTransform: "lowercase",
+                            }}
+                          >
+                            to
+                          </span>
+
+                          {/* End Time Dropdown */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "#475569", marginBottom: "4px" }}>
+                              End Time
+                            </label>
+                            <select
+                              value={editEndTime}
+                              onChange={(e) => setEditEndTime(e.target.value)}
+                              style={{
+                                width: "100%",
+                                fontSize: "12.5px",
+                                fontWeight: 600,
+                                padding: "7px 8px",
+                                borderRadius: "6px",
+                                border: "1.5px solid #EA580C",
+                                outline: "none",
+                                backgroundColor: "#FFFFFF",
+                                color: "#0F172A",
+                                cursor: "pointer",
+                              }}
+                            >
+                              <option value="">-- End Time --</option>
+                              {editEndTime && !TIME_OPTIONS.includes(editEndTime) && (
+                                <option value={editEndTime}>{editEndTime}</option>
+                              )}
+                              {TIME_OPTIONS.map((time) => (
+                                <option key={`end-${time}`} value={time}>
+                                  {time}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Action buttons: Save & Cancel */}
+                        <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "2px" }}>
+                          <button
+                            type="button"
+                            onClick={handleCancelEdit}
+                            style={{
+                              padding: "6px 12px",
+                              borderRadius: "6px",
+                              backgroundColor: "#F1F5F9",
+                              color: "#64748B",
+                              border: "1px solid #CBD5E1",
+                              fontSize: "12px",
+                              fontWeight: 600,
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "4px",
+                            }}
+                          >
+                            <X size={13} />
+                            <span>Cancel</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleSaveSlotTiming(slot.id)}
+                            disabled={isSaving}
+                            style={{
+                              padding: "6px 14px",
+                              borderRadius: "6px",
+                              backgroundColor: "#EA580C",
+                              color: "#FFFFFF",
+                              border: "none",
+                              fontSize: "12px",
+                              fontWeight: 700,
+                              cursor: isSaving ? "not-allowed" : "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "5px",
+                              opacity: isSaving ? 0.7 : 1,
+                            }}
+                          >
+                            <Save size={13} />
+                            <span>{isSaving ? "Saving..." : "Save Timing"}</span>
+                          </button>
+                        </div>
                       </div>
                     ) : (
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
