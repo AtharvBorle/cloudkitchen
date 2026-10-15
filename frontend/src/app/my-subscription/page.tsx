@@ -52,6 +52,7 @@ import {
   ChevronDown,
   Check,
   Edit3,
+  RefreshCw,
 } from "lucide-react";
 import styles from "./MySubscriptionPage.module.css";
 
@@ -155,6 +156,22 @@ function MySubscriptionContent() {
       ),
     [userSubs, isSubscriptionExpired]
   );
+
+  // Set of meal plan IDs that the user is currently actively subscribed to (non-expired)
+  const activeSubscribedPlanIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const sub of userSubs) {
+      if (
+        !isSubscriptionExpired(sub) &&
+        sub.status !== "CANCELLED" &&
+        sub.status !== "EXPIRED"
+      ) {
+        if (sub.planId) ids.add(sub.planId);
+        if (sub.plan?.id) ids.add(sub.plan.id);
+      }
+    }
+    return ids;
+  }, [userSubs, isSubscriptionExpired]);
   const [selectedSubFilter, setSelectedSubFilter] = useState<string>("all");
   const [selectedSubId, setSelectedSubId] = useState<string | null>(null);
   const [subscription, setSubscription] = useState<UserActiveMealSubscription | null>(null);
@@ -497,16 +514,36 @@ function MySubscriptionContent() {
   };
 
   // Open Subscribe Modal
-  const handleOpenSubscribeModal = (plan: PublicMealPlan) => {
+  const handleOpenSubscribeModal = (
+    plan: PublicMealPlan,
+    existingSub?: UserActiveMealSubscription
+  ) => {
     if (!session?.user) {
       router.push(`/login?callbackUrl=${encodeURIComponent("/my-subscriptions-desktop?tab=plans")}`);
       return;
     }
+
+    // Guard: Prevent duplicate purchase if user already has an active, non-expired subscription for this plan
+    if (activeSubscribedPlanIds.has(plan.id)) {
+      showToast(
+        "info",
+        "You already have an active subscription for this meal plan. You cannot subscribe to the same plan again until it expires."
+      );
+      return;
+    }
+
     setIsSubmittingSub(false);
     setSelectedPlanForSub(plan);
-    const initialAddr = defaultAddress?.address || defaultAddress?.label || (typeof window !== "undefined" ? localStorage.getItem("active-selected-address") || "" : "");
+    const initialAddr =
+      existingSub?.deliveryAddress ||
+      defaultAddress?.address ||
+      defaultAddress?.label ||
+      (typeof window !== "undefined" ? localStorage.getItem("active-selected-address") || "" : "");
     setDeliveryAddressInput(initialAddr);
-    const userRawPhone = (session.user as any)?.phone || "";
+    const userRawPhone =
+      existingSub?.contactPhone ||
+      (session.user as any)?.phone ||
+      "";
     setContactPhoneInput(extract10DigitPhone(userRawPhone));
     setSubErrorMsg(null);
     setSubSuccessMsg(null);
@@ -823,14 +860,22 @@ function MySubscriptionContent() {
     return `₹${(sub.pricePaid || sub.plan?.weeklyPrice || 0).toLocaleString("en-IN")}/${getCycleSuffix(sub.cycle, sub.plan?.duration)}`;
   };
 
+  const sortedUserSubs = useMemo(() => {
+    return [...userSubs].sort((a, b) => {
+      const aExp = isSubscriptionExpired(a);
+      const bExp = isSubscriptionExpired(b);
+      if (aExp === bExp) return 0;
+      return aExp ? 1 : -1; // Active first, expired last
+    });
+  }, [userSubs, isSubscriptionExpired]);
+
   const displayedSubs = useMemo(() => {
-    const list = activeSubs.length > 0 ? activeSubs : userSubs;
     if (selectedSubFilter === "all") {
-      return list;
+      return sortedUserSubs;
     }
-    const found = list.find((s) => s.id === selectedSubFilter);
-    return found ? [found] : list;
-  }, [activeSubs, userSubs, selectedSubFilter]);
+    const found = userSubs.find((s) => s.id === selectedSubFilter);
+    return found ? [found] : sortedUserSubs;
+  }, [sortedUserSubs, userSubs, selectedSubFilter]);
 
   return (
     <div className={styles.pageWrapper}>
@@ -1006,7 +1051,7 @@ function MySubscriptionContent() {
                 ) : (
                   <>
                     {/* Multi-Subscription Filter Pills if user has more than 1 plan */}
-                    {activeSubs.length > 1 && (
+                    {userSubs.length > 1 && (
                       <div style={{ marginBottom: "20px" }}>
                         <div style={{
                           display: "flex",
@@ -1017,7 +1062,7 @@ function MySubscriptionContent() {
                           gap: "8px",
                         }}>
                           <div style={{ fontSize: "0.84rem", fontWeight: 800, color: "#1E293B", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                            Active Meal Subscriptions ({activeSubs.length}) — All Plans Running:
+                            My Meal Subscriptions ({userSubs.length}) — {activeSubs.length} Active:
                           </div>
                         </div>
                         <div style={{ display: "flex", gap: "10px", overflowX: "auto", paddingBottom: "6px" }}>
@@ -1037,7 +1082,7 @@ function MySubscriptionContent() {
                               boxShadow: selectedSubFilter === "all" ? "0 2px 8px rgba(255, 85, 0, 0.15)" : "none",
                             }}
                           >
-                            <span>🍱 View All Active Plans ({activeSubs.length})</span>
+                            <span>🍱 View All Plans ({userSubs.length})</span>
                           </button>
 
                           {userSubs.map((s) => {
@@ -1154,6 +1199,33 @@ function MySubscriptionContent() {
                             subItem.status === "INACTIVE");
                         const resolvedStatus = isExpired ? "EXPIRED" : isPlanInactive ? "INACTIVE" : subItem.status;
 
+                        // Check if the underlying meal plan is still Live / available for renewal
+                        const liveMatchedPlan = allPlans.find(
+                          (p) => p.id === subItem.planId || p.id === subItem.plan?.id
+                        );
+                        const isPlanRenewable = Boolean(
+                          (liveMatchedPlan || (subItem.plan && subItem.plan.status === "Live")) &&
+                          !subItem.isPlanDeactivated &&
+                          subItem.plan?.status !== "Inactive"
+                        );
+                        const planToRenew: PublicMealPlan = liveMatchedPlan || {
+                          id: subItem.plan?.id || subItem.planId,
+                          sellerId: subItem.sellerId,
+                          sellerName: subItem.seller?.businessName || "Kitchen Partner",
+                          name: subItem.plan?.name || "Daily Meal Plan",
+                          tier: subItem.tier || subItem.plan?.tier || "Bronze",
+                          description: subItem.plan?.description || "",
+                          weeklyPrice: subItem.plan?.weeklyPrice || subItem.pricePaid || 499,
+                          monthlyPrice: subItem.plan?.monthlyPrice || subItem.plan?.weeklyPrice || subItem.pricePaid || 499,
+                          quarterlyPrice: subItem.plan?.quarterlyPrice || 0,
+                          yearlyPrice: subItem.plan?.yearlyPrice || 0,
+                          duration: subItem.plan?.duration || subItem.cycle || "1 Week",
+                          features: subItem.plan?.features || [],
+                          mealTimings: subItem.mealTimings || [],
+                          allowCancel: subItem.plan?.allowCancel,
+                          pauseBillingPeriod: subItem.plan?.pauseBillingPeriod,
+                        };
+
                         return (
                           <div
                             key={subItem.id}
@@ -1171,21 +1243,66 @@ function MySubscriptionContent() {
                                 style={{
                                   display: "flex",
                                   alignItems: "center",
-                                  gap: "10px",
-                                  padding: "12px 16px",
+                                  justifyContent: "space-between",
+                                  flexWrap: "wrap",
+                                  gap: "12px",
+                                  padding: "14px 18px",
                                   backgroundColor: "#FEF2F2",
-                                  borderRadius: "12px",
+                                  borderRadius: "14px",
                                   marginBottom: "16px",
-                                  border: "1px solid #FECACA",
-                                  color: "#991B1B",
-                                  fontSize: "0.86rem",
-                                  fontWeight: 500,
+                                  border: "1.5px solid #FECACA",
                                 }}
                               >
-                                <AlertCircle size={18} color="#DC2626" style={{ flexShrink: 0 }} />
-                                <span>
-                                  This meal subscription expired on {formatSubRenewalDate(subItem)}. Daily meal deliveries have ended. Browse subscription plans to renew.
-                                </span>
+                                <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: "1 1 280px" }}>
+                                  <AlertCircle size={20} color="#DC2626" style={{ flexShrink: 0 }} />
+                                  <span style={{ color: "#991B1B", fontSize: "0.88rem", fontWeight: 500, lineHeight: 1.4 }}>
+                                    This meal subscription expired on <strong>{formatSubRenewalDate(subItem)}</strong>. Daily meal deliveries have ended.
+                                    {isPlanRenewable ? " You can renew this subscription to resume fresh daily meals." : " This plan is currently not available for renewal."}
+                                  </span>
+                                </div>
+                                {isPlanRenewable ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenSubscribeModal(planToRenew, subItem)}
+                                    style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "8px",
+                                      backgroundColor: "#FF5500",
+                                      color: "#FFFFFF",
+                                      border: "none",
+                                      borderRadius: "10px",
+                                      padding: "10px 18px",
+                                      fontSize: "0.88rem",
+                                      fontWeight: 700,
+                                      cursor: "pointer",
+                                      boxShadow: "0 2px 8px rgba(255, 85, 0, 0.25)",
+                                      transition: "all 0.2s ease",
+                                      flexShrink: 0,
+                                    }}
+                                  >
+                                    <RefreshCw size={15} />
+                                    <span>Renew Plan</span>
+                                  </button>
+                                ) : (
+                                  <span
+                                    style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "6px",
+                                      backgroundColor: "#F1F5F9",
+                                      color: "#64748B",
+                                      border: "1px solid #CBD5E1",
+                                      borderRadius: "8px",
+                                      padding: "6px 12px",
+                                      fontSize: "0.8rem",
+                                      fontWeight: 600,
+                                      flexShrink: 0,
+                                    }}
+                                  >
+                                    Plan Unavailable
+                                  </span>
+                                )}
                               </div>
                             )}
 
@@ -1257,16 +1374,14 @@ function MySubscriptionContent() {
                               )}
                             </div>
 
-                            {/* Pause Subscription Section */}
-                            {isPauseAllowed && (
+                            {/* Pause Subscription Section (only for active, non-expired plans) */}
+                            {isPauseAllowed && !isExpired && (
                               <PauseSubscription
                                 isPaused={subItem.isPaused}
-                                disabled={isExpired || isPlanInactive || subItem.status?.toUpperCase() === "CANCELLED"}
+                                disabled={isPlanInactive || subItem.status?.toUpperCase() === "CANCELLED"}
                                 allowPause={isPauseAllowed}
                                 pausePolicyNote={
-                                  isExpired
-                                    ? "Subscription has expired. Pausing is unavailable for expired plans."
-                                    : isPlanInactive
+                                  isPlanInactive
                                     ? "Subscription is inactive because this plan has been deactivated by the kitchen partner."
                                     : "Pausing is disabled for this meal plan by the kitchen partner."
                                 }
@@ -1293,6 +1408,77 @@ function MySubscriptionContent() {
                                 }
                               />
                             </div>
+
+                            {/* Expired Plan Renewal Action Bar */}
+                            {isExpired && (
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                  flexWrap: "wrap",
+                                  gap: "14px",
+                                  marginTop: "20px",
+                                  padding: "16px 20px",
+                                  backgroundColor: isPlanRenewable ? "#FFF7ED" : "#F8FAFC",
+                                  border: isPlanRenewable ? "1.5px solid #FFEDD5" : "1.5px solid #E2E8F0",
+                                  borderRadius: "14px",
+                                }}
+                              >
+                                <div>
+                                  <div style={{ fontSize: "0.92rem", fontWeight: 800, color: isPlanRenewable ? "#9A3412" : "#475569" }}>
+                                    {isPlanRenewable
+                                      ? "Continue Your Daily Meals — Plan Available for Renewal"
+                                      : "Meal Plan Currently Inactive or Discontinued"}
+                                  </div>
+                                  <p style={{ margin: "3px 0 0 0", fontSize: "0.82rem", color: isPlanRenewable ? "#C2410C" : "#64748B" }}>
+                                    {isPlanRenewable
+                                      ? `Renew ${subItem.plan?.name || "your meal plan"} with ${subItem.seller?.businessName || "Kitchen Partner"} with your saved delivery preferences.`
+                                      : "This kitchen partner has deactivated this subscription plan. Renewal is currently unavailable."}
+                                  </p>
+                                </div>
+                                {isPlanRenewable ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenSubscribeModal(planToRenew, subItem)}
+                                    style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "8px",
+                                      backgroundColor: "#FF5500",
+                                      color: "#FFFFFF",
+                                      border: "none",
+                                      borderRadius: "10px",
+                                      padding: "11px 22px",
+                                      fontSize: "0.92rem",
+                                      fontWeight: 700,
+                                      cursor: "pointer",
+                                      boxShadow: "0 4px 14px rgba(255, 85, 0, 0.28)",
+                                      transition: "all 0.2s ease",
+                                    }}
+                                  >
+                                    <RefreshCw size={16} />
+                                    <span>Renew This Subscription</span>
+                                  </button>
+                                ) : (
+                                  <span
+                                    style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "6px",
+                                      backgroundColor: "#E2E8F0",
+                                      color: "#64748B",
+                                      borderRadius: "8px",
+                                      padding: "8px 14px",
+                                      fontSize: "0.82rem",
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    Renewal Unavailable
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </div>
                         );
                       })}
@@ -1648,14 +1834,52 @@ function MySubscriptionContent() {
                           })()}
 
                           {/* Subscribe CTA Button */}
-                          <button
-                            type="button"
-                            onClick={() => handleOpenSubscribeModal(plan)}
-                            className={styles.subscribeBtn}
-                          >
-                            <span>Subscribe to {plan.name}</span>
-                            <ArrowRight size={15} />
-                          </button>
+                          {(() => {
+                            const isAlreadyActive = activeSubscribedPlanIds.has(plan.id);
+                            if (isAlreadyActive) {
+                              return (
+                                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                                  <button
+                                    type="button"
+                                    disabled
+                                    style={{
+                                      width: "100%",
+                                      padding: "12px 18px",
+                                      borderRadius: "12px",
+                                      backgroundColor: "#F1F5F9",
+                                      color: "#475569",
+                                      fontSize: "0.88rem",
+                                      fontWeight: 700,
+                                      border: "1.5px solid #CBD5E1",
+                                      cursor: "not-allowed",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      gap: "8px",
+                                    }}
+                                    title="You already have an active subscription for this plan. You can renew after it expires."
+                                  >
+                                    <CheckCircle2 size={16} color="#16A34A" />
+                                    <span>Currently Subscribed</span>
+                                  </button>
+                                  <span style={{ fontSize: "0.74rem", color: "#64748B", textAlign: "center" }}>
+                                    Active plan in progress. You can renew once it expires.
+                                  </span>
+                                </div>
+                              );
+                            }
+
+                            return (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenSubscribeModal(plan)}
+                                className={styles.subscribeBtn}
+                              >
+                                <span>Subscribe to {plan.name}</span>
+                                <ArrowRight size={15} />
+                              </button>
+                            );
+                          })()}
                         </article>
                       );
                     })}

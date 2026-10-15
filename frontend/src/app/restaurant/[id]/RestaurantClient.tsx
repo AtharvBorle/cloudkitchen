@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Navbar } from "@/components/navbar";
@@ -47,6 +47,41 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
   const [rawMealPlans, setRawMealPlans] = useState<any[]>([]);
   const [selectedModalPlan, setSelectedModalPlan] = useState<SubscribeModalPlan | null>(null);
   const [isSubscribeModalOpen, setIsSubscribeModalOpen] = useState(false);
+  const [activeSubscribedPlanIds, setActiveSubscribedPlanIds] = useState<Set<string>>(new Set());
+
+  // Fetch active subscriptions for current logged-in user to prevent duplicate subscriptions
+  useEffect(() => {
+    if (!session?.user) return;
+    fetchApi("/api/user/meal-subscriptions")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        const subs = data?.data?.subscriptions || data?.subscriptions || data?.data || [];
+        if (Array.isArray(subs)) {
+          const now = new Date();
+          const activeIds = new Set<string>();
+          for (const s of subs) {
+            const isExp = s.isExpired || s.status === "EXPIRED" || (s.endDate && new Date(s.endDate) < now);
+            if (!isExp && s.status !== "CANCELLED") {
+              if (s.planId) activeIds.add(s.planId);
+              if (s.plan?.id) activeIds.add(s.plan.id);
+            }
+          }
+          setActiveSubscribedPlanIds(activeIds);
+        }
+      })
+      .catch(() => {});
+  }, [session]);
+
+  const computedSubscriptionPlans = useMemo(() => {
+    return subscriptionPlans.map((plan) => {
+      const isSubscribed = activeSubscribedPlanIds.has(plan.id);
+      return {
+        ...plan,
+        isSubscribed,
+        buttonText: isSubscribed ? "Currently Subscribed" : "Subscribe Now",
+      };
+    });
+  }, [subscriptionPlans, activeSubscribedPlanIds]);
 
   interface PriceFilterState {
     minPrice?: number;
@@ -595,6 +630,11 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
       return;
     }
 
+    if (activeSubscribedPlanIds.has(plan.id)) {
+      alert("You already have an active subscription for this meal plan. You cannot subscribe to the same plan again until your current subscription has expired.");
+      return;
+    }
+
     const raw = rawMealPlans.find((p) => p.id === plan.id);
     const planPrice = raw?.price !== undefined && raw?.price !== null
       ? (typeof raw.price === "number" ? raw.price : parseFloat(String(raw.price).replace(/[^\d.]/g, "")) || 499)
@@ -836,9 +876,9 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
             bannerImageUrl={kitchenData.bannerImageUrl}
           />
 
-          {subscriptionPlans.length > 0 && (
+          {computedSubscriptionPlans.length > 0 && (
             <SubscriptionPlans
-              plans={subscriptionPlans}
+              plans={computedSubscriptionPlans}
               onSelectPlan={handleSelectPlan}
             />
           )}
@@ -923,7 +963,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
           onVegToggle={handleVegToggle}
           onAddItem={handleAddItem}
           onDecreaseItem={handleDecreaseItem}
-          subscriptionPlans={subscriptionPlans}
+          subscriptionPlans={computedSubscriptionPlans}
           onSelectPlan={handleSelectPlan}
           priceFilterText={priceFilterBadgeText}
           onClearPriceFilter={handleClearPriceFilter}

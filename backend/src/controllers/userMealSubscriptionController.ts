@@ -239,6 +239,26 @@ export const initiateMealSubscriptionPayment = async (req: Request) => {
         throw new ApiError("This kitchen partner is currently offline and not accepting new subscriptions.", 400);
     }
 
+    // Prevent duplicate purchase of the same meal plan while a subscription is active and not expired
+    const activeExistingSub = await db.userMealSubscription.findFirst({
+        where: {
+            userId: session.user.id,
+            planId: plan.id,
+            status: { in: ["ACTIVE", "PAUSED"] },
+            OR: [
+                { endDate: null },
+                { endDate: { gte: new Date() } }
+            ]
+        }
+    });
+
+    if (activeExistingSub) {
+        throw new ApiError(
+            "You already have an active subscription for this meal plan. You cannot purchase the same plan again until your current subscription has expired.",
+            400
+        );
+    }
+
     const planDuration = (plan.duration || "1 Week").toLowerCase();
     const cycleNormalized = (cycle || plan.duration || "WEEKLY").toUpperCase();
     let calculatedPrice = plan.weeklyPrice;
@@ -398,6 +418,26 @@ export const createUserMealSubscription = async (req: Request) => {
 
     if (!plan || plan.status !== "Live") {
         throw new ApiError("Selected meal plan is unavailable or inactive", 404);
+    }
+
+    // Prevent duplicate activation of the same meal plan while a subscription is active and not expired
+    const activeExistingSub = await db.userMealSubscription.findFirst({
+        where: {
+            userId: session.user.id,
+            planId: plan.id,
+            status: { in: ["ACTIVE", "PAUSED"] },
+            OR: [
+                { endDate: null },
+                { endDate: { gte: new Date() } }
+            ]
+        }
+    });
+
+    if (activeExistingSub) {
+        throw new ApiError(
+            "You already have an active subscription for this meal plan. You cannot purchase the same plan again until your current subscription has expired.",
+            400
+        );
     }
 
     const planDuration = (plan.duration || "1 Week").toLowerCase();
