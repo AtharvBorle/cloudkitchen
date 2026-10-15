@@ -252,6 +252,7 @@ function MySubscriptionContent() {
   useEffect(() => {
     if (tabParam === "plans" || tabParam === "all") {
       setActiveTab("plans");
+      setSelectedSellerId("all");
     } else if (tabParam === "active") {
       setActiveTab("active");
     }
@@ -319,8 +320,8 @@ function MySubscriptionContent() {
       setAllKitchens(kitchensData);
 
       setSelectedSellerId((prev) => {
-        if (plansData.length > 0 && prev === "all") {
-          return plansData[0].sellerId;
+        if (prev !== "all" && !plansData.some((p) => p.sellerId === prev)) {
+          return "all";
         }
         return prev;
       });
@@ -808,7 +809,7 @@ function MySubscriptionContent() {
       : (sub.mealTimings && sub.mealTimings.length > 0 ? sub.mealTimings : []);
 
     if (timings.length > 0) {
-      return timings.map((t, idx) => {
+      return timings.map((t: string, idx: number) => {
         const parsed = formatMealTimingDisplay(t);
         return {
           id: `slot-${sub.id}-${idx}`,
@@ -820,7 +821,7 @@ function MySubscriptionContent() {
     }
 
     if (sub.mealSlots && sub.mealSlots.length > 0) {
-      return sub.mealSlots.map((s, idx) => {
+      return sub.mealSlots.map((s: any, idx: number) => {
         const parsed = formatMealTimingDisplay(s.name || s.id);
         return {
           id: `slot-${sub.id}-${idx}`,
@@ -958,6 +959,7 @@ function MySubscriptionContent() {
                 }`}
                 onClick={() => {
                   setActiveTab("plans");
+                  setSelectedSellerId("all");
                   router.replace("/my-subscriptions-desktop?tab=plans", { scroll: false });
                 }}
               >
@@ -1023,6 +1025,7 @@ function MySubscriptionContent() {
                       type="button"
                       onClick={() => {
                         setActiveTab("plans");
+                        setSelectedSellerId("all");
                         router.replace("/my-subscriptions-desktop?tab=plans", { scroll: false });
                       }}
                       style={{
@@ -1774,9 +1777,15 @@ function MySubscriptionContent() {
                                   (plan as any).allowPauseBilling !== false
                                 );
                                 const rawFeatures = plan.features && plan.features.length > 0 ? plan.features : [];
-                                const filteredFeatures = isPlanPauseAllowed
+                                const filteredFeatures = (isPlanPauseAllowed
                                   ? rawFeatures
-                                  : rawFeatures.filter((f) => !String(f).toLowerCase().includes("pause"));
+                                  : rawFeatures.filter((f) => !String(f).toLowerCase().includes("pause"))
+                                ).filter(
+                                  (f) =>
+                                    !String(f).toLowerCase().includes("100% free doorstep delivery") &&
+                                    !String(f).toLowerCase().includes("free doorstep delivery") &&
+                                    !String(f).toLowerCase().includes("doorstep delivery")
+                                );
 
                                 if (filteredFeatures.length > 0) {
                                   return filteredFeatures.map((feature, fIdx) => (
@@ -1800,10 +1809,6 @@ function MySubscriptionContent() {
                                   </>
                                 );
                               })()}
-                              <li className={styles.featureItem}>
-                                <CheckCircle2 size={14} className={styles.featureIcon} />
-                                <span>100% Free Doorstep Delivery</span>
-                              </li>
                             </ul>
                           </div>
 

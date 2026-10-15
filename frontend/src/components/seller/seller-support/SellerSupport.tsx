@@ -17,10 +17,13 @@ import {
   MessageSquare,
   CheckCircle2,
   AlertCircle,
+  FileText,
+  UploadCloud,
+  Download,
 } from "lucide-react";
 import styles from "./SellerSupport.module.css";
 import { fetchApi } from "@/lib/fetch-api";
-import { useSellerProfile, isGenericFallbackName } from "@/hooks/useSellerProfile";
+import { useSellerProfile } from "@/hooks/useSellerProfile";
 
 export interface TicketMessage {
   id: string;
@@ -121,7 +124,35 @@ function mapRawMessage(m: any, ticketUser?: any): TicketMessage {
 
 function cleanTicketText(text: string | null | undefined): string {
   if (!text) return "";
-  return text.replace(/\[Priority:\s*(High|Medium|Low)\]\s*\n?/gi, "").trim();
+  let cleaned = text.replace(/\[Priority:\s*(High|Medium|Low)\]\s*\n?/gi, "");
+  cleaned = cleaned.replace(/\[Attachment:\s*[^\]]+\][\s\S]*$/gi, "");
+  return cleaned.trim();
+}
+
+export interface ParsedTicketAttachment {
+  name: string;
+  type?: string;
+  url: string;
+}
+
+export function parseTicketMessage(raw: string): {
+  text: string;
+  attachment: ParsedTicketAttachment | null;
+} {
+  if (!raw) return { text: "", attachment: null };
+  const cleaned = raw.replace(/\[Priority:\s*(High|Medium|Low)\]\s*\n?/gi, "").trim();
+  const match = cleaned.match(/\[Attachment:\s*([^\]|]+)(?:\|([^\]]+))?\]\s*([\s\S]*)$/i);
+  if (match) {
+    const textPart = cleaned.substring(0, match.index).trim();
+    const name = match[1]?.trim() || "attachment";
+    const type = match[2]?.trim() || "";
+    const url = match[3]?.trim() || "";
+    return {
+      text: textPart,
+      attachment: url ? { name, type, url } : null,
+    };
+  }
+  return { text: cleaned, attachment: null };
 }
 
 export function resolveTicketPriority(t: any): "High" | "Medium" | "Low" | null {
@@ -249,9 +280,13 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
 }) => {
   const seller = useSellerProfile();
   const effectiveOwnerName =
-    ownerName && !isGenericFallbackName(ownerName)
+    ownerName &&
+    ownerName !== "Rahul Sharma" &&
+    ownerName !== "Rahul" &&
+    ownerName !== "John Doe" &&
+    ownerName !== "Kitchen Owner"
       ? ownerName
-      : (!isGenericFallbackName(seller.ownerName) ? seller.ownerName : "");
+      : seller.ownerName;
   const effectivePartnerRole = partnerRole || seller.partnerRole;
   const effectiveAvatarInitials =
     avatarInitials && avatarInitials !== "JD" && avatarInitials !== "KP"
@@ -275,6 +310,22 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
   const [isSubmittingTicket, setIsSubmittingTicket] = useState(false);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
 
+  // Attachment State for Raise Ticket Modal
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
+  const [attachedPreview, setAttachedPreview] = useState<string | null>(null);
+  const [attachedDataUrl, setAttachedDataUrl] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Attachment State for Chat Reply
+  const [replyAttachedFile, setReplyAttachedFile] = useState<File | null>(null);
+  const [replyAttachedPreview, setReplyAttachedPreview] = useState<string | null>(null);
+  const [replyAttachedDataUrl, setReplyAttachedDataUrl] = useState<string | null>(null);
+  const replyFileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Lightbox modal for viewing image attachments
+  const [previewModalImage, setPreviewModalImage] = useState<string | null>(null);
+
   // Toast Notification State
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastType, setToastType] = useState<"success" | "error">("success");
@@ -285,6 +336,99 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
     setTimeout(() => {
       setToastMessage(null);
     }, 4000);
+  };
+
+  const processFileToDataUrl = (
+    file: File,
+    onSuccess: (dataUrl: string, preview: string | null) => void
+  ) => {
+    if (file.size > 5 * 1024 * 1024) {
+      showToast("File size exceeds 5MB limit. Please upload a smaller file.", "error");
+      return;
+    }
+
+    if (file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        if (file.size > 600 * 1024) {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            const maxDim = 1280;
+            let width = img.width;
+            let height = img.height;
+            if (width > maxDim || height > maxDim) {
+              if (width > height) {
+                height = Math.round((height * maxDim) / width);
+                width = maxDim;
+              } else {
+                width = Math.round((width * maxDim) / height);
+                height = maxDim;
+              }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext("2d");
+            if (ctx) {
+              ctx.drawImage(img, 0, 0, width, height);
+              const compressed = canvas.toDataURL("image/jpeg", 0.82);
+              onSuccess(compressed, compressed);
+              return;
+            }
+            onSuccess(result, result);
+          };
+          img.onerror = () => {
+            onSuccess(result, result);
+          };
+          img.src = result;
+        } else {
+          onSuccess(result, result);
+        }
+      };
+      reader.readAsDataURL(file);
+    } else {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        onSuccess(result, null);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleModalFileSelected = (file: File) => {
+    processFileToDataUrl(file, (dataUrl, preview) => {
+      setAttachedFile(file);
+      setAttachedDataUrl(dataUrl);
+      setAttachedPreview(preview);
+    });
+  };
+
+  const removeModalAttachment = () => {
+    setAttachedFile(null);
+    setAttachedPreview(null);
+    setAttachedDataUrl(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleReplyFileSelected = (file: File) => {
+    processFileToDataUrl(file, (dataUrl, preview) => {
+      setReplyAttachedFile(file);
+      setReplyAttachedDataUrl(dataUrl);
+      setReplyAttachedPreview(preview);
+    });
+  };
+
+  const removeReplyAttachment = () => {
+    setReplyAttachedFile(null);
+    setReplyAttachedPreview(null);
+    setReplyAttachedDataUrl(null);
+    if (replyFileInputRef.current) {
+      replyFileInputRef.current.value = "";
+    }
   };
 
   const fetchTickets = async (selectId?: string) => {
@@ -372,13 +516,18 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
 
     setIsSubmittingTicket(true);
     try {
+      const finalDescription =
+        attachedDataUrl && attachedFile
+          ? `${newDescription.trim()}\n\n[Attachment: ${attachedFile.name}|${attachedFile.type}]\n${attachedDataUrl}`
+          : newDescription.trim();
+
       const res = await fetchApi("/api/tickets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: newTitle.trim(),
           category: newCategory,
-          description: newDescription.trim(),
+          description: finalDescription,
           priority: "Medium",
         }),
       });
@@ -390,6 +539,7 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
         setNewTitle("");
         setNewDescription("");
         setNewCategory("Operations");
+        removeModalAttachment();
         const createdId = data.id || data.data?.id;
         await fetchTickets(createdId);
         if (createdId) {
@@ -408,10 +558,17 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputMessage.trim() || !selectedTicket) return;
+    if ((!inputMessage.trim() && !replyAttachedDataUrl) || !selectedTicket) return;
 
-    const msgText = inputMessage.trim();
+    let fullMsg = inputMessage.trim();
+    if (replyAttachedDataUrl && replyAttachedFile) {
+      fullMsg = fullMsg
+        ? `${fullMsg}\n\n[Attachment: ${replyAttachedFile.name}|${replyAttachedFile.type}]\n${replyAttachedDataUrl}`
+        : `[Attachment: ${replyAttachedFile.name}|${replyAttachedFile.type}]\n${replyAttachedDataUrl}`;
+    }
+
     setInputMessage("");
+    removeReplyAttachment();
     setIsSendingMessage(true);
 
     // Optimistic message update
@@ -422,7 +579,7 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
       role: "customer",
       initials: getInitials(senderName),
       timestamp: "Just now",
-      text: msgText,
+      text: fullMsg,
     };
 
     setTickets((prev) =>
@@ -437,7 +594,7 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
       const res = await fetchApi(`/api/tickets/${selectedTicket.id}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: msgText }),
+        body: JSON.stringify({ message: fullMsg }),
       });
 
       if (res.ok) {
@@ -736,7 +893,56 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
                               isSupport ? styles.messageBubbleSupport : styles.messageBubbleCustomer
                             }`}
                           >
-                            {msg.text}
+                            {(() => {
+                              const parsed = parseTicketMessage(msg.text);
+                              const isImage =
+                                parsed.attachment &&
+                                (parsed.attachment.url.startsWith("data:image/") ||
+                                  /\.(png|jpe?g|webp|gif|svg)$/i.test(parsed.attachment.name || ""));
+
+                              return (
+                                <>
+                                  {parsed.text && <p className={styles.bubbleText}>{parsed.text}</p>}
+                                  {parsed.attachment && (
+                                    <div className={styles.bubbleAttachmentBox}>
+                                      {isImage ? (
+                                        <div className={styles.bubbleImageContainer}>
+                                          <img
+                                            src={parsed.attachment.url}
+                                            alt={parsed.attachment.name}
+                                            className={styles.bubbleImage}
+                                            onClick={() => setPreviewModalImage(parsed.attachment?.url || null)}
+                                            title="Click to view full image"
+                                          />
+                                          <span className={styles.bubbleImageCaption}>
+                                            {parsed.attachment.name}
+                                          </span>
+                                        </div>
+                                      ) : (
+                                        <a
+                                          href={parsed.attachment.url}
+                                          download={parsed.attachment.name}
+                                          className={styles.bubbleDocDownload}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                        >
+                                          <FileText size={18} color="#EA580C" />
+                                          <div className={styles.bubbleDocInfo}>
+                                            <span className={styles.bubbleDocName}>
+                                              {parsed.attachment.name}
+                                            </span>
+                                            <span className={styles.bubbleDocAction}>
+                                              Click to download/view
+                                            </span>
+                                          </div>
+                                          <Download size={15} color="#64748B" />
+                                        </a>
+                                      )}
+                                    </div>
+                                  )}
+                                </>
+                              );
+                            })()}
                           </div>
                         </div>
 
@@ -752,7 +958,50 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
 
                 {/* Chat Message Input */}
                 <form onSubmit={handleSendMessage} className={styles.chatInputFooter}>
+                  {replyAttachedFile && (
+                    <div className={styles.replyAttachmentChip}>
+                      {replyAttachedPreview ? (
+                        <img
+                          src={replyAttachedPreview}
+                          alt="preview"
+                          className={styles.replyThumbnail}
+                        />
+                      ) : (
+                        <FileText size={15} color="#EA580C" />
+                      )}
+                      <span className={styles.replyFileName}>
+                        {replyAttachedFile.name}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={removeReplyAttachment}
+                        className={styles.replyRemoveBtn}
+                        title="Remove attachment"
+                      >
+                        <X size={13} />
+                      </button>
+                    </div>
+                  )}
                   <div className={styles.inputWrapper}>
+                    <input
+                      ref={replyFileInputRef}
+                      type="file"
+                      accept="image/*,.pdf,.doc,.docx,.txt"
+                      style={{ display: "none" }}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleReplyFileSelected(file);
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className={styles.attachmentBtn}
+                      onClick={() => replyFileInputRef.current?.click()}
+                      title="Attach problem screenshot or document"
+                      disabled={selectedTicket.status === "Closed"}
+                    >
+                      <Paperclip size={17} />
+                    </button>
                     <input
                       type="text"
                       placeholder="Type a reply to support..."
@@ -763,7 +1012,11 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
                     />
                     <button
                       type="submit"
-                      disabled={!inputMessage.trim() || isSendingMessage || selectedTicket.status === "Closed"}
+                      disabled={
+                        (!inputMessage.trim() && !replyAttachedDataUrl) ||
+                        isSendingMessage ||
+                        selectedTicket.status === "Closed"
+                      }
                       className={styles.sendBtn}
                       title="Send reply"
                     >
@@ -805,7 +1058,13 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
 
       {/* 3. Raise Ticket Modal Dialog */}
       {isCreateModalOpen && (
-        <div className={styles.modalBackdrop} onClick={() => setIsCreateModalOpen(false)}>
+        <div
+          className={styles.modalBackdrop}
+          onClick={() => {
+            setIsCreateModalOpen(false);
+            removeModalAttachment();
+          }}
+        >
           <div
             className={styles.modalContainer}
             onClick={(e) => e.stopPropagation()}
@@ -822,7 +1081,10 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
               <button
                 type="button"
                 className={styles.modalCloseBtn}
-                onClick={() => setIsCreateModalOpen(false)}
+                onClick={() => {
+                  setIsCreateModalOpen(false);
+                  removeModalAttachment();
+                }}
                 aria-label="Close"
               >
                 <X size={20} />
@@ -863,9 +1125,32 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
                 </div>
 
                 <div className={styles.formGroup}>
-                  <label className={styles.formLabel}>
-                    Description / Details <span className={styles.formLabelRequired}>*</span>
-                  </label>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                    <label className={styles.formLabel} style={{ marginBottom: 0 }}>
+                      Description / Details <span className={styles.formLabelRequired}>*</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "#EA580C",
+                        cursor: "pointer",
+                        fontSize: "0.78rem",
+                        fontWeight: 700,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "5px",
+                        padding: "2px 6px",
+                        borderRadius: "6px",
+                      }}
+                      title="Attach problem screenshot, photo or document"
+                    >
+                      <Paperclip size={14} />
+                      <span>{attachedFile ? "Change Attachment" : "Attach Screenshot / Document"}</span>
+                    </button>
+                  </div>
                   <textarea
                     placeholder="Explain the issue or question in detail. Mention order IDs, subscriber names, or error messages if applicable..."
                     value={newDescription}
@@ -875,13 +1160,122 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
                     required
                   />
                 </div>
+
+                {/* 4. Attachment (Screenshot, Photo or Document) */}
+                <div className={styles.formGroup}>
+                  {/* Keep file input always in DOM so fileInputRef.current?.click() always works */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*,.pdf,.doc,.docx,.txt"
+                    style={{ display: "none" }}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleModalFileSelected(file);
+                      e.target.value = "";
+                    }}
+                  />
+
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                    <label className={styles.formLabel} style={{ marginBottom: 0 }}>
+                      Attachment <span style={{ fontSize: "0.76rem", fontWeight: 500, color: "#64748B" }}>(Problem screenshot, photo, or document)</span>
+                    </label>
+                    <span style={{ fontSize: "0.72rem", color: "#94A3B8", fontWeight: 500 }}>Optional</span>
+                  </div>
+
+                  {!attachedFile ? (
+                    <div
+                      className={`${styles.uploadDropzone} ${isDragging ? styles.uploadDropzoneActive : ""}`}
+                      onClick={() => fileInputRef.current?.click()}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setIsDragging(true);
+                      }}
+                      onDragLeave={() => setIsDragging(false)}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setIsDragging(false);
+                        const file = e.dataTransfer.files?.[0];
+                        if (file) handleModalFileSelected(file);
+                      }}
+                      role="button"
+                      tabIndex={0}
+                    >
+                      <div className={styles.uploadDropzoneIcon}>
+                        <UploadCloud size={20} color="#EA580C" />
+                      </div>
+                      <div className={styles.uploadDropzoneText}>
+                        <span className={styles.uploadDropzoneTitle}>
+                          Click or drag to attach problem screenshot or file
+                        </span>
+                        <span className={styles.uploadDropzoneSub}>
+                          PNG, JPG, WEBP, PDF, DOC, TXT (up to 5MB)
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className={styles.attachmentPreviewCard}>
+                      <div className={styles.attachmentPreviewLeft}>
+                        {attachedPreview ? (
+                          <img
+                            src={attachedPreview}
+                            alt="Screenshot preview"
+                            className={styles.attachmentThumbnail}
+                          />
+                        ) : (
+                          <div className={styles.attachmentDocIcon}>
+                            <FileText size={22} color="#EA580C" />
+                          </div>
+                        )}
+                        <div className={styles.attachmentInfo}>
+                          <span className={styles.attachmentName} title={attachedFile.name}>
+                            {attachedFile.name}
+                          </span>
+                          <span className={styles.attachmentSize}>
+                            {(attachedFile.size / 1024).toFixed(1)} KB • {attachedFile.type || "Document"}
+                          </span>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          style={{
+                            background: "none",
+                            border: "1px solid #fed7aa",
+                            borderRadius: "6px",
+                            padding: "4px 8px",
+                            color: "#c2410c",
+                            fontSize: "0.74rem",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                          }}
+                        >
+                          Change
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.attachmentRemoveBtn}
+                          onClick={removeModalAttachment}
+                          title="Remove attachment"
+                          aria-label="Remove attachment"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className={styles.modalFooter}>
                 <button
                   type="button"
                   className={styles.btnCancel}
-                  onClick={() => setIsCreateModalOpen(false)}
+                  onClick={() => {
+                    setIsCreateModalOpen(false);
+                    removeModalAttachment();
+                  }}
                   disabled={isSubmittingTicket}
                 >
                   Cancel
@@ -909,7 +1303,36 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
         </div>
       )}
 
-      {/* 4. Toast Notification */}
+      {/* 4. Image Lightbox Modal */}
+      {previewModalImage && (
+        <div
+          className={styles.imageModalBackdrop}
+          onClick={() => setPreviewModalImage(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className={styles.imageModalContent}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={previewModalImage}
+              alt="Attachment preview"
+              className={styles.imageModalFullImg}
+            />
+            <button
+              type="button"
+              className={styles.imageModalCloseBtn}
+              onClick={() => setPreviewModalImage(null)}
+              aria-label="Close preview"
+            >
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 5. Toast Notification */}
       {toastMessage && (
         <div
           className={`${styles.toast} ${

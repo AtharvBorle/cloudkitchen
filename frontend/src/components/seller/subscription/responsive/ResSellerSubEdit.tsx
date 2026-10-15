@@ -118,6 +118,7 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
   const [selectedSlotIds, setSelectedSlotIds] = useState<string[]>([]);
   const [allowPauseBilling, setAllowPauseBilling] = useState(initialAllowPauseBilling);
   const [pauseBillingPeriod, setPauseBillingPeriod] = useState("30 Days");
+  const [mealTimings, setMealTimings] = useState<MealServingTiming[]>(initialMealTimings);
   const [metadata, setMetadata] = useState<PlanMetadataData>(initialMetadata);
 
   useEffect(() => {
@@ -205,7 +206,7 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
           : normalizeMealSlotIds(found.mealTimings || []);
         setSelectedSlotIds(normalizedSlots.length > 0 ? normalizedSlots : ["breakfast", "lunch", "dinner"]);
         setMealTimings(
-          (found.mealTimings || []).map((t, idx) => {
+          (found.mealTimings || []).map((t: string, idx: number) => {
             const [mealName, time] = t.includes(":") ? t.split(/:\s*(.+)/) : [`Meal ${idx + 1}`, t];
             return {
               id: `time-${idx}`,

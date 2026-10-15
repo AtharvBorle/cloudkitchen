@@ -287,7 +287,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
                     plan.mealTimings && plan.mealTimings.length
                       ? `Served for ${
                           Array.isArray(plan.mealTimings)
-                            ? plan.mealTimings.map((t) => formatMealTimingDisplay(t).name).join(", ")
+                            ? plan.mealTimings.map((t: string) => formatMealTimingDisplay(t).name).join(", ")
                             : formatMealTimingDisplay(plan.mealTimings).name
                         }`
                       : "Daily breakfast, lunch or dinner",

@@ -106,6 +106,7 @@ export const SavedCards: React.FC = () => {
           );
         })}
       </div>
+      )}
     </div>
   );
 };

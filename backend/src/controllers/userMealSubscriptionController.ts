@@ -75,8 +75,18 @@ export const getUserMealSubscriptions = async () => {
             sub.pauseHistory = JSON.stringify(history);
         }
 
-        // 2. Auto-expire user subscriptions whose duration / validity (endDate) has passed
-        if (sub.status !== "CANCELLED" && sub.status !== "EXPIRED" && sub.endDate && new Date(sub.endDate) < now) {
+        // 2. Auto-expire user subscriptions whose duration / validity (endDate) has passed or reached
+        const isEndReached = (() => {
+            if (!sub.endDate) return false;
+            const end = new Date(sub.endDate);
+            if (isNaN(end.getTime())) return false;
+            if (end <= now) return true;
+            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+            const endDayStart = new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime();
+            return endDayStart <= todayStart;
+        })();
+
+        if (sub.status !== "CANCELLED" && sub.status !== "EXPIRED" && isEndReached) {
             await db.userMealSubscription.update({
                 where: { id: sub.id },
                 data: {
@@ -86,6 +96,7 @@ export const getUserMealSubscriptions = async () => {
             }).catch(() => {});
             sub.status = "EXPIRED";
             sub.isPaused = false;
+            emitMealSubscriptionUpdated(sub.sellerId, sub.userId, "UPDATE", sub);
         }
     }
 
@@ -204,7 +215,16 @@ export const getUserMealSubscriptions = async () => {
         });
 
         const isPlanDeactivated = sub.plan?.status === "Inactive";
-        const isExpired = sub.status === "EXPIRED" || Boolean(sub.endDate && new Date(sub.endDate) < now);
+        const isEndReached = (() => {
+            if (!sub.endDate) return false;
+            const end = new Date(sub.endDate);
+            if (isNaN(end.getTime())) return false;
+            if (end <= now) return true;
+            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+            const endDayStart = new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime();
+            return endDayStart <= todayStart;
+        })();
+        const isExpired = sub.status === "EXPIRED" || isEndReached;
         const effectiveStatus = isExpired
             ? "EXPIRED"
             : isPlanDeactivated && sub.status === "ACTIVE"

@@ -2,6 +2,7 @@
 
 import { fetchApi } from "@/lib/fetch-api";
 import { useRoomModule } from "@/context/RoomModuleContext";
+import PaginationControls from "@/components/seller/common/PaginationControls";
 import { useState, useMemo, useEffect } from "react";
 import {
     CheckCircle,
@@ -144,6 +145,13 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
     const [startDate, setStartDate] = useState<string>("");
     const [endDate, setEndDate] = useState<string>("");
     const [sortBy, setSortBy] = useState<"NEWEST" | "OLDEST" | "NAME_ASC">("NEWEST");
+    const [currentPage, setCurrentPage] = useState<number>(1);
+    const [pageSize, setPageSize] = useState<number | "All">(5);
+
+    // Reset pagination to page 1 whenever tab or search or filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [activeTab, searchQuery, statusFilter, categoryFilter, datePreset, startDate, endDate, sortBy]);
 
     // Revision State
     const [revisionAppId, setRevisionAppId] = useState<string | null>(null);
@@ -284,6 +292,33 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
             return isOverallPending || isFoodPending || isPropPending;
         });
     }, [visibleApplications, isRoomEnabled]);
+
+    // Filter pending applications by search query
+    const filteredPendingApplications = useMemo(() => {
+        if (!searchQuery.trim()) return pendingApplications;
+        const q = searchQuery.toLowerCase().trim();
+        return pendingApplications.filter((app) => {
+            return (
+                app.businessName?.toLowerCase().includes(q) ||
+                app.ownerName?.toLowerCase().includes(q) ||
+                app.email?.toLowerCase().includes(q) ||
+                app.phone?.toLowerCase().includes(q) ||
+                app.kitchenAddress?.toLowerCase().includes(q) ||
+                app.type?.toLowerCase().includes(q) ||
+                app.trackingId?.toLowerCase().includes(q) ||
+                app.verificationNote?.toLowerCase().includes(q) ||
+                app.id?.toLowerCase().includes(q)
+            );
+        });
+    }, [pendingApplications, searchQuery]);
+
+    // Paginate pending applications (default 5 records per page)
+    const paginatedPendingApplications = useMemo(() => {
+        if (pageSize === "All") return filteredPendingApplications;
+        const numSize = Number(pageSize) || 5;
+        const startIndex = (currentPage - 1) * numSize;
+        return filteredPendingApplications.slice(startIndex, startIndex + numSize);
+    }, [filteredPendingApplications, currentPage, pageSize]);
 
     // Compute metrics
     const metrics = useMemo(() => {
@@ -441,6 +476,14 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
             return 0;
         });
     }, [visibleApplications, searchQuery, statusFilter, categoryFilter, datePreset, startDate, endDate, sortBy, isRoomEnabled]);
+
+    // Paginate history applications (default 5 records per page)
+    const paginatedHistoryApplications = useMemo(() => {
+        if (pageSize === "All") return filteredHistoryApplications;
+        const numSize = Number(pageSize) || 5;
+        const startIndex = (currentPage - 1) * numSize;
+        return filteredHistoryApplications.slice(startIndex, startIndex + numSize);
+    }, [filteredHistoryApplications, currentPage, pageSize]);
 
     const handleResetFilters = () => {
         setSearchQuery("");
@@ -681,84 +724,145 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                 </div>
             </div>
 
-            {/* Navigation Tabs (Active Queue vs Application History) */}
+            {/* Navigation Tabs (Active Queue vs Application History) with Search Bar on the Right */}
             <div
                 style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: "8px",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    gap: "12px",
                     borderBottom: "1px solid #E2E8F0",
                     marginBottom: "1.75rem",
-                    paddingBottom: "2px",
+                    paddingBottom: "8px",
                 }}
             >
-                <button
-                    type="button"
-                    onClick={() => setActiveTab("pending")}
-                    style={{
-                        padding: "10px 18px",
-                        border: "none",
-                        background: "transparent",
-                        fontSize: "0.95rem",
-                        fontWeight: activeTab === "pending" ? 700 : 500,
-                        color: activeTab === "pending" ? "var(--primary)" : "#64748B",
-                        borderBottom: activeTab === "pending" ? "2px solid var(--primary)" : "2px solid transparent",
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        transition: "all 0.15s ease",
-                    }}
-                >
-                    <Layers size={17} />
-                    <span>Pending Review Queue</span>
-                    <span
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab("pending")}
                         style={{
-                            fontSize: "0.75rem",
-                            fontWeight: 700,
-                            padding: "2px 8px",
-                            borderRadius: "12px",
-                            backgroundColor: activeTab === "pending" ? "#FFF1E8" : "#F1F5F9",
-                            color: activeTab === "pending" ? "#F97316" : "#64748B",
+                            padding: "10px 18px",
+                            border: "none",
+                            background: "transparent",
+                            fontSize: "0.95rem",
+                            fontWeight: activeTab === "pending" ? 700 : 500,
+                            color: activeTab === "pending" ? "var(--primary)" : "#64748B",
+                            borderBottom: activeTab === "pending" ? "2px solid var(--primary)" : "2px solid transparent",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            transition: "all 0.15s ease",
                         }}
                     >
-                        {pendingApplications.length}
-                    </span>
-                </button>
+                        <Layers size={17} />
+                        <span>Pending Review Queue</span>
+                        <span
+                            style={{
+                                fontSize: "0.75rem",
+                                fontWeight: 700,
+                                padding: "2px 8px",
+                                borderRadius: "12px",
+                                backgroundColor: activeTab === "pending" ? "#FFF1E8" : "#F1F5F9",
+                                color: activeTab === "pending" ? "#F97316" : "#64748B",
+                            }}
+                        >
+                            {pendingApplications.length}
+                        </span>
+                    </button>
 
-                <button
-                    type="button"
-                    onClick={() => setActiveTab("history")}
-                    style={{
-                        padding: "10px 18px",
-                        border: "none",
-                        background: "transparent",
-                        fontSize: "0.95rem",
-                        fontWeight: activeTab === "history" ? 700 : 500,
-                        color: activeTab === "history" ? "var(--primary)" : "#64748B",
-                        borderBottom: activeTab === "history" ? "2px solid var(--primary)" : "2px solid transparent",
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        transition: "all 0.15s ease",
-                    }}
-                >
-                    <History size={17} />
-                    <span>Application History</span>
-                    <span
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab("history")}
                         style={{
-                            fontSize: "0.75rem",
-                            fontWeight: 700,
-                            padding: "2px 8px",
-                            borderRadius: "12px",
-                            backgroundColor: activeTab === "history" ? "#FFF1E8" : "#F1F5F9",
-                            color: activeTab === "history" ? "#F97316" : "#64748B",
+                            padding: "10px 18px",
+                            border: "none",
+                            background: "transparent",
+                            fontSize: "0.95rem",
+                            fontWeight: activeTab === "history" ? 700 : 500,
+                            color: activeTab === "history" ? "var(--primary)" : "#64748B",
+                            borderBottom: activeTab === "history" ? "2px solid var(--primary)" : "2px solid transparent",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            transition: "all 0.15s ease",
                         }}
                     >
-                        {applications.length}
-                    </span>
-                </button>
+                        <History size={17} />
+                        <span>Application History</span>
+                        <span
+                            style={{
+                                fontSize: "0.75rem",
+                                fontWeight: 700,
+                                padding: "2px 8px",
+                                borderRadius: "12px",
+                                backgroundColor: activeTab === "history" ? "#FFF1E8" : "#F1F5F9",
+                                color: activeTab === "history" ? "#F97316" : "#64748B",
+                            }}
+                        >
+                            {applications.length}
+                        </span>
+                    </button>
+                </div>
+
+                {/* Search Bar on the Right (as marked by admin) */}
+                <div
+                    style={{
+                        position: "relative",
+                        flex: "1 1 280px",
+                        maxWidth: "360px",
+                        minWidth: "220px",
+                    }}
+                >
+                    <Search
+                        size={16}
+                        color="#94A3B8"
+                        style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)" }}
+                    />
+                    <input
+                        type="text"
+                        placeholder="Search applications..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        style={{
+                            width: "100%",
+                            height: "38px",
+                            padding: "0 34px 0 36px",
+                            borderRadius: "8px",
+                            border: "1px solid #CBD5E1",
+                            fontSize: "0.88rem",
+                            color: "#0F172A",
+                            outline: "none",
+                            boxSizing: "border-box",
+                            backgroundColor: "#FFFFFF",
+                            boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
+                        }}
+                    />
+                    {searchQuery && (
+                        <button
+                            type="button"
+                            onClick={() => setSearchQuery("")}
+                            style={{
+                                position: "absolute",
+                                right: "10px",
+                                top: "50%",
+                                transform: "translateY(-50%)",
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                color: "#94A3B8",
+                                padding: 0,
+                                display: "flex",
+                                alignItems: "center",
+                            }}
+                            title="Clear search"
+                        >
+                            <X size={15} />
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* TAB 1: PENDING QUEUE */}
@@ -797,9 +901,44 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                                 View Application History ({applications.length})
                             </button>
                         </div>
+                    ) : filteredPendingApplications.length === 0 ? (
+                        <div
+                            style={{
+                                backgroundColor: "white",
+                                padding: "4rem 2rem",
+                                borderRadius: "16px",
+                                textAlign: "center",
+                                border: "1px dashed #CBD5E1",
+                                color: "#64748B",
+                            }}
+                        >
+                            <Search size={44} color="#94A3B8" style={{ margin: "0 auto 1rem", opacity: 0.6 }} />
+                            <h3 style={{ fontSize: "1.2rem", color: "#1E293B", marginBottom: "0.5rem", fontWeight: 700 }}>
+                                No matching pending applications found
+                            </h3>
+                            <p style={{ margin: "0 0 1.25rem", fontSize: "0.9rem" }}>
+                                Try adjusting your search query.
+                            </p>
+                            <button
+                                type="button"
+                                onClick={() => setSearchQuery("")}
+                                style={{
+                                    padding: "8px 18px",
+                                    backgroundColor: "var(--primary)",
+                                    color: "#FFFFFF",
+                                    border: "none",
+                                    borderRadius: "8px",
+                                    fontWeight: 600,
+                                    cursor: "pointer",
+                                    fontSize: "0.88rem",
+                                }}
+                            >
+                                Clear Search
+                            </button>
+                        </div>
                     ) : (
                         <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-                            {pendingApplications.map((app) => (
+                            {paginatedPendingApplications.map((app) => (
                                 <ApplicationCard
                                     key={app.id}
                                     app={app}
@@ -811,6 +950,21 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                                     showActions={true}
                                 />
                             ))}
+
+                            <div style={{ marginTop: "0.5rem", borderRadius: "12px", border: "1px solid #E2E8F0", overflow: "hidden" }}>
+                                <PaginationControls
+                                    currentPage={currentPage}
+                                    totalItems={filteredPendingApplications.length}
+                                    pageSize={pageSize}
+                                    pageSizeOptions={[5, 10, 20, 50, "All"]}
+                                    itemLabel="applications"
+                                    onPageChange={setCurrentPage}
+                                    onPageSizeChange={(newSize) => {
+                                        setPageSize(newSize);
+                                        setCurrentPage(1);
+                                    }}
+                                />
+                            </div>
                         </div>
                     )}
                 </div>
@@ -917,7 +1071,7 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                         </div>
                     </div>
 
-                    {/* Filter & Search Toolbar */}
+                    {/* Filter Toolbar */}
                     <div
                         style={{
                             backgroundColor: "#FFFFFF",
@@ -928,78 +1082,6 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                             boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
                         }}
                     >
-                        {/* Search Input Row */}
-                        <div style={{ display: "flex", gap: "12px", marginBottom: "14px", flexWrap: "wrap" }}>
-                            <div style={{ flex: 1, minWidth: "260px", position: "relative" }}>
-                                <Search
-                                    size={17}
-                                    color="#94A3B8"
-                                    style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)" }}
-                                />
-                                <input
-                                    type="text"
-                                    placeholder="Search by business name, owner name, phone, email, address, tracking ID..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    style={{
-                                        width: "100%",
-                                        height: "42px",
-                                        padding: "0 36px 0 40px",
-                                        borderRadius: "9px",
-                                        border: "1px solid #CBD5E1",
-                                        fontSize: "0.9rem",
-                                        color: "#0F172A",
-                                        outline: "none",
-                                        boxSizing: "border-box",
-                                        backgroundColor: "#F8FAFC",
-                                    }}
-                                />
-                                {searchQuery && (
-                                    <button
-                                        type="button"
-                                        onClick={() => setSearchQuery("")}
-                                        style={{
-                                            position: "absolute",
-                                            right: "12px",
-                                            top: "50%",
-                                            transform: "translateY(-50%)",
-                                            background: "none",
-                                            border: "none",
-                                            cursor: "pointer",
-                                            color: "#94A3B8",
-                                            padding: 0,
-                                        }}
-                                    >
-                                        <X size={16} />
-                                    </button>
-                                )}
-                            </div>
-
-                            {/* Sort Dropdown */}
-                            <div style={{ width: "200px" }}>
-                                <select
-                                    value={sortBy}
-                                    onChange={(e) => setSortBy(e.target.value as any)}
-                                    style={{
-                                        width: "100%",
-                                        height: "42px",
-                                        padding: "0 12px",
-                                        borderRadius: "9px",
-                                        border: "1px solid #CBD5E1",
-                                        fontSize: "0.88rem",
-                                        color: "#0F172A",
-                                        backgroundColor: "#F8FAFC",
-                                        outline: "none",
-                                        fontWeight: 500,
-                                    }}
-                                >
-                                    <option value="NEWEST">Newest Applied First</option>
-                                    <option value="OLDEST">Oldest Applied First</option>
-                                    <option value="NAME_ASC">Business Name (A-Z)</option>
-                                </select>
-                            </div>
-                        </div>
-
                         {/* Filter Controls Row */}
                         <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center" }}>
                             {/* Status Filter */}
@@ -1131,6 +1213,29 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                                 </div>
                             )}
 
+                            {/* Sort Dropdown */}
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                <span style={{ fontSize: "0.82rem", color: "#64748B", fontWeight: 600 }}>Sort:</span>
+                                <select
+                                    value={sortBy}
+                                    onChange={(e) => setSortBy(e.target.value as any)}
+                                    style={{
+                                        height: "36px",
+                                        padding: "0 10px",
+                                        borderRadius: "8px",
+                                        border: "1px solid #CBD5E1",
+                                        fontSize: "0.85rem",
+                                        color: "#0F172A",
+                                        backgroundColor: "#FFFFFF",
+                                        fontWeight: 600,
+                                    }}
+                                >
+                                    <option value="NEWEST">Newest First</option>
+                                    <option value="OLDEST">Oldest First</option>
+                                    <option value="NAME_ASC">Business Name (A-Z)</option>
+                                </select>
+                            </div>
+
                             {/* Reset Button */}
                             {hasActiveFilters && (
                                 <button
@@ -1212,7 +1317,7 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                         </div>
                     ) : (
                         <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-                            {filteredHistoryApplications.map((app) => (
+                            {paginatedHistoryApplications.map((app) => (
                                 <ApplicationCard
                                     key={app.id}
                                     app={app}
@@ -1224,6 +1329,21 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                                     showActions={true}
                                 />
                             ))}
+
+                            <div style={{ marginTop: "0.5rem", borderRadius: "12px", border: "1px solid #E2E8F0", overflow: "hidden" }}>
+                                <PaginationControls
+                                    currentPage={currentPage}
+                                    totalItems={filteredHistoryApplications.length}
+                                    pageSize={pageSize}
+                                    pageSizeOptions={[5, 10, 20, 50, "All"]}
+                                    itemLabel="applications"
+                                    onPageChange={setCurrentPage}
+                                    onPageSizeChange={(newSize) => {
+                                        setPageSize(newSize);
+                                        setCurrentPage(1);
+                                    }}
+                                />
+                            </div>
                         </div>
                     )}
                 </div>

@@ -33,7 +33,16 @@ function ExploreDesktopContent() {
   const categoryFilter = searchParams.get("category");
   const searchQuery = searchParams.get("query");
   const dietaryParam = searchParams.get("dietary");
-  const [selectedDiet, setSelectedDiet] = React.useState<string>(dietaryParam || "all");
+  const [selectedDiet, setSelectedDiet] = React.useState<string>(() => {
+    if (dietaryParam) return dietaryParam;
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("cloudkitchen_diet_preference");
+        if (stored) return stored;
+      } catch {}
+    }
+    return "veg";
+  });
   const { defaultAddress, openLocationModal } = useLocation();
   const homeData = useHomeData();
 

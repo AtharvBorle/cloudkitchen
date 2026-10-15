@@ -28,6 +28,7 @@ interface HouseMapPickerProps {
     onChange: (lat: number, lng: number, details?: AddressDetails) => void;
     label?: string;
     height?: string;
+    initialQuery?: string;
     skipInitialReverseGeocode?: boolean;
 }
 

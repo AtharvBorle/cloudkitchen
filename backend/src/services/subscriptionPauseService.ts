@@ -67,6 +67,27 @@ export class SubscriptionPauseService {
         throw new ApiError("Subscription not found", 404);
       }
 
+      const now = new Date();
+      const isEndReached = (() => {
+        if (!subscription.endDate) return false;
+        const end = new Date(subscription.endDate);
+        if (isNaN(end.getTime())) return false;
+        if (end <= now) return true;
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        const endDayStart = new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime();
+        return endDayStart <= todayStart;
+      })();
+
+      if (subscription.status === "EXPIRED" || subscription.status === "CANCELLED" || isEndReached) {
+        if (isEndReached && subscription.status !== "EXPIRED") {
+          await tx.userMealSubscription.update({
+            where: { id: subscription.id },
+            data: { status: "EXPIRED", isPaused: false },
+          }).catch(() => {});
+        }
+        throw new ApiError("Cannot pause an expired meal subscription. Pausing is only allowed for eligible, active subscriptions.", 400);
+      }
+
       const plan = subscription.plan;
       const allowedDays = parseAllowedPauseDays(plan?.pauseBillingPeriod);
       const allowPause = (plan as any)?.allowPause;
@@ -97,7 +118,6 @@ export class SubscriptionPauseService {
       }
 
       const pauseDays = Math.max(1, Math.min(Number(requestedDays) || 1, remainingQuota));
-      const now = new Date();
       const todayStr = formatDateKey(now);
       const pauseEndDate = new Date(now.getTime() + pauseDays * 24 * 60 * 60 * 1000);
 
@@ -140,7 +160,9 @@ export class SubscriptionPauseService {
       // For today: mark undelivered upcoming slots as SKIPPED_PAUSED
       for (const slotId of subSlotIds) {
         const slotDef = getMealSlotDetails(slotId);
-        const slotStartMins = slotDef.startHour * 60 + slotDef.startMinute;
+        const startHour = slotDef?.startHour ?? 0;
+        const startMinute = slotDef?.startMinute ?? 0;
+        const slotStartMins = startHour * 60 + startMinute;
 
         // Check existing delivery record for today
         const existingDelivery = await tx.mealSubscriptionDelivery.findUnique({
@@ -339,7 +361,9 @@ export class SubscriptionPauseService {
 
       for (const slotId of subSlotIds) {
         const slotDef = getMealSlotDetails(slotId);
-        const slotEndMins = slotDef.endHour * 60 + slotDef.endMinute;
+        const endHour = slotDef?.endHour ?? 23;
+        const endMinute = slotDef?.endMinute ?? 59;
+        const slotEndMins = endHour * 60 + endMinute;
 
         // If slot delivery window hasn't ended yet today, restore to PENDING!
         if (slotEndMins > currentTimeInMins) {
@@ -379,11 +403,21 @@ export class SubscriptionPauseService {
         history[0].finalEndDate = finalEndDate.toISOString();
       }
 
+      const isExpiredAfterResume = (() => {
+        if (!finalEndDate) return false;
+        if (finalEndDate <= now) return true;
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        const endDayStart = new Date(finalEndDate.getFullYear(), finalEndDate.getMonth(), finalEndDate.getDate()).getTime();
+        return endDayStart <= todayStart;
+      })();
+
+      const nextStatus = isExpiredAfterResume ? "EXPIRED" : "ACTIVE";
+
       const updated = await tx.userMealSubscription.update({
         where: { id: subscription.id },
         data: {
           isPaused: false,
-          status: "ACTIVE",
+          status: nextStatus,
           pausedAt: null,
           pauseEndDate: null,
           usedPauseDays: currentUsedDays,

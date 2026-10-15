@@ -48,6 +48,7 @@ export default function DeliveriesCanvas() {
 
   // Data States
   const [loading, setLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [deliveries, setDeliveries] = useState<MealSlotDeliveryRecord[]>([]);
   const [slotCounts, setSlotCounts] = useState<Record<string, number>>({});
   const [totalDeliveries, setTotalDeliveries] = useState<number>(0);
@@ -69,6 +70,7 @@ export default function DeliveriesCanvas() {
 
   const loadDeliveries = useCallback(async (showLoadingSpinner = true) => {
     if (showLoadingSpinner) setLoading(true);
+    setLoadError(null);
     try {
       const response: MealDeliveriesResponse = await fetchMealSubscriptionDeliveries({
         date: selectedDate,
@@ -80,9 +82,16 @@ export default function DeliveriesCanvas() {
       setDeliveries(response.deliveries || []);
       setSlotCounts(response.slotCounts || {});
       setTotalDeliveries(response.totalDeliveries || 0);
+      setLoadError(null);
     } catch (err: any) {
       console.error("Error loading meal deliveries:", err);
-      showToast(err.message || "Failed to load deliveries roster", "error");
+      const rawMsg = String(err?.message || "");
+      const isTechnical = /not defined|is not a function|ReferenceError|TypeError|SyntaxError/i.test(rawMsg);
+      const friendlyMsg = isTechnical || !rawMsg
+        ? "Delivery data could not be loaded. Please check your connection or try again."
+        : rawMsg;
+      setLoadError(friendlyMsg);
+      showToast(friendlyMsg, "error");
     } finally {
       if (showLoadingSpinner) setLoading(false);
     }
@@ -457,6 +466,66 @@ export default function DeliveriesCanvas() {
             <div style={{ textAlign: "center", padding: "80px 20px", color: "#64748B" }}>
               <Loader2 size={36} className="animate-spin" color="#FF5500" style={{ margin: "0 auto 14px" }} />
               <p style={{ margin: 0, fontWeight: 600, fontSize: "14px" }}>Loading meal slot deliveries roster...</p>
+            </div>
+          ) : loadError ? (
+            <div
+              style={{
+                backgroundColor: "#FFFFFF",
+                borderRadius: "14px",
+                padding: "60px 24px",
+                textAlign: "center",
+                border: "1.5px solid #FECACA",
+                boxShadow: "0 2px 8px rgba(239, 68, 68, 0.05)",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "14px",
+              }}
+            >
+              <div
+                style={{
+                  width: "56px",
+                  height: "56px",
+                  borderRadius: "50%",
+                  backgroundColor: "#FEE2E2",
+                  color: "#DC2626",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <AlertCircle size={28} />
+              </div>
+              <h3 style={{ margin: 0, fontSize: "17px", fontWeight: 800, color: "#991B1B" }}>
+                Delivery Data Could Not Be Loaded
+              </h3>
+              <p style={{ margin: 0, fontSize: "13.5px", color: "#64748B", maxWidth: "480px", lineHeight: 1.5 }}>
+                {loadError}
+              </p>
+              <button
+                type="button"
+                onClick={() => loadDeliveries(true)}
+                style={{
+                  marginTop: "6px",
+                  padding: "10px 22px",
+                  borderRadius: "10px",
+                  backgroundColor: "#EA580C",
+                  color: "#FFFFFF",
+                  border: "none",
+                  fontSize: "13.5px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  boxShadow: "0 4px 12px rgba(234, 88, 12, 0.25)",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <RefreshCw size={15} />
+                <span>Retry Loading Deliveries</span>
+              </button>
             </div>
           ) : deliveries.length === 0 ? (
             <div

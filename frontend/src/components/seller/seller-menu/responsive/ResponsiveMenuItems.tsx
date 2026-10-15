@@ -556,27 +556,30 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
                       handleUpdateVariant(variant.id, "name", e.target.value)
                     }
                   />
-                    <div className={styles.variantPriceWrapper}>
-                      <span className={styles.variantCurrency}>+₹</span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="1"
-                        className={styles.variantPriceInput}
-                        value={variant.price}
-                        placeholder="Price *"
-                        required
-                        onChange={(e) =>
-                          handleUpdateVariant(variant.id, "price", e.target.value)
+                  <div className={styles.variantPriceWrapper}>
+                    <span className={styles.variantPricePrefix}>
+                      <span className={styles.variantPlus}>+</span>
+                      <span className={styles.variantCurrency}>₹</span>
+                    </span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      className={styles.variantPriceInput}
+                      value={variant.price}
+                      placeholder="Price *"
+                      required
+                      onChange={(e) =>
+                        handleUpdateVariant(variant.id, "price", e.target.value)
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "-" || e.key === "e" || e.key === "E" || e.key === "+") {
+                          e.preventDefault();
                         }
-                        onKeyDown={(e) => {
-                          if (e.key === "-" || e.key === "e" || e.key === "E" || e.key === "+") {
-                            e.preventDefault();
-                          }
-                        }}
-                        aria-label="Add-on price"
-                      />
-                    </div>
+                      }}
+                      aria-label="Add-on price"
+                    />
+                  </div>
                   <button
                     type="button"
                     className={styles.deleteVariantBtn}

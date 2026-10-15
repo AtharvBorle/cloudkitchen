@@ -259,7 +259,7 @@ export default function OrderConfirmation() {
       })() : null);
 
       if (!orderIdToFetch) return;
-      if (!payload.orderId || payload.orderId === orderIdToFetch || payload.orderId === orderData.orderId.replace("#NCR-", "")) {
+      if (!payload.orderId || payload.orderId === orderIdToFetch || payload.orderId === orderData?.orderId?.replace("#NCR-", "")) {
         fetchApi(`/api/user/orders/${orderIdToFetch}`)
           .then((res) => res.ok && res.json())
           .then((data) => data && parseAndSetOrder(data))
