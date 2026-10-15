@@ -56,6 +56,47 @@ async function runTests() {
   const invalid = normalizeMealSlotIds(["unknown_slot", "", null, undefined]);
   assert(invalid.length === 0, "Invalid or empty slots correctly rejected");
 
+  // Test 3b: Centralized meal slots config & timing persistence
+  const { getMealSlotsConfig } = await import("../src/controllers/sellerMealPlanController");
+  const initialSlotsConfig = await getMealSlotsConfig();
+  assert(
+    Array.isArray(initialSlotsConfig.slots) && initialSlotsConfig.slots.length === 6,
+    "getMealSlotsConfig returns exactly 6 standardized slots in slots array"
+  );
+  assert(
+    initialSlotsConfig.slots.every((s) => typeof s.id === "string" && typeof s.name === "string" && typeof s.defaultTimeRange === "string"),
+    "All slots have valid string id, name, and defaultTimeRange"
+  );
+
+  // Test saving timing for breakfast and morning_meal
+  const testTimings = {
+    breakfast: "08:00 AM – 10:00 AM",
+    morning_meal: "10:30 AM – 11:30 AM",
+  };
+  await db.systemSettings.upsert({
+    where: { key: "MEAL_SUBSCRIPTION_SLOTS" },
+    create: {
+      id: "MEAL_SUBSCRIPTION_SLOTS",
+      key: "MEAL_SUBSCRIPTION_SLOTS",
+      value: JSON.stringify(testTimings),
+    },
+    update: {
+      value: JSON.stringify(testTimings),
+    },
+  });
+
+  const updatedSlotsConfig = await getMealSlotsConfig();
+  const breakfastSlot = updatedSlotsConfig.slots.find((s) => s.id === "breakfast");
+  const morningMealSlot = updatedSlotsConfig.slots.find((s) => s.id === "morning_meal");
+  assert(
+    breakfastSlot?.defaultTimeRange === "08:00 AM – 10:00 AM",
+    "Configured delivery timing persists and is returned for breakfast"
+  );
+  assert(
+    morningMealSlot?.defaultTimeRange === "10:30 AM – 11:30 AM",
+    "Configured delivery timing persists and is returned for morning_meal"
+  );
+
   // Test 4: Check an existing subscription in DB
   const sampleSub = await db.userMealSubscription.findFirst({
     include: { slots: { include: { slot: true } }, plan: true, user: true },

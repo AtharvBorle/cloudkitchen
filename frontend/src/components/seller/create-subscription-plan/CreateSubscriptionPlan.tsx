@@ -56,13 +56,23 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
   const [selectedSlotIds, setSelectedSlotIds] = useState<string[]>([]);
 
   useEffect(() => {
-    fetchMealSlots()
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          setSlotsWithTimings(data);
-        }
-      })
-      .catch((err) => console.error("Error fetching meal slots:", err));
+    const loadSlots = () => {
+      fetchMealSlots()
+        .then((data) => {
+          if (Array.isArray(data) && data.length > 0) {
+            setSlotsWithTimings(data);
+          }
+        })
+        .catch((err) => console.error("Error fetching meal slots:", err));
+    };
+
+    loadSlots();
+    window.addEventListener("focus", loadSlots);
+    window.addEventListener("meal-timings-updated", loadSlots);
+    return () => {
+      window.removeEventListener("focus", loadSlots);
+      window.removeEventListener("meal-timings-updated", loadSlots);
+    };
   }, []);
 
   // 5. Subscription Policies

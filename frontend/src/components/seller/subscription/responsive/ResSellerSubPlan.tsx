@@ -72,13 +72,23 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
   const [pauseBillingPeriod, setPauseBillingPeriod] = useState("30 Days");
 
   useEffect(() => {
-    fetchMealSlots()
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          setSlotsWithTimings(data);
-        }
-      })
-      .catch((err) => console.error("Error fetching meal slots on mobile:", err));
+    const loadSlots = () => {
+      fetchMealSlots()
+        .then((data) => {
+          if (Array.isArray(data) && data.length > 0) {
+            setSlotsWithTimings(data);
+          }
+        })
+        .catch((err) => console.error("Error fetching meal slots on mobile:", err));
+    };
+
+    loadSlots();
+    window.addEventListener("focus", loadSlots);
+    window.addEventListener("meal-timings-updated", loadSlots);
+    return () => {
+      window.removeEventListener("focus", loadSlots);
+      window.removeEventListener("meal-timings-updated", loadSlots);
+    };
   }, []);
 
   const handleToggleSlot = (slotId: string) => {

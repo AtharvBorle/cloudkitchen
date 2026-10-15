@@ -205,13 +205,23 @@ export default function SubscriptionEditCanvas({
   const [slotsWithTimings, setSlotsWithTimings] = useState<MealSlotDefinition[]>(PREDEFINED_MEAL_SLOTS);
 
   useEffect(() => {
-    fetchMealSlots()
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          setSlotsWithTimings(data);
-        }
-      })
-      .catch((err) => console.error("Error fetching meal slots in edit:", err));
+    const loadSlots = () => {
+      fetchMealSlots()
+        .then((data) => {
+          if (Array.isArray(data) && data.length > 0) {
+            setSlotsWithTimings(data);
+          }
+        })
+        .catch((err) => console.error("Error fetching meal slots in edit:", err));
+    };
+
+    loadSlots();
+    window.addEventListener("focus", loadSlots);
+    window.addEventListener("meal-timings-updated", loadSlots);
+    return () => {
+      window.removeEventListener("focus", loadSlots);
+      window.removeEventListener("meal-timings-updated", loadSlots);
+    };
   }, []);
 
   const [isDurationDropdownOpen, setIsDurationDropdownOpen] = useState(false);

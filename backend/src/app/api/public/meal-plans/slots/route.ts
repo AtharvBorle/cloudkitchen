@@ -8,9 +8,9 @@ export async function OPTIONS() {
   return new NextResponse(null, { status: 204 });
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const data = await getMealSlotsConfig();
+    const data = await getMealSlotsConfig(req);
     return successResponse(data, "Predefined meal slots fetched successfully", 200);
   } catch (error: any) {
     return errorResponse(error.message || "Failed to fetch meal slots", 500);
