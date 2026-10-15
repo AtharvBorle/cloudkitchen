@@ -436,16 +436,26 @@
 .variantRow {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   background-color: #FFFFFF;
   border: 1px solid #E2E8F0;
   border-radius: 8px;
-  padding: 8px 14px;
+  padding: 6px 12px;
   box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.variantRow:focus-within {
+  border-color: #F97316;
+  box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.15);
 }
 
 .variantNameInput {
-  flex: 1;
+  flex: 1 1 0%;
+  min-width: 0;
+  width: 100%;
   border: none;
   background: transparent;
   outline: none;
@@ -453,6 +463,15 @@
   color: #0F172A;
   font-weight: 500;
   font-family: inherit;
+  padding: 4px 0;
+}
+
+.variantNameInput::placeholder {
+  color: #94A3B8;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .variantPriceBadge {
@@ -660,13 +679,17 @@
 
 /* Variant Price Input */
 .variantPriceWrapper {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   background-color: #F8FAFC;
   border: 1px solid #E2E8F0;
   border-radius: 6px;
-  padding: 4px 10px;
+  padding: 4px 8px 4px 10px;
   gap: 4px;
+  flex-shrink: 0;
+  width: 104px;
+  min-width: 96px;
+  box-sizing: border-box;
   transition: all 0.2s ease;
 }
 
@@ -676,21 +699,51 @@
   box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
 }
 
-.currencyPrefix {
+.variantPricePrefix {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  user-select: none;
+  line-height: 1;
+}
+
+.variantPlus {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #F97316;
+  line-height: 1;
+}
+
+.variantCurrency {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #64748B;
+  color: #475569;
+  line-height: 1;
 }
 
 .variantPriceInput {
-  width: 70px;
+  flex: 1 1 0%;
+  min-width: 0;
+  width: 100%;
   border: none;
   background: transparent;
   outline: none;
   font-size: 0.88rem;
   font-weight: 600;
   color: #0F172A;
+  text-align: right;
   font-family: inherit;
+  padding: 0;
+  margin: 0;
+}
+
+.variantPriceInput::placeholder {
+  color: #94A3B8;
+  font-weight: 400;
+  font-size: 0.8rem;
+  text-align: right;
 }
 
 /* Themed Confirmation Modal */

@@ -452,7 +452,8 @@
 .variantsList {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+  width: 100%;
 }
 
 .variantRow {
@@ -460,49 +461,95 @@
   align-items: center;
   justify-content: space-between;
   background-color: #FFFFFF;
-  border: 1px solid #EEF0F4;
+  border: 1px solid #E2E8F0;
   border-radius: 12px;
-  padding: 8px 12px;
+  padding: 6px 10px 6px 12px;
   box-sizing: border-box;
-  gap: 10px;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.variantRow:focus-within {
+  border-color: #F97316;
+  box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.15);
 }
 
 .variantNameInput {
-  flex: 1;
+  flex: 1 1 0%;
+  min-width: 0;
+  width: 100%;
   border: none;
   outline: none;
   font-size: 13.5px;
-  font-weight: 600;
+  font-weight: 500;
   color: #0F172A;
   background: transparent;
   font-family: inherit;
-  padding: 4px 0;
+  padding: 6px 0;
 }
 
 .variantNameInput::placeholder {
   color: #94A3B8;
   font-weight: 400;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .variantPriceWrapper {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  height: 32px;
-  padding: 0 8px;
+  gap: 4px;
+  height: 36px;
+  padding: 0 8px 0 10px;
   border: 1px solid #E2E8F0;
   border-radius: 8px;
-  background-color: #FFFFFF;
+  background-color: #F8FAFC;
   box-sizing: border-box;
+  flex-shrink: 0;
+  width: 104px;
+  min-width: 96px;
+  max-width: 115px;
+  transition: all 0.2s ease;
+}
+
+.variantPriceWrapper:focus-within {
+  border-color: #F97316;
+  background-color: #FFFFFF;
+  box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.12);
+}
+
+.variantPricePrefix {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  user-select: none;
+  line-height: 1;
+}
+
+.variantPlus {
+  font-size: 13px;
+  font-weight: 700;
+  color: #F97316;
+  line-height: 1;
 }
 
 .variantCurrency {
   font-size: 13px;
   font-weight: 600;
   color: #475569;
+  line-height: 1;
 }
 
 .variantPriceInput {
-  width: 44px;
+  flex: 1 1 0%;
+  min-width: 0;
+  width: 100%;
   border: none;
   background: transparent;
   font-size: 13px;
@@ -511,6 +558,14 @@
   outline: none;
   text-align: right;
   font-family: inherit;
+  padding: 0;
+}
+
+.variantPriceInput::placeholder {
+  color: #94A3B8;
+  font-weight: 400;
+  font-size: 12px;
+  text-align: right;
 }
 
 .deleteVariantBtn {
@@ -532,6 +587,26 @@
 .deleteVariantBtn:hover {
   color: #EF4444;
   background-color: #FEE2E2;
+}
+
+@media (max-width: 380px) {
+  .variantRow {
+    padding: 6px 6px 6px 10px;
+    gap: 6px;
+  }
+  .variantPriceWrapper {
+    width: 92px;
+    min-width: 86px;
+    padding: 0 6px 0 8px;
+    gap: 2px;
+  }
+  .variantNameInput {
+    font-size: 12.5px;
+  }
+  .deleteVariantBtn {
+    width: 28px;
+    height: 28px;
+  }
 }
 
 .addVariantBtn {

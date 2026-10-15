@@ -645,7 +645,10 @@ function EditMenuInner({
                       }
                     />
                     <div className={styles.variantPriceWrapper}>
-                      <span className={styles.currencyPrefix}>+₹</span>
+                      <span className={styles.variantPricePrefix}>
+                        <span className={styles.variantPlus}>+</span>
+                        <span className={styles.variantCurrency}>₹</span>
+                      </span>
                       <input
                         type="number"
                         min="0"
