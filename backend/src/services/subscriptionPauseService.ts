@@ -67,6 +67,27 @@ export class SubscriptionPauseService {
         throw new ApiError("Subscription not found", 404);
       }
 
+      const now = new Date();
+      const isEndReached = (() => {
+        if (!subscription.endDate) return false;
+        const end = new Date(subscription.endDate);
+        if (isNaN(end.getTime())) return false;
+        if (end <= now) return true;
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        const endDayStart = new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime();
+        return endDayStart <= todayStart;
+      })();
+
+      if (subscription.status === "EXPIRED" || subscription.status === "CANCELLED" || isEndReached) {
+        if (isEndReached && subscription.status !== "EXPIRED") {
+          await tx.userMealSubscription.update({
+            where: { id: subscription.id },
+            data: { status: "EXPIRED", isPaused: false },
+          }).catch(() => {});
+        }
+        throw new ApiError("Cannot pause an expired meal subscription. Pausing is only allowed for eligible, active subscriptions.", 400);
+      }
+
       const plan = subscription.plan;
       const allowedDays = parseAllowedPauseDays(plan?.pauseBillingPeriod);
       const allowPause = (plan as any)?.allowPause;
@@ -97,7 +118,6 @@ export class SubscriptionPauseService {
       }
 
       const pauseDays = Math.max(1, Math.min(Number(requestedDays) || 1, remainingQuota));
-      const now = new Date();
       const todayStr = formatDateKey(now);
       const pauseEndDate = new Date(now.getTime() + pauseDays * 24 * 60 * 60 * 1000);
 

@@ -34,6 +34,7 @@ export interface PauseSubscriptionProps {
   isPaused?: boolean;
   disabled?: boolean;
   allowPause?: boolean;
+  isExpired?: boolean;
   pausePolicyNote?: string;
   pauseBillingPeriod?: string;
   usedPauseDays?: number;
@@ -76,6 +77,7 @@ export const PauseSubscription: React.FC<PauseSubscriptionProps> = ({
   isPaused: controlledPaused,
   disabled = false,
   allowPause = true,
+  isExpired: isExpiredProp,
   pausePolicyNote,
   pauseBillingPeriod = "7 Days",
   usedPauseDays = 0,
@@ -97,6 +99,22 @@ export const PauseSubscription: React.FC<PauseSubscriptionProps> = ({
   const [selectedDays, setSelectedDays] = useState<number>(1);
   const [showHistory, setShowHistory] = useState(false);
 
+  // Check if renewal/expiry date has reached or passed
+  const isDateExpired = (() => {
+    if (isExpiredProp) return true;
+    if (!currentEndDate) return false;
+    const end = new Date(currentEndDate);
+    if (!isNaN(end.getTime())) {
+      const today = new Date();
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+      const endDayStart = new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime();
+      return endDayStart <= todayStart || end <= today;
+    }
+    return false;
+  })();
+
+  const isExpired = Boolean(isExpiredProp) || isDateExpired;
+
   useEffect(() => {
     if (controlledPaused !== undefined) {
       setInternalPaused(controlledPaused);
@@ -109,7 +127,7 @@ export const PauseSubscription: React.FC<PauseSubscriptionProps> = ({
   const remainingDays = Math.max(0, totalAllowed - (usedPauseDays || 0));
   const isPauseDisabledBySeller = allowPause === false || totalAllowed <= 0;
   const isQuotaExhausted = !activePaused && remainingDays <= 0;
-  const isSwitchDisabled = disabled || isPauseDisabledBySeller || isQuotaExhausted;
+  const isSwitchDisabled = disabled || isPauseDisabledBySeller || isQuotaExhausted || isExpired;
 
   useEffect(() => {
     if (remainingDays > 0 && selectedDays > remainingDays) {
@@ -120,7 +138,7 @@ export const PauseSubscription: React.FC<PauseSubscriptionProps> = ({
   }, [remainingDays, selectedDays]);
 
   const handleToggleClick = () => {
-    if (isSwitchDisabled) return;
+    if (isSwitchDisabled || isExpired) return;
     if (!session?.user) {
       router.push("/login?callbackUrl=/my-subscription");
       return;
@@ -135,6 +153,10 @@ export const PauseSubscription: React.FC<PauseSubscriptionProps> = ({
       setIsModalOpen(true);
     }
   };
+
+  if (isExpired) {
+    return null;
+  }
 
   const handleConfirmPause = () => {
     setIsModalOpen(false);

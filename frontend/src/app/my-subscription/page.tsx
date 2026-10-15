@@ -468,6 +468,11 @@ function MySubscriptionContent() {
 
   const handleTogglePause = async (subId: string, nextPaused: boolean, days?: number) => {
     try {
+      const targetSub = userSubs.find((s) => s.id === subId);
+      if (targetSub && isSubscriptionExpired(targetSub)) {
+        showToast("error", "Cannot pause an expired meal subscription. Pausing is only allowed for eligible, active plans.");
+        return;
+      }
       let result: any = null;
       if (subId && !subId.startsWith("sub-demo")) {
         result = await togglePauseUserSubscription(subId, nextPaused, days);
@@ -1289,6 +1294,7 @@ function MySubscriptionContent() {
                             {!isExpired && (
                               <PauseSubscription
                                 isPaused={subItem.isPaused}
+                                isExpired={isExpired}
                                 disabled={isPlanInactive || subItem.status?.toUpperCase() === "CANCELLED"}
                                 allowPause={isPauseAllowed}
                                 pausePolicyNote={
