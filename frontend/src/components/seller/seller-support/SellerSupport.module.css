@@ -720,7 +720,8 @@
   background-color: #ffffff;
   border-radius: 16px;
   width: 100%;
-  max-width: 520px;
+  max-width: 540px;
+  max-height: 92vh;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
   overflow: hidden;
   border: 1px solid #e2e8f0;
@@ -779,6 +780,8 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  overflow-y: auto;
+  max-height: calc(92vh - 140px);
 }
 
 .formGroup {
@@ -918,6 +921,303 @@
   background-color: #7f1d1d;
   color: #ffffff;
   border-left: 4px solid #ef4444;
+}
+
+/* ================= ATTACHMENT & FILE UPLOAD STYLES ================= */
+.uploadDropzone {
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 10px;
+  padding: 16px 14px;
+  background-color: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.uploadDropzone:hover,
+.uploadDropzoneActive {
+  border-color: #ea580c;
+  background-color: #fff7ed;
+}
+
+.uploadDropzoneIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #ffedd5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.uploadDropzoneText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.uploadDropzoneTitle {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.uploadDropzoneSub {
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+.attachmentPreviewCard {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  background-color: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.attachmentPreviewLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.attachmentThumbnail {
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.attachmentDocIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  background-color: #ffedd5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.attachmentInfo {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.attachmentName {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 260px;
+}
+
+.attachmentSize {
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+.attachmentRemoveBtn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.attachmentRemoveBtn:hover {
+  color: #ef4444;
+  background-color: #fee2e2;
+}
+
+/* Chat bubble attachment styles */
+.bubbleText {
+  margin: 0;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.bubbleAttachmentBox {
+  margin-top: 8px;
+}
+
+.bubbleImageContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bubbleImage {
+  max-width: 280px;
+  max-height: 200px;
+  border-radius: 8px;
+  object-fit: cover;
+  cursor: pointer;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s ease;
+}
+
+.bubbleImage:hover {
+  transform: scale(1.02);
+}
+
+.bubbleImageCaption {
+  font-size: 0.72rem;
+  color: inherit;
+  opacity: 0.85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 280px;
+}
+
+.bubbleDocDownload {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background-color: rgba(255, 255, 255, 0.9);
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #1e293b;
+  transition: all 0.15s ease;
+  max-width: 280px;
+}
+
+.bubbleDocDownload:hover {
+  background-color: #ffffff;
+  border-color: #ea580c;
+}
+
+.bubbleDocInfo {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.bubbleDocName {
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bubbleDocAction {
+  font-size: 0.7rem;
+  color: #ea580c;
+  font-weight: 500;
+}
+
+.replyAttachmentChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  background-color: #fff7ed;
+  border: 1px solid #ffedd5;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  max-width: fit-content;
+}
+
+.replyThumbnail {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.replyFileName {
+  font-size: 0.78rem;
+  color: #9a3412;
+  font-weight: 500;
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.replyRemoveBtn {
+  background: none;
+  border: none;
+  color: #9a3412;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+}
+
+.imageModalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.imageModalContent {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.imageModalFullImg {
+  max-width: 100%;
+  max-height: 85vh;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  object-fit: contain;
+}
+
+.imageModalCloseBtn {
+  position: absolute;
+  top: -14px;
+  right: -14px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  color: #0f172a;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s ease;
+}
+
+.imageModalCloseBtn:hover {
+  transform: scale(1.1);
 }
 
 /* ================= RESPONSIVE MOBILE VIEW (≤ 900px) ================= */
