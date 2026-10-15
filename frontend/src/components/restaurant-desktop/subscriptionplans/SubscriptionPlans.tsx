@@ -14,6 +14,7 @@ export interface PlanItem {
   features: string[];
   buttonText: string;
   isPremium?: boolean;
+  isSubscribed?: boolean;
 }
 
 export interface SubscriptionPlansProps {
@@ -34,6 +35,7 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
   }
 
   const handlePlanClick = (plan: PlanItem) => {
+    if (plan.isSubscribed) return;
     setActivePlanId(plan.id);
     if (onSelectPlan) {
       onSelectPlan(plan);
@@ -110,14 +112,27 @@ export const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({
               {/* Action Button */}
               <button
                 type="button"
-                className={isActive ? styles.filledBtn : styles.outlineBtn}
+                className={
+                  plan.isSubscribed
+                    ? styles.subscribedBtn
+                    : isActive
+                    ? styles.filledBtn
+                    : styles.outlineBtn
+                }
+                disabled={plan.isSubscribed}
                 onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                   e.stopPropagation();
                   handlePlanClick(plan);
                 }}
                 aria-label={`${plan.buttonText} for ${plan.name}`}
               >
-                {plan.buttonText}
+                {plan.isSubscribed ? (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                    <CheckCircle2 size={16} color="#16A34A" /> Currently Subscribed
+                  </span>
+                ) : (
+                  plan.buttonText
+                )}
               </button>
             </div>
           );

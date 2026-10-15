@@ -58,7 +58,7 @@ export interface ResponsiveOrderItem {
   createdAt?: string;
 }
 
-import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useSellerProfile, isGenericFallbackName } from "@/hooks/useSellerProfile";
 import { useSellerNotifications } from "@/hooks/useSellerNotifications";
 
 export interface ResponsiveSellerOrdersProps {
@@ -91,13 +91,9 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
   const isNotificationActive =
     hasUnreadNotifications !== undefined ? hasUnreadNotifications : unreadCount > 0;
   const effectiveOwnerName =
-    ownerName &&
-    ownerName !== "Rahul Sharma" &&
-    ownerName !== "Rahul" &&
-    ownerName !== "John Doe" &&
-    ownerName !== "Kitchen Owner"
+    ownerName && !isGenericFallbackName(ownerName)
       ? ownerName
-      : seller.ownerName;
+      : (!isGenericFallbackName(seller.ownerName) ? seller.ownerName : "");
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   const [selectedTab, setSelectedTab] = useState<OrderFilterTab>("New");
   const [ordersList, setOrdersList] = useState<ResponsiveOrderItem[]>(orders);

@@ -74,39 +74,6 @@ interface ConfirmedOrderData {
   } | null;
 }
 
-const DEFAULT_DEMO_ORDER: ConfirmedOrderData = {
-  orderId: "NCB-782410",
-  orderTime: "Just now",
-  status: "PENDING",
-  estimatedDelivery: "25-35 mins",
-  deliveryAddress: {
-    fullName: "Aman Sharma",
-    phoneNumber: "+91 98765 43210",
-    streetAddress: "Flat 402, Sunshine Heights, Baner Road",
-    city: "Pune",
-    pincode: "411045",
-  },
-  paymentMethod: "Online Payment (Paid Online)",
-  items: [
-    {
-      id: "1",
-      name: "Hyderabadi Dum Biryani",
-      price: 260,
-      qty: 1,
-      image: "/images/places/place-biryani.png",
-      variant: "Family Pack (Serves 2)",
-      itemType: "NON_VEG",
-    },
-  ],
-  subtotal: 260,
-  discount: 0,
-  deliveryFee: 0,
-  taxes: 0,
-  grandTotal: 260,
-  sellerName: "Chef Anjali's Gourmet Kitchen",
-  deliveryPerson: null,
-};
-
 // Colors for the celebratory confetti
 const CONFETTI_COLORS = ["#FF6B00", "#F97316", "#22C55E", "#EAB308", "#EC4899", "#3B82F6", "#A855F7"];
 
@@ -129,7 +96,8 @@ export default function OrderConfirmation() {
   const searchParams = useSearchParams();
   const queryOrderId = searchParams.get("orderId");
 
-  const [orderData, setOrderData] = useState<ConfirmedOrderData>(DEFAULT_DEMO_ORDER);
+  const [orderData, setOrderData] = useState<ConfirmedOrderData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [showConfetti, setShowConfetti] = useState(true);
   const [mounted, setMounted] = useState(false);
@@ -249,7 +217,10 @@ export default function OrderConfirmation() {
     })() : null);
 
     async function fetchLiveOrder() {
-      if (!orderIdToFetch) return;
+      if (!orderIdToFetch) {
+        if (isMounted) setIsLoading(false);
+        return;
+      }
       try {
         const res = await fetchApi(`/api/user/orders/${orderIdToFetch}`);
         if (res.ok && isMounted) {
@@ -258,6 +229,8 @@ export default function OrderConfirmation() {
         }
       } catch (err) {
         console.error("Failed to fetch live order details:", err);
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
     }
 
@@ -294,6 +267,56 @@ export default function OrderConfirmation() {
       }
     },
   });
+
+  if (!orderData) {
+    return (
+      <div className={styles.pageWrapper}>
+        <Navbar />
+        <main className={styles.mainContainer}>
+          <div
+            style={{
+              maxWidth: 500,
+              margin: "80px auto",
+              textAlign: "center",
+              padding: "48px 24px",
+              backgroundColor: "#FFFFFF",
+              borderRadius: "16px",
+              border: "1px solid #E2E8F0",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.03)",
+            }}
+          >
+            <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#0F172A", marginBottom: "8px" }}>
+              {isLoading ? "Retrieving order details..." : "No order details found"}
+            </h2>
+            <p style={{ color: "#64748B", fontSize: "14px", marginBottom: "24px", lineHeight: 1.5 }}>
+              {isLoading
+                ? "Please wait while we check your order status."
+                : "We couldn't locate this order confirmation. You can view your active orders in My Orders."}
+            </p>
+            {!isLoading && (
+              <button
+                type="button"
+                onClick={() => router.push("/orders-desktop")}
+                style={{
+                  display: "inline-block",
+                  backgroundColor: "#FF5500",
+                  color: "#FFFFFF",
+                  padding: "10px 24px",
+                  borderRadius: "8px",
+                  fontWeight: 600,
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                Go to My Orders
+              </button>
+            )}
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   const handleCopyOrderId = () => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {

@@ -1699,7 +1699,7 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
                               className={styles.subPlanPill}
                               style={{ backgroundColor: tierColors.tierBg, color: tierColors.tierColor }}
                             >
-                              🍱 {sub.planName} ({sub.tier || "Bronze"})
+                              {sub.planName} ({sub.tier || "Bronze"})
                             </span>
                             {sub.isPaused ? (
                               <span

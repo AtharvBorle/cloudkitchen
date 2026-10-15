@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import SellerSidebar from "../../sidebar/Sidebar";
 import Topbar from "../../nav/Topbar";
 import AgentCanvas, { AgentCanvasProps, AgentFormData } from "./AgentCanvas";
-import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useSellerProfile, isGenericFallbackName } from "@/hooks/useSellerProfile";
 
 export interface AgentCanvasDasProps {
   topbarTitle?: string;
@@ -36,7 +36,7 @@ export default function AgentCanvasDas({
   onNotificationClick,
 }: AgentCanvasDasProps) {
   const seller = useSellerProfile();
-  const effectiveOwnerName = ownerName && ownerName !== "John Doe" ? ownerName : seller.ownerName;
+  const effectiveOwnerName = ownerName && !isGenericFallbackName(ownerName) ? ownerName : (!isGenericFallbackName(seller.ownerName) ? seller.ownerName : "");
   const effectivePartnerRole = partnerRole || seller.partnerRole;
   const effectiveAvatarInitials = avatarInitials && avatarInitials !== "JD" ? avatarInitials : seller.avatarInitials;
 

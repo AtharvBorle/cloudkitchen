@@ -9,7 +9,7 @@ import RoomConfigCanvas, {
   RoomConfigData,
 } from "./RoomConfigCanvas";
 
-import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useSellerProfile, isGenericFallbackName } from "@/hooks/useSellerProfile";
 import { useRoomModule } from "@/context/RoomModuleContext";
 
 export interface RoomConfigCanvasDasProps extends RoomConfigCanvasProps {
@@ -44,7 +44,7 @@ export default function RoomConfigCanvasDas({
   }, [isRoomEnabled, router]);
 
   const seller = useSellerProfile();
-  const effectiveOwnerName = ownerName && ownerName !== "John Doe" ? ownerName : seller.ownerName;
+  const effectiveOwnerName = ownerName && !isGenericFallbackName(ownerName) ? ownerName : (!isGenericFallbackName(seller.ownerName) ? seller.ownerName : "");
   const effectivePartnerRole = partnerRole || seller.partnerRole;
   const effectiveAvatarInitials = avatarInitials && avatarInitials !== "JD" ? avatarInitials : seller.avatarInitials;
 

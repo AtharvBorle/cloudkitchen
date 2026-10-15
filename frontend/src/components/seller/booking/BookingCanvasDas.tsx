@@ -143,7 +143,7 @@ export default function BookingCanvasDas({
                 id: b.id,
                 guestName: name,
                 guestInitials: computeInitials(name),
-                guestPhone: b.user?.phone || "+91 98765 43210",
+                guestPhone: b.user?.phone || "",
                 room: b.room?.title || "Room",
                 capacity: b.room?.capacity ? `Sleeps ${b.room.capacity} Guests` : "Sleeps 2 Guests",
                 checkIn: checkInStr,

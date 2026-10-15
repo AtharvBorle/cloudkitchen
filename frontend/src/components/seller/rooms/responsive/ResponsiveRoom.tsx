@@ -8,7 +8,7 @@ import { Menu as MenuIcon, Plus, User, ChevronRight, Bell } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import PaginationControls from "../../common/PaginationControls";
 import styles from "./ResponsiveRoom.module.css";
-import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useSellerProfile, isGenericFallbackName } from "@/hooks/useSellerProfile";
 import { useSellerNotifications } from "@/hooks/useSellerNotifications";
 
 export interface ResponsiveRoomItem {
@@ -43,13 +43,9 @@ export const ResponsiveRoom: React.FC<ResponsiveRoomProps> = ({
   const seller = useSellerProfile();
   const { unreadCount } = useSellerNotifications();
   const effectiveOwnerName =
-    ownerName &&
-    ownerName !== "Rahul Sharma" &&
-    ownerName !== "Rahul" &&
-    ownerName !== "John Doe" &&
-    ownerName !== "Kitchen Owner"
+    ownerName && !isGenericFallbackName(ownerName)
       ? ownerName
-      : seller.ownerName;
+      : (!isGenericFallbackName(seller.ownerName) ? seller.ownerName : "");
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   const [roomList, setRoomList] = useState<ResponsiveRoomItem[]>(rooms);
 

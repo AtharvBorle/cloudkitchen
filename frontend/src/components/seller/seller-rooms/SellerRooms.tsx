@@ -89,9 +89,9 @@ export const SellerRooms: React.FC<SellerRoomsProps> = ({
     const q = searchQuery.toLowerCase().trim();
     return roomList.filter(
       (r) =>
-        r.title.toLowerCase().includes(q) ||
-        r.tier.toLowerCase().includes(q) ||
-        r.pricePerNight.toLowerCase().includes(q)
+        r?.title?.toLowerCase()?.includes(q) ||
+        (r?.tier || "")?.toLowerCase()?.includes(q) ||
+        (r?.pricePerNight || "")?.toLowerCase()?.includes(q)
     );
   }, [roomList, searchQuery]);
 

@@ -10,18 +10,7 @@ export interface UpiItem {
   bankName: string;
 }
 
-const DEFAULT_UPI_ITEMS: UpiItem[] = [
-  {
-    id: "okicici",
-    upiId: "rahul@okicici",
-    bankName: "Linked via ICICI Bank",
-  },
-  {
-    id: "ybl",
-    upiId: "rahul@ybl",
-    bankName: "Linked via Yes Bank",
-  },
-];
+const DEFAULT_UPI_ITEMS: UpiItem[] = [];
 
 export const UpiIds: React.FC = () => {
   const [upiList, setUpiList] = useState<UpiItem[]>(DEFAULT_UPI_ITEMS);
@@ -35,7 +24,12 @@ export const UpiIds: React.FC = () => {
       <h3 className={styles.sectionHeading}>UPI IDS</h3>
 
       <div className={styles.cardContainer}>
-        <div className={styles.upiList}>
+        {upiList.length === 0 ? (
+          <div style={{ padding: "30px 20px", textAlign: "center", color: "#64748B", fontSize: "14px" }}>
+            No UPI IDs linked to this account.
+          </div>
+        ) : (
+          <div className={styles.upiList}>
           {upiList.map((item) => (
             <div key={item.id} className={styles.upiRow}>
               <div className={styles.leftInfo}>

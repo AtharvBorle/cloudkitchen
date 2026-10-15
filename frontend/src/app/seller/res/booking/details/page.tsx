@@ -77,25 +77,25 @@ function BookingDetailsContent() {
   return (
     <ResponsiveBookingDetails
       bookingId={booking ? `B-${booking.id.slice(0, 4)}` : rawId}
-      guestName={booking?.user?.name || (booking ? "Guest" : "Aarav Mehta")}
+      guestName={booking?.user?.name || (booking ? "Guest" : "")}
       guestInitials={
         booking?.user?.name
           ? booking.user.name
               .split(" ")
               .map((n: string) => n[0])
               .join("")
-          : "AM"
+          : ""
       }
-      guestPhone={booking?.user?.phone || "+91 98765 43210"}
+      guestPhone={booking?.user?.phone || ""}
       roomName={booking?.room?.title || "Room"}
-      roomCapacity={booking?.room?.capacity ? `Sleeps ${booking.room.capacity} Guests` : "Sleeps 2 Guests"}
+      roomCapacity={booking?.room?.capacity ? `Sleeps ${booking.room.capacity} Guests` : ""}
       dateRange={dateRange}
-      stayDuration={`${nights} ${nights === 1 ? "Night" : "Nights"} Stay`}
-      ratePerNight={`₹${booking ? Math.round(booking.totalAmount / nights) : 2500}`}
+      stayDuration={nights ? `${nights} ${nights === 1 ? "Night" : "Nights"} Stay` : ""}
+      ratePerNight={`₹${booking && nights ? Math.round(booking.totalAmount / nights) : 0}`}
       nightsCount={nights}
-      roomChargeTotal={`₹${booking ? booking.totalAmount : 10000}`}
+      roomChargeTotal={`₹${booking ? booking.totalAmount : 0}`}
       serviceFee="₹500"
-      totalAmount={`₹${booking ? booking.totalAmount + 500 : 10500}`}
+      totalAmount={`₹${booking ? booking.totalAmount + 500 : 0}`}
       initialStatus={booking ? mapStatusToStep(booking.status) : "Requested"}
       onConfirm={() => handleUpdateStatus("CONFIRMED")}
       onDecline={() => handleUpdateStatus("CANCELLED")}

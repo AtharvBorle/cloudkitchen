@@ -15,36 +15,25 @@ export interface CardItem {
   expires: string;
 }
 
-const DEFAULT_CARDS: CardItem[] = [
-  {
-    id: "hdfc-credit",
-    type: "visa",
-    title: "HDFC Bank Credit Card",
-    cardNumber: "•••• •••• •••• 4523",
-    cardHolder: "Rahul Sharma",
-    expires: "09/29",
-  },
-  {
-    id: "icici-debit",
-    type: "mastercard",
-    title: "ICICI Debit Card",
-    cardNumber: "•••• •••• •••• 8891",
-    cardHolder: "Rahul Sharma",
-    expires: "12/27",
-  },
-];
+const DEFAULT_CARDS: CardItem[] = [];
 
 export const SavedCards: React.FC = () => {
   const router = useRouter();
   const { data: session } = useSession();
-  const [selectedCardId, setSelectedCardId] = useState<string>("hdfc-credit");
+  const [cards] = useState<CardItem[]>(DEFAULT_CARDS);
+  const [selectedCardId, setSelectedCardId] = useState<string>("");
 
   return (
     <div className={styles.sectionWrapper}>
       <h3 className={styles.sectionHeading}>SAVED CARDS</h3>
 
-      <div className={styles.cardsGrid}>
-        {DEFAULT_CARDS.map((card) => {
+      {cards.length === 0 ? (
+        <div style={{ padding: "36px 20px", textAlign: "center", color: "#64748B", backgroundColor: "#F8FAFC", borderRadius: "12px", border: "1.5px dashed #CBD5E1", fontSize: "14px" }}>
+          No saved credit or debit cards found.
+        </div>
+      ) : (
+        <div className={styles.cardsGrid}>
+          {cards.map((card) => {
           const isSelected = selectedCardId === card.id;
 
           return (

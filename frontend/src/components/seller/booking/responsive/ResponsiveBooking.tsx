@@ -8,7 +8,7 @@ import { Menu as MenuIcon, Calendar, Bell } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import PaginationControls from "../../common/PaginationControls";
 import styles from "./ResponsiveBooking.module.css";
-import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useSellerProfile, isGenericFallbackName } from "@/hooks/useSellerProfile";
 import { useSellerNotifications } from "@/hooks/useSellerNotifications";
 
 export type BookingStatusTab = "Requested" | "Confirmed" | "Paid";
@@ -48,13 +48,9 @@ export const ResponsiveBooking: React.FC<ResponsiveBookingProps> = ({
   const seller = useSellerProfile();
   const { unreadCount } = useSellerNotifications();
   const effectiveOwnerName =
-    ownerName &&
-    ownerName !== "Rahul Sharma" &&
-    ownerName !== "Rahul" &&
-    ownerName !== "John Doe" &&
-    ownerName !== "Kitchen Owner"
+    ownerName && !isGenericFallbackName(ownerName)
       ? ownerName
-      : seller.ownerName;
+      : (!isGenericFallbackName(seller.ownerName) ? seller.ownerName : "");
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   const [selectedTab, setSelectedTab] = useState<BookingStatusTab>(initialTab);
   const [bookingList, setBookingList] = useState<ResponsiveBookingItem[]>(bookings);

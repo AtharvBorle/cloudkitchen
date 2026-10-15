@@ -53,129 +53,25 @@ export const PaymentMethods: React.FC<PaymentMethodsProps> = ({
         </button>
       </div>
 
-      {/* 2 Payment Cards */}
+      {/* Payment Cards */}
       <div className={styles.paymentsGrid}>
-        {/* Card 1: HDFC Credit Card */}
         <div
-          className={styles.paymentBox}
-          onClick={() => setSelectedMethod("card-1")}
-          role="button"
-          tabIndex={0}
+          style={{
+            gridColumn: "1 / -1",
+            padding: "36px 20px",
+            textAlign: "center",
+            color: "#64748B",
+            backgroundColor: "#F8FAFC",
+            borderRadius: "12px",
+            border: "1.5px dashed #CBD5E1",
+          }}
         >
-          <div>
-            <div className={styles.paymentTop}>
-              <div className={styles.paymentTopLeft}>
-                <span className={styles.visaBadge}>VISA</span>
-                <div className={styles.paymentInfo}>
-                  <h3 className={styles.paymentName}>HDFC Bank Credit Card</h3>
-                  <p className={styles.cardNumber}>•••• •••• •••• 4523</p>
-                </div>
-              </div>
-
-              <div
-                className={
-                  selectedMethod === "card-1"
-                    ? styles.radioSelected
-                    : styles.radioUnselected
-                }
-              />
-            </div>
-          </div>
-
-          <div className={styles.paymentBottom}>
-            <div className={styles.cardMetaGroup}>
-              <div className={styles.metaItem}>
-                <span className={styles.metaLabel}>CARD HOLDER</span>
-                <p className={styles.metaValue}>Rahul Sharma</p>
-              </div>
-              <div className={styles.metaItem}>
-                <span className={styles.metaLabel}>EXPIRES</span>
-                <p className={styles.metaValue}>09/29</p>
-              </div>
-            </div>
-
-            <div className={styles.actionIcons}>
-              <button
-                type="button"
-                className={styles.iconActionBtn}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleAction(onEditPayment ? () => onEditPayment("card-1") : undefined);
-                }}
-                aria-label="Edit Credit Card"
-              >
-                <Pencil size={15} />
-              </button>
-              <button
-                type="button"
-                className={styles.deleteBtn}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleAction(onDeletePayment ? () => onDeletePayment("card-1") : undefined);
-                }}
-                aria-label="Delete Credit Card"
-              >
-                <Trash2 size={14} color="#ef4444" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 2: UPI */}
-        <div
-          className={styles.paymentBox}
-          onClick={() => setSelectedMethod("upi-1")}
-          role="button"
-          tabIndex={0}
-        >
-          <div>
-            <div className={styles.paymentTop}>
-              <div className={styles.paymentTopLeft}>
-                <span className={styles.upiBadge}>UPI</span>
-                <div className={styles.paymentInfo}>
-                  <h3 className={styles.paymentName}>rahul@okicici</h3>
-                  <p className={styles.subText}>Linked via ICICI Bank</p>
-                </div>
-              </div>
-
-              <div
-                className={
-                  selectedMethod === "upi-1"
-                    ? styles.radioSelected
-                    : styles.radioUnselected
-                }
-              />
-            </div>
-          </div>
-
-          <div className={styles.paymentBottom}>
-            <p className={styles.verifiedText}>Verified & Active</p>
-
-            <div className={styles.actionIcons}>
-              <button
-                type="button"
-                className={styles.iconActionBtn}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleAction(onEditPayment ? () => onEditPayment("upi-1") : undefined);
-                }}
-                aria-label="Edit UPI"
-              >
-                <Pencil size={15} />
-              </button>
-              <button
-                type="button"
-                className={styles.deleteBtn}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleAction(onDeletePayment ? () => onDeletePayment("upi-1") : undefined);
-                }}
-                aria-label="Delete UPI"
-              >
-                <Trash2 size={14} color="#ef4444" />
-              </button>
-            </div>
-          </div>
+          <p style={{ margin: "0 0 6px 0", fontSize: "15px", fontWeight: 700, color: "#1E293B" }}>
+            No saved payment methods
+          </p>
+          <p style={{ margin: 0, fontSize: "13px" }}>
+            Add a credit card or UPI ID to easily pay for orders.
+          </p>
         </div>
       </div>
     </div>

@@ -9,7 +9,7 @@ import RiderCanvas, {
   RiderWalletRecord,
 } from "./RiderCanvas";
 
-import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useSellerProfile, isGenericFallbackName } from "@/hooks/useSellerProfile";
 
 export interface RiderCanvasDasProps {
   topbarTitle?: string;
@@ -43,7 +43,7 @@ export default function RiderCanvasDas({
   onAddDeliveryBoy,
 }: RiderCanvasDasProps) {
   const seller = useSellerProfile();
-  const effectiveOwnerName = ownerName && ownerName !== "John Doe" ? ownerName : seller.ownerName;
+  const effectiveOwnerName = ownerName && !isGenericFallbackName(ownerName) ? ownerName : (!isGenericFallbackName(seller.ownerName) ? seller.ownerName : "");
   const effectivePartnerRole = partnerRole || seller.partnerRole;
   const effectiveAvatarInitials = avatarInitials && avatarInitials !== "JD" ? avatarInitials : seller.avatarInitials;
 

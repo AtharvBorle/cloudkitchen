@@ -46,7 +46,15 @@ export function isGenericFallbackName(name?: string): boolean {
     lower === "john doe" ||
     lower === "rahul sharma" ||
     lower === "rahul" ||
+    lower === "siddharth sharma" ||
+    lower === "siddharth" ||
+    lower === "aman sharma" ||
+    lower === "aman" ||
+    lower === "aarav mehta" ||
+    lower === "aarav" ||
     lower === "kitchen owner" ||
+    lower === "guest user" ||
+    lower === "user" ||
     lower === "seller" ||
     lower === "seller partner" ||
     lower === "seller role" ||
@@ -265,7 +273,7 @@ export function useSellerProfile() {
           const validUserName = user?.name && !isGenericFallbackName(user.name) ? user.name : "";
           const validSessionName = sessionName && !isGenericFallbackName(sessionName) ? sessionName : "";
           const rawBusinessName =
-            profile?.businessName || validUserName || validSessionName || user?.name || "Kitchen Owner";
+            profile?.businessName || validUserName || validSessionName || (!isGenericFallbackName(user?.name) ? user?.name : "") || "";
           const rawOwnerName = rawBusinessName;
           const rawFullName = validUserName || validSessionName || user?.name || rawBusinessName;
           const rawEmail = user?.email || sessionEmail || "";

@@ -4,7 +4,7 @@ import React from "react";
 import { Menu, LogOut } from "lucide-react";
 import styles from "./SellerHeader.module.css";
 
-import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useSellerProfile, isGenericFallbackName } from "@/hooks/useSellerProfile";
 import { performLogout } from "@/lib/logout";
 
 export interface SellerHeaderProps {
@@ -24,13 +24,9 @@ export const SellerHeader: React.FC<SellerHeaderProps> = ({
 }) => {
   const seller = useSellerProfile();
   const effectiveUserName =
-    userName &&
-    userName !== "Rahul Sharma" &&
-    userName !== "Rahul" &&
-    userName !== "John Doe" &&
-    userName !== "Kitchen Owner"
+    userName && !isGenericFallbackName(userName)
       ? userName
-      : seller.ownerName;
+      : (!isGenericFallbackName(seller.ownerName) ? seller.ownerName : "");
   const effectiveUserRole = userRole || seller.partnerRole;
   const effectiveUserInitials =
     userInitials && userInitials !== "JD" && userInitials !== "KP"

@@ -46,7 +46,7 @@ const TABS: TabItem[] = [
   { id: "settlements", label: "Settlements" },
 ];
 
-import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useSellerProfile, isGenericFallbackName } from "@/hooks/useSellerProfile";
 import { useSellerNotifications } from "@/hooks/useSellerNotifications";
 import { formatNotificationTime } from "../notificationData";
 
@@ -65,13 +65,9 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
 }) => {
   const seller = useSellerProfile();
   const effectiveOwnerName =
-    ownerName &&
-    ownerName !== "Rahul Sharma" &&
-    ownerName !== "Rahul" &&
-    ownerName !== "John Doe" &&
-    ownerName !== "Kitchen Owner"
+    ownerName && !isGenericFallbackName(ownerName)
       ? ownerName
-      : seller.ownerName;
+      : (!isGenericFallbackName(seller.ownerName) ? seller.ownerName : "");
   const {
     notifications,
     unreadCount,

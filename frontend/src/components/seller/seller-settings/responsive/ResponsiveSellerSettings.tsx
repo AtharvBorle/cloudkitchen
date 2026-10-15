@@ -141,10 +141,10 @@ const DEFAULT_OPERATING_HOURS: OperatingHoursDay[] = [
 ];
 
 const INITIAL_SETTINGS: ResponsiveSellerSettingsData = {
-  businessName: "Neo Cloud Kitchen & Rooms",
-  businessEmail: "hello@neocloudbite.com",
-  phoneNumber: "+91 98765 43210",
-  address: "451 Innovation Way, Suite 300, Mumbai, MH 400001",
+  businessName: "",
+  businessEmail: "",
+  phoneNumber: "",
+  address: "",
   latitude: null,
   longitude: null,
   isLocationPinned: false,
@@ -208,7 +208,7 @@ const INITIAL_SETTINGS: ResponsiveSellerSettingsData = {
   autoDeleteSessionHistory: false,
 };
 
-import { useSellerProfile, toggleSellerOnlineStatus, updateCachedProfile, computeInitials } from "@/hooks/useSellerProfile";
+import { useSellerProfile, toggleSellerOnlineStatus, updateCachedProfile, computeInitials, isGenericFallbackName } from "@/hooks/useSellerProfile";
 import { useSellerNotifications } from "@/hooks/useSellerNotifications";
 import { fetchApi } from "@/lib/fetch-api";
 import { compressImage } from "@/lib/image-compression";
@@ -235,13 +235,9 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
   const seller = useSellerProfile();
   const { unreadCount } = useSellerNotifications();
   const effectiveOwnerName =
-    ownerName &&
-    ownerName !== "Rahul Sharma" &&
-    ownerName !== "Rahul" &&
-    ownerName !== "John Doe" &&
-    ownerName !== "Kitchen Owner"
+    ownerName && !isGenericFallbackName(ownerName)
       ? ownerName
-      : seller.ownerName;
+      : (!isGenericFallbackName(seller.ownerName) ? seller.ownerName : "");
 
   const [activeTab, setActiveTab] = useState<SettingsTabType>(() => {
     const allowedTabs: SettingsTabType[] = ["General", "Security"];

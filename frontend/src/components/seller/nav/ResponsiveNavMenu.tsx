@@ -84,7 +84,9 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
   const effectiveOwnerName =
     ownerName && !isGenericFallbackName(ownerName)
       ? ownerName
-      : (seller.businessName || seller.ownerName);
+      : (seller.businessName && !isGenericFallbackName(seller.businessName)
+          ? seller.businessName
+          : (seller.ownerName && !isGenericFallbackName(seller.ownerName) ? seller.ownerName : ""));
   const pathname = usePathname();
   const [statusData, setStatusData] = React.useState<any>(null);
 
@@ -350,9 +352,9 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
 
         {/* Profile Info Card */}
         <div className={styles.profileCard}>
-          <div className={styles.avatar}>{computeInitials(effectiveOwnerName)}</div>
+          <div className={styles.avatar}>{effectiveOwnerName ? computeInitials(effectiveOwnerName) : "SP"}</div>
           <div className={styles.profileDetails}>
-            <span className={styles.profileName}>{effectiveOwnerName}</span>
+            <span className={styles.profileName}>{effectiveOwnerName || "Seller Partner"}</span>
             <span className={styles.profileStatus}>
               <span className={styles.statusDot} />
               Store Online

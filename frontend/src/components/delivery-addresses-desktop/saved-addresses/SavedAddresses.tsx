@@ -15,26 +15,7 @@ export interface AddressItem {
   mapType: "home" | "office";
 }
 
-const DEFAULT_ADDRESSES: AddressItem[] = [
-  {
-    id: "home",
-    tag: "HOME",
-    isDefault: true,
-    recipientName: "Rahul Sharma",
-    recipientPhone: "+91 98765 43210",
-    addressLines: "Flat 402, Shanti Vihar, Sector 56, Gurgaon, Haryana - 122011",
-    mapType: "home",
-  },
-  {
-    id: "office",
-    tag: "OFFICE",
-    isDefault: false,
-    recipientName: "Rahul Sharma",
-    recipientPhone: "+91 98765 43210",
-    addressLines: "Lumen Tech Corp, 5th Floor, Block C, Cyber City, Gurgaon, Haryana",
-    mapType: "office",
-  },
-];
+const DEFAULT_ADDRESSES: AddressItem[] = [];
 
 export interface SavedAddressesProps {
   onSetLocationMap?: (addr: AddressItem) => void;
@@ -46,7 +27,7 @@ export const SavedAddresses: React.FC<SavedAddressesProps> = ({
   onEditAddress,
 }) => {
   const [addresses, setAddresses] = useState<AddressItem[]>(DEFAULT_ADDRESSES);
-  const [selectedId, setSelectedId] = useState<string>("home");
+  const [selectedId, setSelectedId] = useState<string>("");
 
   useEffect(() => {
     let isMounted = true;
@@ -57,13 +38,13 @@ export const SavedAddresses: React.FC<SavedAddressesProps> = ({
         if (res.ok) {
           const data = await res.json();
           const list = data.data?.addresses || data.addresses || data.data || [];
-          if (Array.isArray(list) && list.length > 0 && isMounted) {
+          if (Array.isArray(list) && isMounted) {
             const mapped: AddressItem[] = list.map((a: any) => ({
               id: a.id,
               tag: (a.type || "HOME").toUpperCase(),
               isDefault: Boolean(a.isDefault),
-              recipientName: a.recipientName || "Registered User",
-              recipientPhone: a.recipientPhone || "+91 98765 43210",
+              recipientName: a.recipientName || "",
+              recipientPhone: a.recipientPhone || "",
               addressLines: `${a.houseNumber || ""}, ${a.street || ""}, ${a.landmark ? a.landmark + ", " : ""}${a.pincode || ""}`.trim(),
               mapType: (a.type || "").toLowerCase() === "office" ? "office" : "home",
             }));
@@ -72,6 +53,7 @@ export const SavedAddresses: React.FC<SavedAddressesProps> = ({
             const defaultItem = sorted.find((m) => m.isDefault);
             if (defaultItem) setSelectedId(defaultItem.id);
             else if (sorted[0]) setSelectedId(sorted[0].id);
+            else setSelectedId("");
           }
         }
       } catch (err) {
@@ -100,7 +82,27 @@ export const SavedAddresses: React.FC<SavedAddressesProps> = ({
 
   return (
     <div className={styles.addressesGrid}>
-      {addresses.map((addr) => {
+      {addresses.length === 0 ? (
+        <div
+          style={{
+            gridColumn: "1 / -1",
+            textAlign: "center",
+            padding: "48px 24px",
+            backgroundColor: "#F8FAFC",
+            borderRadius: "14px",
+            border: "1.5px dashed #CBD5E1",
+            color: "#64748B",
+          }}
+        >
+          <p style={{ margin: "0 0 6px 0", fontSize: "15px", fontWeight: 700, color: "#1E293B" }}>
+            No saved addresses
+          </p>
+          <p style={{ margin: 0, fontSize: "13px", color: "#64748B" }}>
+            You haven&apos;t added any delivery addresses yet. Add one to get started.
+          </p>
+        </div>
+      ) : (
+        addresses.map((addr) => {
         const isSelected = selectedId === addr.id;
 
         return (
@@ -202,9 +204,9 @@ export const SavedAddresses: React.FC<SavedAddressesProps> = ({
               )}
 
               <div className={styles.addressInfo}>
-                <h4 className={styles.recipientName}>{addr.recipientName}</h4>
-                <p className={styles.recipientPhone}>{addr.recipientPhone}</p>
-                <p className={styles.addressLines}>{addr.addressLines}</p>
+                {addr.recipientName && <h4 className={styles.recipientName}>{addr.recipientName}</h4>}
+                {addr.recipientPhone && <p className={styles.recipientPhone}>{addr.recipientPhone}</p>}
+                {addr.addressLines && <p className={styles.addressLines}>{addr.addressLines}</p>}
               </div>
             </div>
 

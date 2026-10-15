@@ -177,7 +177,7 @@ export default function ResponsiveSellerDashboardPage() {
     });
   }, [dateFilteredOrders]);
 
-  const ownerDisplayName = overviewData?.sellerProfile?.businessName || overviewData?.sellerProfile?.user?.name || "Rahul";
+  const ownerDisplayName = overviewData?.sellerProfile?.businessName || overviewData?.sellerProfile?.user?.name || "";
 
   return (
     <>

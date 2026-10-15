@@ -1,6 +1,6 @@
 /**
  * ==============================================================================
- * 🍱 Centralized Meal Slots Configuration & Helpers
+ * Centralized Meal Slots Configuration & Helpers
  * ==============================================================================
  * Exactly 6 standardized predefined meal slots for the entire platform:
  * 1. Breakfast (Morning breakfast / Nasta)
@@ -159,4 +159,82 @@ export function formatMealSlotsDisplay(slotIds: string[]): string {
   const valid = normalizeMealSlotIds(slotIds);
   if (valid.length === 0) return "Standard Delivery Window";
   return valid.map((id) => getMealSlotDetails(id).name).join(", ");
+}
+
+/**
+ * Returns the configured delivery timing for a slot.
+ * Does NOT return any arbitrary hardcoded default times.
+ */
+export function getSlotDeliveryTime(slotId: string, customTime?: string): string {
+  const norm = normalizeMealSlotId(slotId) || "breakfast";
+
+  if (customTime && customTime.trim() && !MEAL_SLOTS_MAP.has(customTime.trim().toLowerCase())) {
+    if (customTime.includes(":") && (customTime.toLowerCase().includes("am") || customTime.toLowerCase().includes("pm"))) {
+      const parts = customTime.split(/:\s*(?=\d)/);
+      if (parts.length > 1) return parts[1].trim();
+      return customTime.trim();
+    }
+    if (customTime.includes("(") && customTime.includes(")")) {
+      const extracted = customTime.substring(customTime.indexOf("(") + 1, customTime.indexOf(")")).trim();
+      if (extracted) return extracted;
+    }
+    return customTime.trim();
+  }
+
+  const def = MEAL_SLOTS_MAP.get(norm);
+  if (def?.defaultTimeRange && def.defaultTimeRange.trim()) {
+    return def.defaultTimeRange.trim();
+  }
+
+  return "";
+}
+
+export interface FormattedMealTiming {
+  slotId: string;
+  name: string;
+  timeRange: string;
+  fullDisplay: string;
+  icon: string;
+}
+
+/**
+ * Parses and formats any meal timing string into a clean, human-friendly display
+ * showing ONLY the timing configured by the seller, with no arbitrary defaults or emojis.
+ */
+export function formatMealTimingDisplay(timing: string | null | undefined): FormattedMealTiming {
+  if (!timing || typeof timing !== "string") {
+    return {
+      slotId: "lunch",
+      name: "Lunch",
+      timeRange: "",
+      fullDisplay: "Lunch",
+      icon: "",
+    };
+  }
+
+  const raw = timing.trim();
+  const normId = normalizeMealSlotId(raw) || "lunch";
+  const def = getMealSlotDetails(normId);
+
+  let extractedTime = "";
+
+  if (raw.includes(":") && (raw.toLowerCase().includes("am") || raw.toLowerCase().includes("pm"))) {
+    const colonIndex = raw.indexOf(":");
+    extractedTime = raw.substring(colonIndex + 1).trim();
+  } else if (raw.includes("(") && raw.includes(")")) {
+    extractedTime = raw.substring(raw.indexOf("(") + 1, raw.indexOf(")")).trim();
+  } else if (raw.toLowerCase().includes("am") || raw.toLowerCase().includes("pm")) {
+    extractedTime = raw;
+  }
+
+  const timeRange = getSlotDeliveryTime(normId, extractedTime);
+  const name = def.name;
+
+  return {
+    slotId: normId,
+    name,
+    timeRange,
+    fullDisplay: timeRange ? `${name} (${timeRange})` : name,
+    icon: "",
+  };
 }
