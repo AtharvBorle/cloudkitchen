@@ -957,9 +957,11 @@ export default function Properties({
           className="properties2-column Properties2"
         >
           {/* Header Title: Best Places Nearby */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+          {/* Header Row */}
+          <div className="best-places-header-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <h2
+                className="best-places-title"
                 style={{
                   fontSize: "24px",
                   fontWeight: "700",
@@ -972,6 +974,7 @@ export default function Properties({
                 Best Places Nearby
               </h2>
               <span
+                className="best-places-count-badge"
                 style={{
                   fontSize: "12.5px",
                   fontWeight: "700",
@@ -1017,7 +1020,7 @@ export default function Properties({
                   className="place-card-skeleton"
                 >
                   <div
-                    className="skeleton-pulse"
+                    className="skeleton-pulse place-card-skeleton-image"
                     style={{
                       width: "100%",
                       height: "155px",
@@ -1032,6 +1035,7 @@ export default function Properties({
                       flex: 1,
                       justifyContent: "space-between",
                     }}
+                    className="place-card-content"
                   >
                     <div>
                       <div className="skeleton-pulse" style={{ width: "70%", height: "18px", borderRadius: "6px", marginBottom: "6px" }} />
@@ -1127,14 +1131,15 @@ export default function Properties({
                 >
                   {/* Card Food Image */}
                   <div
+                    className="place-card-image-box"
                     style={{
                       width: "100%",
                       height: "155px",
-                    position: "relative",
-                    overflow: "hidden",
-                    backgroundColor: "#F8FAFC",
-                  }}
-                >
+                      position: "relative",
+                      overflow: "hidden",
+                      backgroundColor: "#F8FAFC",
+                    }}
+                  >
                   <Image
                     src={place.imageUrl || "/images/places/place-pizza.png"}
                     alt={place.name}
@@ -1147,8 +1152,10 @@ export default function Properties({
                     }}
                     className="place-card-img"
                   />
+                  <div className="place-card-mobile-overlay" />
                   {isClosed && (
                     <div
+                      className="place-card-closed-pill"
                       style={{
                         position: "absolute",
                         top: 0,
@@ -1163,6 +1170,7 @@ export default function Properties({
                       }}
                     >
                       <span
+                        className="place-card-closed-text"
                         style={{
                           backgroundColor: "#0F172A",
                           color: "#FFFFFF",
@@ -1186,6 +1194,7 @@ export default function Properties({
 
                 {/* Card Content Footer */}
                 <div
+                  className="place-card-content"
                   style={{
                     padding: "12px 14px",
                     display: "flex",
@@ -1197,8 +1206,9 @@ export default function Properties({
                   }}
                 >
                   {/* Restaurant Name */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px" }}>
+                  <div className="place-card-header-line" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px" }}>
                     <h3
+                      className="place-card-title"
                       style={{
                         fontSize: "15px",
                         fontWeight: "700",
@@ -1214,6 +1224,7 @@ export default function Properties({
                     </h3>
                     {isClosed && (
                       <span
+                        className="place-card-offline-tag"
                         style={{
                           fontSize: "10px",
                           fontWeight: "700",
@@ -1231,6 +1242,7 @@ export default function Properties({
 
                   {/* Rating & Delivery Time Meta Row */}
                   <div
+                    className="place-card-meta-line"
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -1239,6 +1251,7 @@ export default function Properties({
                   >
                     {/* Star Rating Badge */}
                     <div
+                      className="place-card-rating-badge"
                       style={{
                         display: "inline-flex",
                         alignItems: "center",
@@ -1253,12 +1266,14 @@ export default function Properties({
                         fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
                       }}
                     >
-                      <Star size={12} fill={isClosed ? "#64748B" : (place.rating > 0 ? "#10B981" : "#94A3B8")} color={isClosed ? "#64748B" : (place.rating > 0 ? "#10B981" : "#94A3B8")} />
-                      <span>{place.rating > 0 ? place.rating.toFixed(1) : "New"}</span>
+                      <Star size={12} className="place-star-icon" fill={isClosed ? "#64748B" : (place.rating > 0 ? "#10B981" : "#94A3B8")} color={isClosed ? "#64748B" : (place.rating > 0 ? "#10B981" : "#94A3B8")} />
+                      <span className="place-rating-text-desktop">{place.rating > 0 ? place.rating.toFixed(1) : "New"}</span>
+                      <span className="place-rating-text-mobile">{Number(place.rating || 0).toFixed(1)}</span>
                     </div>
 
                     {/* Delivery Time / Closed Text */}
                     <span
+                      className="place-card-time"
                       style={{
                         fontSize: "12px",
                         color: isClosed ? "#94A3B8" : "#64748B",
@@ -1299,6 +1314,15 @@ export default function Properties({
         .place-card:hover .place-card-img {
           transform: scale(1.05);
         }
+        .place-card-mobile-overlay {
+          display: none;
+        }
+        .place-rating-text-mobile {
+          display: none;
+        }
+        .place-rating-text-desktop {
+          display: inline;
+        }
         @media (max-width: 1200px) {
           .properties-container {
             flex-direction: column !important;
@@ -1329,13 +1353,182 @@ export default function Properties({
           }
         }
         @media (max-width: 768px) {
+          .Properties {
+            padding: 0 0 24px 0 !important;
+          }
+          .properties-container {
+            gap: 12px !important;
+            min-height: auto !important;
+          }
+          .Properties2 {
+            width: 100% !important;
+            min-width: 0 !important;
+            min-height: auto !important;
+            gap: 12px !important;
+          }
+          .best-places-header-row {
+            margin-bottom: 0 !important;
+          }
+          .best-places-title {
+            font-size: 19px !important;
+            font-weight: 700 !important;
+            letter-spacing: -0.2px !important;
+          }
+          .best-places-count-badge {
+            display: none !important;
+          }
           .PlacesGrid {
-            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            gap: 12px !important;
+            padding: 2px 2px 8px 2px !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+          }
+          .PlacesGrid::-webkit-scrollbar {
+            display: none !important;
+          }
+          .place-card {
+            flex: 0 0 148px !important;
+            width: 148px !important;
+            min-width: 148px !important;
+            max-width: 148px !important;
+            height: 148px !important;
+            min-height: 148px !important;
+            max-height: 148px !important;
+            border-radius: 18px !important;
+            position: relative !important;
+            overflow: hidden !important;
+            background-color: #1E293B !important;
+            border: none !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+            flex-shrink: 0 !important;
+          }
+          .place-card-image-box {
+            position: absolute !important;
+            inset: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            border-radius: 18px !important;
+          }
+          .place-card-img {
+            border-radius: 18px !important;
+            object-fit: cover !important;
+          }
+          .place-card-mobile-overlay {
+            display: block !important;
+            position: absolute !important;
+            inset: 0 !important;
+            z-index: 1 !important;
+            background: linear-gradient(180deg, rgba(0, 0, 0, 0) 25%, rgba(0, 0, 0, 0.45) 60%, rgba(0, 0, 0, 0.9) 100%) !important;
+            pointer-events: none;
+          }
+          .place-card-content {
+            position: absolute !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            z-index: 3 !important;
+            background: transparent !important;
+            padding: 8px 10px 10px 10px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: flex-end !important;
+            gap: 2px !important;
+          }
+          .place-card-header-line {
+            width: 100% !important;
+            gap: 4px !important;
+          }
+          .place-card-title {
+            color: #FFFFFF !important;
+            font-size: 13.5px !important;
+            font-weight: 700 !important;
+            line-height: 1.25 !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8) !important;
+          }
+          .place-card-offline-tag {
+            display: none !important;
+          }
+          .place-card-meta-line {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            gap: 4px !important;
+            margin-top: 1px !important;
+          }
+          .place-card-rating-badge {
+            background: transparent !important;
+            border: none !important;
+            padding: 0 !important;
+            gap: 4px !important;
+            color: #FFFFFF !important;
+            font-size: 12.5px !important;
+            font-weight: 600 !important;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8) !important;
+          }
+          .place-star-icon {
+            fill: #F59E0B !important;
+            color: #F59E0B !important;
+            width: 12px !important;
+            height: 12px !important;
+          }
+          .place-rating-text-desktop {
+            display: none !important;
+          }
+          .place-rating-text-mobile {
+            display: inline !important;
+            color: #FFFFFF !important;
+            font-size: 12px !important;
+            font-weight: 600 !important;
+          }
+          .place-card-time {
+            display: none !important;
+          }
+          .place-card-closed-pill {
+            z-index: 2 !important;
+          }
+          .place-card-closed-text {
+            font-size: 10px !important;
+            padding: 3px 8px !important;
+          }
+          .place-card-skeleton {
+            flex: 0 0 148px !important;
+            width: 148px !important;
+            min-width: 148px !important;
+            max-width: 148px !important;
+            height: 148px !important;
+            min-height: 148px !important;
+            max-height: 148px !important;
+            border-radius: 18px !important;
+            flex-shrink: 0 !important;
+          }
+          .place-card-skeleton-image {
+            width: 100% !important;
+            height: 100% !important;
+            border-radius: 18px !important;
+          }
+          .place-card-skeleton .place-card-content {
+            display: none !important;
           }
         }
-        @media (max-width: 480px) {
-          .PlacesGrid {
-            grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+        @media (max-width: 540px) {
+          .place-card,
+          .place-card-skeleton {
+            flex: 0 0 144px !important;
+            width: 144px !important;
+            min-width: 144px !important;
+            max-width: 144px !important;
+            height: 144px !important;
+            min-height: 144px !important;
+            max-height: 144px !important;
           }
         }
       `}</style>
