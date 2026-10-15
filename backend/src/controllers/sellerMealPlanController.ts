@@ -2,7 +2,8 @@ import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { emitMealPlanUpdated, emitMealSubscriptionUpdated } from "@/lib/realtime-events";
-import { PREDEFINED_MEAL_SLOTS, normalizeMealSlotIds, getMealSlotDetails } from "@/lib/meal-slots";
+import { getCategoryExpiries } from "@/lib/subscription";
+import { PREDEFINED_MEAL_SLOTS, normalizeMealSlotId, normalizeMealSlotIds, getMealSlotDetails } from "@/lib/meal-slots";
 import { MealSubscriptionDeliveryService } from "@/services/mealSubscriptionDeliveryService";
 
 export const getAuthenticatedSellerProfile = async () => {
@@ -10,7 +11,8 @@ export const getAuthenticatedSellerProfile = async () => {
     if (!session?.user) {
         throw new ApiError("Please log in first to manage meal plans.", 401);
     }
-    if (session.user.role !== "SELLER") {
+    const userRole = (session.user.role || "").toUpperCase();
+    if (userRole !== "SELLER" && userRole !== "ADMIN" && userRole !== "SUPERADMIN") {
         throw new ApiError("Access denied. Seller account required to manage meal plans.", 403);
     }
 
@@ -261,11 +263,11 @@ export const getSellerMealPlans = async () => {
             name: plan.name,
             tier: plan.tier,
             description: plan.description || "",
-            weeklyPrice: `₹${plan.weeklyPrice.toFixed(0)}`,
+            weeklyPrice: plan.weeklyPrice != null ? `₹${Number(plan.weeklyPrice).toFixed(0)}` : "₹0",
             rawWeeklyPrice: getPlanBasePrice(plan),
-            monthlyPrice: plan.monthlyPrice ? `₹${plan.monthlyPrice.toFixed(0)}` : "",
-            quarterlyPrice: plan.quarterlyPrice ? `₹${plan.quarterlyPrice.toFixed(0)}` : "",
-            yearlyPrice: plan.yearlyPrice ? `₹${plan.yearlyPrice.toFixed(0)}` : "",
+            monthlyPrice: plan.monthlyPrice != null ? `₹${Number(plan.monthlyPrice).toFixed(0)}` : "",
+            quarterlyPrice: plan.quarterlyPrice != null ? `₹${Number(plan.quarterlyPrice).toFixed(0)}` : "",
+            yearlyPrice: plan.yearlyPrice != null ? `₹${Number(plan.yearlyPrice).toFixed(0)}` : "",
             duration: plan.duration,
             features: parsedFeatures,
             mealTimings: parsedTimings,
@@ -374,11 +376,11 @@ export const getSellerMealPlanById = async (planId: string) => {
         name: plan.name,
         tier: plan.tier,
         description: plan.description || "",
-        weeklyPrice: `₹${plan.weeklyPrice.toFixed(0)}`,
-        rawWeeklyPrice: plan.weeklyPrice,
-        monthlyPrice: plan.monthlyPrice ? `₹${plan.monthlyPrice.toFixed(0)}` : "",
-        quarterlyPrice: plan.quarterlyPrice ? `₹${plan.quarterlyPrice.toFixed(0)}` : "",
-        yearlyPrice: plan.yearlyPrice ? `₹${plan.yearlyPrice.toFixed(0)}` : "",
+        weeklyPrice: plan.weeklyPrice != null ? `₹${Number(plan.weeklyPrice).toFixed(0)}` : "₹0",
+        rawWeeklyPrice: plan.weeklyPrice ?? 0,
+        monthlyPrice: plan.monthlyPrice != null ? `₹${Number(plan.monthlyPrice).toFixed(0)}` : "",
+        quarterlyPrice: plan.quarterlyPrice != null ? `₹${Number(plan.quarterlyPrice).toFixed(0)}` : "",
+        yearlyPrice: plan.yearlyPrice != null ? `₹${Number(plan.yearlyPrice).toFixed(0)}` : "",
         duration: plan.duration,
         features: parsedFeatures,
         mealTimings: parsedTimings,
@@ -523,11 +525,11 @@ export const createSellerMealPlan = async (req: Request) => {
         name: newPlan.name,
         tier: newPlan.tier,
         description: newPlan.description,
-        weeklyPrice: `₹${newPlan.weeklyPrice.toFixed(0)}`,
-        rawWeeklyPrice: newPlan.weeklyPrice,
-        monthlyPrice: newPlan.monthlyPrice ? `₹${newPlan.monthlyPrice.toFixed(0)}` : "",
-        quarterlyPrice: newPlan.quarterlyPrice ? `₹${newPlan.quarterlyPrice.toFixed(0)}` : "",
-        yearlyPrice: newPlan.yearlyPrice ? `₹${newPlan.yearlyPrice.toFixed(0)}` : "",
+        weeklyPrice: newPlan.weeklyPrice != null ? `₹${Number(newPlan.weeklyPrice).toFixed(0)}` : "₹0",
+        rawWeeklyPrice: newPlan.weeklyPrice ?? 0,
+        monthlyPrice: newPlan.monthlyPrice != null ? `₹${Number(newPlan.monthlyPrice).toFixed(0)}` : "",
+        quarterlyPrice: newPlan.quarterlyPrice != null ? `₹${Number(newPlan.quarterlyPrice).toFixed(0)}` : "",
+        yearlyPrice: newPlan.yearlyPrice != null ? `₹${Number(newPlan.yearlyPrice).toFixed(0)}` : "",
         duration: newPlan.duration,
         features: Array.isArray(features) ? features : [],
         mealTimings: normalizedSlotIds,
@@ -727,9 +729,9 @@ export const updateSellerMealPlan = async (req: Request) => {
         name: updated.name,
         tier: updated.tier,
         description: updated.description,
-        weeklyPrice: `₹${updated.weeklyPrice.toFixed(0)}`,
-        rawWeeklyPrice: updated.weeklyPrice,
-        monthlyPrice: updated.monthlyPrice ? `₹${updated.monthlyPrice.toFixed(0)}` : "",
+        weeklyPrice: updated.weeklyPrice != null ? `₹${Number(updated.weeklyPrice).toFixed(0)}` : "₹0",
+        rawWeeklyPrice: updated.weeklyPrice ?? 0,
+        monthlyPrice: updated.monthlyPrice != null ? `₹${Number(updated.monthlyPrice).toFixed(0)}` : "",
         duration: updated.duration,
         features: parsedFeatures,
         mealTimings: planSlotIds,
