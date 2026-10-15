@@ -21,7 +21,7 @@ import {
   Clock,
 } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
-import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useSellerProfile, isGenericFallbackName } from "@/hooks/useSellerProfile";
 import { useSellerNotifications } from "@/hooks/useSellerNotifications";
 import styles from "./ResponsiveSellerSubscription.module.css";
 
@@ -94,13 +94,9 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
   const seller = useSellerProfile();
   const { unreadCount } = useSellerNotifications();
   const effectiveOwnerName =
-    ownerName &&
-    ownerName !== "Rahul Sharma" &&
-    ownerName !== "Rahul" &&
-    ownerName !== "John Doe" &&
-    ownerName !== "Kitchen Owner"
+    ownerName && !isGenericFallbackName(ownerName)
       ? ownerName
-      : seller.ownerName;
+      : (!isGenericFallbackName(seller.ownerName) ? seller.ownerName : "");
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   const [localSearchQuery, setLocalSearchQuery] = useState("");
   const searchQuery = propSearchQuery !== undefined ? propSearchQuery : localSearchQuery;

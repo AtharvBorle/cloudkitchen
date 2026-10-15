@@ -19,9 +19,9 @@ import {
   ChevronRight,
   LogOut,
   LogIn,
+  User,
 } from "lucide-react";
 import styles from "./SettingsSidebar.module.css";
-import rahulAvatar from "./Rectangle.jpg";
 
 export interface SettingsSidebarProps {
   activeTabId?: string;
@@ -111,7 +111,15 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
         {/* 1. User Profile Section */}
         <div className={styles.userSection}>
           <div className={styles.avatarWrapper}>
-            {session?.user?.name ? (
+            {session?.user?.image ? (
+              <Image
+                src={session.user.image}
+                alt={session.user.name || "User Profile"}
+                fill
+                sizes="40px"
+                className={styles.avatarImg}
+              />
+            ) : session?.user?.name ? (
               <div
                 style={{
                   width: "100%",
@@ -129,19 +137,28 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
                 {session.user.name.trim().charAt(0).toUpperCase()}
               </div>
             ) : (
-              <Image
-                src={rahulAvatar}
-                alt="User Profile"
-                fill
-                sizes="40px"
-                className={styles.avatarImg}
-              />
+              <div
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  borderRadius: "50%",
+                  backgroundColor: "#F1F5F9",
+                  color: "#64748B",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <User size={20} />
+              </div>
             )}
           </div>
           <div className={styles.userInfo}>
-            <h3 className={styles.userName} title={session?.user?.name || "Guest User"}>
-              {session?.user?.name || (session ? "User" : "Guest User")}
-            </h3>
+            {session?.user?.name ? (
+              <h3 className={styles.userName} title={session.user.name}>
+                {session.user.name}
+              </h3>
+            ) : null}
             <p className={styles.userPhone} title={session?.user?.email || (session ? "" : "Sign in to manage account")}>
               {session?.user?.email || (session ? (session.user as any)?.phone || "" : "Sign in to manage account")}
             </p>

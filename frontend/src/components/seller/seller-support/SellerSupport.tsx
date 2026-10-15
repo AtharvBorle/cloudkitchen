@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import styles from "./SellerSupport.module.css";
 import { fetchApi } from "@/lib/fetch-api";
-import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useSellerProfile, isGenericFallbackName } from "@/hooks/useSellerProfile";
 
 export interface TicketMessage {
   id: string;
@@ -249,13 +249,9 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
 }) => {
   const seller = useSellerProfile();
   const effectiveOwnerName =
-    ownerName &&
-    ownerName !== "Rahul Sharma" &&
-    ownerName !== "Rahul" &&
-    ownerName !== "John Doe" &&
-    ownerName !== "Kitchen Owner"
+    ownerName && !isGenericFallbackName(ownerName)
       ? ownerName
-      : seller.ownerName;
+      : (!isGenericFallbackName(seller.ownerName) ? seller.ownerName : "");
   const effectivePartnerRole = partnerRole || seller.partnerRole;
   const effectiveAvatarInitials =
     avatarInitials && avatarInitials !== "JD" && avatarInitials !== "KP"

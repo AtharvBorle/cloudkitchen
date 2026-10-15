@@ -18,7 +18,7 @@ import {
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import styles from "./ResponsiveSellerDashboard.module.css";
 
-import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useSellerProfile, isGenericFallbackName } from "@/hooks/useSellerProfile";
 import { useSellerNotifications } from "@/hooks/useSellerNotifications";
 import { useRoomModule } from "@/context/RoomModuleContext";
 
@@ -82,13 +82,9 @@ export const ResponsiveSellerDashboard: React.FC<ResponsiveSellerDashboardProps>
   const isNotificationActive =
     hasUnreadNotifications !== undefined ? hasUnreadNotifications : unreadCount > 0;
   const effectiveOwnerName =
-    ownerName &&
-    ownerName !== "Rahul Sharma" &&
-    ownerName !== "Rahul" &&
-    ownerName !== "John Doe" &&
-    ownerName !== "Kitchen Owner"
+    ownerName && !isGenericFallbackName(ownerName)
       ? ownerName
-      : seller.ownerName;
+      : (!isGenericFallbackName(seller.ownerName) ? seller.ownerName : "");
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
 
   // Verification status routing protection:
@@ -229,7 +225,7 @@ export const ResponsiveSellerDashboard: React.FC<ResponsiveSellerDashboardProps>
           <section className={styles.greetingSection}>
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "10px" }}>
               <div>
-                <h2 className={styles.greetingTitle}>Hi, {effectiveOwnerName}</h2>
+                <h2 className={styles.greetingTitle}>{effectiveOwnerName ? `Hi, ${effectiveOwnerName}` : "Dashboard"}</h2>
                 <p className={styles.greetingSubtitle}>
                   {!selectedDate || selectedDate === new Date().toLocaleDateString("en-CA")
                     ? greetingSubtitle

@@ -33,7 +33,7 @@ export interface ResponsiveMenuProps {
   onSyncDevices?: () => void;
 }
 
-import { useSellerProfile } from "@/hooks/useSellerProfile";
+import { useSellerProfile, isGenericFallbackName } from "@/hooks/useSellerProfile";
 import { useSellerNotifications } from "@/hooks/useSellerNotifications";
 
 const EMPTY_DISHES: ResponsiveDishItem[] = [];
@@ -51,13 +51,9 @@ export const ResponsiveMenu: React.FC<ResponsiveMenuProps> = ({
   const seller = useSellerProfile();
   const { unreadCount } = useSellerNotifications();
   const effectiveOwnerName =
-    ownerName &&
-    ownerName !== "Rahul Sharma" &&
-    ownerName !== "Rahul" &&
-    ownerName !== "John Doe" &&
-    ownerName !== "Kitchen Owner"
+    ownerName && !isGenericFallbackName(ownerName)
       ? ownerName
-      : seller.ownerName;
+      : (!isGenericFallbackName(seller.ownerName) ? seller.ownerName : "");
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState("");

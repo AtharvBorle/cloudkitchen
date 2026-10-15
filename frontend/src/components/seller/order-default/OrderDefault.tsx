@@ -217,8 +217,8 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
               status: statusVal,
               rawStatus: s,
               customerName: target.user?.name || "Customer",
-              customerPhone: target.customerPhone || target.user?.phone || "+91 98765 43210",
-              contactNumber: target.customerPhone || target.user?.phone || "+91 98765 43210",
+              customerPhone: target.customerPhone || target.user?.phone || "",
+              contactNumber: target.customerPhone || target.user?.phone || "",
               deliveryAddress: formatOrderDeliveryAddress(target.deliveryAddress, target.room?.title),
               roomAssigned: formatOrderDeliveryAddress(target.deliveryAddress, target.room?.title),
               items: formattedItems,
@@ -560,14 +560,16 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
                     <span className={styles.metaLabel}>ROOM / ADDRESS</span>
                     <span className={styles.metaValue}>{activeOrderData.deliveryAddress}</span>
                   </div>
-                  <div className={styles.metaItem}>
-                    <span className={styles.metaLabel}>CONTACT</span>
-                    <span className={styles.metaValue}>
-                      <a href={`tel:${activeOrderData.contactNumber}`} style={{ color: "#F97316", textDecoration: "none" }}>
-                        {activeOrderData.contactNumber}
-                      </a>
-                    </span>
-                  </div>
+                  {activeOrderData.contactNumber && (
+                    <div className={styles.metaItem}>
+                      <span className={styles.metaLabel}>CONTACT</span>
+                      <span className={styles.metaValue}>
+                        <a href={`tel:${activeOrderData.contactNumber}`} style={{ color: "#F97316", textDecoration: "none" }}>
+                          {activeOrderData.contactNumber}
+                        </a>
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 

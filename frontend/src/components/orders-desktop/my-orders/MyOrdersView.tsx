@@ -392,7 +392,7 @@ function parseBookingFromDb(b: any): RoomBookingData {
     isPaid: Boolean(b.isPaid),
     paymentMethod: b.paymentMethod || "COD",
     imageUrl: imgUrl,
-    hostPhone: hostUser.phone || seller.phone || "+91 98765 43210",
+    hostPhone: hostUser.phone || seller.phone || "",
     description: room.description || "Comfortable accommodation with modern amenities.",
     createdAt: b.createdAt,
   };
@@ -2459,14 +2459,8 @@ export default function MyOrdersView() {
                 {/* Host Details Box */}
                 <div className={styles.deliveryPartnerBox}>
                   <div className={styles.partnerLeft}>
-                    <div className={styles.partnerAvatar}>
-                      <Image
-                        src="/images/delivery-partner-rohit.jpg"
-                        alt="Property Host"
-                        width={44}
-                        height={44}
-                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                      />
+                    <div className={styles.partnerAvatar} style={{ display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#FFEDD5", color: "#EA580C", fontWeight: 700, borderRadius: "50%", width: 44, height: 44 }}>
+                      {selectedBooking.hostName ? selectedBooking.hostName.trim().charAt(0).toUpperCase() : <User size={20} />}
                     </div>
                     <div className={styles.partnerInfo}>
                       <h4 className={styles.partnerName}>{selectedBooking.hostName}</h4>
@@ -2479,13 +2473,15 @@ export default function MyOrdersView() {
                   </div>
 
                   <div className={styles.partnerActions}>
-                    <a
-                      href={`tel:${selectedBooking.hostPhone}`}
-                      className={styles.partnerActionBtn}
-                      title="Call Host"
-                    >
-                      <Phone size={15} />
-                    </a>
+                    {selectedBooking.hostPhone && (
+                      <a
+                        href={`tel:${selectedBooking.hostPhone}`}
+                        className={styles.partnerActionBtn}
+                        title="Call Host"
+                      >
+                        <Phone size={15} />
+                      </a>
+                    )}
                     <button
                       type="button"
                       className={styles.partnerActionBtn}

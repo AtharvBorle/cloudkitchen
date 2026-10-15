@@ -913,19 +913,21 @@ export default function BookingCanvas({
                     >
                       {selectedBooking.guestName}
                     </h4>
-                    <span
-                      style={{
-                        fontSize: "12.5px",
-                        color: "#64748B",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "4px",
-                        marginTop: "2px",
-                      }}
-                    >
-                      <Phone size={13} />
-                      {selectedBooking.guestPhone || "+91 98765 43210"}
-                    </span>
+                    {selectedBooking.guestPhone && (
+                      <span
+                        style={{
+                          fontSize: "12.5px",
+                          color: "#64748B",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          marginTop: "2px",
+                        }}
+                      >
+                        <Phone size={13} />
+                        {selectedBooking.guestPhone}
+                      </span>
+                    )}
                   </div>
                 </div>
 

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Phone, Bed, Calendar, CheckCircle2, XCircle, Bell } from "lucide-react";
+import { ChevronLeft, Phone, Bed, Calendar, CheckCircle2, XCircle, Bell, User } from "lucide-react";
 import styles from "./ResponsiveBookingDetails.module.css";
 
 export type BookingProgressStep =
@@ -42,19 +42,19 @@ const PROGRESS_STEPS: BookingProgressStep[] = [
 export const ResponsiveBookingDetails: React.FC<
   ResponsiveBookingDetailsProps
 > = ({
-  bookingId = "B-2047",
-  guestName = "Aarav Mehta",
-  guestInitials = "AM",
-  guestPhone = "+91 98765 43210",
-  roomName = "Deluxe Suite",
-  roomCapacity = "Sleeps 4 Guests",
-  dateRange = "Aug 28 – Sep 1",
-  stayDuration = "4 Nights Stay",
-  ratePerNight = "₹2,500",
-  nightsCount = 4,
-  roomChargeTotal = "₹10,000",
-  serviceFee = "₹500",
-  totalAmount = "₹10,500",
+  bookingId = "",
+  guestName = "",
+  guestInitials = "",
+  guestPhone = "",
+  roomName = "",
+  roomCapacity = "",
+  dateRange = "",
+  stayDuration = "",
+  ratePerNight = "",
+  nightsCount = 0,
+  roomChargeTotal = "",
+  serviceFee = "",
+  totalAmount = "",
   initialStatus = "Requested",
   onBack,
   onConfirm,
@@ -146,27 +146,29 @@ export const ResponsiveBookingDetails: React.FC<
           {/* 1. Guest Information Card */}
           <section className={`${styles.card} ${styles.guestCard}`}>
             <div className={styles.guestLeft}>
-              <div className={styles.avatarCircle}>{guestInitials}</div>
+              <div className={styles.avatarCircle}>{guestInitials || <User size={18} />}</div>
               <div className={styles.guestInfo}>
-                <h2 className={styles.guestName}>{guestName}</h2>
-                <p className={styles.guestPhone}>{guestPhone}</p>
+                <h2 className={styles.guestName}>{guestName || "Guest"}</h2>
+                {guestPhone ? <p className={styles.guestPhone}>{guestPhone}</p> : null}
               </div>
             </div>
 
-            <a
-              href={`tel:${guestPhone}`}
-              className={styles.callButton}
-              onClick={(e) => {
-                if (onCallGuest) {
-                  e.preventDefault();
-                  onCallGuest();
-                }
-              }}
-              aria-label={`Call ${guestName}`}
-              title="Call Guest"
-            >
-              <Phone size={18} />
-            </a>
+            {guestPhone && (
+              <a
+                href={`tel:${guestPhone}`}
+                className={styles.callButton}
+                onClick={(e) => {
+                  if (onCallGuest) {
+                    e.preventDefault();
+                    onCallGuest();
+                  }
+                }}
+                aria-label={`Call ${guestName || "Guest"}`}
+                title="Call Guest"
+              >
+                <Phone size={18} />
+              </a>
+            )}
           </section>
 
           {/* 2. Room Information Card */}
