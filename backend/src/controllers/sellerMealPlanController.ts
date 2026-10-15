@@ -139,6 +139,11 @@ export const getSellerMealPlans = async () => {
             sub.isPaused = false;
             sub.status = "ACTIVE";
         }
+        // Check if subscription expired naturally
+        if (sub.endDate && new Date(sub.endDate) < now) {
+            sub.isPaused = false;
+            sub.status = "EXPIRED";
+        }
 
         const resolvedPrice = Number(sub.pricePaid) > 0 ? Number(sub.pricePaid) : getPlanBasePrice(planObj || sub.plan);
 

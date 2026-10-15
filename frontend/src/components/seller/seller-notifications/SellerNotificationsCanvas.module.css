@@ -296,14 +296,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
+  gap: 16px;
 }
 
 .titleArea {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex: 1;
+  min-width: 0;
 }
 
 .cardTitle {
@@ -311,6 +312,9 @@
   font-weight: 700;
   color: #0F172A;
   margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .unreadDot {
@@ -324,22 +328,33 @@
 .metaArea {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .timeAgo {
   font-size: 12px;
   color: #94A3B8;
   white-space: nowrap;
+  text-align: right;
 }
 
 .severityBadge {
   font-size: 11px;
   font-weight: 700;
-  padding: 2px 8px;
+  padding: 3px 10px;
   border-radius: 6px;
   text-transform: uppercase;
   letter-spacing: 0.3px;
+  min-width: 92px;
+  width: 92px;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }
 
 .severityCritical {

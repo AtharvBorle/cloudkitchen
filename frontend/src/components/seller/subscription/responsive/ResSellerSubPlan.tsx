@@ -364,14 +364,14 @@ export const ResSellerSubPlan: React.FC<ResSellerSubPlanProps> = ({
             <div className={styles.featuresList}>
               {features.length === 0 ? (
                 <div className={styles.emptyState}>
-                  <span>No features added yet.</span>
+                  <span>No items added yet.</span>
                   <button
                     type="button"
                     className={styles.addFeatureBtn}
                     onClick={handleAddFeature}
                     style={{ marginTop: "4px" }}
                   >
-                    + Add First Feature
+                    + Add Meal Item
                   </button>
                 </div>
               ) : (

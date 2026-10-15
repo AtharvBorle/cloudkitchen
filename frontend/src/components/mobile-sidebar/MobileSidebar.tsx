@@ -25,7 +25,6 @@ import {
   BedDouble,
   Check,
   Calendar,
-  Bell,
   CreditCard,
   MapPin,
   History,
@@ -241,11 +240,6 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
           icon: <Calendar className={styles.subnavIcon} size={15} />,
         },
         {
-          label: "Notifications",
-          href: "/notifications-desktop",
-          icon: <Bell className={styles.subnavIcon} size={15} />,
-        },
-        {
           label: "Delivery Addresses",
           href: "/delivery-addresses-desktop",
           icon: <MapPin className={styles.subnavIcon} size={15} />,
@@ -342,9 +336,6 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
     }
     if (sub.href === "/my-subscriptions-desktop") {
       return pathname === "/my-subscriptions-desktop" || pathname === "/my-subscription";
-    }
-    if (sub.href === "/notifications-desktop") {
-      return pathname === "/notifications-desktop" || pathname === "/notifications";
     }
     if (sub.href === "/support") {
       return pathname === "/support" || pathname?.startsWith("/support/");
@@ -596,7 +587,7 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
 
           <div className={styles.footerBrandRow}>
             <span className={styles.versionText}>v2.4.1 (124040)</span>
-            <span className={styles.footerBrandText}>CLOUD KITCHEN</span>
+            <span className={styles.footerBrandText}>NEO CLOUD BITES</span>
           </div>
         </div>
       </aside>

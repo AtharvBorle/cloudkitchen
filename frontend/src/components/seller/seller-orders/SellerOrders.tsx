@@ -211,6 +211,7 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
   onNotificationClick,
 }) => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const seller = useSellerProfile();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<OrderStatusFilter>("All");
@@ -275,17 +276,105 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
   const partnerRole = initialPartnerRole || seller.partnerRole;
   const avatarInitials = initialAvatarInitials || seller.avatarInitials;
 
-  // Section toggle: Regular Food Orders vs Subscribers Meal
-  const [activeSection, setActiveSection] = useState<"orders" | "subscribers">("orders");
+  // Section toggle: Regular Food Orders vs Subscribers Meal (persisted across refresh via URL & sessionStorage)
+  const sectionParam = searchParams?.get("section")?.toLowerCase();
+  const initialSection: "orders" | "subscribers" =
+    sectionParam === "subscribers" || sectionParam === "subscriber-meal"
+      ? "subscribers"
+      : "orders";
+
+  const [activeSection, setActiveSection] = useState<"orders" | "subscribers">(initialSection);
 
   // Subscribers State
   const [subscribers, setSubscribers] = useState<MealSubscriber[]>([]);
   const [loadingSubs, setLoadingSubs] = useState(false);
-  const [subscribersTab, setSubscribersTab] = useState<"today" | "paused" | "all">("today");
+
+  const tabParam = searchParams?.get("subTab")?.toLowerCase();
+  const initialSubTab: "today" | "paused" | "all" =
+    tabParam === "paused" || tabParam === "all" ? (tabParam as "paused" | "all") : "today";
+
+  const [subscribersTab, setSubscribersTab] = useState<"today" | "paused" | "all">(initialSubTab);
   const [subSearchQuery, setSubSearchQuery] = useState("");
   const [subTierFilter, setSubTierFilter] = useState("ALL");
   const [subDeliveryFilter, setSubDeliveryFilter] = useState<"ALL" | "DELIVERED" | "PENDING">("ALL");
   const [subMealSlotFilter, setSubMealSlotFilter] = useState<string>("ALL");
+
+  // Keep navigation section and sub-tab persistent across page reloads
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const currentSectionParam = searchParams?.get("section")?.toLowerCase();
+    const currentSubTabParam = searchParams?.get("subTab")?.toLowerCase();
+
+    if (currentSectionParam === "subscribers" || currentSectionParam === "subscriber-meal") {
+      setActiveSection("subscribers");
+      sessionStorage.setItem("neo_seller_orders_active_section", "subscribers");
+    } else if (currentSectionParam === "orders") {
+      setActiveSection("orders");
+      sessionStorage.setItem("neo_seller_orders_active_section", "orders");
+    } else {
+      const savedSection = sessionStorage.getItem("neo_seller_orders_active_section");
+      if (savedSection === "subscribers") {
+        setActiveSection("subscribers");
+        const url = new URL(window.location.href);
+        url.searchParams.set("section", "subscribers");
+        window.history.replaceState(null, "", url.toString());
+      }
+    }
+
+    if (currentSubTabParam === "today" || currentSubTabParam === "paused" || currentSubTabParam === "all") {
+      setSubscribersTab(currentSubTabParam as "today" | "paused" | "all");
+      sessionStorage.setItem("neo_seller_orders_subscribers_tab", currentSubTabParam);
+    } else {
+      const savedTab = sessionStorage.getItem("neo_seller_orders_subscribers_tab");
+      if (savedTab === "today" || savedTab === "paused" || savedTab === "all") {
+        setSubscribersTab(savedTab as "today" | "paused" | "all");
+      }
+    }
+  }, [searchParams]);
+
+  // Update dynamic document title based on current active section
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.title =
+        activeSection === "subscribers"
+          ? "Subscribers Meal Delivery | Neo Cloud Kitchen"
+          : "Food & Service Orders | Neo Cloud Kitchen";
+    }
+  }, [activeSection]);
+
+  const handleSectionChange = useCallback((section: "orders" | "subscribers") => {
+    setActiveSection(section);
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.setItem("neo_seller_orders_active_section", section);
+        const url = new URL(window.location.href);
+        if (section === "subscribers") {
+          url.searchParams.set("section", "subscribers");
+        } else {
+          url.searchParams.delete("section");
+          url.searchParams.delete("subTab");
+        }
+        window.history.replaceState(null, "", url.toString());
+      } catch (e) {
+        console.error("Failed to update section in storage/URL:", e);
+      }
+    }
+  }, []);
+
+  const handleSubscribersTabChange = useCallback((tab: "today" | "paused" | "all") => {
+    setSubscribersTab(tab);
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.setItem("neo_seller_orders_subscribers_tab", tab);
+        const url = new URL(window.location.href);
+        url.searchParams.set("subTab", tab);
+        window.history.replaceState(null, "", url.toString());
+      } catch (e) {
+        console.error("Failed to update subTab in storage/URL:", e);
+      }
+    }
+  }, []);
 
   const todayDateStr = useMemo(() => new Date().toISOString().split("T")[0], []);
 
@@ -965,7 +1054,7 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
               <button
                 type="button"
                 className={`${styles.sectionSwitchBtn} ${activeSection === "orders" ? styles.sectionSwitchBtnActive : ""}`}
-                onClick={() => setActiveSection("orders")}
+                onClick={() => handleSectionChange("orders")}
               >
                 <Bike size={16} />
                 <span>Food Orders ({orderList.length})</span>
@@ -973,7 +1062,7 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
               <button
                 type="button"
                 className={`${styles.sectionSwitchBtn} ${activeSection === "subscribers" ? styles.sectionSwitchBtnActive : ""}`}
-                onClick={() => setActiveSection("subscribers")}
+                onClick={() => handleSectionChange("subscribers")}
               >
                 <Utensils size={16} />
                 <span>Subscribers Meal ({mealsToDeliverTodayCount} Today)</span>
@@ -1338,7 +1427,7 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
               <button
                 type="button"
                 className={`${styles.subTabBtn} ${subscribersTab === "today" ? styles.subTabBtnActive : ""}`}
-                onClick={() => setSubscribersTab("today")}
+                onClick={() => handleSubscribersTabChange("today")}
               >
                 <Utensils size={15} />
                 <span>Today&apos;s Meal Deliveries</span>
@@ -1356,7 +1445,7 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
               <button
                 type="button"
                 className={`${styles.subTabBtn} ${subscribersTab === "paused" ? styles.subTabBtnActive : ""}`}
-                onClick={() => setSubscribersTab("paused")}
+                onClick={() => handleSubscribersTabChange("paused")}
               >
                 <PauseCircle size={15} />
                 <span>Paused Subscribers Window</span>
@@ -1374,7 +1463,7 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
               <button
                 type="button"
                 className={`${styles.subTabBtn} ${subscribersTab === "all" ? styles.subTabBtnActive : ""}`}
-                onClick={() => setSubscribersTab("all")}
+                onClick={() => handleSubscribersTabChange("all")}
               >
                 <ShieldCheck size={15} />
                 <span>All Subscribers</span>

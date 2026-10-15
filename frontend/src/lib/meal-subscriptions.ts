@@ -646,7 +646,9 @@ export interface UserActiveMealSubscription {
   userId: string;
   sellerId: string;
   planId: string;
-  status: "ACTIVE" | "PAUSED" | "CANCELLED" | "EXPIRED" | string;
+  status: "ACTIVE" | "PAUSED" | "CANCELLED" | "EXPIRED" | "INACTIVE" | string;
+  isPlanDeactivated?: boolean;
+  isExpired?: boolean;
   tier: string;
   cycle: "WEEKLY" | "MONTHLY" | string;
   pricePaid: number;

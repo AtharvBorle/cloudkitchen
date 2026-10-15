@@ -74,6 +74,19 @@ export const getUserMealSubscriptions = async () => {
             sub.pauseEndDate = null;
             sub.pauseHistory = JSON.stringify(history);
         }
+
+        // 2. Auto-expire user subscriptions whose duration / validity (endDate) has passed
+        if (sub.status !== "CANCELLED" && sub.status !== "EXPIRED" && sub.endDate && new Date(sub.endDate) < now) {
+            await db.userMealSubscription.update({
+                where: { id: sub.id },
+                data: {
+                    status: "EXPIRED",
+                    isPaused: false,
+                }
+            }).catch(() => {});
+            sub.status = "EXPIRED";
+            sub.isPaused = false;
+        }
     }
 
     return subscriptions.map((sub) => {
@@ -118,16 +131,26 @@ export const getUserMealSubscriptions = async () => {
             : normalizeMealSlotIds(mealTimings);
         const planSlotDetails = planSlotIds.map((id) => getMealSlotDetails(id));
 
+        const isPlanDeactivated = sub.plan?.status === "Inactive";
+        const isExpired = sub.status === "EXPIRED" || Boolean(sub.endDate && new Date(sub.endDate) < now);
+        const effectiveStatus = isExpired
+            ? "EXPIRED"
+            : isPlanDeactivated && sub.status === "ACTIVE"
+            ? "INACTIVE"
+            : sub.status;
+
         return {
             id: sub.id,
             userId: sub.userId,
             sellerId: sub.sellerId,
             planId: sub.planId,
-            status: sub.status,
+            status: effectiveStatus,
+            isExpired,
+            isPlanDeactivated: Boolean(isPlanDeactivated),
             tier: sub.tier,
             cycle: sub.cycle,
             pricePaid: sub.pricePaid,
-            isPaused: sub.isPaused,
+            isPaused: isPlanDeactivated || isExpired ? false : sub.isPaused,
             pausedAt: sub.pausedAt ? sub.pausedAt.toISOString() : null,
             pauseEndDate: sub.pauseEndDate ? sub.pauseEndDate.toISOString() : null,
             usedPauseDays: sub.usedPauseDays || 0,

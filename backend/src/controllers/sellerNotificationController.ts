@@ -14,7 +14,7 @@ export type NotificationCategory =
     | "settlements"
     | "system";
 
-export type NotificationSeverity = "critical" | "warning" | "info" | "success";
+export type NotificationSeverity = "critical" | "warning" | "info" | "success" | "cancelled";
 
 export interface SellerNotification {
     id: string;
@@ -149,7 +149,7 @@ export const getSellerNotifications = async (req: Request) => {
                 timestamp: ord.updatedAt.toISOString(),
                 timeAgo: calculateTimeAgo(ord.updatedAt),
                 isRead: true,
-                severity: "critical",
+                severity: "cancelled",
                 actionLabel: "View Order",
                 actionHref: `/seller/orders/details?orderId=${encodeURIComponent(ord.id)}`,
                 metadata: { orderId: ord.id }
@@ -329,7 +329,7 @@ export const getSellerNotifications = async (req: Request) => {
             timestamp: bk.createdAt.toISOString(),
             timeAgo: calculateTimeAgo(bk.createdAt),
             isRead: !isRecent,
-            severity: bk.status === "CONFIRMED" || bk.status === "PAID" ? "success" : bk.status === "CANCELLED" ? "critical" : "info",
+            severity: bk.status === "CONFIRMED" || bk.status === "PAID" ? "success" : bk.status === "CANCELLED" ? "cancelled" : "info",
             actionLabel: "View Bookings",
             actionHref: `/seller/booking`,
             metadata: { bookingId: bk.id, roomId: bk.roomId, status: bk.status }

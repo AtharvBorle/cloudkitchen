@@ -221,8 +221,11 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
             }
 
             if (Array.isArray(mealPlansData) && mealPlansData.length > 0 && isMounted) {
-              setRawMealPlans(mealPlansData);
-              const formatted: PlanItem[] = mealPlansData.map((plan: any) => {
+              const activeMealPlans = mealPlansData.filter(
+                (p: any) => p.status === "Live" || (p.status !== "Inactive" && p.isActive !== false)
+              );
+              setRawMealPlans(activeMealPlans);
+              const formatted: PlanItem[] = activeMealPlans.map((plan: any) => {
                 let features: string[] = [];
                 if (Array.isArray(plan.features)) {
                   features = plan.features;

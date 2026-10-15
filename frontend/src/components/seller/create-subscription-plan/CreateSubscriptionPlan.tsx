@@ -284,14 +284,14 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
                 <div className={styles.featuresList}>
                   {features.length === 0 ? (
                     <div className={styles.emptyFeaturesState}>
-                      <span>No features added yet.</span>
+                      <span>No items added yet.</span>
                       <button
                         type="button"
                         className={styles.addBtn}
                         onClick={handleAddFeature}
                         style={{ padding: '6px 12px', border: '1px solid #FED7AA', borderRadius: '6px', backgroundColor: '#FFF7ED' }}
                       >
-                        + Add First Feature
+                        + Add Meal Item
                       </button>
                     </div>
                   ) : (

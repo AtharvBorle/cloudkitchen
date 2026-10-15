@@ -633,7 +633,7 @@ export function broadcastBookingAlert(payload: {
   const phoneText = payload.guestPhone ? ` • Phone: ${payload.guestPhone}` : "";
   const statusUpper = (payload.status || "CONFIRMED").toUpperCase();
   const severity: SellerNotificationItem["severity"] =
-    statusUpper === "CANCELLED" ? "critical" : (statusUpper === "CONFIRMED" || statusUpper === "PAID") ? "success" : "info";
+    statusUpper === "CANCELLED" ? "cancelled" : (statusUpper === "CONFIRMED" || statusUpper === "PAID") ? "success" : "info";
 
   const notifItem: SellerNotificationItem = {
     id: notifId,

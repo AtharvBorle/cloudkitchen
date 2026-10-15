@@ -33,22 +33,18 @@ export default function CategoryBar({
 
   const { isRoomEnabled } = useRoomModule();
 
-  const displayCategories = useMemo(() => {
-    const list = items || [];
-    if (isRoomEnabled) return list;
-    return list.filter((cat) => {
-      const lowerId = (cat.id || "").toLowerCase();
-      const lowerName = (cat.name || "").toLowerCase();
-      const lowerRoute = (cat.route || "").toLowerCase();
-      return (
-        lowerId !== "rooms" &&
-        lowerId !== "room" &&
-        lowerName !== "rooms" &&
-        lowerName !== "room" &&
-        !lowerRoute.includes("room")
-      );
-    });
-  }, [items, isRoomEnabled]);
+  const displayCategories = (items || []).filter((cat) => {
+    const idLower = (cat.id || "").toLowerCase().trim();
+    const nameLower = (cat.name || "").toLowerCase().trim();
+    return (
+      idLower !== "rooms" &&
+      idLower !== "room" &&
+      nameLower !== "rooms" &&
+      nameLower !== "room" &&
+      !nameLower.includes("room") &&
+      !nameLower.includes("property")
+    );
+  });
 
   const checkScrollPosition = useCallback(() => {
     if (scrollContainerRef.current) {

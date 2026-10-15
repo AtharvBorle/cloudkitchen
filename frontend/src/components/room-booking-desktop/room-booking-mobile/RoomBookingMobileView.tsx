@@ -23,6 +23,7 @@ import premiumSingleImg from "../all-available-rooms/premium-single-room.jpg";
 import logoImg from "@/components/navbar/logo-nav.png";
 import { MobileSidebar } from "@/components/mobile-sidebar";
 import { fetchApi } from "@/lib/fetch-api";
+import { useLocation } from "@/components/location-provider";
 
 const LANG_OPTIONS = [
   { id: "hi", label: "Hindi", code: "HI" },
@@ -80,6 +81,7 @@ export const RoomBookingMobileView: React.FC<RoomBookingMobileViewProps> = ({
   isLoading = false,
 }) => {
   const router = useRouter();
+  const { defaultAddress, openLocationModal } = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -260,7 +262,7 @@ export const RoomBookingMobileView: React.FC<RoomBookingMobileViewProps> = ({
             <div className={styles.logoWrapper}>
               <Image
                 src={logoImg}
-                alt="Cloud Kitchen Logo"
+                alt="Neo Cloud Bites Logo"
                 width={40}
                 height={40}
                 className={styles.logoImage}
@@ -268,9 +270,26 @@ export const RoomBookingMobileView: React.FC<RoomBookingMobileViewProps> = ({
               />
             </div>
             <div className={styles.brandInfo}>
-              <span className={styles.brandTitle}>Cloud Kitchen</span>
-              <div className={styles.locationContainer}>
-                <span>Kothrud, Pune</span>
+              <span className={styles.brandTitle}>Neo Cloud Bites</span>
+              <div
+                className={styles.locationContainer}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  openLocationModal();
+                }}
+                style={{ cursor: "pointer" }}
+                title="Choose Delivery Location"
+              >
+                <span>
+                  {defaultAddress?.locality || defaultAddress?.city
+                    ? `${defaultAddress.locality ? defaultAddress.locality + ", " : ""}${
+                        defaultAddress.city || defaultAddress.pincode
+                      }`
+                    : defaultAddress?.pincode
+                    ? `PIN: ${defaultAddress.pincode}`
+                    : "Select Location"}
+                </span>
                 <ChevronDown size={14} />
               </div>
             </div>

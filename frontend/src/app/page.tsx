@@ -220,21 +220,16 @@ export default function Home() {
     if (!homeData.categories || homeData.categories.length === 0) return [];
     return homeData.categories
       .filter((c) => {
-        if (!isRoomEnabled) {
-          const lowerId = (c.id || "").toLowerCase();
-          const lowerName = (c.name || "").toLowerCase();
-          const lowerRoute = (c.route || "").toLowerCase();
-          if (
-            lowerId === "rooms" ||
-            lowerId === "room" ||
-            lowerName === "rooms" ||
-            lowerName === "room" ||
-            lowerRoute.includes("room")
-          ) {
-            return false;
-          }
-        }
-        return true;
+        const idLower = (c.id || "").toLowerCase().trim();
+        const nameLower = (c.name || "").toLowerCase().trim();
+        return (
+          idLower !== "rooms" &&
+          idLower !== "room" &&
+          nameLower !== "rooms" &&
+          nameLower !== "room" &&
+          !nameLower.includes("room") &&
+          !nameLower.includes("property")
+        );
       })
       .map((c) => ({
         id: c.id,
@@ -243,7 +238,7 @@ export default function Home() {
         emoji: c.emoji || "🍽️",
         route: c.route,
       }));
-  }, [homeData.categories, isRoomEnabled]);
+  }, [homeData.categories]);
 
   // Extract available cuisines from DB categories & items
   const availableCuisines = useMemo(() => {

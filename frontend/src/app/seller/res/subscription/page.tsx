@@ -22,13 +22,11 @@ export default function ResponsiveSellerSubscriptionPage() {
           : "orange";
 
       const statusLower = (p.status || "").trim().toLowerCase();
-      const status: "Draft" | "Paused" | "Active" | "Expired" =
+      const status: "Draft" | "Active" | "Inactive" =
         statusLower === "live" || statusLower === "active"
           ? "Active"
-          : statusLower === "paused"
-          ? "Paused"
-          : statusLower === "expired" || statusLower === "inactive"
-          ? "Expired"
+          : statusLower === "inactive" || statusLower === "expired" || statusLower === "draft"
+          ? "Inactive"
           : "Draft";
 
       const tierFormatted =

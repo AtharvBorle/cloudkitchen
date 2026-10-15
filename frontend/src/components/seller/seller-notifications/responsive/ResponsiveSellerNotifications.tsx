@@ -282,6 +282,7 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
   const getSeverityStyle = (severity: string) => {
     switch (severity) {
       case "critical":
+      case "cancelled":
         return styles.severityCritical;
       case "warning":
         return styles.severityWarning;
@@ -292,6 +293,13 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
       default:
         return styles.severityInfo;
     }
+  };
+
+  const isCancelledNotification = (item: SellerNotificationItem) => {
+    const s = String(item.severity || "").toLowerCase().trim();
+    const t = String(item.title || "").toLowerCase();
+    const m = String(item.message || "").toLowerCase();
+    return s === "cancelled" || t.includes("order cancelled") || m.includes("was cancelled");
   };
 
   const getCountForTab = (tabId: TabFilter) => {
@@ -577,10 +585,10 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
                     <div className={styles.cardTopMeta}>
                       <span
                         className={`${styles.severityTag} ${getSeverityStyle(
-                          notif.severity
+                          isCancelledNotification(notif) ? "cancelled" : notif.severity
                         )}`}
                       >
-                        {notif.severity}
+                        {isCancelledNotification(notif) ? "cancelled" : notif.severity}
                       </span>
                       <span
                         className={styles.timeAgo}

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Zap,
   Star,
@@ -71,45 +72,99 @@ export default function FilterRow({
 }: FilterRowProps) {
   const [internalFilters, setInternalFilters] = useState<ActiveHomeFilters>(activeFilters);
   const [openPopover, setOpenPopover] = useState<"dietary" | "price" | "cuisines" | null>(null);
+  const [popoverPos, setPopoverPos] = useState<{ top: number; left: number } | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   const dietaryRef = useRef<HTMLDivElement>(null);
   const priceRef = useRef<HTMLDivElement>(null);
   const cuisinesRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Sync internal state with prop changes
   useEffect(() => {
     setInternalFilters(activeFilters);
   }, [activeFilters]);
 
-  // Click outside listener to close popovers
+  const updatePosition = (popoverType?: "dietary" | "price" | "cuisines" | null) => {
+    const activeType = popoverType !== undefined ? popoverType : openPopover;
+    if (!activeType) {
+      setPopoverPos(null);
+      return;
+    }
+    const triggerEl =
+      activeType === "dietary"
+        ? dietaryRef.current
+        : activeType === "price"
+        ? priceRef.current
+        : cuisinesRef.current;
+
+    if (!triggerEl) return;
+    const rect = triggerEl.getBoundingClientRect();
+    if (rect.bottom < 40 || rect.top > window.innerHeight) {
+      setOpenPopover(null);
+      return;
+    }
+
+    const menuWidth = activeType === "cuisines" ? 240 : 185;
+    const padding = 12;
+    let left = rect.left;
+    if (left + menuWidth > window.innerWidth - padding) {
+      left = Math.max(padding, window.innerWidth - menuWidth - padding);
+    }
+    if (left < padding) {
+      left = padding;
+    }
+
+    setPopoverPos({
+      top: rect.bottom + 8,
+      left,
+    });
+  };
+
+  // Click / touch outside and scroll/resize listener to reposition or close popovers
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    if (!openPopover) {
+      setPopoverPos(null);
+      return;
+    }
+
+    updatePosition(openPopover);
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
       const target = event.target as Node;
-      if (
-        openPopover === "dietary" &&
-        dietaryRef.current &&
-        !dietaryRef.current.contains(target)
-      ) {
-        setOpenPopover(null);
+      if (!target) return;
+      if (menuRef.current && menuRef.current.contains(target)) {
+        return;
       }
       if (
-        openPopover === "price" &&
-        priceRef.current &&
-        !priceRef.current.contains(target)
+        (dietaryRef.current && dietaryRef.current.contains(target)) ||
+        (priceRef.current && priceRef.current.contains(target)) ||
+        (cuisinesRef.current && cuisinesRef.current.contains(target))
       ) {
-        setOpenPopover(null);
+        return;
       }
-      if (
-        openPopover === "cuisines" &&
-        cuisinesRef.current &&
-        !cuisinesRef.current.contains(target)
-      ) {
-        setOpenPopover(null);
-      }
+      setOpenPopover(null);
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    const handleScrollOrResize = () => {
+      updatePosition(openPopover);
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown, { passive: true });
+    window.addEventListener("resize", handleScrollOrResize);
+    window.addEventListener("scroll", handleScrollOrResize, true);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+      window.removeEventListener("resize", handleScrollOrResize);
+      window.removeEventListener("scroll", handleScrollOrResize, true);
+    };
   }, [openPopover]);
 
   const updateFilters = (updated: Partial<ActiveHomeFilters>) => {
@@ -395,7 +450,11 @@ export default function FilterRow({
         <div ref={dietaryRef} style={{ position: "relative", flexShrink: 0, zIndex: openPopover === "dietary" ? 100 : 1 }}>
           <button
             type="button"
-            onClick={() => setOpenPopover(openPopover === "dietary" ? null : "dietary")}
+            onClick={() => {
+              const next = openPopover === "dietary" ? null : "dietary";
+              setOpenPopover(next);
+              if (next) updatePosition("dietary");
+            }}
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -458,97 +517,17 @@ export default function FilterRow({
               />
             </span>
           </button>
-
-          {openPopover === "dietary" && (
-            <div
-              className="filter-popover-menu"
-              style={{
-                position: "absolute",
-                top: "calc(100% + 8px)",
-                left: 0,
-                backgroundColor: "#FFFFFF",
-                borderRadius: "16px",
-                padding: "8px",
-                boxShadow: "0 16px 36px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.08)",
-                border: "1px solid #E2E8F0",
-                zIndex: 9999,
-                minWidth: "185px",
-                maxWidth: "calc(100vw - 32px)",
-                boxSizing: "border-box",
-                display: "flex",
-                flexDirection: "column",
-                gap: "4px",
-              }}
-            >
-              {[
-                { id: "all", label: "All Kitchens", count: counts?.all },
-                { id: "pure_veg", label: "Pure Veg 🥦", count: counts?.pure_veg },
-                { id: "non_veg", label: "Non-Veg 🍗", count: counts?.non_veg },
-                { id: "vegan", label: "Vegan 🌱", count: counts?.vegan },
-                { id: "jain", label: "Jain 🌾", count: counts?.jain },
-              ].map((opt) => {
-                const isSelected =
-                  opt.id === "all"
-                    ? !internalFilters.dietary || internalFilters.dietary === "all"
-                    : opt.id === "non_veg" || opt.id === "non-veg"
-                    ? internalFilters.dietary === "non_veg" || (internalFilters.dietary as string) === "non-veg"
-                    : internalFilters.dietary === opt.id;
-                const isItemNonVeg = opt.id === "non_veg" || opt.id === "non-veg";
-                const activeBg = isItemNonVeg ? "#FEF2F2" : "#ECFDF5";
-                const activeColor = isItemNonVeg ? "#DC2626" : "#047857";
-
-                return (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => {
-                      const nextVal = isSelected ? (opt.id === "all" ? "all" : "all") : (opt.id as any);
-                      handleSelectDietary(nextVal);
-                    }}
-                    className={`filter-popover-item ${isItemNonVeg ? "item-nonveg" : ""} ${isSelected ? "is-selected" : ""}`}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: "8px 12px",
-                      borderRadius: "10px",
-                      border: "none",
-                      backgroundColor: isSelected ? activeBg : "transparent",
-                      color: isSelected ? activeColor : "#334155",
-                      fontWeight: isSelected ? "700" : "500",
-                      fontSize: "13.5px",
-                      cursor: "pointer",
-                      textAlign: "left",
-                      gap: "8px",
-                    }}
-                  >
-                    <span>{opt.label}</span>
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      {opt.count !== undefined && (
-                        <span
-                          style={{
-                            fontSize: "11px",
-                            fontWeight: "600",
-                            color: isSelected ? activeColor : "#94A3B8",
-                          }}
-                        >
-                          ({opt.count})
-                        </span>
-                      )}
-                      {isSelected && <Check size={14} color={activeColor} />}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
         </div>
 
         {/* 5. Price Range Popover */}
         <div ref={priceRef} style={{ position: "relative", flexShrink: 0, zIndex: openPopover === "price" ? 100 : 1 }}>
           <button
             type="button"
-            onClick={() => setOpenPopover(openPopover === "price" ? null : "price")}
+            onClick={() => {
+              const next = openPopover === "price" ? null : "price";
+              setOpenPopover(next);
+              if (next) updatePosition("price");
+            }}
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -581,81 +560,17 @@ export default function FilterRow({
               <ChevronDown size={13} color={isPriceActive ? "#FF6B00" : "#94A3B8"} />
             </span>
           </button>
-
-          {openPopover === "price" && (
-            <div
-              className="filter-popover-menu"
-              style={{
-                position: "absolute",
-                top: "calc(100% + 8px)",
-                left: 0,
-                backgroundColor: "#FFFFFF",
-                borderRadius: "16px",
-                padding: "8px",
-                boxShadow: "0 16px 36px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.08)",
-                border: "1px solid #E2E8F0",
-                zIndex: 9999,
-                minWidth: "180px",
-                maxWidth: "calc(100vw - 32px)",
-                boxSizing: "border-box",
-                display: "flex",
-                flexDirection: "column",
-                gap: "4px",
-              }}
-            >
-              {[
-                { id: "all", label: "Any Price", count: counts?.all },
-                { id: "under-150", label: "Under ₹150", count: counts?.under150 },
-                { id: "150-300", label: "₹150 – ₹300", count: counts?.price150to300 },
-                { id: "300-plus", label: "₹300+", count: counts?.price300plus },
-              ].map((opt) => {
-                const isSelected =
-                  (internalFilters.priceTier || "all") === opt.id ||
-                  (!internalFilters.priceTier && opt.id === "all");
-                return (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => handleSelectPrice(opt.id as any)}
-                    className={`filter-popover-item ${isSelected ? "is-selected" : ""}`}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: "8px 12px",
-                      borderRadius: "10px",
-                      border: "none",
-                      backgroundColor: isSelected ? "#FFF3EB" : "transparent",
-                      color: isSelected ? "#FF6B00" : "#334155",
-                      fontWeight: isSelected ? "700" : "500",
-                      fontSize: "13.5px",
-                      cursor: "pointer",
-                      textAlign: "left",
-                      gap: "12px",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    <span style={{ whiteSpace: "nowrap" }}>{opt.label}</span>
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
-                      {opt.count !== undefined && (
-                        <span style={{ fontSize: "11px", fontWeight: "600", color: isSelected ? "#FF6B00" : "#94A3B8" }}>
-                          ({opt.count})
-                        </span>
-                      )}
-                      {isSelected && <Check size={14} color="#FF6B00" />}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
         </div>
 
         {/* 6. Dynamic Cuisines Popover */}
         <div ref={cuisinesRef} style={{ position: "relative", flexShrink: 0, zIndex: openPopover === "cuisines" ? 100 : 1 }}>
           <button
             type="button"
-            onClick={() => setOpenPopover(openPopover === "cuisines" ? null : "cuisines")}
+            onClick={() => {
+              const next = openPopover === "cuisines" ? null : "cuisines";
+              setOpenPopover(next);
+              if (next) updatePosition("cuisines");
+            }}
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -687,82 +602,206 @@ export default function FilterRow({
               <ChevronDown size={13} color={isCuisinesActive ? "#FF6B00" : "#94A3B8"} />
             </span>
           </button>
-
-          {openPopover === "cuisines" && (
-            <div
-              className="filter-popover-menu"
-              style={{
-                position: "absolute",
-                top: "calc(100% + 8px)",
-                left: 0,
-                backgroundColor: "#FFFFFF",
-                borderRadius: "16px",
-                padding: "10px",
-                boxShadow: "0 16px 36px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.08)",
-                border: "1px solid #E2E8F0",
-                zIndex: 9999,
-                minWidth: "230px",
-                maxWidth: "calc(100vw - 32px)",
-                boxSizing: "border-box",
-                maxHeight: "280px",
-                overflowY: "auto",
-                display: "flex",
-                flexDirection: "column",
-                gap: "4px",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "11.5px",
-                  fontWeight: "700",
-                  color: "#94A3B8",
-                  padding: "4px 8px",
-                  textTransform: "uppercase",
-                }}
-              >
-                Select Cuisines
-              </div>
-              {displayCuisinesList.map((c) => {
-                const isSelected = (internalFilters.cuisines || []).includes(c);
-                const cCount = counts?.cuisineCounts ? counts.cuisineCounts[c] : undefined;
-                return (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => handleToggleCuisine(c)}
-                    className={`filter-popover-item ${isSelected ? "is-selected" : ""}`}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: "8px 10px",
-                      borderRadius: "8px",
-                      border: "none",
-                      backgroundColor: isSelected ? "#FFF3EB" : "transparent",
-                      color: isSelected ? "#FF6B00" : "#334155",
-                      fontWeight: isSelected ? "700" : "500",
-                      fontSize: "13.5px",
-                      cursor: "pointer",
-                      textAlign: "left",
-                      gap: "8px",
-                    }}
-                  >
-                    <span>{c}</span>
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      {cCount !== undefined && (
-                        <span style={{ fontSize: "11px", fontWeight: "600", color: isSelected ? "#FF6B00" : "#94A3B8" }}>
-                          ({cCount})
-                        </span>
-                      )}
-                      {isSelected && <Check size={14} color="#FF6B00" />}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
         </div>
       </div>
+
+      {/* Dynamic Floating Filter Popover via Body Portal (escapes horizontal scroll clipping on mobile) */}
+      {mounted && openPopover && popoverPos && typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={menuRef}
+            className="filter-popover-portal-container"
+            style={{
+              position: "fixed",
+              top: `${popoverPos.top}px`,
+              left: `${popoverPos.left}px`,
+              backgroundColor: "#FFFFFF",
+              borderRadius: "16px",
+              padding: openPopover === "cuisines" ? "10px" : "8px",
+              boxShadow: "0 16px 36px rgba(0, 0, 0, 0.2), 0 4px 12px rgba(0, 0, 0, 0.08)",
+              border: "1px solid #E2E8F0",
+              zIndex: 99999,
+              minWidth: openPopover === "cuisines" ? "240px" : "185px",
+              maxWidth: "calc(100vw - 24px)",
+              boxSizing: "border-box",
+              maxHeight: "min(320px, calc(100vh - 120px))",
+              overflowY: "auto",
+              display: "flex",
+              flexDirection: "column",
+              gap: "4px",
+              fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+            }}
+          >
+            {openPopover === "dietary" && (
+              <>
+                {[
+                  { id: "all", label: "All Kitchens", count: counts?.all },
+                  { id: "pure_veg", label: "Pure Veg 🥦", count: counts?.pure_veg },
+                  { id: "non_veg", label: "Non-Veg 🍗", count: counts?.non_veg },
+                  { id: "vegan", label: "Vegan 🌱", count: counts?.vegan },
+                  { id: "jain", label: "Jain 🌾", count: counts?.jain },
+                ].map((opt) => {
+                  const isSelected =
+                    opt.id === "all"
+                      ? !internalFilters.dietary || internalFilters.dietary === "all"
+                      : opt.id === "non_veg" || opt.id === "non-veg"
+                      ? internalFilters.dietary === "non_veg" || (internalFilters.dietary as string) === "non-veg"
+                      : internalFilters.dietary === opt.id;
+                  const isItemNonVeg = opt.id === "non_veg" || opt.id === "non-veg";
+                  const activeBg = isItemNonVeg ? "#FEF2F2" : "#ECFDF5";
+                  const activeColor = isItemNonVeg ? "#DC2626" : "#047857";
+
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => {
+                        const nextVal = isSelected ? (opt.id === "all" ? "all" : "all") : (opt.id as any);
+                        handleSelectDietary(nextVal);
+                      }}
+                      className={`filter-popover-item filter-popover-portal-item ${isItemNonVeg ? "item-nonveg" : ""} ${isSelected ? "is-selected" : ""}`}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "8px 12px",
+                        borderRadius: "10px",
+                        border: "none",
+                        backgroundColor: isSelected ? activeBg : "transparent",
+                        color: isSelected ? activeColor : "#334155",
+                        fontWeight: isSelected ? "700" : "500",
+                        fontSize: "13.5px",
+                        cursor: "pointer",
+                        textAlign: "left",
+                        gap: "8px",
+                      }}
+                    >
+                      <span>{opt.label}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        {opt.count !== undefined && (
+                          <span
+                            style={{
+                              fontSize: "11px",
+                              fontWeight: "600",
+                              color: isSelected ? activeColor : "#94A3B8",
+                            }}
+                          >
+                            ({opt.count})
+                          </span>
+                        )}
+                        {isSelected && <Check size={14} color={activeColor} />}
+                      </div>
+                    </button>
+                  );
+                })}
+              </>
+            )}
+
+            {openPopover === "price" && (
+              <>
+                {[
+                  { id: "all", label: "Any Price", count: counts?.all },
+                  { id: "under-150", label: "Under ₹150", count: counts?.under150 },
+                  { id: "150-300", label: "₹150 – ₹300", count: counts?.price150to300 },
+                  { id: "300-plus", label: "₹300+", count: counts?.price300plus },
+                ].map((opt) => {
+                  const isSelected =
+                    (internalFilters.priceTier || "all") === opt.id ||
+                    (!internalFilters.priceTier && opt.id === "all");
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => handleSelectPrice(opt.id as any)}
+                      className={`filter-popover-item filter-popover-portal-item ${isSelected ? "is-selected" : ""}`}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "8px 12px",
+                        borderRadius: "10px",
+                        border: "none",
+                        backgroundColor: isSelected ? "#FFF3EB" : "transparent",
+                        color: isSelected ? "#FF6B00" : "#334155",
+                        fontWeight: isSelected ? "700" : "500",
+                        fontSize: "13.5px",
+                        cursor: "pointer",
+                        textAlign: "left",
+                        gap: "12px",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      <span style={{ whiteSpace: "nowrap" }}>{opt.label}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
+                        {opt.count !== undefined && (
+                          <span style={{ fontSize: "11px", fontWeight: "600", color: isSelected ? "#FF6B00" : "#94A3B8" }}>
+                            ({opt.count})
+                          </span>
+                        )}
+                        {isSelected && <Check size={14} color="#FF6B00" />}
+                      </div>
+                    </button>
+                  );
+                })}
+              </>
+            )}
+
+            {openPopover === "cuisines" && (
+              <>
+                <div
+                  style={{
+                    fontSize: "11.5px",
+                    fontWeight: "700",
+                    color: "#94A3B8",
+                    padding: "4px 8px",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Select Cuisines
+                </div>
+                {displayCuisinesList.map((c) => {
+                  const isSelected = (internalFilters.cuisines || []).includes(c);
+                  const cCount = counts?.cuisineCounts ? counts.cuisineCounts[c] : undefined;
+                  return (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => handleToggleCuisine(c)}
+                      className={`filter-popover-item filter-popover-portal-item ${isSelected ? "is-selected" : ""}`}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "8px 10px",
+                        borderRadius: "8px",
+                        border: "none",
+                        backgroundColor: isSelected ? "#FFF3EB" : "transparent",
+                        color: isSelected ? "#FF6B00" : "#334155",
+                        fontWeight: isSelected ? "700" : "500",
+                        fontSize: "13.5px",
+                        cursor: "pointer",
+                        textAlign: "left",
+                        gap: "8px",
+                      }}
+                    >
+                      <span>{c}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        {cCount !== undefined && (
+                          <span style={{ fontSize: "11px", fontWeight: "600", color: isSelected ? "#FF6B00" : "#94A3B8" }}>
+                            ({cCount})
+                          </span>
+                        )}
+                        {isSelected && <Check size={14} color="#FF6B00" />}
+                      </div>
+                    </button>
+                  );
+                })}
+              </>
+            )}
+          </div>,
+          document.body
+        )
+      }
 
       <style jsx>{`
         /* Base Filter Pill */
@@ -953,6 +992,55 @@ export default function FilterRow({
           .filter-row-container::-webkit-scrollbar {
             display: none;
           }
+        }
+      `}</style>
+      <style jsx global>{`
+        @keyframes filterPopoverSlide {
+          from {
+            opacity: 0;
+            transform: translateY(-8px) scale(0.97);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        .filter-popover-portal-container {
+          animation: filterPopoverSlide 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          transform-origin: top left;
+        }
+        .filter-popover-portal-item {
+          transition: all 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+          user-select: none;
+        }
+        .filter-popover-portal-item:not(.is-selected):not(.item-nonveg):hover {
+          background-color: #FFF3EB !important;
+          color: #FF6B00 !important;
+          transform: translateX(3px);
+          padding-left: 14px !important;
+        }
+        .filter-popover-portal-item.item-nonveg:not(.is-selected):hover {
+          background-color: #FEF2F2 !important;
+          color: #DC2626 !important;
+          transform: translateX(3px);
+          padding-left: 14px !important;
+        }
+        .filter-popover-portal-item.is-selected:not(.item-nonveg):hover {
+          filter: brightness(0.96);
+          transform: translateX(2px);
+        }
+        .filter-popover-portal-item.item-nonveg.is-selected {
+          background-color: #FEF2F2 !important;
+          color: #DC2626 !important;
+        }
+        .filter-popover-portal-item.item-nonveg.is-selected:hover {
+          background-color: #FEE2E2 !important;
+          color: #B91C1C !important;
+          transform: translateX(2px);
+        }
+        .filter-popover-portal-item:active {
+          transform: scale(0.98);
+          opacity: 0.92;
         }
       `}</style>
     </section>

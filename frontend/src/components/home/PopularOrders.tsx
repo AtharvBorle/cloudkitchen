@@ -259,6 +259,7 @@ export default function PopularOrders({
                 }}
               >
                 <div
+                  className="offer-discount-badge"
                   style={{
                     backgroundColor: isClosed ? "#E2E8F0" : "#FFFFFF",
                     color: isClosed ? "#64748B" : "#FF6B00",
@@ -277,6 +278,7 @@ export default function PopularOrders({
 
               {/* Food Image */}
               <div
+                className="offer-image-box"
                 style={{
                   width: "100%",
                   height: "125px",
@@ -335,9 +337,13 @@ export default function PopularOrders({
               </div>
 
               {/* Info: Title, Price, Kitchen, Dietary, Description & Coupon Code */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "3px", minWidth: 0, width: "100%", overflow: "hidden" }}>
+              <div
+                className="offer-info-box"
+                style={{ display: "flex", flexDirection: "column", gap: "3px", minWidth: 0, width: "100%", overflow: "hidden" }}
+              >
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
                   <h3
+                    className="offer-title"
                     style={{
                       fontSize: "1.02rem",
                       fontWeight: "800",
@@ -355,6 +361,7 @@ export default function PopularOrders({
                   </h3>
                   {offer.price !== undefined && offer.price > 0 && (
                     <span
+                      className="offer-price"
                       style={{
                         fontSize: "1.02rem",
                         fontWeight: "800",
@@ -369,6 +376,7 @@ export default function PopularOrders({
 
                 {offer.sellerName && (
                   <span
+                    className="offer-seller-name"
                     style={{
                       fontSize: "0.76rem",
                       fontWeight: "600",
@@ -396,6 +404,7 @@ export default function PopularOrders({
 
                 {offer.description && offer.description.trim() && offer.description.trim().toLowerCase() !== "xyz" && (
                   <span
+                    className="offer-description"
                     style={{
                       fontSize: "0.75rem",
                       fontWeight: "500",
@@ -413,6 +422,7 @@ export default function PopularOrders({
                 )}
 
                 <span
+                  className="offer-code"
                   style={{
                     fontSize: "0.80rem",
                     fontWeight: "700",
@@ -448,6 +458,7 @@ export default function PopularOrders({
               {isClosed ? (
                 <button
                   type="button"
+                  className="offer-action-btn"
                   style={{
                     marginTop: "auto",
                     backgroundColor: "#F1F5F9",
@@ -466,6 +477,7 @@ export default function PopularOrders({
                 </button>
               ) : currentInCart && currentInCart.quantity > 0 ? (
                 <div
+                  className="offer-action-btn offer-qty-selector"
                   style={{
                     marginTop: "auto",
                     display: "flex",
@@ -565,6 +577,7 @@ export default function PopularOrders({
               ) : (
                 <button
                   type="button"
+                  className="offer-order-btn offer-action-btn"
                   onClick={() => handleOrderNow(offer)}
                   style={{
                     marginTop: "auto",
@@ -627,6 +640,71 @@ export default function PopularOrders({
             width: 200px !important;
             min-width: 200px !important;
             scroll-snap-align: start;
+          }
+        }
+        @media (max-width: 768px) {
+          .offers-grid-layout {
+            gap: 12px !important;
+          }
+          .offer-card {
+            flex: 0 0 185px !important;
+            width: 185px !important;
+            min-width: 185px !important;
+            min-height: auto !important;
+            padding: 12px !important;
+            gap: 7px !important;
+            border-radius: 16px !important;
+          }
+          .offer-discount-badge {
+            font-size: 0.70rem !important;
+            padding: 3px 8px !important;
+          }
+          .offer-image-box {
+            height: 105px !important;
+            border-radius: 11px !important;
+          }
+          .offer-info-box {
+            gap: 2px !important;
+          }
+          .offer-title {
+            font-size: 0.92rem !important;
+          }
+          .offer-price {
+            font-size: 0.92rem !important;
+          }
+          .offer-seller-name {
+            font-size: 0.70rem !important;
+          }
+          .offer-description {
+            font-size: 0.70rem !important;
+          }
+          .offer-code {
+            font-size: 0.74rem !important;
+          }
+          .offer-action-btn {
+            height: 34px !important;
+            font-size: 0.82rem !important;
+            padding: 6px 10px !important;
+            border-radius: 10px !important;
+          }
+          .offer-qty-selector button {
+            font-size: 1.05rem !important;
+          }
+          .offer-qty-selector span {
+            font-size: 0.85rem !important;
+            padding: 0 8px !important;
+          }
+        }
+        @media (max-width: 480px) {
+          .offer-card {
+            flex: 0 0 180px !important;
+            width: 180px !important;
+            min-width: 180px !important;
+            padding: 11px !important;
+            gap: 6px !important;
+          }
+          .offer-image-box {
+            height: 100px !important;
           }
         }
       `}</style>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import ResponsiveSellerOrders, {
   ResponsiveOrderItem,
@@ -9,7 +9,7 @@ import { fetchApi } from "@/lib/fetch-api";
 import { useRealtimeStream } from "@/hooks/useRealtimeStream";
 import { playNewOrderChime } from "@/lib/audio-chime";
 
-export default function ResponsiveSellerOrdersPage() {
+function ResponsiveSellerOrdersContent() {
   const router = useRouter();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -145,6 +145,14 @@ export default function ResponsiveSellerOrdersPage() {
         router.push(`/seller/orders/details?orderId=${encodeURIComponent(order.id)}&from=orders`);
       }}
     />
+  );
+}
+
+export default function ResponsiveSellerOrdersPage() {
+  return (
+    <Suspense fallback={null}>
+      <ResponsiveSellerOrdersContent />
+    </Suspense>
   );
 }
 

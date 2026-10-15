@@ -16,7 +16,6 @@ import {
   UserCircle,
   Settings,
   Bell,
-  RefreshCw,
   ChevronRight,
   LogOut,
   Percent,
@@ -161,6 +160,10 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
           return;
         }
       }
+    }
+
+    if (item.id === "orders" && typeof window !== "undefined") {
+      sessionStorage.setItem("neo_seller_orders_active_section", "orders");
     }
 
     onClose();
@@ -413,18 +416,6 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
 
         {/* Footer */}
         <div className={styles.drawerFooter} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          <button
-            type="button"
-            className={styles.syncButton}
-            onClick={() => {
-              if (onSyncDevices) onSyncDevices();
-              onClose();
-            }}
-          >
-            <RefreshCw size={14} />
-            <span>Sync Live Orders</span>
-          </button>
-
           <button
             type="button"
             onClick={() => {
