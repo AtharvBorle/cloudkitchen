@@ -2,9 +2,10 @@
   width: 100%;
   background-color: #ffffff;
   border-bottom: 1px solid #e5e7eb;
+  position: -webkit-sticky;
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 1000;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
 }
 

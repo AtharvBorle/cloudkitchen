@@ -147,7 +147,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [internalActiveItem, setInternalActiveItem] = useState<string>(initialActiveItem);
-  const [internalVegOnly, setInternalVegOnly] = useState<boolean>(false);
+  const [internalVegOnly, setInternalVegOnly] = useState<boolean>(true);
 
   // Sync veg & diet filter preference with localStorage and across tabs/components
   useEffect(() => {
@@ -156,11 +156,15 @@ export const Navbar: React.FC<NavbarProps> = ({
         const storedVeg = localStorage.getItem("cloudkitchen_veg_preference");
         if (storedVeg !== null) {
           setInternalVegOnly(storedVeg === "true");
+        } else {
+          setInternalVegOnly(true);
         }
         if (controlledDiet === undefined) {
           const storedDiet = localStorage.getItem("cloudkitchen_diet_preference");
           if (storedDiet) {
             setSelectedDiet(storedDiet);
+          } else {
+            setSelectedDiet("veg");
           }
         }
       } catch {}
@@ -210,7 +214,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, [controlledDiet]);
 
   const [selectedDiet, setSelectedDiet] = useState<string>(
-    controlledDiet !== undefined ? controlledDiet : "all"
+    controlledDiet !== undefined ? controlledDiet : "veg"
   );
   const [isDietDropdownOpen, setIsDietDropdownOpen] = useState<boolean>(false);
   const [selectedLang, setSelectedLang] = useState<string>("en");
@@ -623,7 +627,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const getDietPillLabel = () => {
     const found = DIET_OPTIONS.find((d) => d.id === selectedDiet);
-    return found ? found.label : "All";
+    return found ? found.label : "Veg";
   };
 
   const getDietPillDotColor = () => {
