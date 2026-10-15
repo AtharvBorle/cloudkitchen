@@ -338,7 +338,11 @@ export const getUserNotifications = async (req: Request) => {
             },
             include: {
                 slot: { select: { name: true, defaultTimeRange: true } },
-                seller: { select: { businessName: true } },
+                subscription: {
+                    select: {
+                        seller: { select: { businessName: true } },
+                    },
+                },
             },
             orderBy: { scheduledDate: "desc" },
             take: 10,
@@ -358,7 +362,7 @@ export const getUserNotifications = async (req: Request) => {
 
             if (del.status === "DELIVERED") {
                 title = `${slotName} Delivered!`;
-                message = `Your ${slotName} meal delivery from ${del.seller?.businessName || "Kitchen"} was marked delivered.`;
+                message = `Your ${slotName} meal delivery from ${del.subscription?.seller?.businessName || "Kitchen"} was marked delivered.`;
                 severity = "success";
             } else if (del.status === "SKIPPED_PAUSED") {
                 title = `${slotName} Skipped (Paused)`;
