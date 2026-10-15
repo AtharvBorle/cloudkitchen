@@ -2,10 +2,10 @@
 
 import React, { useState } from "react";
 import { useRoomModule } from "@/context/RoomModuleContext";
-import { ShieldCheck, Sparkles, BedDouble, Utensils, CheckCircle2, AlertCircle } from "lucide-react";
+import { ShieldCheck, Sparkles, BedDouble, Utensils, CheckCircle2, AlertCircle, MessageSquare } from "lucide-react";
 
 export default function SuperadminSettingsPage() {
-  const { isRoomEnabled, setRoomEnabled, isLoading } = useRoomModule();
+  const { isRoomEnabled, setRoomEnabled, isChatbotEnabled, setChatbotEnabled, isLoading } = useRoomModule();
   const [successToast, setSuccessToast] = useState<string | null>(null);
 
   const handleToggle = async (nextState: boolean) => {
@@ -15,6 +15,18 @@ export default function SuperadminSettingsPage() {
         nextState
           ? "Room Module enabled successfully! Room features are now active across the platform."
           : "Room Module disabled! All room-related features are hidden across User, Seller, and Admin views."
+      );
+      setTimeout(() => setSuccessToast(null), 4000);
+    }
+  };
+
+  const handleToggleChatbot = async (nextState: boolean) => {
+    const ok = await setChatbotEnabled(nextState);
+    if (ok) {
+      setSuccessToast(
+        nextState
+          ? "Bitey AI Chatbot enabled! The virtual assistant is now active and visible across the platform."
+          : "Bitey AI Chatbot disabled! The virtual assistant is now completely hidden platform-wide."
       );
       setTimeout(() => setSuccessToast(null), 4000);
     }
@@ -153,6 +165,110 @@ export default function SuperadminSettingsPage() {
             </button>
             <span style={{ fontSize: "0.78rem", fontWeight: "700", color: isRoomEnabled ? "#16A34A" : "#64748B" }}>
               {isRoomEnabled ? "ENABLED" : "DISABLED"}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Feature Flag Card: Bitey AI Chatbot */}
+      <div style={{
+        backgroundColor: "#FFFFFF",
+        border: "1.5px solid var(--border)",
+        borderRadius: "14px",
+        padding: "24px 28px",
+        boxShadow: "0 4px 15px rgba(0,0,0,0.03)",
+        marginBottom: "28px"
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "20px" }}>
+          <div style={{ flex: 1, minWidth: "280px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+              <div style={{
+                width: "40px",
+                height: "40px",
+                borderRadius: "10px",
+                backgroundColor: isChatbotEnabled ? "#F0FDF4" : "#F1F5F9",
+                color: isChatbotEnabled ? "#16A34A" : "#64748B",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center"
+              }}>
+                <MessageSquare size={22} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: "1.2rem", fontWeight: "700", margin: 0, color: "var(--text-main)" }}>
+                  Bitey Virtual AI Assistant (Chatbot)
+                </h3>
+                <span style={{
+                  fontSize: "0.72rem",
+                  fontWeight: "800",
+                  padding: "2px 8px",
+                  borderRadius: "9999px",
+                  backgroundColor: isChatbotEnabled ? "#DCFCE7" : "#F1F5F9",
+                  color: isChatbotEnabled ? "#15803D" : "#64748B",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px"
+                }}>
+                  {isChatbotEnabled ? "Currently Enabled (Active)" : "Currently Disabled (Hidden)"}
+                </span>
+              </div>
+            </div>
+
+            <p style={{ fontSize: "0.88rem", color: "#475569", lineHeight: "1.6", margin: "14px 0" }}>
+              Control platform-wide visibility of the Bitey interactive floating assistant widget on user and seller interfaces.
+              When this toggle is <strong>OFF</strong>, the chatbot floating bubble, dialog launcher, and assistant support are completely hidden across all screens.
+            </p>
+
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", marginTop: "16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.82rem", color: "#64748B" }}>
+                <CheckCircle2 size={15} color={isChatbotEnabled ? "#16A34A" : "#94A3B8"} />
+                <span>Customer AI Order Tracking &amp; FAQs</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.82rem", color: "#64748B" }}>
+                <CheckCircle2 size={15} color={isChatbotEnabled ? "#16A34A" : "#94A3B8"} />
+                <span>Seller Inquiries &amp; Support Tickets</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.82rem", color: "#64748B" }}>
+                <CheckCircle2 size={15} color={isChatbotEnabled ? "#16A34A" : "#94A3B8"} />
+                <span>Floating Draggable Chat Bubble</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Toggle Switch */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "8px" }}>
+            <button
+              type="button"
+              disabled={isLoading}
+              onClick={() => handleToggleChatbot(!isChatbotEnabled)}
+              style={{
+                width: "60px",
+                height: "32px",
+                borderRadius: "16px",
+                backgroundColor: isChatbotEnabled ? "#16A34A" : "#CBD5E1",
+                border: "none",
+                cursor: isLoading ? "wait" : "pointer",
+                position: "relative",
+                transition: "background-color 0.2s ease",
+                padding: 0,
+                outline: "none",
+                boxShadow: "0 2px 5px rgba(0,0,0,0.15)"
+              }}
+              title={`Click to ${isChatbotEnabled ? "disable" : "enable"} Bitey Chatbot`}
+            >
+              <div style={{
+                width: "24px",
+                height: "24px",
+                borderRadius: "50%",
+                backgroundColor: "#FFFFFF",
+                position: "absolute",
+                top: "4px",
+                left: isChatbotEnabled ? "32px" : "4px",
+                transition: "left 0.2s ease",
+                boxShadow: "0 1px 4px rgba(0,0,0,0.25)"
+              }} />
+            </button>
+            <span style={{ fontSize: "0.78rem", fontWeight: "700", color: isChatbotEnabled ? "#16A34A" : "#64748B" }}>
+              {isChatbotEnabled ? "ENABLED" : "DISABLED"}
             </span>
           </div>
         </div>

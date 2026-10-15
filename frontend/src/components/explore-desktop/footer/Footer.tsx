@@ -15,8 +15,11 @@ import {
 } from "lucide-react";
 import styles from "./Footer.module.css";
 import logoImg from "@/components/navbar/logo-nav.png";
+import { useRoomModule } from "@/context/RoomModuleContext";
 
 export const Footer: React.FC = () => {
+  const { isRoomEnabled } = useRoomModule();
+
   return (
     <footer className={styles.footerWrapper} role="contentinfo" aria-label="Neo Cloud Bites Footer">
       <div className={styles.footerContainer}>
@@ -37,29 +40,37 @@ export const Footer: React.FC = () => {
               </div>
               <div className={styles.brandTitleCol}>
                 <span className={styles.brandName}>NEO CLOUD BITES</span>
-                <span className={styles.brandTagline}>Cloud Kitchen &amp; Co-Living</span>
+                <span className={styles.brandTagline}>
+                  {isRoomEnabled ? "Cloud Kitchen & Co-Living" : "Cloud Kitchen"}
+                </span>
               </div>
             </Link>
 
             <p className={styles.brandDesc}>
-              Crafting premium dining experiences directly inside verified community kitchens. Order wholesome home meals or discover curated co-living stays with transparent quality.
+              {isRoomEnabled
+                ? "Crafting premium dining experiences directly inside verified community kitchens. Order wholesome home meals or discover curated co-living stays with transparent quality."
+                : "Crafting premium dining experiences directly inside verified community kitchens. Order wholesome home meals with transparent quality."}
             </p>
           </div>
 
           {/* Column 2: Explore */}
           <div className={styles.linksColumn}>
-            <h4 className={styles.columnHeading}>Explore &amp; Stay</h4>
+            <h4 className={styles.columnHeading}>
+              {isRoomEnabled ? "Explore & Stay" : "Explore"}
+            </h4>
             <ul className={styles.linksList}>
               <li>
                 <Link href="/explore-desktop" className={styles.footerLink}>
                   Order Food
                 </Link>
               </li>
-              <li>
-                <Link href="/room-booking" className={styles.footerLink}>
-                  Book a Room
-                </Link>
-              </li>
+              {isRoomEnabled && (
+                <li>
+                  <Link href="/room-booking" className={styles.footerLink}>
+                    Book a Room
+                  </Link>
+                </li>
+              )}
               <li>
                 <Link href="/explore-desktop" className={styles.footerLink}>
                   Cloud Kitchen Reels

@@ -209,7 +209,43 @@ export const LocationModal: React.FC = () => {
     }
   }, [isLocationModalOpen, defaultAddress]);
 
-  if (!isLocationModalOpen) return null;
+  const handleHouseMapChange = React.useCallback((newLat: number, newLng: number, details?: any) => {
+    setMapLat(newLat);
+    setMapLng(newLng);
+    setLatitude(newLat);
+    setLongitude(newLng);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("user-manually-selected-location", "true");
+    }
+    if (details?.pincode) {
+      const p = details.pincode.replace(/\D/g, "").slice(0, 6);
+      if (p.length === 6) {
+        setResolvedPincode(p);
+      }
+    } else {
+      const resolvedLoc = resolveLocationCoordinates(details?.formattedAddress || details?.street || details?.locality || "");
+      if (resolvedLoc?.pincode) {
+        setResolvedPincode(resolvedLoc.pincode);
+      }
+    }
+    if (details?.street) {
+      setStreet(details.street);
+    }
+    const shortFormatted = formatShortDeliveryLocation(details as any);
+    if (shortFormatted && shortFormatted !== "Select Location") {
+      setResolvedLocality(shortFormatted);
+      setPincodeInput(shortFormatted.split(",")?.[0]?.trim() || details?.pincode || "");
+    } else {
+      const streetName = details?.street;
+      const suburb = (details as any)?.suburb;
+      const locality = (details as any)?.locality || (details as any)?.city;
+      const loc = streetName || suburb || locality || "";
+      if (loc) {
+        setResolvedLocality(loc);
+        setPincodeInput(loc.split(",")?.[0]?.trim() || "");
+      }
+    }
+  }, []);
 
   const showNotification = (type: "success" | "error", message: string) => {
     setFeedback({ type, message });
@@ -549,44 +585,6 @@ export const LocationModal: React.FC = () => {
     }
   };
 
-  const handleHouseMapChange = React.useCallback((newLat: number, newLng: number, details?: any) => {
-    setMapLat(newLat);
-    setMapLng(newLng);
-    setLatitude(newLat);
-    setLongitude(newLng);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("user-manually-selected-location", "true");
-    }
-    if (details?.pincode) {
-      const p = details.pincode.replace(/\D/g, "").slice(0, 6);
-      if (p.length === 6) {
-        setResolvedPincode(p);
-      }
-    } else {
-      const resolvedLoc = resolveLocationCoordinates(details?.formattedAddress || details?.street || details?.locality || "");
-      if (resolvedLoc?.pincode) {
-        setResolvedPincode(resolvedLoc.pincode);
-      }
-    }
-    if (details?.street) {
-      setStreet(details.street);
-    }
-    const shortFormatted = formatShortDeliveryLocation(details as any);
-    if (shortFormatted && shortFormatted !== "Select Location") {
-      setResolvedLocality(shortFormatted);
-      setPincodeInput(shortFormatted.split(",")?.[0]?.trim() || details?.pincode || "");
-    } else {
-      const streetName = details?.street;
-      const suburb = (details as any)?.suburb;
-      const locality = (details as any)?.locality || (details as any)?.city;
-      const loc = streetName || suburb || locality || "";
-      if (loc) {
-        setResolvedLocality(loc);
-        setPincodeInput(loc.split(",")?.[0]?.trim() || "");
-      }
-    }
-  }, []);
-
   // 2. Handle Confirming Pinned Delivery Location
   const handleConfirmPinnedLocation = () => {
     setIsApplying(true);
@@ -846,6 +844,8 @@ export const LocationModal: React.FC = () => {
     }
     closeLocationModal();
   };
+
+  if (!isLocationModalOpen) return null;
 
   return (
     <div className={styles.modalBackdrop} onClick={handleModalClose}>

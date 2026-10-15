@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
 import { TicketAttachmentRenderer } from "@/components/common/TicketAttachmentRenderer";
+import { useRoomModule } from "@/context/RoomModuleContext";
 
 interface Message {
     id: string;
@@ -69,6 +70,7 @@ const getOptionImage = (label: string) => {
 };
 
 export default function ChatbotWidget() {
+    const { isRoomEnabled, isChatbotEnabled } = useRoomModule();
     const { data: session, status } = useSession();
     const pathname = usePathname();
     const router = useRouter();
@@ -472,7 +474,7 @@ export default function ChatbotWidget() {
                     options: [
                         { label: "📦 Issues with an Order", action: () => handleSelectOption("orders") },
                         { label: "🛵 Track Delivery Courier", action: () => handleSelectOption("track_delivery") },
-                        { label: "🛌 Issues with a Room Booking", action: () => handleSelectOption("bookings") },
+                        ...(isRoomEnabled ? [{ label: "🛌 Issues with a Room Booking", action: () => handleSelectOption("bookings") }] : []),
                         { label: "🚀 Register as a Seller", action: () => handleSelectOption("seller_info") },
                         { label: "💳 Payment & Refund Policy", action: () => handleSelectOption("payments_info") },
                         { label: "🎟️ Raise a custom support ticket", action: () => handleSelectOption("custom_ticket") }
@@ -484,7 +486,7 @@ export default function ChatbotWidget() {
 
     useEffect(() => {
         loadGreeting();
-    }, [status, session?.user?.role]);
+    }, [status, session?.user?.role, isRoomEnabled]);
 
     const handleGoBack = () => {
         if (history.length === 0) return;
@@ -521,7 +523,7 @@ export default function ChatbotWidget() {
                     supportOptions = [
                         { label: "📦 Issues with an Order", action: () => handleSelectOption("orders") },
                         { label: "🛵 Track Delivery Courier", action: () => handleSelectOption("track_delivery") },
-                        { label: "🛌 Issues with a Room Booking", action: () => handleSelectOption("bookings") },
+                        ...(isRoomEnabled ? [{ label: "🛌 Issues with a Room Booking", action: () => handleSelectOption("bookings") }] : []),
                         { label: "🚀 Register as a Seller", action: () => handleSelectOption("seller_info") },
                         { label: "💳 Payment & Refund Policy", action: () => handleSelectOption("payments_info") },
                         { label: "🎟️ Raise a custom support ticket", action: () => handleSelectOption("custom_ticket") }
@@ -862,11 +864,13 @@ export default function ChatbotWidget() {
                 setMessages(prev => [...prev, {
                     id: `b_${Date.now()}`,
                     sender: "bot",
-                    text: "You can manage your Food Menu and Room Listings in the **Manage Listings** section of your Seller Dashboard.\n\nWhat would you like assistance with?",
+                    text: isRoomEnabled
+                        ? "You can manage your Food Menu and Room Listings in the **Manage Listings** section of your Seller Dashboard.\n\nWhat would you like assistance with?"
+                        : "You can manage your Food Menu in the **Manage Menu** section of your Seller Dashboard.\n\nWhat would you like assistance with?",
                     timestamp: new Date(),
                     options: [
                         { label: "➕ Request New Item Category", action: () => handleSelectOption("custom_ticket_prefilled", { category: "NEW_CATEGORY_REQUEST", title: "Request New Item Category", desc: "--- Category Request Metadata ---\nRequest Type: Food Category\nRequested Name: [Enter Name]\n\nDetails: Category request submitted via assistant." }) },
-                        { label: "🎟️ Raise listing configuration ticket", action: () => handleSelectOption("custom_ticket_prefilled", { category: "OTHER", title: "Seller Listing Issue", desc: "I am experiencing an issue updating or publishing my menu/room items." }) },
+                        { label: "🎟️ Raise listing configuration ticket", action: () => handleSelectOption("custom_ticket_prefilled", { category: "OTHER", title: "Seller Listing Issue", desc: isRoomEnabled ? "I am experiencing an issue updating or publishing my menu/room items." : "I am experiencing an issue updating or publishing my menu items." }) },
                         { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                     ]
                 }]);
@@ -886,6 +890,20 @@ export default function ChatbotWidget() {
             }
 
             else if (optionType === "bookings") {
+                if (!isRoomEnabled) {
+                    setMessages(prev => [...prev, {
+                        id: `b_${Date.now()}`,
+                        sender: "bot",
+                        text: "Room booking features are currently disabled. How else can I assist you?",
+                        timestamp: new Date(),
+                        options: [
+                            { label: "📦 Issues with an Order", action: () => handleSelectOption("orders") },
+                            { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
+                        ]
+                    }]);
+                    return;
+                }
+
                 if (status !== "authenticated") {
                     setMessages(prev => [...prev, {
                         id: `b_${Date.now()}`,
@@ -1273,10 +1291,12 @@ export default function ChatbotWidget() {
                         { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                     ];
                 }
-                else if (normalizedText.includes("menu") || normalizedText.includes("listing") || normalizedText.includes("food") || normalizedText.includes("room") || normalizedText.includes("dish") || normalizedText.includes("price") || normalizedText.includes("add") || normalizedText.includes("modify") || normalizedText.includes("create") || normalizedText.includes("category")) {
-                    replyText = "To manage your products:\n- **Food Menu**: Go to the 'Manage Menu' section of your Seller Dashboard to add food items, set prices, and update availability.\n- **Room Stays**: Go to the 'Manage Rooms' section to add room types, set prices, and check bookings.\n\nIf the category you need is not listed, you can request a new item/room category or raise a listing ticket:";
+                else if (normalizedText.includes("menu") || normalizedText.includes("listing") || normalizedText.includes("food") || (isRoomEnabled && normalizedText.includes("room")) || normalizedText.includes("dish") || normalizedText.includes("price") || normalizedText.includes("add") || normalizedText.includes("modify") || normalizedText.includes("create") || normalizedText.includes("category")) {
+                    replyText = isRoomEnabled
+                        ? "To manage your products:\n- **Food Menu**: Go to the 'Manage Menu' section of your Seller Dashboard to add food items, set prices, and update availability.\n- **Room Stays**: Go to the 'Manage Rooms' section to add room types, set prices, and check bookings.\n\nIf the category you need is not listed, you can request a new item/room category or raise a listing ticket:"
+                        : "To manage your products:\n- **Food Menu**: Go to the 'Manage Menu' section of your Seller Dashboard to add food items, set prices, and update availability.\n\nIf the category you need is not listed, you can request a new food item category or raise a listing ticket:";
                     generatedOptions = [
-                        { label: "🎟️ Raise listing ticket", action: () => handleSelectOption("custom_ticket_prefilled", { category: "OTHER", title: "Listing configuration support", desc: "I need help configuring my kitchen food menu or room booking listings." }) },
+                        { label: "🎟️ Raise listing ticket", action: () => handleSelectOption("custom_ticket_prefilled", { category: "OTHER", title: "Listing configuration support", desc: isRoomEnabled ? "I need help configuring my kitchen food menu or room booking listings." : "I need help configuring my kitchen food menu." }) },
                         { label: "➕ Request New Item Category", action: () => handleSelectOption("custom_ticket_prefilled", { category: "NEW_CATEGORY_REQUEST", title: "Request New Item Category", desc: "--- Category Request Metadata ---\nRequest Type: Food Category\nRequested Name: [Enter Name]\n\nDetails: Category request submitted via assistant." }) },
                         { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                     ];
@@ -1316,7 +1336,7 @@ export default function ChatbotWidget() {
                     generatedOptions = [
                         { label: "📦 Issues with an Order", action: () => handleSelectOption("orders") },
                         { label: "🛵 Track Delivery Courier", action: () => handleSelectOption("track_delivery") },
-                        { label: "🛌 Issues with a Room Booking", action: () => handleSelectOption("bookings") },
+                        ...(isRoomEnabled ? [{ label: "🛌 Issues with a Room Booking", action: () => handleSelectOption("bookings") }] : []),
                         { label: "🚀 Register as a Seller", action: () => handleSelectOption("seller_info") },
                         { label: "💳 Payment & Refund Policy", action: () => handleSelectOption("payments_info") },
                         { label: "🎟️ Raise a custom support ticket", action: () => handleSelectOption("custom_ticket") }
@@ -1338,7 +1358,7 @@ export default function ChatbotWidget() {
                         { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                     ];
                 }
-                else if (normalizedText.includes("room") || normalizedText.includes("book") || normalizedText.includes("stay") || normalizedText.includes("hotel") || normalizedText.includes("check-in") || normalizedText.includes("checkin") || normalizedText.includes("check-out") || normalizedText.includes("checkout") || normalizedText.includes("time") || normalizedText.includes("date")) {
+                else if (isRoomEnabled && (normalizedText.includes("room") || normalizedText.includes("book") || normalizedText.includes("stay") || normalizedText.includes("hotel") || normalizedText.includes("check-in") || normalizedText.includes("checkin") || normalizedText.includes("check-out") || normalizedText.includes("checkout") || normalizedText.includes("time") || normalizedText.includes("date"))) {
                     replyText = "You can book comfortable stays on our [Book a Room](/room-booking) page. Note these rules:\n- **Check-in time**: 12:00 PM\n- **Check-out time**: 11:00 AM\n- **Overlapping dates**: Check-in on day X is allowed if the previous booking checkout was on day X at 11:00 AM.\n- **Calendar status**: Available dates are colored green, booked dates are red.\n\nTo view or manage bookings, select below:";
                     generatedOptions = [
                         { label: "🛌 View Stay Bookings", action: () => handleSelectOption("bookings") },
@@ -1585,6 +1605,10 @@ Details: Category request submitted via chatbot assistant.`;
                     zIndex: 9999,
                     touchAction: "none"
                   });
+
+    if (!isChatbotEnabled) {
+        return null;
+    }
 
     return (
         <div ref={containerRef} style={rootStyle}>
@@ -1930,7 +1954,7 @@ Details: Category request submitted via chatbot assistant.`;
                                                         style={{ width: "100%", padding: "8px 10px", borderRadius: "10px", border: "1.5px solid #CBD5E1", fontSize: "0.82rem", outline: "none", backgroundColor: "#F8FAFC" }}
                                                     >
                                                         <option value="FOOD">{session?.user?.role === "DELIVERY" ? "Delivery / Order Issue" : "Food Delivery"}</option>
-                                                        {session?.user?.role !== "DELIVERY" && <option value="ROOM">Room Stay</option>}
+                                                        {session?.user?.role !== "DELIVERY" && isRoomEnabled && <option value="ROOM">Room Stay</option>}
                                                         <option value="PAYMENT">{session?.user?.role === "DELIVERY" ? "COD / Wallet / Payment" : "Payment & Refund"}</option>
                                                         <option value="OTHER">{session?.user?.role === "DELIVERY" ? "Other Delivery Query" : "Other Query"}</option>
                                                         {session?.user?.role === "SELLER" && (
@@ -1941,21 +1965,21 @@ Details: Category request submitted via chatbot assistant.`;
                                                 {ticketCategory === "NEW_CATEGORY_REQUEST" ? (
                                                     <>
                                                         <div>
-                                                            <label style={{ display: "block", fontSize: "0.7rem", fontWeight: "800", color: "#64748B", marginBottom: "4px", letterSpacing: "0.5px" }}>REQUESTED CATEGORY TYPE</label>
+                                                             <label style={{ display: "block", fontSize: "0.7rem", fontWeight: "800", color: "#64748B", marginBottom: "4px", letterSpacing: "0.5px" }}>REQUESTED CATEGORY TYPE</label>
                                                             <select
                                                                 value={reqCategoryType}
                                                                 onChange={(e) => setReqCategoryType(e.target.value)}
                                                                 style={{ width: "100%", padding: "8px 10px", borderRadius: "10px", border: "1.5px solid #CBD5E1", fontSize: "0.82rem", outline: "none", backgroundColor: "#F8FAFC" }}
                                                             >
                                                                 <option value="FOOD">Food Category</option>
-                                                                {session?.user?.role !== "DELIVERY" && <option value="ROOM">Room Category</option>}
+                                                                {session?.user?.role !== "DELIVERY" && isRoomEnabled && <option value="ROOM">Room Category</option>}
                                                             </select>
                                                         </div>
                                                         <div>
                                                             <label style={{ display: "block", fontSize: "0.7rem", fontWeight: "800", color: "#64748B", marginBottom: "4px", letterSpacing: "0.5px" }}>REQUESTED CATEGORY NAME</label>
                                                             <input
                                                                 type="text"
-                                                                placeholder="e.g. Mocktails, Milkshakes, Suites..."
+                                                                placeholder={isRoomEnabled ? "e.g. Mocktails, Milkshakes, Suites..." : "e.g. Mocktails, Milkshakes, Desserts..."}
                                                                 value={reqCategoryName}
                                                                 onChange={(e) => setReqCategoryName(e.target.value)}
                                                                 style={{ width: "100%", padding: "8px 10px", borderRadius: "10px", border: "1.5px solid #CBD5E1", fontSize: "0.82rem", outline: "none" }}

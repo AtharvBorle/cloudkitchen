@@ -11,8 +11,10 @@ import PopupBannerDisplay from "@/components/PopupBannerDisplay";
 import { useLocation } from "@/components/location-provider";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/explore-desktop/footer";
+import { useRoomModule } from "@/context/RoomModuleContext";
 
 export function UserHeader() {
+    const { isRoomEnabled } = useRoomModule();
     const { data: session } = useSession();
     const pathname = usePathname();
     const router = useRouter();
@@ -42,9 +44,9 @@ export function UserHeader() {
     const navLinks = [
         { href: "/dashboard/user", label: "Home", exact: true },
         { href: "/dashboard/user/food", label: "Order Food" },
-        { href: "/dashboard/user/rooms", label: "Book a Room" },
+        ...(isRoomEnabled ? [{ href: "/dashboard/user/rooms", label: "Book a Room" }] : []),
         { href: "/dashboard/user/orders", label: "My Orders" },
-        { href: "/dashboard/user/bookings", label: "My Bookings" },
+        ...(isRoomEnabled ? [{ href: "/dashboard/user/bookings", label: "My Bookings" }] : []),
         { href: "/dashboard/user/profile", label: "My Profile" },
         { href: "/dashboard/user/support", label: "Support" },
     ];

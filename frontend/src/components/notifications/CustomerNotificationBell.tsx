@@ -20,6 +20,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
+import { useRoomModule } from "@/context/RoomModuleContext";
 import styles from "./CustomerNotificationBell.module.css";
 
 export interface CustomerNotificationItem {
@@ -78,6 +79,7 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
   className,
 }) => {
   const router = useRouter();
+  const { isRoomEnabled } = useRoomModule();
   const { data: session } = useSession();
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"all" | "orders" | "updates">("all");
@@ -224,18 +226,22 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
         // Ignore network errors
       }
 
-      // 2. Fetch Bookings (limited to 10 most recent)
-      try {
-        const res = await fetchApi("/api/user/bookings");
-        if (res.ok && isMounted) {
-          const data = await res.json();
-          const list = Array.isArray(data) ? data : data?.bookings || data?.data || [];
-          if (Array.isArray(list)) {
-            setDynamicBookings(list.slice(0, 10));
+      // 2. Fetch Bookings (only if room module is enabled)
+      if (isRoomEnabled) {
+        try {
+          const res = await fetchApi("/api/user/bookings");
+          if (res.ok && isMounted) {
+            const data = await res.json();
+            const list = Array.isArray(data) ? data : data?.bookings || data?.data || [];
+            if (Array.isArray(list)) {
+              setDynamicBookings(list.slice(0, 10));
+            }
           }
+        } catch {
+          // Ignore
         }
-      } catch {
-        // Ignore
+      } else if (isMounted) {
+        setDynamicBookings([]);
       }
 
       // 3. Fetch Meal Subscriptions (limited to 10 most recent)
@@ -341,8 +347,8 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
       });
     }
 
-    // Map actual user bookings if present
-    if (dynamicBookings && dynamicBookings.length > 0) {
+    // Map actual user bookings if present (only when room module is enabled)
+    if (isRoomEnabled && dynamicBookings && dynamicBookings.length > 0) {
       dynamicBookings.forEach((b: any) => {
         const roomTitle = b.room?.title || b.roomName || "Room Stay";
         const checkInStr = b.checkIn ? new Date(b.checkIn).toLocaleDateString() : "";
