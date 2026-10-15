@@ -3,7 +3,7 @@ import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { emitMealSubscriptionUpdated } from "@/lib/realtime-events";
 import { SubscriptionPauseService } from "@/services/subscriptionPauseService";
-import { normalizeMealSlotIds, getMealSlotDetails } from "@/lib/meal-slots";
+import { normalizeMealSlotIds, getMealSlotDetails, extractTimeRangeString } from "@/lib/meal-slots";
 import Razorpay from "razorpay";
 import crypto from "crypto";
 
@@ -161,12 +161,12 @@ export const getUserMealSubscriptions = async () => {
                 sellerTimes[id] ||
                 sellerTimes[id.replace(/-/g, '_')] ||
                 sellerTimes[id.replace(/_/g, '-')] ||
-                dbSlot?.defaultTimeRange ||
+                extractTimeRangeString(dbSlot?.defaultTimeRange) ||
                 ""
             ).trim();
             return {
                 ...base,
-                defaultTimeRange: customTime || base.defaultTimeRange || "",
+                defaultTimeRange: customTime || "",
             };
         });
 
@@ -187,12 +187,12 @@ export const getUserMealSubscriptions = async () => {
                 sellerTimes[id] ||
                 sellerTimes[id.replace(/-/g, '_')] ||
                 sellerTimes[id.replace(/_/g, '-')] ||
-                dbSlot?.defaultTimeRange ||
+                extractTimeRangeString(dbSlot?.defaultTimeRange) ||
                 ""
             ).trim();
             return {
                 ...base,
-                defaultTimeRange: customTime || base.defaultTimeRange || "",
+                defaultTimeRange: customTime || "",
             };
         });
 
