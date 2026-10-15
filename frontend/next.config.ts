@@ -183,6 +183,46 @@ const nextConfig: NextConfig = {
         destination: "/seller/subscription/add",
         permanent: true,
       },
+      {
+        source: "/seller/deliveries",
+        destination: "/seller/subscription/deliveries",
+        permanent: false,
+      },
+      {
+        source: "/seller/res/deliveries",
+        destination: "/seller/res/subscription/deliveries",
+        permanent: false,
+      },
+      {
+        source: "/seller/subscription/delivery",
+        destination: "/seller/subscription/deliveries",
+        permanent: false,
+      },
+      {
+        source: "/seller/res/subscription/delivery",
+        destination: "/seller/res/subscription/deliveries",
+        permanent: false,
+      },
+      {
+        source: "/seller/manage-delivery",
+        destination: "/seller/subscription/deliveries",
+        permanent: false,
+      },
+      {
+        source: "/seller/res/manage-delivery",
+        destination: "/seller/res/subscription/deliveries",
+        permanent: false,
+      },
+      {
+        source: "/seller/delivery-roster",
+        destination: "/seller/subscription/deliveries",
+        permanent: false,
+      },
+      {
+        source: "/seller/res/delivery-roster",
+        destination: "/seller/res/subscription/deliveries",
+        permanent: false,
+      },
     ];
   },
 };

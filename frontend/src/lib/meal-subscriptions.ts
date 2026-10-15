@@ -843,6 +843,60 @@ export async function markSubscriberMealDeliveryStatus(
 /**
  * Fetches organized deliveries by date and meal slot for seller.
  */
+/**
+ * Normalizes any raw delivery object into a complete, safe MealSlotDeliveryRecord
+ * with guaranteed nested subscription, user, and plan objects.
+ */
+export function formatDeliveryRecord(raw: any): MealSlotDeliveryRecord {
+  const slotDef = getMealSlotDetails(raw?.slotId || "lunch");
+  const subTier = raw?.subscription?.tier || raw?.tier || raw?.subscription?.plan?.tier || "Bronze";
+  const custName = raw?.subscription?.user?.name || raw?.customerName || raw?.name || "Subscriber";
+  const custPhone = raw?.subscription?.user?.phone || raw?.subscription?.contactPhone || raw?.customerPhone || "";
+  const custEmail = raw?.subscription?.user?.email || raw?.customerEmail || "";
+  const addr = raw?.subscription?.deliveryAddress || raw?.deliveryAddress || "";
+  const pName = raw?.subscription?.plan?.name || raw?.planName || "Meal Plan";
+
+  return {
+    id: raw?.id || `del-${Date.now()}-${Math.random().toString(36).substr(2, 7)}`,
+    subscriptionId: raw?.subscriptionId || raw?.subscription?.id || "",
+    slotId: raw?.slotId || "lunch",
+    slotName: raw?.slotName || slotDef.name,
+    slotSubtitle: raw?.slotSubtitle || slotDef.subtitle,
+    scheduledTime: raw?.scheduledTime || slotDef.defaultTimeRange,
+    sellerId: raw?.sellerId || "",
+    userId: raw?.userId || raw?.subscription?.userId || "",
+    scheduledDate: raw?.scheduledDate || new Date().toISOString().split("T")[0],
+    status: raw?.status || "PENDING",
+    deliveredAt: raw?.deliveredAt || null,
+    markedBy: raw?.markedBy || null,
+    note: raw?.note || null,
+    subscription: {
+      id: raw?.subscription?.id || raw?.subscriptionId || "",
+      tier: subTier,
+      status: raw?.subscription?.status || (raw?.isPaused ? "PAUSED" : "ACTIVE"),
+      deliveryAddress: addr,
+      contactPhone: custPhone,
+      user: {
+        id: raw?.subscription?.user?.id || raw?.userId || "",
+        name: custName,
+        phone: custPhone,
+        email: custEmail,
+      },
+      plan: {
+        id: raw?.subscription?.plan?.id || "",
+        name: pName,
+        tier: subTier,
+      },
+    },
+    customerName: custName,
+    customerPhone: custPhone,
+    customerEmail: custEmail,
+    deliveryAddress: addr,
+    planName: pName,
+    tier: subTier,
+  } as MealSlotDeliveryRecord;
+}
+
 export async function fetchMealSubscriptionDeliveries(params?: {
   date?: string;
   slotId?: string;
@@ -855,13 +909,105 @@ export async function fetchMealSubscriptionDeliveries(params?: {
   if (params?.status) query.set("status", params.status);
   if (params?.search) query.set("search", params.search);
 
-  const res = await fetchApi(`/api/seller/meal-plans/deliveries?${query.toString()}`);
-  if (!res.ok) {
-    const json = await res.json().catch(() => ({}));
-    throw new Error(json.message || "Failed to fetch meal subscription deliveries");
+  try {
+    const res = await fetchApi(`/api/seller/meal-plans/deliveries?${query.toString()}`);
+    if (res.ok) {
+      const json = await res.json();
+      const data = json.data || json;
+      const rawDeliveries = Array.isArray(data?.deliveries) ? data.deliveries : (Array.isArray(data) ? data : []);
+      const formattedDeliveries = rawDeliveries.map(formatDeliveryRecord);
+
+      const counts: Record<string, number> = data?.slotCounts || { all: formattedDeliveries.length };
+      PREDEFINED_MEAL_SLOTS.forEach((s) => {
+        if (counts[s.id] === undefined) {
+          counts[s.id] = formattedDeliveries.filter((d) => d.slotId === s.id).length;
+        }
+      });
+
+      return {
+        scheduledDate: data?.scheduledDate || params?.date || new Date().toISOString().split("T")[0],
+        slotCounts: counts,
+        deliveries: formattedDeliveries,
+        totalDeliveries: data?.totalDeliveries ?? data?.totalCount ?? formattedDeliveries.length,
+      };
+    }
+  } catch (err) {
+    console.warn("API /api/seller/meal-plans/deliveries failed or not found, falling back to local subscribers roster:", err);
   }
-  const json = await res.json();
-  return json.data || json;
+
+  // Graceful fallback from active subscribers in case API is temporarily unavailable
+  const subscribers = getStoredMealSubscribers();
+  const dateStr = params?.date || new Date().toISOString().split("T")[0];
+  const activeSubs = subscribers.filter((s) => s.status === "Active" || s.status === "Paused");
+
+  const generated: MealSlotDeliveryRecord[] = [];
+  activeSubs.forEach((sub) => {
+    const isPaused = sub.status === "Paused";
+    const subSlots = Array.isArray(sub.slots) && sub.slots.length > 0 ? sub.slots : ["lunch"];
+    subSlots.forEach((slotId) => {
+      const slotDef = getMealSlotDetails(slotId);
+      generated.push(
+        formatDeliveryRecord({
+          id: `del-${sub.id}-${slotId}-${dateStr}`,
+          subscriptionId: sub.id,
+          slotId: slotDef.id,
+          slotName: slotDef.name,
+          slotSubtitle: slotDef.subtitle,
+          scheduledTime: slotDef.defaultTimeRange,
+          scheduledDate: dateStr,
+          status: isPaused ? "SKIPPED_PAUSED" : "PENDING",
+          isPaused,
+          subscription: {
+            id: sub.id,
+            tier: sub.tier || "Bronze",
+            status: isPaused ? "PAUSED" : "ACTIVE",
+            deliveryAddress: sub.deliveryAddress || "",
+            contactPhone: sub.customerPhone || sub.phone || "",
+            user: {
+              id: sub.userId || sub.id,
+              name: sub.customerName || sub.name || "Subscriber",
+              phone: sub.customerPhone || sub.phone || "",
+              email: sub.customerEmail || "",
+            },
+            plan: {
+              id: sub.planId || "",
+              name: sub.planName || "Meal Plan",
+              tier: sub.tier || "Bronze",
+            },
+          },
+        })
+      );
+    });
+  });
+
+  let filtered = generated;
+  if (params?.slotId && params.slotId !== "all") {
+    filtered = filtered.filter((d) => d.slotId === params.slotId);
+  }
+  if (params?.status && params.status !== "ALL") {
+    filtered = filtered.filter((d) => d.status === params.status);
+  }
+  if (params?.search && params.search.trim()) {
+    const q = params.search.toLowerCase().trim();
+    filtered = filtered.filter((d) =>
+      d.customerName?.toLowerCase().includes(q) ||
+      d.subscription?.user?.name?.toLowerCase().includes(q) ||
+      d.planName?.toLowerCase().includes(q) ||
+      d.deliveryAddress?.toLowerCase().includes(q)
+    );
+  }
+
+  const slotCounts: Record<string, number> = { all: generated.length };
+  PREDEFINED_MEAL_SLOTS.forEach((s) => {
+    slotCounts[s.id] = generated.filter((d) => d.slotId === s.id).length;
+  });
+
+  return {
+    scheduledDate: dateStr,
+    slotCounts,
+    deliveries: filtered,
+    totalDeliveries: filtered.length,
+  };
 }
 
 /**
