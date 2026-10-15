@@ -25,6 +25,7 @@ import {
   getTierColors,
   UserActiveMealSubscription,
 } from "@/lib/meal-subscriptions";
+import { formatMealTimingDisplay } from "@/lib/meal-slots";
 import { fetchApi } from "@/lib/fetch-api";
 import {
   Utensils,
@@ -767,49 +768,34 @@ function MySubscriptionContent() {
   const getSubscriptionSlots = (sub: UserActiveMealSubscription): DeliverySlot[] => {
     if (sub.plan?.mealTimings && sub.plan.mealTimings.length > 0) {
       return sub.plan.mealTimings.map((t, idx) => {
-        let name = "Meal Delivery";
-        let timeRange = t;
-        let icon = "🍱";
-
-        if (t.toLowerCase().includes("breakfast")) {
-          name = "Breakfast Delivery";
-          icon = "🍳";
-        } else if (t.toLowerCase().includes("lunch")) {
-          name = "Lunch Delivery";
-          icon = "🍲";
-        } else if (t.toLowerCase().includes("dinner")) {
-          name = "Dinner Delivery";
-          icon = "🍱";
-        }
-
-        if (t.includes("(") && t.includes(")")) {
-          timeRange = t.substring(t.indexOf("(") + 1, t.indexOf(")"));
-        }
-
+        const parsed = formatMealTimingDisplay(t);
         return {
           id: `slot-${sub.id}-${idx}`,
-          name,
-          timeRange,
-          icon,
+          name: `${parsed.name} Delivery`,
+          timeRange: parsed.timeRange,
+          icon: parsed.icon,
         };
       });
     }
 
     const planName = (sub.plan?.name || "").toLowerCase();
     if (planName.includes("lunch") && !planName.includes("dinner")) {
-      return [{ id: `lunch-${sub.id}`, name: "Lunch Delivery", timeRange: "1:00 PM – 2:30 PM", icon: "🍲" }];
+      const parsed = formatMealTimingDisplay("lunch");
+      return [{ id: `lunch-${sub.id}`, name: `${parsed.name} Delivery`, timeRange: parsed.timeRange, icon: parsed.icon }];
     }
     if (planName.includes("dinner") && !planName.includes("lunch")) {
-      return [{ id: `dinner-${sub.id}`, name: "Dinner Delivery", timeRange: "8:00 PM – 9:30 PM", icon: "🍱" }];
+      const parsed = formatMealTimingDisplay("dinner");
+      return [{ id: `dinner-${sub.id}`, name: `${parsed.name} Delivery`, timeRange: parsed.timeRange, icon: parsed.icon }];
     }
     if (planName.includes("breakfast")) {
-      return [{ id: `breakfast-${sub.id}`, name: "Breakfast Delivery", timeRange: "8:00 AM – 9:30 AM", icon: "🍳" }];
+      const parsed = formatMealTimingDisplay("breakfast");
+      return [{ id: `breakfast-${sub.id}`, name: `${parsed.name} Delivery`, timeRange: parsed.timeRange, icon: parsed.icon }];
     }
 
     return [
-      { id: `breakfast-${sub.id}`, name: "Breakfast Delivery", timeRange: "8:00 AM – 9:30 AM", icon: "🍳" },
-      { id: `lunch-${sub.id}`, name: "Lunch Delivery", timeRange: "1:00 PM – 2:30 PM", icon: "🍲" },
-      { id: `dinner-${sub.id}`, name: "Dinner Delivery", timeRange: "8:00 PM – 9:30 PM", icon: "🍱" },
+      { id: `breakfast-${sub.id}`, name: "Breakfast Delivery", timeRange: formatMealTimingDisplay("breakfast").timeRange, icon: "🍳" },
+      { id: `lunch-${sub.id}`, name: "Lunch Delivery", timeRange: formatMealTimingDisplay("lunch").timeRange, icon: "🍲" },
+      { id: `dinner-${sub.id}`, name: "Dinner Delivery", timeRange: formatMealTimingDisplay("dinner").timeRange, icon: "🍱" },
     ];
   };
 
@@ -1576,11 +1562,14 @@ function MySubscriptionContent() {
                                 <span>Daily Serving Schedule</span>
                               </div>
                               <div className={styles.timingsGrid}>
-                                {plan.mealTimings.map((timing, tIdx) => (
-                                  <span key={tIdx} className={styles.timingPill}>
-                                    {timing}
-                                  </span>
-                                ))}
+                                {plan.mealTimings.map((timing, tIdx) => {
+                                  const parsed = formatMealTimingDisplay(timing);
+                                  return (
+                                    <span key={tIdx} className={styles.timingPill}>
+                                      {parsed.icon} {parsed.fullDisplay}
+                                    </span>
+                                  );
+                                })}
                               </div>
                             </div>
                           )}

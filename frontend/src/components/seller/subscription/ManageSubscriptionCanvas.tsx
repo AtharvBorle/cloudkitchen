@@ -30,6 +30,7 @@ import {
   MealPlanMetrics,
 } from "@/lib/meal-subscriptions";
 import { Trash2, Power, Eye, EyeOff } from "lucide-react";
+import { formatMealTimingDisplay } from "@/lib/meal-slots";
 import PaginationControls from "../common/PaginationControls";
 
 export function formatDeliveryAddressDisplay(rawAddress?: string, roomNo?: string): string {
@@ -958,24 +959,27 @@ export default function ManageSubscriptionCanvas({
                       </span>
                     ))
                   ) : (
-                    plan.mealTimings.map((t, idx) => (
-                      <span
-                        key={idx}
-                        style={{
-                          fontSize: "11.5px",
-                          backgroundColor: "#F1F5F9",
-                          color: "#475569",
-                          padding: "3px 8px",
-                          borderRadius: "5px",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "4px",
-                        }}
-                      >
-                        <Clock size={11} />
-                        {t}
-                      </span>
-                    ))
+                    plan.mealTimings.map((t, idx) => {
+                      const parsed = formatMealTimingDisplay(t);
+                      return (
+                        <span
+                          key={idx}
+                          style={{
+                            fontSize: "11.5px",
+                            backgroundColor: "#F1F5F9",
+                            color: "#475569",
+                            padding: "3px 8px",
+                            borderRadius: "5px",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
+                          }}
+                        >
+                          <Clock size={11} />
+                          {parsed.fullDisplay}
+                        </span>
+                      );
+                    })
                   )}
                 </div>
               </div>

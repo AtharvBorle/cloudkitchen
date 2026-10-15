@@ -11,6 +11,7 @@ import { RestaurantMobileView } from "@/components/restaurant-desktop/restaurant
 import { getKitchenById, isStaticKitchen, KitchenData, FoodCardItem } from "@/components/restaurant-desktop/restaurant-data";
 import { useCart, generateCartItemId } from "@/context/CartContext";
 import { fetchApi } from "@/lib/fetch-api";
+import { formatMealTimingDisplay } from "@/lib/meal-slots";
 import { Footer } from "@/components/explore-desktop/footer";
 import { AddonCustomizationModal } from "@/components/cart/AddonCustomizationModal";
 import styles from "../restaurant.module.css";
@@ -249,7 +250,11 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
                   features = [
                     "Fresh & hot home-style delivery",
                     plan.mealTimings && plan.mealTimings.length
-                      ? `Served for ${Array.isArray(plan.mealTimings) ? plan.mealTimings.join(", ") : plan.mealTimings}`
+                      ? `Served for ${
+                          Array.isArray(plan.mealTimings)
+                            ? plan.mealTimings.map((t) => formatMealTimingDisplay(t).name).join(", ")
+                            : formatMealTimingDisplay(plan.mealTimings).name
+                        }`
                       : "Daily breakfast, lunch or dinner",
                     "Direct doorstep delivery",
                     ...(isPauseAllowed ? ["Pause anytime when away"] : []),

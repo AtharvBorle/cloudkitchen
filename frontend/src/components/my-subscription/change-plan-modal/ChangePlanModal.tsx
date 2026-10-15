@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { X, Check, ArrowRight, Sparkles, AlertCircle, Clock, ShieldCheck, ShieldAlert, Loader2 } from "lucide-react";
 import styles from "./ChangePlanModal.module.css";
 import { fetchSellerMealPlans, changeUserSubscriptionPlan, getTierColors } from "@/lib/meal-subscriptions";
+import { formatMealTimingDisplay } from "@/lib/meal-slots";
 
 export interface ChangePlanModalProps {
   isOpen: boolean;
@@ -219,11 +220,14 @@ export const ChangePlanModal: React.FC<ChangePlanModalProps> = ({
                         <Clock size={14} className={styles.timingIcon} />
                         <span className={styles.timingLabel}>Includes:</span>
                         <div className={styles.timingTags}>
-                          {timings.map((t, idx) => (
-                            <span key={idx} className={styles.timingTag}>
-                              {t}
-                            </span>
-                          ))}
+                          {timings.map((t, idx) => {
+                            const parsed = formatMealTimingDisplay(t);
+                            return (
+                              <span key={idx} className={styles.timingTag}>
+                                {parsed.fullDisplay}
+                              </span>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
