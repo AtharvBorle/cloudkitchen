@@ -3,7 +3,7 @@ import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { emitMealPlanUpdated, emitMealSubscriptionUpdated } from "@/lib/realtime-events";
 import { getCategoryExpiries } from "@/lib/subscription";
-import { PREDEFINED_MEAL_SLOTS, normalizeMealSlotId, normalizeMealSlotIds, getMealSlotDetails } from "@/lib/meal-slots";
+import { PREDEFINED_MEAL_SLOTS, normalizeMealSlotId, normalizeMealSlotIds, getMealSlotDetails, extractTimeRangeString } from "@/lib/meal-slots";
 import { MealSubscriptionDeliveryService } from "@/services/mealSubscriptionDeliveryService";
 
 export const getAuthenticatedSellerProfile = async () => {
@@ -202,12 +202,12 @@ export const getSellerMealPlans = async () => {
                 combinedSellerTimes[id] ||
                 combinedSellerTimes[id.replace(/-/g, '_')] ||
                 combinedSellerTimes[id.replace(/_/g, '-')] ||
-                dbSlot?.defaultTimeRange ||
+                extractTimeRangeString(dbSlot?.defaultTimeRange) ||
                 ""
             ).trim();
             return {
                 ...base,
-                defaultTimeRange: customTime || base.defaultTimeRange || "",
+                defaultTimeRange: customTime || "",
             };
         });
 
@@ -283,12 +283,12 @@ export const getSellerMealPlans = async () => {
                 combinedSellerTimes[id] ||
                 combinedSellerTimes[id.replace(/-/g, '_')] ||
                 combinedSellerTimes[id.replace(/_/g, '-')] ||
-                dbSlot?.defaultTimeRange ||
+                extractTimeRangeString(dbSlot?.defaultTimeRange) ||
                 ""
             ).trim();
             return {
                 ...base,
-                defaultTimeRange: customTime || base.defaultTimeRange || "",
+                defaultTimeRange: customTime || "",
             };
         });
 
@@ -1091,22 +1091,23 @@ export const getPublicMealPlans = async (req: Request) => {
             const slotRecord = p.slots?.find((s: any) => s.slotId === slotId)?.slot;
             const slotName = slotRecord?.name || getMealSlotDetails(slotId).name;
 
-            if (t.includes(":") && !t.endsWith(":")) {
-                const parts = t.split(":");
-                const namePart = parts[0].trim();
-                const timePart = parts.slice(1).join(":").trim();
-                if (timePart) {
-                    return `${namePart}: ${timePart}`;
-                }
-            }
-
-            const configuredTime = (
+            // 1. Primary: exact configured timing from seller setting
+            let configuredTime = (
                 sellerTimes[slotId] ||
                 sellerTimes[slotId.replace(/-/g, '_')] ||
                 sellerTimes[slotId.replace(/_/g, '-')] ||
-                slotRecord?.defaultTimeRange ||
                 ""
             ).trim();
+
+            // 2. Secondary: extract time range from t
+            if (!configuredTime) {
+                configuredTime = extractTimeRangeString(t);
+            }
+
+            // 3. Tertiary: slotRecord defaultTimeRange
+            if (!configuredTime && slotRecord?.defaultTimeRange) {
+                configuredTime = extractTimeRangeString(slotRecord.defaultTimeRange);
+            }
 
             return configuredTime ? `${slotName}: ${configuredTime}` : slotName;
         });

@@ -162,24 +162,53 @@ export function formatMealSlotsDisplay(slotIds: string[]): string {
 }
 
 /**
+ * Extracts only the time range portion from a string (e.g. "Breakfast: 07:30 PM – 09:30 PM" -> "07:30 PM – 09:30 PM").
+ * Never corrupts or splits the hours/minutes inside the time range.
+ */
+export function extractTimeRangeString(str?: string | null): string {
+  if (!str || typeof str !== "string") return "";
+  let s = str.trim();
+  if (!s) return "";
+
+  // 1. If wrapped in parentheses "(07:30 PM – 09:30 PM)"
+  if (s.includes("(") && s.includes(")")) {
+    s = s.substring(s.indexOf("(") + 1, s.lastIndexOf(")")).trim();
+  }
+
+  // 2. If it has a prefix with a colon e.g. "Breakfast: 07:30 PM – 09:30 PM"
+  // The prefix is a slot name or ID (e.g. "Breakfast", "Morning Meal", "morning_meal").
+  // It does NOT contain digits.
+  const colonIdx = s.indexOf(":");
+  if (colonIdx !== -1) {
+    const before = s.substring(0, colonIdx).trim();
+    // Only strip before colon if 'before' does NOT contain digits (e.g. not "07:30")
+    if (!/\d/.test(before)) {
+      s = s.substring(colonIdx + 1).trim();
+    }
+  }
+
+  s = s.replace(/^[:\s]+|[:\s]+$/g, "").trim();
+
+  // If what remains is just a slot ID or slot name without time
+  if (MEAL_SLOTS_MAP.has(s.toLowerCase()) || normalizeMealSlotId(s) === s.toLowerCase()) {
+    return "";
+  }
+
+  return s;
+}
+
+/**
  * Returns the configured delivery timing for a slot.
  * Does NOT return any arbitrary hardcoded default times.
  */
 export function getSlotDeliveryTime(slotId: string, customTime?: string): string {
   const norm = normalizeMealSlotId(slotId) || "breakfast";
 
-  // If a valid custom time is passed that isn't just the slot ID
-  if (customTime && customTime.trim() && !MEAL_SLOTS_MAP.has(customTime.trim().toLowerCase())) {
-    if (customTime.includes(":") && (customTime.toLowerCase().includes("am") || customTime.toLowerCase().includes("pm"))) {
-      const parts = customTime.split(/:\s*(?=\d)/);
-      if (parts.length > 1) return parts[1].trim();
-      return customTime.trim();
+  if (customTime) {
+    const extracted = extractTimeRangeString(customTime);
+    if (extracted) {
+      return extracted;
     }
-    if (customTime.includes("(") && customTime.includes(")")) {
-      const extracted = customTime.substring(customTime.indexOf("(") + 1, customTime.indexOf(")")).trim();
-      if (extracted) return extracted;
-    }
-    return customTime.trim();
   }
 
   // Check localStorage cached slots config if in browser
@@ -190,8 +219,9 @@ export function getSlotDeliveryTime(slotId: string, customTime?: string): string
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed)) {
           const found = parsed.find((s: any) => normalizeMealSlotId(s.id) === norm);
-          if (found?.defaultTimeRange && found.defaultTimeRange.trim()) {
-            return found.defaultTimeRange.trim();
+          if (found?.defaultTimeRange) {
+            const extracted = extractTimeRangeString(found.defaultTimeRange);
+            if (extracted) return extracted;
           }
         }
       }
@@ -200,8 +230,9 @@ export function getSlotDeliveryTime(slotId: string, customTime?: string): string
 
   // Check predefined slots definition
   const def = MEAL_SLOTS_MAP.get(norm);
-  if (def?.defaultTimeRange && def.defaultTimeRange.trim()) {
-    return def.defaultTimeRange.trim();
+  if (def?.defaultTimeRange) {
+    const extracted = extractTimeRangeString(def.defaultTimeRange);
+    if (extracted) return extracted;
   }
 
   return "";
@@ -234,23 +265,7 @@ export function formatMealTimingDisplay(timing: string | null | undefined): Form
   const normId = normalizeMealSlotId(raw) || "lunch";
   const def = getMealSlotDetails(normId);
 
-  let extractedTime = "";
-
-  // 1. Check if string is "Name: Time" e.g. "Lunch: 12:30 PM – 02:30 PM"
-  if (raw.includes(":") && (raw.toLowerCase().includes("am") || raw.toLowerCase().includes("pm"))) {
-    const colonIndex = raw.indexOf(":");
-    extractedTime = raw.substring(colonIndex + 1).trim();
-  }
-  // 2. Check if string is "Name (Time)" e.g. "Lunch (12:30 PM – 02:30 PM)"
-  else if (raw.includes("(") && raw.includes(")")) {
-    extractedTime = raw.substring(raw.indexOf("(") + 1, raw.indexOf(")")).trim();
-  }
-  // 3. Check if raw contains AM/PM times directly
-  else if (raw.toLowerCase().includes("am") || raw.toLowerCase().includes("pm")) {
-    extractedTime = raw;
-  }
-
-  const timeRange = getSlotDeliveryTime(normId, extractedTime);
+  const timeRange = getSlotDeliveryTime(normId, raw);
   const name = def.name;
 
   return {
