@@ -1125,9 +1125,32 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
                 </div>
 
                 <div className={styles.formGroup}>
-                  <label className={styles.formLabel}>
-                    Description / Details <span className={styles.formLabelRequired}>*</span>
-                  </label>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                    <label className={styles.formLabel} style={{ marginBottom: 0 }}>
+                      Description / Details <span className={styles.formLabelRequired}>*</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "#EA580C",
+                        cursor: "pointer",
+                        fontSize: "0.78rem",
+                        fontWeight: 700,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "5px",
+                        padding: "2px 6px",
+                        borderRadius: "6px",
+                      }}
+                      title="Attach problem screenshot, photo or document"
+                    >
+                      <Paperclip size={14} />
+                      <span>{attachedFile ? "Change Attachment" : "Attach Screenshot / Document"}</span>
+                    </button>
+                  </div>
                   <textarea
                     placeholder="Explain the issue or question in detail. Mention order IDs, subscriber names, or error messages if applicable..."
                     value={newDescription}
@@ -1140,6 +1163,19 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
 
                 {/* 4. Attachment (Screenshot, Photo or Document) */}
                 <div className={styles.formGroup}>
+                  {/* Keep file input always in DOM so fileInputRef.current?.click() always works */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*,.pdf,.doc,.docx,.txt"
+                    style={{ display: "none" }}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleModalFileSelected(file);
+                      e.target.value = "";
+                    }}
+                  />
+
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
                     <label className={styles.formLabel} style={{ marginBottom: 0 }}>
                       Attachment <span style={{ fontSize: "0.76rem", fontWeight: 500, color: "#64748B" }}>(Problem screenshot, photo, or document)</span>
@@ -1165,16 +1201,6 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
                       role="button"
                       tabIndex={0}
                     >
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*,.pdf,.doc,.docx,.txt"
-                        style={{ display: "none" }}
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleModalFileSelected(file);
-                        }}
-                      />
                       <div className={styles.uploadDropzoneIcon}>
                         <UploadCloud size={20} color="#EA580C" />
                       </div>
@@ -1210,15 +1236,33 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
                           </span>
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        className={styles.attachmentRemoveBtn}
-                        onClick={removeModalAttachment}
-                        title="Remove attachment"
-                        aria-label="Remove attachment"
-                      >
-                        <X size={16} />
-                      </button>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          style={{
+                            background: "none",
+                            border: "1px solid #fed7aa",
+                            borderRadius: "6px",
+                            padding: "4px 8px",
+                            color: "#c2410c",
+                            fontSize: "0.74rem",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                          }}
+                        >
+                          Change
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.attachmentRemoveBtn}
+                          onClick={removeModalAttachment}
+                          title="Remove attachment"
+                          aria-label="Remove attachment"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
