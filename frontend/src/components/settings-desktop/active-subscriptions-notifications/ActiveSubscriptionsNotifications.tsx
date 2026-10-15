@@ -42,7 +42,24 @@ export const ActiveSubscriptionsNotifications: React.FC = () => {
     };
   }, []);
 
-  const activeSubscriptions = subscriptions.filter((s) => s.status === "ACTIVE");
+  const isSubscriptionExpired = (s: UserActiveMealSubscription) => {
+    if (s.isExpired) return true;
+    if (s.status?.toUpperCase() === "EXPIRED") return true;
+    if (s.endDate) {
+      const end = new Date(s.endDate);
+      const now = new Date();
+      if (!isNaN(end.getTime())) {
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        const endDayStart = new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime();
+        return endDayStart <= todayStart || end <= now;
+      }
+    }
+    return false;
+  };
+
+  const activeSubscriptions = subscriptions.filter(
+    (s) => !isSubscriptionExpired(s) && (s.status === "ACTIVE" || s.isPaused || s.status === "PAUSED")
+  );
 
   return (
     <div className={styles.sectionContainer}>

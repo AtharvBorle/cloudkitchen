@@ -383,11 +383,21 @@ export class SubscriptionPauseService {
         history[0].finalEndDate = finalEndDate.toISOString();
       }
 
+      const isExpiredAfterResume = (() => {
+        if (!finalEndDate) return false;
+        if (finalEndDate <= now) return true;
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        const endDayStart = new Date(finalEndDate.getFullYear(), finalEndDate.getMonth(), finalEndDate.getDate()).getTime();
+        return endDayStart <= todayStart;
+      })();
+
+      const nextStatus = isExpiredAfterResume ? "EXPIRED" : "ACTIVE";
+
       const updated = await tx.userMealSubscription.update({
         where: { id: subscription.id },
         data: {
           isPaused: false,
-          status: "ACTIVE",
+          status: nextStatus,
           pausedAt: null,
           pauseEndDate: null,
           usedPauseDays: currentUsedDays,

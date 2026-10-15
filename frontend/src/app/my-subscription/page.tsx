@@ -140,7 +140,15 @@ function MySubscriptionContent() {
   const isSubscriptionExpired = useCallback((s: UserActiveMealSubscription) => {
     if (s.isExpired) return true;
     if (s.status?.toUpperCase() === "EXPIRED") return true;
-    if (s.endDate && new Date(s.endDate) < new Date()) return true;
+    if (s.endDate) {
+      const end = new Date(s.endDate);
+      const now = new Date();
+      if (!isNaN(end.getTime())) {
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        const endDayStart = new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime();
+        return endDayStart <= todayStart || end <= now;
+      }
+    }
     return false;
   }, []);
 
@@ -1243,6 +1251,7 @@ function MySubscriptionContent() {
                               tier={subItem.tier || subItem.plan?.tier || "Bronze"}
                               statusText={resolvedStatus}
                               isPaused={!isExpired && !isPlanInactive && subItem.isPaused}
+                              isExpired={isExpired}
                               startedOn={formatSubStartedOn(subItem)}
                               renewalDate={isExpired ? `${formatSubRenewalDate(subItem)} (Expired)` : isPlanInactive ? "Deactivated" : formatSubRenewalDate(subItem)}
                               planPrice={formatSubPrice(subItem)}
@@ -1277,26 +1286,26 @@ function MySubscriptionContent() {
                             </div>
 
                             {/* Pause Subscription Section */}
-                            <PauseSubscription
-                              isPaused={subItem.isPaused}
-                              disabled={isExpired || isPlanInactive || subItem.status?.toUpperCase() === "CANCELLED"}
-                              allowPause={isPauseAllowed}
-                              pausePolicyNote={
-                                isExpired
-                                  ? "Subscription has expired. Pausing is unavailable for expired plans."
-                                  : isPlanInactive
-                                  ? "Subscription is inactive because this plan has been deactivated by the kitchen partner."
-                                  : "Pausing is disabled for this meal plan by the kitchen partner."
-                              }
-                              pauseBillingPeriod={subItem.plan?.pauseBillingPeriod || "7 Days"}
-                              usedPauseDays={subItem.usedPauseDays || 0}
-                              pausedAt={subItem.pausedAt}
-                              pauseEndDate={subItem.pauseEndDate}
-                              pauseHistory={subItem.pauseHistory}
-                              currentEndDate={subItem.endDate}
-                              planName={subItem.plan?.name || "Meal Plan"}
-                              onTogglePause={(nextPaused, days) => handleTogglePause(subItem.id, nextPaused, days)}
-                            />
+                            {!isExpired && (
+                              <PauseSubscription
+                                isPaused={subItem.isPaused}
+                                disabled={isPlanInactive || subItem.status?.toUpperCase() === "CANCELLED"}
+                                allowPause={isPauseAllowed}
+                                pausePolicyNote={
+                                  isPlanInactive
+                                    ? "Subscription is inactive because this plan has been deactivated by the kitchen partner."
+                                    : "Pausing is disabled for this meal plan by the kitchen partner."
+                                }
+                                pauseBillingPeriod={subItem.plan?.pauseBillingPeriod || "7 Days"}
+                                usedPauseDays={subItem.usedPauseDays || 0}
+                                pausedAt={subItem.pausedAt}
+                                pauseEndDate={subItem.pauseEndDate}
+                                pauseHistory={subItem.pauseHistory}
+                                currentEndDate={subItem.endDate}
+                                planName={subItem.plan?.name || "Meal Plan"}
+                                onTogglePause={(nextPaused, days) => handleTogglePause(subItem.id, nextPaused, days)}
+                              />
+                            )}
 
                             {/* Delivery Times & Benefits Grid */}
                             <div className={styles.detailsGrid}>
