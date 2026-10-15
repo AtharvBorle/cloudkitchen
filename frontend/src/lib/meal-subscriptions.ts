@@ -646,7 +646,9 @@ export interface UserActiveMealSubscription {
   userId: string;
   sellerId: string;
   planId: string;
-  status: "ACTIVE" | "PAUSED" | "CANCELLED" | "EXPIRED" | string;
+  status: "ACTIVE" | "PAUSED" | "CANCELLED" | "EXPIRED" | "INACTIVE" | string;
+  isPlanDeactivated?: boolean;
+  isExpired?: boolean;
   tier: string;
   cycle: "WEEKLY" | "MONTHLY" | string;
   pricePaid: number;
@@ -867,15 +869,42 @@ export async function fetchMealSubscriptionDeliveries(params?: {
  */
 export async function fetchMealSlots(): Promise<MealSlotDefinition[]> {
   try {
-    const res = await fetchApi("/api/public/meal-plans/slots");
-    if (res.ok) {
+    const res = await fetchApi("/api/seller/meal-plans/timings", { cache: "no-store" })
+      .catch(() => null)
+      || await fetchApi("/api/public/meal-plans/slots", { cache: "no-store" });
+
+    if (res && res.ok) {
       const json = await res.json();
-      const slots = json.data || json;
-      if (Array.isArray(slots) && slots.length > 0) return slots;
+      const rawSlots =
+        (Array.isArray(json) ? json : null) ||
+        (Array.isArray(json?.slots) ? json.slots : null) ||
+        (Array.isArray(json?.data) ? json.data : null) ||
+        (Array.isArray(json?.data?.slots) ? json.data.slots : null);
+
+      if (Array.isArray(rawSlots) && rawSlots.length > 0) {
+        if (typeof window !== "undefined") {
+          try {
+            localStorage.setItem("neo_meal_slots_config", JSON.stringify(rawSlots));
+          } catch {}
+        }
+        return rawSlots;
+      }
     }
   } catch (err) {
-    console.error("Failed to fetch slots from API, using defaults:", err);
+    console.error("Failed to fetch slots from API, using defaults/cached:", err);
   }
+
+  // Check cached slots in localStorage
+  if (typeof window !== "undefined") {
+    try {
+      const cached = localStorage.getItem("neo_meal_slots_config");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+  }
+
   return PREDEFINED_MEAL_SLOTS;
 }
 
@@ -904,6 +933,20 @@ export async function updateMealSlotConfig(
   if (!res.ok) {
     throw new Error(json.message || json.error || "Failed to update meal slot timing");
   }
+
+  // Update local cache and dispatch event for immediate cross-page sync
+  if (typeof window !== "undefined") {
+    try {
+      const cached = localStorage.getItem("neo_meal_slots_config");
+      const currentList: MealSlotDefinition[] = cached ? JSON.parse(cached) : PREDEFINED_MEAL_SLOTS;
+      const updatedList = currentList.map((s) =>
+        s.id === slotId ? { ...s, defaultTimeRange: timeRange } : s
+      );
+      localStorage.setItem("neo_meal_slots_config", JSON.stringify(updatedList));
+      window.dispatchEvent(new Event("meal-timings-updated"));
+    } catch {}
+  }
+
   return json.data?.slot || json.slot || json.data || { id: slotId, ...data };
 }
 

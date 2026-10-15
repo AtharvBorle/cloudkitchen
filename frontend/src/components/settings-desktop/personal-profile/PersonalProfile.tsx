@@ -341,35 +341,15 @@ export const PersonalProfile: React.FC<PersonalProfileProps> = ({
         </div>
 
         {!isEditing && (
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <div className={styles.headerActions}>
             {/* Direct Change Password Button */}
             <button
               type="button"
+              className={styles.changePasswordBtn}
               onClick={handleOpenPasswordModal}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "7px 14px",
-                backgroundColor: "#FFF1E8",
-                color: "#FF5500",
-                border: "1px solid #FFD0B8",
-                borderRadius: "8px",
-                fontSize: "0.82rem",
-                fontWeight: 600,
-                cursor: "pointer",
-                fontFamily: "inherit",
-                transition: "all 0.15s ease",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = "#FFE4D6";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "#FFF1E8";
-              }}
               aria-label="Change Password"
             >
-              <KeyRound size={13} strokeWidth={2.4} />
+              <KeyRound size={14} strokeWidth={2.4} />
               <span>Change Password</span>
             </button>
 
@@ -380,42 +360,22 @@ export const PersonalProfile: React.FC<PersonalProfileProps> = ({
               onClick={handleOpenEdit}
               aria-label="Edit Details"
             >
-              <Pencil size={13} strokeWidth={2.4} />
+              <Pencil size={14} strokeWidth={2.4} />
               <span>Edit Details</span>
             </button>
 
             {/* Delete Account Button */}
             <button
               type="button"
+              className={styles.deleteAccountBtn}
               onClick={() => {
                 setDeleteError(null);
                 setDeletePassword("");
                 setDeleteModalOpen(true);
               }}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "7px 14px",
-                backgroundColor: "#FEF2F2",
-                color: "#DC2626",
-                border: "1px solid #FECACA",
-                borderRadius: "8px",
-                fontSize: "0.82rem",
-                fontWeight: 600,
-                cursor: "pointer",
-                fontFamily: "inherit",
-                transition: "all 0.15s ease",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = "#FEE2E2";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "#FEF2F2";
-              }}
               aria-label="Delete Account"
             >
-              <Trash2 size={13} strokeWidth={2.4} />
+              <Trash2 size={14} strokeWidth={2.4} />
               <span>Delete Account</span>
             </button>
           </div>

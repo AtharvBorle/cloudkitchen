@@ -22,6 +22,7 @@ import { SearchResultsSection } from "@/components/explore-desktop/search-result
 import styles from "./ExploreMobileView.module.css";
 import { MobileSidebar } from "@/components/mobile-sidebar";
 import { useLocation } from "@/components/location-provider";
+import { CustomerNotificationBell } from "@/components/notifications";
 import logoImg from "@/components/navbar/logo-nav.png";
 import {
   matchesKitchenOrDishSearch,
@@ -450,7 +451,7 @@ export const ExploreMobileView: React.FC = () => {
             <div className={styles.logoWrapper}>
               <Image
                 src={logoImg}
-                alt="Cloud Kitchen Logo"
+                alt="Neo Cloud Bites Logo"
                 width={40}
                 height={40}
                 className={styles.logoImage}
@@ -458,7 +459,7 @@ export const ExploreMobileView: React.FC = () => {
               />
             </div>
             <div className={styles.brandInfo}>
-              <span className={styles.brandTitle}>Cloud Kitchen</span>
+              <span className={styles.brandTitle}>Neo Cloud Bites</span>
               <div
                 className={styles.locationContainer}
                 onClick={(e) => {
@@ -486,13 +487,7 @@ export const ExploreMobileView: React.FC = () => {
 
         <div className={styles.navRightGroup}>
           {/* Notification Bell Button */}
-          <button
-            type="button"
-            className={styles.bellBtn}
-            aria-label="Notifications"
-          >
-            <Bell size={20} strokeWidth={2} />
-          </button>
+          <CustomerNotificationBell />
 
           {/* Language Selector Pill with Dropdown (Commented out for now) */}
           {/*

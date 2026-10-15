@@ -40,9 +40,17 @@ for (let h = 0; h < 24; h++) {
 function parseTimeRange(rangeStr?: string): { start: string; end: string } {
   if (!rangeStr) return { start: "", end: "" };
   const parts = rangeStr.split(/\s*(?:–|-|\bto\b)\s*/i);
+  const normalize = (t?: string) => {
+    if (!t) return "";
+    let s = t.trim();
+    if (/^0[1-9]:/.test(s)) {
+      s = s.slice(1);
+    }
+    return s;
+  };
   return {
-    start: parts[0]?.trim() || "",
-    end: parts[1]?.trim() || "",
+    start: normalize(parts[0]),
+    end: normalize(parts[1]),
   };
 }
 
@@ -82,6 +90,10 @@ export default function ManageMealTimingsCanvas() {
 
   useEffect(() => {
     loadSlots();
+    window.addEventListener("meal-timings-updated", loadSlots);
+    return () => {
+      window.removeEventListener("meal-timings-updated", loadSlots);
+    };
   }, []);
 
   const handleStartEdit = (slot: MealSlotDefinition) => {

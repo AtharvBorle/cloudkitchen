@@ -9,9 +9,9 @@ export async function OPTIONS() {
   return new NextResponse(null, { status: 204 });
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const data = await getMealSlotsConfig();
+    const data = await getMealSlotsConfig(req);
     return successResponse(data, "Meal subscription timings fetched successfully", 200);
   } catch (error: any) {
     if (error instanceof ApiError) return errorResponse(error.message, error.statusCode);

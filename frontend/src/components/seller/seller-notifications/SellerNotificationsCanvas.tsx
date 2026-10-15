@@ -260,9 +260,10 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
     }
   };
 
-  const getSeverityClass = (severity: SellerNotificationItem["severity"]) => {
+  const getSeverityClass = (severity: SellerNotificationItem["severity"] | string) => {
     switch (severity) {
       case "critical":
+      case "cancelled":
         return styles.severityCritical;
       case "warning":
         return styles.severityWarning;
@@ -273,6 +274,13 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
       default:
         return styles.severityInfo;
     }
+  };
+
+  const isCancelledNotification = (item: SellerNotificationItem) => {
+    const s = String(item.severity || "").toLowerCase().trim();
+    const t = String(item.title || "").toLowerCase();
+    const m = String(item.message || "").toLowerCase();
+    return s === "cancelled" || t.includes("order cancelled") || m.includes("was cancelled");
   };
 
   const getCountByFilter = (filter: FilterTab) => {
@@ -576,14 +584,14 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
                     </div>
 
                     <div className={styles.metaArea}>
-                      <span className={`${styles.severityBadge} ${getSeverityClass(item.severity)}`}>
-                        {item.severity}
-                      </span>
                       <span
                         className={styles.timeAgo}
                         title={item.timestamp ? new Date(item.timestamp).toLocaleString("en-IN") : undefined}
                       >
                         {formatNotificationTime(item.timestamp, item.timeAgo)}
+                      </span>
+                      <span className={`${styles.severityBadge} ${getSeverityClass(isCancelledNotification(item) ? "cancelled" : item.severity)}`}>
+                        {isCancelledNotification(item) ? "cancelled" : item.severity}
                       </span>
                     </div>
                   </div>

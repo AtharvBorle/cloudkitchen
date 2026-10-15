@@ -121,13 +121,23 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
   const [metadata, setMetadata] = useState<PlanMetadataData>(initialMetadata);
 
   useEffect(() => {
-    fetchMealSlots()
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          setSlotsWithTimings(data);
-        }
-      })
-      .catch((err) => console.error("Error fetching meal slots in mobile edit:", err));
+    const loadSlots = () => {
+      fetchMealSlots()
+        .then((data) => {
+          if (Array.isArray(data) && data.length > 0) {
+            setSlotsWithTimings(data);
+          }
+        })
+        .catch((err) => console.error("Error fetching meal slots in mobile edit:", err));
+    };
+
+    loadSlots();
+    window.addEventListener("focus", loadSlots);
+    window.addEventListener("meal-timings-updated", loadSlots);
+    return () => {
+      window.removeEventListener("focus", loadSlots);
+      window.removeEventListener("meal-timings-updated", loadSlots);
+    };
   }, []);
 
   const handleToggleSlot = (slotId: string) => {
@@ -521,14 +531,14 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
             <div className={styles.featuresList}>
               {features.length === 0 ? (
                 <div className={styles.emptyState}>
-                  <span>No features added yet.</span>
+                  <span>No items added yet.</span>
                   <button
                     type="button"
                     className={styles.addFeatureBtn}
                     onClick={handleAddFeature}
                     style={{ marginTop: "4px" }}
                   >
-                    + Add First Feature
+                    + Add Meal Item
                   </button>
                 </div>
               ) : (

@@ -9,7 +9,7 @@ export type NotificationCategory =
   | "reviews"
   | "settlements";
 
-export type NotificationSeverity = "critical" | "warning" | "info" | "success";
+export type NotificationSeverity = "critical" | "warning" | "info" | "success" | "cancelled";
 
 export interface SellerNotificationItem {
   id: string;

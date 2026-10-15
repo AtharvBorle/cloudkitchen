@@ -139,6 +139,11 @@ export const getSellerMealPlans = async () => {
             sub.isPaused = false;
             sub.status = "ACTIVE";
         }
+        // Check if subscription expired naturally
+        if (sub.endDate && new Date(sub.endDate) < now) {
+            sub.isPaused = false;
+            sub.status = "EXPIRED";
+        }
 
         const resolvedPrice = Number(sub.pricePaid) > 0 ? Number(sub.pricePaid) : getPlanBasePrice(planObj || sub.plan);
 
@@ -463,6 +468,18 @@ export const createSellerMealPlan = async (req: Request) => {
         try { customTimes = JSON.parse(slotSetting.value); } catch {}
     }
 
+    if (sellerProfile?.id) {
+        const sellerSetting = await db.systemSettings.findUnique({
+            where: { key: `SELLER_MEAL_TIMINGS_${sellerProfile.id}` },
+        });
+        if (sellerSetting?.value) {
+            try {
+                const sellerTimes = JSON.parse(sellerSetting.value);
+                customTimes = { ...customTimes, ...sellerTimes };
+            } catch {}
+        }
+    }
+
     const dbSlots = await db.mealSlot.findMany({
         where: { id: { in: normalizedSlotIds } },
     });
@@ -470,7 +487,13 @@ export const createSellerMealPlan = async (req: Request) => {
     const missingSlots: string[] = [];
     for (const slotId of normalizedSlotIds) {
         const slotRecord = dbSlots.find((s) => s.id === slotId);
-        const configuredTime = (customTimes[slotId] || slotRecord?.defaultTimeRange || "").trim();
+        const configuredTime = (
+            customTimes[slotId] ||
+            customTimes[slotId.replace(/-/g, '_')] ||
+            customTimes[slotId.replace(/_/g, '-')] ||
+            slotRecord?.defaultTimeRange ||
+            ""
+        ).trim();
         const inlineTimingMatch = Array.isArray(body.mealTimings)
             ? body.mealTimings.find((t: string) => typeof t === "string" && normalizeMealSlotId(t) === slotId && t.includes(":"))
             : null;
@@ -620,13 +643,32 @@ export const updateSellerMealPlan = async (req: Request) => {
         if (slotSetting?.value) {
             try { customTimes = JSON.parse(slotSetting.value); } catch {}
         }
+
+        if (sellerProfile?.id) {
+            const sellerSetting = await db.systemSettings.findUnique({
+                where: { key: `SELLER_MEAL_TIMINGS_${sellerProfile.id}` },
+            });
+            if (sellerSetting?.value) {
+                try {
+                    const sellerTimes = JSON.parse(sellerSetting.value);
+                    customTimes = { ...customTimes, ...sellerTimes };
+                } catch {}
+            }
+        }
+
         const dbSlots = await db.mealSlot.findMany({
             where: { id: { in: normalizedSlotIds } },
         });
         const missingSlots: string[] = [];
         for (const slotId of normalizedSlotIds) {
             const slotRecord = dbSlots.find((s) => s.id === slotId);
-            const configuredTime = (customTimes[slotId] || slotRecord?.defaultTimeRange || "").trim();
+            const configuredTime = (
+                customTimes[slotId] ||
+                customTimes[slotId.replace(/-/g, '_')] ||
+                customTimes[slotId.replace(/_/g, '-')] ||
+                slotRecord?.defaultTimeRange ||
+                ""
+            ).trim();
             const inlineTimingMatch = Array.isArray(body.mealTimings)
                 ? body.mealTimings.find((t: string) => typeof t === "string" && normalizeMealSlotId(t) === slotId && t.includes(":"))
                 : null;
@@ -988,15 +1030,49 @@ export const getMealSubscriptionDeliveries = async (req: Request) => {
     });
 };
 
-export const getMealSlotsConfig = async () => {
+export const getMealSlotsConfig = async (req?: Request) => {
+    let customTimes: Record<string, string> = {};
+
+    let sellerId: string | null = null;
+    try {
+        const session = await getAuthSession();
+        if (session?.user?.id) {
+            const seller = await db.sellerProfile.findUnique({
+                where: { userId: session.user.id },
+                select: { id: true },
+            });
+            if (seller) sellerId = seller.id;
+        }
+    } catch {}
+
+    if (!sellerId && req) {
+        try {
+            const url = new URL(req.url);
+            sellerId = url.searchParams.get("sellerId");
+        } catch {}
+    }
+
+    // 1. Central platform settings
     const setting = await db.systemSettings.findUnique({
         where: { key: "MEAL_SUBSCRIPTION_SLOTS" },
     });
-    let customTimes: Record<string, string> = {};
     if (setting?.value) {
         try {
             customTimes = JSON.parse(setting.value);
         } catch {}
+    }
+
+    // 2. Seller-specific settings
+    if (sellerId) {
+        const sellerSetting = await db.systemSettings.findUnique({
+            where: { key: `SELLER_MEAL_TIMINGS_${sellerId}` },
+        });
+        if (sellerSetting?.value) {
+            try {
+                const sellerTimes = JSON.parse(sellerSetting.value);
+                customTimes = { ...customTimes, ...sellerTimes };
+            } catch {}
+        }
     }
 
     const dbSlots = await db.mealSlot.findMany({
@@ -1004,14 +1080,30 @@ export const getMealSlotsConfig = async () => {
         orderBy: { order: "asc" },
     });
 
-    const slots = (dbSlots.length > 0 ? dbSlots : PREDEFINED_MEAL_SLOTS).map((s) => ({
-        ...s,
-        defaultTimeRange: customTimes[s.id] || s.defaultTimeRange,
-    }));
+    const slots = PREDEFINED_MEAL_SLOTS.map((predefined) => {
+        const dbMatch = dbSlots.find((d) => d.id === predefined.id);
+        const configuredTime = (
+            customTimes[predefined.id] ||
+            customTimes[predefined.id.replace(/-/g, '_')] ||
+            customTimes[predefined.id.replace(/_/g, '-')] ||
+            dbMatch?.defaultTimeRange ||
+            ""
+        ).trim();
+
+        return {
+            ...predefined,
+            ...(dbMatch || {}),
+            name: predefined.name,
+            subtitle: predefined.subtitle,
+            order: predefined.order,
+            defaultTimeRange: configuredTime,
+        };
+    });
 
     return {
         slots,
         total: slots.length,
+        timings: customTimes,
     };
 };
 
@@ -1025,6 +1117,15 @@ export const updateMealSlotsConfig = async (req: Request) => {
         throw new ApiError("Access denied. Authorized partner or admin account required.", 403);
     }
 
+    let sellerId: string | null = null;
+    try {
+        const seller = await db.sellerProfile.findUnique({
+            where: { userId: session.user.id },
+            select: { id: true },
+        });
+        if (seller) sellerId = seller.id;
+    } catch {}
+
     const body = await req.json();
     let slotUpdates: Record<string, string> = {};
 
@@ -1037,6 +1138,14 @@ export const updateMealSlotsConfig = async (req: Request) => {
         throw new ApiError("A valid slotId or timings dictionary is required.", 400);
     }
 
+    // Normalize keys in slotUpdates
+    const normalizedUpdates: Record<string, string> = {};
+    for (const [key, val] of Object.entries(slotUpdates)) {
+        const normKey = normalizeMealSlotId(key) || key;
+        normalizedUpdates[normKey] = typeof val === "string" ? val.trim() : String(val);
+    }
+
+    // 1. Central platform settings
     const existing = await db.systemSettings.findUnique({
         where: { key: "MEAL_SUBSCRIPTION_SLOTS" },
     });
@@ -1048,46 +1157,78 @@ export const updateMealSlotsConfig = async (req: Request) => {
         } catch {}
     }
 
-    const merged = { ...currentMap, ...slotUpdates };
+    const mergedPlatform = { ...currentMap, ...normalizedUpdates };
 
     await db.systemSettings.upsert({
         where: { key: "MEAL_SUBSCRIPTION_SLOTS" },
         create: {
             id: "MEAL_SUBSCRIPTION_SLOTS",
             key: "MEAL_SUBSCRIPTION_SLOTS",
-            value: JSON.stringify(merged),
+            value: JSON.stringify(mergedPlatform),
         },
         update: {
-            value: JSON.stringify(merged),
+            value: JSON.stringify(mergedPlatform),
         },
     });
 
-    for (const [slotId, timeRange] of Object.entries(slotUpdates)) {
+    // 2. Seller-specific settings
+    if (sellerId) {
+        const sellerSettingKey = `SELLER_MEAL_TIMINGS_${sellerId}`;
+        const existingSeller = await db.systemSettings.findUnique({
+            where: { key: sellerSettingKey },
+        });
+        let sellerMap: Record<string, string> = {};
+        if (existingSeller?.value) {
+            try {
+                sellerMap = JSON.parse(existingSeller.value);
+            } catch {}
+        }
+        const mergedSeller = { ...sellerMap, ...normalizedUpdates };
+        await db.systemSettings.upsert({
+            where: { key: sellerSettingKey },
+            create: {
+                id: sellerSettingKey,
+                key: sellerSettingKey,
+                value: JSON.stringify(mergedSeller),
+            },
+            update: {
+                value: JSON.stringify(mergedSeller),
+            },
+        });
+    }
+
+    // 3. Upsert into MealSlot database table with proper names and details
+    for (const [slotId, timeRange] of Object.entries(normalizedUpdates)) {
         if (typeof timeRange === "string") {
             const trimmed = timeRange.trim();
+            const details = getMealSlotDetails(slotId);
             await db.mealSlot.upsert({
-                where: { id: slotId },
+                where: { id: details.id },
                 create: {
-                    id: slotId,
-                    name: slotId,
-                    subtitle: "",
+                    id: details.id,
+                    name: details.name,
+                    subtitle: details.subtitle,
+                    description: details.description || "",
                     defaultTimeRange: trimmed,
-                    order: 99,
+                    order: details.order || 99,
                     isActive: true,
                 },
                 update: {
                     defaultTimeRange: trimmed,
+                    name: details.name,
+                    subtitle: details.subtitle,
                 },
             }).catch(() => {});
         }
     }
 
+    const returnSlotId = body.slotId ? (normalizeMealSlotId(body.slotId) || body.slotId) : undefined;
     return {
         success: true,
         message: "Meal subscription timings updated successfully.",
-        timings: merged,
-        slot: body.slotId
-            ? { id: body.slotId, defaultTimeRange: slotUpdates[body.slotId] }
+        timings: mergedPlatform,
+        slot: returnSlotId
+            ? { id: returnSlotId, defaultTimeRange: normalizedUpdates[returnSlotId] }
             : undefined,
     };
 };
