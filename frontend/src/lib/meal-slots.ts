@@ -1,6 +1,6 @@
 /**
  * ==============================================================================
- * 🍱 Centralized Meal Slots Configuration & Helpers (Frontend)
+ * Centralized Meal Slots Configuration & Helpers (Frontend)
  * ==============================================================================
  * Exactly 6 standardized predefined meal slots for the entire platform:
  * 1. Breakfast (Morning breakfast / Nasta)
@@ -161,26 +161,9 @@ export function formatMealSlotsDisplay(slotIds: string[]): string {
   return valid.map((id) => getMealSlotDetails(id).name).join(", ");
 }
 
-export const DEFAULT_SLOT_TIMES: Record<string, string> = {
-  breakfast: "07:30 AM – 09:30 AM",
-  morning_meal: "10:30 AM – 12:00 PM",
-  lunch: "12:30 PM – 02:30 PM",
-  evening_snack: "04:30 PM – 06:30 PM",
-  dinner: "07:30 PM – 09:30 PM",
-  late_night_snack: "10:30 PM – 12:30 AM",
-};
-
-export const DEFAULT_SLOT_ICONS: Record<string, string> = {
-  breakfast: "🍳",
-  morning_meal: "🥐",
-  lunch: "🍲",
-  evening_snack: "☕",
-  dinner: "🍱",
-  late_night_snack: "🌙",
-};
-
 /**
- * Returns the configured delivery timing for a slot, falling back to platform defaults.
+ * Returns the configured delivery timing for a slot.
+ * Does NOT return any arbitrary hardcoded default times.
  */
 export function getSlotDeliveryTime(slotId: string, customTime?: string): string {
   const norm = normalizeMealSlotId(slotId) || "breakfast";
@@ -221,7 +204,7 @@ export function getSlotDeliveryTime(slotId: string, customTime?: string): string
     return def.defaultTimeRange.trim();
   }
 
-  return DEFAULT_SLOT_TIMES[norm] || "Standard Delivery Window";
+  return "";
 }
 
 export interface FormattedMealTiming {
@@ -233,24 +216,23 @@ export interface FormattedMealTiming {
 }
 
 /**
- * Parses and formats any meal timing string (variable name, "slot: time", "Slot (time)", or slot ID)
- * into a structured, human-friendly display with name, time range, full display label, and icon.
+ * Parses and formats any meal timing string into a clean, human-friendly display
+ * showing ONLY the timing configured by the seller, with no arbitrary defaults or emojis.
  */
 export function formatMealTimingDisplay(timing: string | null | undefined): FormattedMealTiming {
   if (!timing || typeof timing !== "string") {
     return {
       slotId: "lunch",
       name: "Lunch",
-      timeRange: DEFAULT_SLOT_TIMES.lunch,
-      fullDisplay: `Lunch (${DEFAULT_SLOT_TIMES.lunch})`,
-      icon: DEFAULT_SLOT_ICONS.lunch,
+      timeRange: "",
+      fullDisplay: "Lunch",
+      icon: "",
     };
   }
 
   const raw = timing.trim();
   const normId = normalizeMealSlotId(raw) || "lunch";
   const def = getMealSlotDetails(normId);
-  const icon = DEFAULT_SLOT_ICONS[normId] || "🍱";
 
   let extractedTime = "";
 
@@ -275,7 +257,7 @@ export function formatMealTimingDisplay(timing: string | null | undefined): Form
     slotId: normId,
     name,
     timeRange,
-    fullDisplay: `${name} (${timeRange})`,
-    icon,
+    fullDisplay: timeRange ? `${name} (${timeRange})` : name,
+    icon: "",
   };
 }

@@ -561,7 +561,7 @@ export default function DeliveriesCanvas() {
                                 color: tierColors.tierColor,
                               }}
                             >
-                              🍱 {planName} ({subTier})
+                              {planName} ({subTier})
                             </span>
                           </div>
 

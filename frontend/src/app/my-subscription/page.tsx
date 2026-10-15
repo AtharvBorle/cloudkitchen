@@ -803,37 +803,35 @@ function MySubscriptionContent() {
   };
 
   const getSubscriptionSlots = (sub: UserActiveMealSubscription): DeliverySlot[] => {
-    if (sub.plan?.mealTimings && sub.plan.mealTimings.length > 0) {
-      return sub.plan.mealTimings.map((t, idx) => {
+    const timings = (sub.plan?.mealTimings && sub.plan.mealTimings.length > 0)
+      ? sub.plan.mealTimings
+      : (sub.mealTimings && sub.mealTimings.length > 0 ? sub.mealTimings : []);
+
+    if (timings.length > 0) {
+      return timings.map((t, idx) => {
         const parsed = formatMealTimingDisplay(t);
         return {
           id: `slot-${sub.id}-${idx}`,
           name: `${parsed.name} Delivery`,
           timeRange: parsed.timeRange,
-          icon: parsed.icon,
+          icon: "",
         };
       });
     }
 
-    const planName = (sub.plan?.name || "").toLowerCase();
-    if (planName.includes("lunch") && !planName.includes("dinner")) {
-      const parsed = formatMealTimingDisplay("lunch");
-      return [{ id: `lunch-${sub.id}`, name: `${parsed.name} Delivery`, timeRange: parsed.timeRange, icon: parsed.icon }];
-    }
-    if (planName.includes("dinner") && !planName.includes("lunch")) {
-      const parsed = formatMealTimingDisplay("dinner");
-      return [{ id: `dinner-${sub.id}`, name: `${parsed.name} Delivery`, timeRange: parsed.timeRange, icon: parsed.icon }];
-    }
-    if (planName.includes("breakfast")) {
-      const parsed = formatMealTimingDisplay("breakfast");
-      return [{ id: `breakfast-${sub.id}`, name: `${parsed.name} Delivery`, timeRange: parsed.timeRange, icon: parsed.icon }];
+    if (sub.mealSlots && sub.mealSlots.length > 0) {
+      return sub.mealSlots.map((s, idx) => {
+        const parsed = formatMealTimingDisplay(s.name || s.id);
+        return {
+          id: `slot-${sub.id}-${idx}`,
+          name: `${parsed.name} Delivery`,
+          timeRange: parsed.timeRange || s.defaultTimeRange || "",
+          icon: "",
+        };
+      });
     }
 
-    return [
-      { id: `breakfast-${sub.id}`, name: "Breakfast Delivery", timeRange: formatMealTimingDisplay("breakfast").timeRange, icon: "🍳" },
-      { id: `lunch-${sub.id}`, name: "Lunch Delivery", timeRange: formatMealTimingDisplay("lunch").timeRange, icon: "🍲" },
-      { id: `dinner-${sub.id}`, name: "Dinner Delivery", timeRange: formatMealTimingDisplay("dinner").timeRange, icon: "🍱" },
-    ];
+    return [];
   };
 
   const formatSubStartedOn = (sub: UserActiveMealSubscription) => {
@@ -1011,10 +1009,9 @@ function MySubscriptionContent() {
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        fontSize: "28px",
                       }}
                     >
-                      🍱
+                      <Utensils size={28} color="#FF6B00" />
                     </div>
                     <h3 style={{ margin: 0, fontSize: "1.25rem", fontWeight: "700", color: "#1E293B" }}>
                       No Active Meal Subscriptions
@@ -1082,7 +1079,7 @@ function MySubscriptionContent() {
                               boxShadow: selectedSubFilter === "all" ? "0 2px 8px rgba(255, 85, 0, 0.15)" : "none",
                             }}
                           >
-                            <span>🍱 View All Plans ({userSubs.length})</span>
+                            <span>View All Plans ({userSubs.length})</span>
                           </button>
 
                           {userSubs.map((s) => {
@@ -1110,7 +1107,7 @@ function MySubscriptionContent() {
                                   boxShadow: isSelected ? "0 2px 8px rgba(255, 85, 0, 0.15)" : "none",
                                 }}
                               >
-                                <span>🍱 {s.plan?.name || "Meal Plan"}</span>
+                                <span>{s.plan?.name || "Meal Plan"}</span>
                                 <span style={{ fontSize: "0.78rem", color: isSelected ? "#EA580C" : "#64748B", fontWeight: 500 }}>
                                   ({s.seller?.businessName || "Kitchen"})
                                 </span>
@@ -1752,7 +1749,8 @@ function MySubscriptionContent() {
                                   const parsed = formatMealTimingDisplay(timing);
                                   return (
                                     <span key={tIdx} className={styles.timingPill}>
-                                      {parsed.icon} {parsed.fullDisplay}
+                                      <Clock size={11} color="#EA580C" style={{ marginRight: 4, flexShrink: 0 }} />
+                                      {parsed.fullDisplay}
                                     </span>
                                   );
                                 })}

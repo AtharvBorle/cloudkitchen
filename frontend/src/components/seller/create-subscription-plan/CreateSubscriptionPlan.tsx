@@ -669,7 +669,7 @@ export const CreateSubscriptionPlan: React.FC<CreateSubscriptionPlanProps> = ({
                                 border: '1px solid #FED7AA',
                               }}
                             >
-                              🍱 {slot?.name || slotId}
+                              {slot?.name || slotId}
                             </span>
                           );
                         })}

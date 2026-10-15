@@ -89,6 +89,34 @@ export const getUserMealSubscriptions = async () => {
         }
     }
 
+    const sellerIds = Array.from(new Set(subscriptions.map((s) => s.sellerId).filter(Boolean)));
+    const sellerSettings = await db.systemSettings.findMany({
+        where: {
+            key: {
+                in: [
+                    "MEAL_SUBSCRIPTION_SLOTS",
+                    ...sellerIds.map((sid) => `SELLER_MEAL_TIMINGS_${sid}`),
+                ],
+            },
+        },
+    });
+
+    const platformTimesSetting = sellerSettings.find((s) => s.key === "MEAL_SUBSCRIPTION_SLOTS");
+    let basePlatformTimes: Record<string, string> = {};
+    if (platformTimesSetting?.value) {
+        try { basePlatformTimes = JSON.parse(platformTimesSetting.value); } catch {}
+    }
+
+    const sellerTimesMap: Record<string, Record<string, string>> = {};
+    for (const sid of sellerIds) {
+        const st = sellerSettings.find((s) => s.key === `SELLER_MEAL_TIMINGS_${sid}`);
+        let stTimes: Record<string, string> = {};
+        if (st?.value) {
+            try { stTimes = JSON.parse(st.value); } catch {}
+        }
+        sellerTimesMap[sid] = { ...basePlatformTimes, ...stTimes };
+    }
+
     return subscriptions.map((sub) => {
         let features: string[] = [];
         try {
@@ -118,18 +146,62 @@ export const getUserMealSubscriptions = async () => {
             parsedDailyDeliveries = [];
         }
 
+        const sellerTimes = (sub.sellerId ? sellerTimesMap[sub.sellerId] : null) || basePlatformTimes;
+
         const rawSlots = sub.slots && sub.slots.length > 0
             ? sub.slots.map((s: any) => s.slotId)
             : (sub.plan?.slots && sub.plan.slots.length > 0
                 ? sub.plan.slots.map((s: any) => s.slotId)
                 : mealTimings);
         const resolvedSlotIds = normalizeMealSlotIds(rawSlots);
-        const resolvedSlotDetails = resolvedSlotIds.map((id) => getMealSlotDetails(id));
+        const resolvedSlotDetails = resolvedSlotIds.map((id) => {
+            const base = getMealSlotDetails(id);
+            const dbSlot = sub.slots?.find((s: any) => s.slotId === id)?.slot || sub.plan?.slots?.find((s: any) => s.slotId === id)?.slot;
+            const customTime = (
+                sellerTimes[id] ||
+                sellerTimes[id.replace(/-/g, '_')] ||
+                sellerTimes[id.replace(/_/g, '-')] ||
+                dbSlot?.defaultTimeRange ||
+                ""
+            ).trim();
+            return {
+                ...base,
+                defaultTimeRange: customTime || base.defaultTimeRange || "",
+            };
+        });
+
+        const resolvedTimings = resolvedSlotIds.map((id) => {
+            const detail = resolvedSlotDetails.find((d) => d.id === id);
+            const name = detail?.name || getMealSlotDetails(id).name;
+            const time = detail?.defaultTimeRange || "";
+            return time ? `${name}: ${time}` : name;
+        });
 
         const planSlotIds = sub.plan?.slots && sub.plan.slots.length > 0
             ? sub.plan.slots.map((s: any) => s.slotId)
             : normalizeMealSlotIds(mealTimings);
-        const planSlotDetails = planSlotIds.map((id) => getMealSlotDetails(id));
+        const planSlotDetails = planSlotIds.map((id) => {
+            const base = getMealSlotDetails(id);
+            const dbSlot = sub.plan?.slots?.find((s: any) => s.slotId === id)?.slot;
+            const customTime = (
+                sellerTimes[id] ||
+                sellerTimes[id.replace(/-/g, '_')] ||
+                sellerTimes[id.replace(/_/g, '-')] ||
+                dbSlot?.defaultTimeRange ||
+                ""
+            ).trim();
+            return {
+                ...base,
+                defaultTimeRange: customTime || base.defaultTimeRange || "",
+            };
+        });
+
+        const planMealTimings = planSlotIds.map((id) => {
+            const detail = planSlotDetails.find((d) => d.id === id);
+            const name = detail?.name || getMealSlotDetails(id).name;
+            const time = detail?.defaultTimeRange || "";
+            return time ? `${name}: ${time}` : name;
+        });
 
         const isPlanDeactivated = sub.plan?.status === "Inactive";
         const isExpired = sub.status === "EXPIRED" || Boolean(sub.endDate && new Date(sub.endDate) < now);
@@ -156,7 +228,7 @@ export const getUserMealSubscriptions = async () => {
             usedPauseDays: sub.usedPauseDays || 0,
             pauseHistory: parsedPauseHistory,
             dailyDeliveries: parsedDailyDeliveries,
-            mealTimings: resolvedSlotIds,
+            mealTimings: resolvedTimings,
             mealSlots: resolvedSlotDetails,
             slotIds: resolvedSlotIds,
             startDate: sub.startDate.toISOString(),
@@ -176,7 +248,7 @@ export const getUserMealSubscriptions = async () => {
                 yearlyPrice: sub.plan.yearlyPrice || null,
                 duration: sub.plan.duration,
                 features,
-                mealTimings: planSlotIds,
+                mealTimings: planMealTimings,
                 mealSlots: planSlotDetails,
                 slotIds: planSlotIds,
                 status: sub.plan.status,

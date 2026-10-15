@@ -102,6 +102,23 @@ export const getSellerMealPlans = async () => {
         orderBy: { createdAt: "desc" }
     });
 
+    const sellerSetting = await db.systemSettings.findUnique({
+        where: { key: `SELLER_MEAL_TIMINGS_${sellerProfile.id}` },
+    });
+    let sellerCustomTimes: Record<string, string> = {};
+    if (sellerSetting?.value) {
+        try { sellerCustomTimes = JSON.parse(sellerSetting.value); } catch {}
+    }
+
+    const platformSetting = await db.systemSettings.findUnique({
+        where: { key: "MEAL_SUBSCRIPTION_SLOTS" },
+    });
+    let platformCustomTimes: Record<string, string> = {};
+    if (platformSetting?.value) {
+        try { platformCustomTimes = JSON.parse(platformSetting.value); } catch {}
+    }
+    const combinedSellerTimes = { ...platformCustomTimes, ...sellerCustomTimes };
+
     const now = new Date();
     const isSubscriptionActive = (sub: any) => {
         const statusStr = String(sub.status || "").toUpperCase().trim();
@@ -177,7 +194,29 @@ export const getSellerMealPlans = async () => {
                 ? planObj.slots.map((s: any) => s.slotId)
                 : parsedMealTimings);
         const resolvedSlotIds = normalizeMealSlotIds(rawSubSlots);
-        const resolvedSlotDetails = resolvedSlotIds.map((id) => getMealSlotDetails(id));
+        const resolvedSlotDetails = resolvedSlotIds.map((id) => {
+            const base = getMealSlotDetails(id);
+            const dbSlot = sub.slots?.find((s: any) => s.slotId === id)?.slot ||
+                           planObj?.slots?.find((s: any) => s.slotId === id)?.slot;
+            const customTime = (
+                combinedSellerTimes[id] ||
+                combinedSellerTimes[id.replace(/-/g, '_')] ||
+                combinedSellerTimes[id.replace(/_/g, '-')] ||
+                dbSlot?.defaultTimeRange ||
+                ""
+            ).trim();
+            return {
+                ...base,
+                defaultTimeRange: customTime || base.defaultTimeRange || "",
+            };
+        });
+
+        const resolvedTimings = resolvedSlotIds.map((id) => {
+            const detail = resolvedSlotDetails.find((d) => d.id === id);
+            const name = detail?.name || getMealSlotDetails(id).name;
+            const time = detail?.defaultTimeRange || "";
+            return time ? `${name}: ${time}` : name;
+        });
 
         allSubscribers.push({
             id: sub.id,
@@ -197,7 +236,7 @@ export const getSellerMealPlans = async () => {
             usedPauseDays: Number(sub.usedPauseDays || 0),
             pauseHistory: parsedPauseHistory,
             dailyDeliveries: parsedDailyDeliveries,
-            mealTimings: parsedMealTimings,
+            mealTimings: resolvedTimings,
             mealSlots: resolvedSlotDetails,
             slotIds: resolvedSlotIds,
             pauseBillingPeriod,
@@ -237,7 +276,28 @@ export const getSellerMealPlans = async () => {
         const planSlotIds = plan.slots && plan.slots.length > 0
             ? plan.slots.map((s: any) => s.slotId)
             : normalizeMealSlotIds(parsedTimings);
-        const planSlotDetails = planSlotIds.map((id: string) => getMealSlotDetails(id));
+        const planSlotDetails = planSlotIds.map((id: string) => {
+            const base = getMealSlotDetails(id);
+            const dbSlot = plan.slots?.find((s: any) => s.slotId === id)?.slot;
+            const customTime = (
+                combinedSellerTimes[id] ||
+                combinedSellerTimes[id.replace(/-/g, '_')] ||
+                combinedSellerTimes[id.replace(/_/g, '-')] ||
+                dbSlot?.defaultTimeRange ||
+                ""
+            ).trim();
+            return {
+                ...base,
+                defaultTimeRange: customTime || base.defaultTimeRange || "",
+            };
+        });
+
+        const resolvedTimings = planSlotIds.map((id: string) => {
+            const detail = planSlotDetails.find((d) => d.id === id);
+            const name = detail?.name || getMealSlotDetails(id).name;
+            const time = detail?.defaultTimeRange || "";
+            return time ? `${name}: ${time}` : name;
+        });
 
         // Count active subscriptions for this specific plan (deduplicated by subscription ID)
         const planActiveSubIds = new Set<string>();
@@ -275,7 +335,7 @@ export const getSellerMealPlans = async () => {
             yearlyPrice: plan.yearlyPrice != null ? `₹${Number(plan.yearlyPrice).toFixed(0)}` : "",
             duration: plan.duration,
             features: parsedFeatures,
-            mealTimings: parsedTimings,
+            mealTimings: resolvedTimings,
             mealSlots: planSlotDetails,
             slotIds: planSlotIds,
             status: plan.status,
@@ -510,6 +570,24 @@ export const createSellerMealPlan = async (req: Request) => {
         );
     }
 
+    const planTimingsArray = normalizedSlotIds.map((slotId) => {
+        const slotRecord = dbSlots.find((s) => s.id === slotId);
+        const slotName = slotRecord?.name || getMealSlotDetails(slotId).name;
+        const configuredTime = (
+            customTimes[slotId] ||
+            customTimes[slotId.replace(/-/g, '_')] ||
+            customTimes[slotId.replace(/_/g, '-')] ||
+            slotRecord?.defaultTimeRange ||
+            ""
+        ).trim();
+        const inlineTimingMatch = Array.isArray(body.mealTimings)
+            ? body.mealTimings.find((t: string) => typeof t === "string" && normalizeMealSlotId(t) === slotId && t.includes(":"))
+            : null;
+        const inlineTime = inlineTimingMatch ? inlineTimingMatch.split(":").slice(1).join(":").trim() : "";
+        const finalTime = configuredTime || inlineTime;
+        return finalTime ? `${slotName}: ${finalTime}` : slotName;
+    });
+
     const newPlan = await db.sellerMealPlan.create({
         data: {
             sellerId: sellerProfile.id,
@@ -522,7 +600,7 @@ export const createSellerMealPlan = async (req: Request) => {
             yearlyPrice: numericYearly,
             duration: duration || "1 Week",
             features: JSON.stringify(Array.isArray(features) ? features : []),
-            mealTimings: JSON.stringify(normalizedSlotIds),
+            mealTimings: JSON.stringify(planTimingsArray),
             status: status || "Live",
             allowCancel: allowCancel !== undefined ? Boolean(allowCancel) : false,
             pauseBillingPeriod: isPauseDisabled ? "None" : (pauseBillingPeriod || "30 Days"),
@@ -684,7 +762,25 @@ export const updateSellerMealPlan = async (req: Request) => {
             );
         }
 
-        updateData.mealTimings = JSON.stringify(normalizedSlotIds);
+        const planTimingsArray = normalizedSlotIds.map((slotId) => {
+            const slotRecord = dbSlots.find((s) => s.id === slotId);
+            const slotName = slotRecord?.name || getMealSlotDetails(slotId).name;
+            const configuredTime = (
+                customTimes[slotId] ||
+                customTimes[slotId.replace(/-/g, '_')] ||
+                customTimes[slotId.replace(/_/g, '-')] ||
+                slotRecord?.defaultTimeRange ||
+                ""
+            ).trim();
+            const inlineTimingMatch = Array.isArray(body.mealTimings)
+                ? body.mealTimings.find((t: string) => typeof t === "string" && normalizeMealSlotId(t) === slotId && t.includes(":"))
+                : null;
+            const inlineTime = inlineTimingMatch ? inlineTimingMatch.split(":").slice(1).join(":").trim() : "";
+            const finalTime = configuredTime || inlineTime;
+            return finalTime ? `${slotName}: ${finalTime}` : slotName;
+        });
+
+        updateData.mealTimings = JSON.stringify(planTimingsArray);
         await db.sellerMealPlanSlot.deleteMany({ where: { planId: existingPlan.id } });
         await db.sellerMealPlanSlot.createMany({
             data: normalizedSlotIds.map((sId) => ({ planId: existingPlan.id, slotId: sId })),
@@ -932,10 +1028,43 @@ export const getPublicMealPlans = async (req: Request) => {
                     addressLocality: true,
                     foodType: true,
                 }
+            },
+            slots: {
+                include: {
+                    slot: true
+                }
             }
         },
         orderBy: { weeklyPrice: "asc" }
     });
+
+    const sellerIds = Array.from(new Set(plans.map((p) => p.sellerId).filter(Boolean)));
+    const sellerSettings = await db.systemSettings.findMany({
+        where: {
+            key: {
+                in: [
+                    "MEAL_SUBSCRIPTION_SLOTS",
+                    ...sellerIds.map((sid) => `SELLER_MEAL_TIMINGS_${sid}`),
+                ],
+            },
+        },
+    });
+
+    const platformTimesSetting = sellerSettings.find((s) => s.key === "MEAL_SUBSCRIPTION_SLOTS");
+    let basePlatformTimes: Record<string, string> = {};
+    if (platformTimesSetting?.value) {
+        try { basePlatformTimes = JSON.parse(platformTimesSetting.value); } catch {}
+    }
+
+    const sellerTimesMap: Record<string, Record<string, string>> = {};
+    for (const sid of sellerIds) {
+        const st = sellerSettings.find((s) => s.key === `SELLER_MEAL_TIMINGS_${sid}`);
+        let stTimes: Record<string, string> = {};
+        if (st?.value) {
+            try { stTimes = JSON.parse(st.value); } catch {}
+        }
+        sellerTimesMap[sid] = { ...basePlatformTimes, ...stTimes };
+    }
 
     return plans.map((p) => {
         let parsedFeatures: string[] = [];
@@ -951,6 +1080,36 @@ export const getPublicMealPlans = async (req: Request) => {
         } catch {
             parsedTimings = [];
         }
+
+        const sellerTimes = sellerTimesMap[p.sellerId] || basePlatformTimes;
+        const slotSources = parsedTimings.length > 0
+            ? parsedTimings
+            : (p.slots && p.slots.length > 0 ? p.slots.map((s: any) => s.slotId) : []);
+
+        const resolvedTimings = slotSources.map((t: string) => {
+            const slotId = normalizeMealSlotId(t) || t;
+            const slotRecord = p.slots?.find((s: any) => s.slotId === slotId)?.slot;
+            const slotName = slotRecord?.name || getMealSlotDetails(slotId).name;
+
+            if (t.includes(":") && !t.endsWith(":")) {
+                const parts = t.split(":");
+                const namePart = parts[0].trim();
+                const timePart = parts.slice(1).join(":").trim();
+                if (timePart) {
+                    return `${namePart}: ${timePart}`;
+                }
+            }
+
+            const configuredTime = (
+                sellerTimes[slotId] ||
+                sellerTimes[slotId.replace(/-/g, '_')] ||
+                sellerTimes[slotId.replace(/_/g, '-')] ||
+                slotRecord?.defaultTimeRange ||
+                ""
+            ).trim();
+
+            return configuredTime ? `${slotName}: ${configuredTime}` : slotName;
+        });
 
         const isWeekly = (p.duration || "1 Week").toLowerCase().includes("week");
         const pausePeriodLower = String(p.pauseBillingPeriod || "").trim().toLowerCase();
@@ -976,7 +1135,7 @@ export const getPublicMealPlans = async (req: Request) => {
             yearlyPrice: p.yearlyPrice || null,
             duration: p.duration,
             features: parsedFeatures,
-            mealTimings: parsedTimings,
+            mealTimings: resolvedTimings,
             allowCancel: p.allowCancel,
             pauseBillingPeriod: allowPause ? p.pauseBillingPeriod : "None",
             allowPause,
