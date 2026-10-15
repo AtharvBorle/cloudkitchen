@@ -15,6 +15,7 @@ export async function GET(req: Request) {
     return successResponse(data, "Meal subscription deliveries fetched successfully", 200);
   } catch (error: any) {
     if (error instanceof ApiError) return errorResponse(error.message, error.statusCode);
-    return errorResponse(error.message || "Failed to fetch deliveries", 500);
+    console.error("Error in GET /api/seller/meal-plans/deliveries:", error);
+    return errorResponse("Unable to load meal subscription deliveries. Please try again later.", 500);
   }
 }

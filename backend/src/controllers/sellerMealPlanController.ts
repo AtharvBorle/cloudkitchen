@@ -37,7 +37,13 @@ export const getAuthenticatedSellerProfile = async () => {
         }
     });
 
-    const { foodExpiry } = getCategoryExpiries(activeSubs);
+    let foodExpiry: Date | null = null;
+    try {
+        const expiries = getCategoryExpiries(activeSubs);
+        foodExpiry = expiries?.foodExpiry ?? null;
+    } catch (e) {
+        console.error("Error calculating subscription category expiries:", e);
+    }
     const isFoodActive = (foodExpiry ? foodExpiry > new Date() : false) && sellerProfile.foodVerificationStatus === "APPROVED";
 
     if (!isFoodActive && sellerProfile.verificationStatus !== "APPROVED") {

@@ -881,7 +881,9 @@ export async function fetchMealSubscriptionDeliveries(params?: {
   const res = await fetchApi(`/api/seller/meal-plans/deliveries?${query.toString()}`);
   if (!res.ok) {
     const json = await res.json().catch(() => ({}));
-    throw new Error(json.message || "Failed to fetch meal subscription deliveries");
+    const rawMsg = String(json?.message || "");
+    const isTechnical = /not defined|is not a function|ReferenceError|TypeError|SyntaxError/i.test(rawMsg);
+    throw new Error(isTechnical ? "Delivery data could not be loaded. Please try again." : (rawMsg || "Failed to fetch meal subscription deliveries"));
   }
   const json = await res.json();
   return json.data || json;
