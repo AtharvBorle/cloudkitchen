@@ -21,7 +21,8 @@ export const getSystemSetting = async (req: Request) => {
             SUPPORT_PHONE: "+91 98765 43210",
             MAINTENANCE_MODE: "false",
             AUTO_ASSIGN_DELIVERY: "true",
-            ENABLE_ROOM_MODULE: "false"
+            ENABLE_ROOM_MODULE: "false",
+            ENABLE_CHATBOT: "true"
         };
         for (const s of allSettings) {
             settingsMap[s.key] = s.value;
@@ -44,23 +45,37 @@ export const getSystemSetting = async (req: Request) => {
         return { key, value: "false" };
     }
 
+    if (!setting && key === "ENABLE_CHATBOT") {
+        return { key, value: "true" };
+    }
+
     return setting || { key, value: null };
 };
 
 export const getPublicSystemSettings = async () => {
     try {
-        const setting = await db.systemSettings.findUnique({
+        const roomSetting = await db.systemSettings.findUnique({
             where: { key: "ENABLE_ROOM_MODULE" }
         });
-        const isRoomEnabled = setting?.value === "true";
+        const isRoomEnabled = roomSetting?.value === "true";
+
+        const botSetting = await db.systemSettings.findUnique({
+            where: { key: "ENABLE_CHATBOT" }
+        });
+        const isChatbotEnabled = botSetting ? botSetting.value !== "false" : true;
+
         return {
             isRoomEnabled,
-            ENABLE_ROOM_MODULE: isRoomEnabled ? "true" : "false"
+            ENABLE_ROOM_MODULE: isRoomEnabled ? "true" : "false",
+            isChatbotEnabled,
+            ENABLE_CHATBOT: isChatbotEnabled ? "true" : "false"
         };
     } catch (e) {
         return {
             isRoomEnabled: false,
-            ENABLE_ROOM_MODULE: "false"
+            ENABLE_ROOM_MODULE: "false",
+            isChatbotEnabled: true,
+            ENABLE_CHATBOT: "true"
         };
     }
 };

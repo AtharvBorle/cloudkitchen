@@ -11,6 +11,7 @@ import { fetchApi } from "@/lib/fetch-api";
 import { useSession } from "next-auth/react";
 import { performLogout } from "@/lib/logout";
 import { Footer } from "@/components/explore-desktop/footer";
+import { useRoomModule } from "@/context/RoomModuleContext";
 import {
     reverseGeocodeWithGoogle,
     geocodeWithGoogle,
@@ -346,6 +347,7 @@ function MapPicker({ onLocationSelected }: MapPickerProps) {
 }
 
 export function ExploreHeader() {
+    const { isRoomEnabled } = useRoomModule();
     const { data: session } = useSession();
     const pathname = usePathname();
     const router = useRouter();
@@ -596,7 +598,7 @@ export function ExploreHeader() {
     const navLinks = [
         { href: "/", label: "Home", exact: true },
         { href: "/explore-desktop", label: "Order Food" },
-        { href: "/room-booking", label: "Book a Room" },
+        ...(isRoomEnabled ? [{ href: "/room-booking", label: "Book a Room" }] : []),
     ];
 
     const isActive = (href: string, exact?: boolean) => {
