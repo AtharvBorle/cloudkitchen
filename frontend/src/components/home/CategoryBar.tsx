@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useRef, useState, useEffect, useCallback } from "react";
+import React, { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import Image from "next/image";
 import { ChevronRight, ChevronLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useRoomModule } from "@/context/RoomModuleContext";
 
 export interface CategoryItem {
   id: string;

@@ -274,34 +274,127 @@ model SellerMealPlan {
   updatedAt          DateTime               @updatedAt
   seller             SellerProfile          @relation(fields: [sellerId], references: [id], onDelete: Cascade)
   userSubscriptions  UserMealSubscription[]
+  slots              SellerMealPlanSlot[]
 }
 
 model UserMealSubscription {
-  id                String         @id @default(uuid())
+  id                String                     @id @default(uuid())
   userId            String
   sellerId          String
   planId            String
-  status            String         @default("ACTIVE")
-  tier              String         @default("Bronze")
-  startDate         DateTime       @default(now())
+  status            String                     @default("ACTIVE")
+  tier              String                     @default("Bronze")
+  startDate         DateTime                   @default(now())
   endDate           DateTime?
-  pricePaid         Float          @default(0)
-  cycle             String         @default("WEEKLY")
-  isPaused          Boolean        @default(false)
+  pricePaid         Float                      @default(0)
+  cycle             String                     @default("WEEKLY")
+  isPaused          Boolean                    @default(false)
   pausedAt          DateTime?
   pauseEndDate      DateTime?
-  usedPauseDays     Int            @default(0)
-  pauseHistory      String         @default("[]")
-  dailyDeliveries   String         @default("[]")
-  deliveryAddress   String?        @default("")
-  contactPhone      String?        @default("")
-  razorpayOrderId   String?        @unique
-  razorpayPaymentId String?        @unique
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-  plan              SellerMealPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
-  seller            SellerProfile  @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  usedPauseDays     Int                        @default(0)
+  pauseHistory      String                     @default("[]")
+  dailyDeliveries   String                     @default("[]")
+  deliveryAddress   String?                    @default("")
+  contactPhone      String?                    @default("")
+  razorpayOrderId   String?                    @unique
+  razorpayPaymentId String?                    @unique
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+  plan              SellerMealPlan             @relation(fields: [planId], references: [id], onDelete: Cascade)
+  seller            SellerProfile              @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  user              User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slots             UserSubscriptionMealSlot[]
+  deliveries        MealSubscriptionDelivery[]
+  pauseIntervals    SubscriptionPauseInterval[]
+}
+
+model MealSlot {
+  id               String                     @id // "breakfast", "mid_morning_meal", etc.
+  name             String
+  subtitle         String
+  description      String?                    @default("")
+  defaultTimeRange String                     @default("")
+  startHour        Int                        @default(7)
+  startMinute      Int                        @default(30)
+  endHour          Int                        @default(9)
+  endMinute        Int                        @default(30)
+  order            Int                        @default(1)
+  isActive         Boolean                    @default(true)
+  createdAt        DateTime                   @default(now())
+  updatedAt        DateTime                   @updatedAt
+
+  planSlots         SellerMealPlanSlot[]
+  subscriptionSlots UserSubscriptionMealSlot[]
+  deliveries        MealSubscriptionDelivery[]
+}
+
+model SellerMealPlanSlot {
+  id        String         @id @default(uuid())
+  planId    String
+  slotId    String
+  createdAt DateTime       @default(now())
+  plan      SellerMealPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  slot      MealSlot       @relation(fields: [slotId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, slotId])
+  @@index([planId])
+  @@index([slotId])
+}
+
+model UserSubscriptionMealSlot {
+  id             String               @id @default(uuid())
+  subscriptionId String
+  slotId         String
+  createdAt      DateTime             @default(now())
+  subscription   UserMealSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  slot           MealSlot             @relation(fields: [slotId], references: [id], onDelete: Cascade)
+
+  @@unique([subscriptionId, slotId])
+  @@index([subscriptionId])
+  @@index([slotId])
+}
+
+model MealSubscriptionDelivery {
+  id             String               @id @default(uuid())
+  subscriptionId String
+  slotId         String
+  sellerId       String
+  userId         String
+  scheduledDate  String               // YYYY-MM-DD
+  scheduledTime  String?              // e.g. "7:30 AM – 9:30 AM"
+  status         String               @default("PENDING") // PENDING, DELIVERED, NOT_DELIVERED, SKIPPED_PAUSED, CANCELLED
+  deliveredAt    DateTime?
+  markedBy       String?
+  note           String?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  subscription   UserMealSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  slot           MealSlot             @relation(fields: [slotId], references: [id], onDelete: Cascade)
+
+  @@unique([subscriptionId, scheduledDate, slotId])
+  @@index([subscriptionId])
+  @@index([sellerId, scheduledDate])
+  @@index([slotId])
+  @@index([status])
+}
+
+model SubscriptionPauseInterval {
+  id             String               @id @default(uuid())
+  subscriptionId String
+  startDate      DateTime             // When pause began
+  endDate        DateTime?            // When scheduled/actual pause ends
+  resumedAt      DateTime?            // When actually resumed
+  pauseDays      Int                  // Quota days requested/charged
+  actualDaysUsed Int?                 // Actual days calculated
+  status         String               @default("ACTIVE") // ACTIVE, RESUMED_EARLY, COMPLETED
+  reason         String?              @default("")
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  subscription   UserMealSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId])
 }
 
 model SystemSettings {

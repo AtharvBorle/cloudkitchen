@@ -11,6 +11,7 @@ import {
     PlacePredictionItem,
     NormalizedAddressDetails,
 } from "@/lib/google-maps";
+import { getSafeCurrentPosition } from "@/lib/safe-geolocation";
 
 export interface AddressDetails {
     pincode?: string;
@@ -584,7 +585,7 @@ export function HouseMapPicker({
         }
 
         setIsLocatingGps(true);
-        navigator.geolocation.getCurrentPosition(
+        getSafeCurrentPosition(
             (pos) => {
                 setIsLocatingGps(false);
                 const curLat = pos.coords.latitude;
@@ -615,7 +616,7 @@ export function HouseMapPicker({
                 console.warn("GPS error:", err);
                 alert("Unable to detect GPS position. Please check location permissions or pin manually.");
             },
-            { enableHighAccuracy: true, timeout: 8000 }
+            { enableHighAccuracy: true, timeout: 5000 }
         );
     };
 

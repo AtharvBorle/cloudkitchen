@@ -17,6 +17,7 @@ import {
     fetchPlacesAutocomplete,
     fetchPlaceDetails,
 } from "@/lib/google-maps";
+import { getSafeCurrentPosition } from "@/lib/safe-geolocation";
 
 interface MapPickerProps {
     onLocationSelected: (pincode: string) => void;
@@ -179,19 +180,15 @@ function MapPicker({ onLocationSelected }: MapPickerProps) {
         };
 
         script.onload = () => {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        initMap(position.coords.latitude, position.coords.longitude);
-                    },
-                    () => {
-                        initMap(19.0760, 72.8777); // Mumbai fallback
-                    },
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-                );
-            } else {
-                initMap(19.0760, 72.8777);
-            }
+            getSafeCurrentPosition(
+                (position) => {
+                    initMap(position.coords.latitude, position.coords.longitude);
+                },
+                () => {
+                    initMap(19.0760, 72.8777); // Mumbai fallback
+                },
+                { enableHighAccuracy: true, timeout: 5000 }
+            );
         };
 
         return () => {
@@ -479,7 +476,7 @@ export function ExploreHeader() {
         setGpsLoading(true);
         setGpsError("");
         setGpsSuccessPincode("");
-        navigator.geolocation.getCurrentPosition(
+        getSafeCurrentPosition(
             async (position) => {
                 const { latitude, longitude } = position.coords;
                 try {
@@ -503,7 +500,7 @@ export function ExploreHeader() {
                 setGpsLoading(false);
                 setGpsError("Permission denied or location unavailable.");
             },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            { enableHighAccuracy: true, timeout: 5000 }
         );
     };
 

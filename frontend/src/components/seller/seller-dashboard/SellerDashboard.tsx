@@ -10,6 +10,7 @@ import {
   Truck,
   Calendar,
   CreditCard,
+  DollarSign,
   AlertTriangle,
   ArrowRight,
   ShieldAlert,
@@ -18,7 +19,6 @@ import {
   Search,
   Clock,
   RotateCcw,
-  DollarSign,
 } from "lucide-react";
 import { SellerCalendarModal, formatDateToYMD } from "./SellerCalendarModal";
 import { fetchApi } from "@/lib/fetch-api";

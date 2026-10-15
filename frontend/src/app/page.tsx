@@ -33,6 +33,7 @@ import {
   getDishOfferBadge,
   resolveDishDietaryTypes,
 } from "@/lib/dietary-filter";
+import { useRoomModule } from "@/context/RoomModuleContext";
 
 function getInitialDietPreference(): "all" | "veg" | "pure_veg" | "non_veg" | "vegan" | "jain" {
   if (typeof window !== "undefined") {
@@ -55,6 +56,7 @@ function getInitialDietPreference(): "all" | "veg" | "pure_veg" | "non_veg" | "v
 }
 
 export default function Home() {
+  const { isRoomEnabled } = useRoomModule();
   const [selectedCategory, setSelectedCategory] = useState("food");
   const [activeFilters, setActiveFilters] = useState<ActiveHomeFilters>(() => {
     let initialDiet: "all" | "veg" | "pure_veg" | "non_veg" | "vegan" | "jain" = "all";
@@ -236,7 +238,7 @@ export default function Home() {
         emoji: c.emoji || "🍽️",
         route: c.route,
       }));
-  }, [homeData.categories]);
+  }, [homeData.categories, isRoomEnabled]);
 
   // Extract available cuisines from DB categories & items
   const availableCuisines = useMemo(() => {

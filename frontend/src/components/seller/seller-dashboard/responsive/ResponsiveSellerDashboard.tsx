@@ -77,8 +77,8 @@ export const ResponsiveSellerDashboard: React.FC<ResponsiveSellerDashboardProps>
 }) => {
   const router = useRouter();
   const seller = useSellerProfile();
-  const { unreadCount } = useSellerNotifications();
   const { isRoomEnabled } = useRoomModule();
+  const { unreadCount } = useSellerNotifications();
   const isNotificationActive =
     hasUnreadNotifications !== undefined ? hasUnreadNotifications : unreadCount > 0;
   const effectiveOwnerName =

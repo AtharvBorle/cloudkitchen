@@ -38,6 +38,12 @@ import {
   MealSubscriber,
   getTierColors,
 } from "@/lib/meal-subscriptions";
+import {
+  PREDEFINED_MEAL_SLOTS,
+  normalizeMealSlotIds,
+  getMealSlotDetails,
+  MealSlotDefinition,
+} from "@/lib/meal-slots";
 import styles from "./SellerOrders.module.css";
 
 export const ORDER_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
@@ -299,6 +305,7 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
   const [subSearchQuery, setSubSearchQuery] = useState("");
   const [subTierFilter, setSubTierFilter] = useState("ALL");
   const [subDeliveryFilter, setSubDeliveryFilter] = useState<"ALL" | "DELIVERED" | "PENDING">("ALL");
+  const [subMealSlotFilter, setSubMealSlotFilter] = useState<string>("ALL");
 
   // Keep navigation section and sub-tab persistent across page reloads
   useEffect(() => {
@@ -422,6 +429,14 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
     }
   };
 
+  const getSubscriberSlots = useCallback((s: MealSubscriber): MealSlotDefinition[] => {
+    if (s.mealSlots && s.mealSlots.length > 0) return s.mealSlots;
+    if (s.slotIds && s.slotIds.length > 0) return s.slotIds.map((id) => getMealSlotDetails(id));
+    const normalized = normalizeMealSlotIds(s.mealTimings || []);
+    if (normalized.length > 0) return normalized.map((id) => getMealSlotDetails(id));
+    return [getMealSlotDetails("lunch")];
+  }, []);
+
   // 1. Paused subscribers list
   const pausedSubscribers = useMemo(() => {
     return subscribers.filter((s) => Boolean(s.isPaused));
@@ -440,8 +455,22 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
     });
   }, [subscribers]);
 
-  // Metric counters
-  const mealsToDeliverTodayCount = todayDeliverySubscribers.length;
+  // Metric counters across 7 slots
+  const slotCounts = useMemo(() => {
+    const counts: Record<string, number> = { ALL: 0 };
+    PREDEFINED_MEAL_SLOTS.forEach((slot) => { counts[slot.id] = 0; });
+
+    todayDeliverySubscribers.forEach((s) => {
+      const slots = getSubscriberSlots(s);
+      counts.ALL += slots.length;
+      slots.forEach((slot) => {
+        counts[slot.id] = (counts[slot.id] || 0) + 1;
+      });
+    });
+    return counts;
+  }, [todayDeliverySubscribers, getSubscriberSlots]);
+
+  const mealsToDeliverTodayCount = slotCounts.ALL || todayDeliverySubscribers.length;
   const deliveredTodayCount = useMemo(() => {
     return todayDeliverySubscribers.filter((s) => {
       const todayRec = s.dailyDeliveries?.find((d: any) => d.date === todayDateStr);
@@ -477,9 +506,18 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
       list = list.filter((s) => (s.tier || "Bronze").toUpperCase() === subTierFilter.toUpperCase());
     }
 
+    if (subscribersTab === "today" && subMealSlotFilter !== "ALL") {
+      list = list.filter((s) => {
+        const slots = getSubscriberSlots(s);
+        return slots.some((slot) => slot.id === subMealSlotFilter);
+      });
+    }
+
     if (subscribersTab === "today" && subDeliveryFilter !== "ALL") {
       list = list.filter((s) => {
-        const isDel = s.dailyDeliveries?.find((d: any) => d.date === todayDateStr)?.status === "DELIVERED";
+        const isDel = s.dailyDeliveries?.some(
+          (d: any) => d.date === todayDateStr && d.status === "DELIVERED"
+        );
         return subDeliveryFilter === "DELIVERED" ? isDel : !isDel;
       });
     }
@@ -492,12 +530,17 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
     subscribers,
     subSearchQuery,
     subTierFilter,
+    subMealSlotFilter,
     subDeliveryFilter,
     todayDateStr,
+    getSubscriberSlots,
   ]);
 
-  const handleToggleDelivery = async (sub: MealSubscriber) => {
-    const isCurrentlyDelivered = sub.dailyDeliveries?.find((d: any) => d.date === todayDateStr)?.status === "DELIVERED";
+  const handleToggleDelivery = async (sub: MealSubscriber, slotId?: string) => {
+    const targetSlotId = slotId || (getSubscriberSlots(sub)[0]?.id || "breakfast");
+    const isCurrentlyDelivered = sub.dailyDeliveries?.some(
+      (d: any) => d.date === todayDateStr && (d.slotId === targetSlotId || !d.slotId) && d.status === "DELIVERED"
+    );
     const nextStatus: "DELIVERED" | "NOT_DELIVERED" = isCurrentlyDelivered ? "NOT_DELIVERED" : "DELIVERED";
 
     // Optimistic UI update
@@ -505,9 +548,12 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
       prev.map((s) => {
         if (s.id !== sub.id) return s;
         const currentDeliveries = Array.isArray(s.dailyDeliveries) ? [...s.dailyDeliveries] : [];
-        const idx = currentDeliveries.findIndex((d: any) => d.date === todayDateStr);
+        const idx = currentDeliveries.findIndex(
+          (d: any) => d.date === todayDateStr && (d.slotId === targetSlotId || !d.slotId)
+        );
         const rec = {
           date: todayDateStr,
+          slotId: targetSlotId,
           status: nextStatus,
           markedAt: new Date().toISOString(),
         };
@@ -521,10 +567,11 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
     );
 
     try {
-      await markSubscriberMealDeliveryStatus(sub.id, todayDateStr, nextStatus);
+      await markSubscriberMealDeliveryStatus(sub.id, todayDateStr, nextStatus, undefined, targetSlotId);
+      const slotObj = getMealSlotDetails(targetSlotId);
       setToast({
         type: "success",
-        text: `Meal marked as ${nextStatus === "DELIVERED" ? "Delivered" : "Pending"} for ${sub.customerName || "Customer"}`,
+        text: `${slotObj.name} marked as ${nextStatus === "DELIVERED" ? "Delivered" : "Pending"} for ${sub.customerName || "Customer"}`,
       });
     } catch (err: any) {
       setToast({ type: "error", text: err.message || "Failed to update delivery status" });
@@ -1480,6 +1527,91 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
             </div>
           </div>
 
+          {/* 7 Predefined Meal Slot Filter Tabs */}
+          {subscribersTab === "today" && (
+            <div
+              style={{
+                display: "flex",
+                gap: "8px",
+                overflowX: "auto",
+                paddingBottom: "4px",
+                alignItems: "center",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setSubMealSlotFilter("ALL")}
+                style={{
+                  padding: "7px 14px",
+                  borderRadius: "9999px",
+                  fontSize: "0.84rem",
+                  fontWeight: subMealSlotFilter === "ALL" ? 800 : 600,
+                  border: subMealSlotFilter === "ALL" ? "1.5px solid #EA580C" : "1px solid #E2E8F0",
+                  backgroundColor: subMealSlotFilter === "ALL" ? "#FFF7ED" : "#FFFFFF",
+                  color: subMealSlotFilter === "ALL" ? "#C2410C" : "#475569",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                <span>All Slots</span>
+                <span
+                  style={{
+                    fontSize: "0.74rem",
+                    padding: "2px 7px",
+                    borderRadius: "9999px",
+                    backgroundColor: subMealSlotFilter === "ALL" ? "#FFEDD5" : "#F1F5F9",
+                    color: subMealSlotFilter === "ALL" ? "#C2410C" : "#64748B",
+                    fontWeight: 700,
+                  }}
+                >
+                  {slotCounts.ALL || 0}
+                </span>
+              </button>
+              {PREDEFINED_MEAL_SLOTS.map((slot) => {
+                const isSelected = subMealSlotFilter === slot.id;
+                const count = slotCounts[slot.id] || 0;
+                return (
+                  <button
+                    key={slot.id}
+                    type="button"
+                    onClick={() => setSubMealSlotFilter(slot.id)}
+                    style={{
+                      padding: "7px 14px",
+                      borderRadius: "9999px",
+                      fontSize: "0.84rem",
+                      fontWeight: isSelected ? 800 : 600,
+                      border: isSelected ? "1.5px solid #EA580C" : "1px solid #E2E8F0",
+                      backgroundColor: isSelected ? "#FFF7ED" : "#FFFFFF",
+                      color: isSelected ? "#C2410C" : "#475569",
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    <span>{slot.name}</span>
+                    <span
+                      style={{
+                        fontSize: "0.74rem",
+                        padding: "2px 7px",
+                        borderRadius: "9999px",
+                        backgroundColor: isSelected ? "#FFEDD5" : "#F1F5F9",
+                        color: isSelected ? "#C2410C" : "#64748B",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           {/* Informative Header Notices */}
           {subscribersTab === "today" && (
             <div style={{ fontSize: "0.86rem", color: "#64748B", display: "flex", alignItems: "center", gap: "8px" }}>
@@ -1644,17 +1776,31 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
                         </span>
                       </div>
 
-                      {/* Meal Timings */}
+                      {/* Meal Timings & Slots */}
                       <div className={styles.subDetailBlock}>
-                        <span className={styles.subDetailLabel}>Meal Timings & Slot</span>
-                        <span className={styles.subDetailValue}>
-                          <Clock size={15} color="#EA580C" style={{ flexShrink: 0 }} />
-                          <span>
-                            {sub.mealTimings && sub.mealTimings.length > 0
-                              ? sub.mealTimings.join(", ")
-                              : "Standard Delivery Window"}
-                          </span>
-                        </span>
+                        <span className={styles.subDetailLabel}>Scheduled Meal Slots</span>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "4px" }}>
+                          {getSubscriberSlots(sub).map((slot) => (
+                            <span
+                              key={slot.id}
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                padding: "3px 8px",
+                                borderRadius: "6px",
+                                fontSize: "0.75rem",
+                                fontWeight: 700,
+                                backgroundColor: "#EFF6FF",
+                                color: "#1D4ED8",
+                                border: "1px solid #BFDBFE",
+                              }}
+                            >
+                              <Clock size={11} />
+                              {slot.name}
+                            </span>
+                          ))}
+                        </div>
                       </div>
 
                       {/* Subscription Validity (Showing Added Pause Days) */}
@@ -1686,75 +1832,111 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
                       )}
                     </div>
 
-                    {/* Footer Action: Today's Delivery Marking (For Today Tab) */}
+                    {/* Footer Action: Today's Delivery Marking per Slot */}
                     {subscribersTab === "today" && (
-                      <div className={styles.subFooterActions}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          {isDeliveredToday ? (
-                            <span
-                              style={{
-                                backgroundColor: "#DCFCE7",
-                                color: "#15803D",
-                                padding: "6px 14px",
-                                borderRadius: "8px",
-                                fontWeight: 700,
-                                fontSize: "0.85rem",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "6px",
-                              }}
-                            >
-                              <CheckCircle2 size={16} />
-                              <span>
-                                Delivered Today{" "}
-                                {todayRecord?.markedAt
-                                  ? `(${new Date(todayRecord.markedAt).toLocaleTimeString("en-IN", {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                    })})`
-                                  : ""}
-                              </span>
-                            </span>
-                          ) : (
-                            <span
-                              style={{
-                                backgroundColor: "#FEF3C7",
-                                color: "#B45309",
-                                padding: "6px 14px",
-                                borderRadius: "8px",
-                                fontWeight: 700,
-                                fontSize: "0.85rem",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "6px",
-                              }}
-                            >
-                              <Clock size={16} />
-                              <span>Pending Delivery Today</span>
-                            </span>
-                          )}
-                        </div>
+                      <div
+                        style={{
+                          marginTop: "16px",
+                          paddingTop: "14px",
+                          borderTop: "1px solid #F1F5F9",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "8px",
+                        }}
+                      >
+                        <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                          Today&apos;s Deliveries By Meal Slot
+                        </span>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                          {getSubscriberSlots(sub).map((slot) => {
+                            const isSlotDelivered = sub.dailyDeliveries?.some(
+                              (d: any) => d.date === todayDateStr && (d.slotId === slot.id || !d.slotId) && d.status === "DELIVERED"
+                            );
+                            const slotRecord = sub.dailyDeliveries?.find(
+                              (d: any) => d.date === todayDateStr && (d.slotId === slot.id || !d.slotId)
+                            );
+                            return (
+                              <div
+                                key={slot.id}
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                  backgroundColor: "#F8FAFC",
+                                  padding: "8px 12px",
+                                  borderRadius: "10px",
+                                  border: isSlotDelivered ? "1px solid #BBF7D0" : "1px solid #E2E8F0",
+                                }}
+                              >
+                                <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                                  <span style={{ fontWeight: 700, fontSize: "0.88rem", color: "#0F172A" }}>
+                                    {slot.name}
+                                  </span>
+                                  <span style={{ fontSize: "0.75rem", color: "#64748B" }}>
+                                    ({slot.defaultTimeRange || (slot as any).deliveryWindow || (slot as any).time || ""})
+                                  </span>
+                                  {isSlotDelivered ? (
+                                    <span
+                                      style={{
+                                        backgroundColor: "#DCFCE7",
+                                        color: "#15803D",
+                                        padding: "3px 8px",
+                                        borderRadius: "6px",
+                                        fontWeight: 700,
+                                        fontSize: "0.74rem",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "4px",
+                                      }}
+                                    >
+                                      <CheckCircle2 size={12} />
+                                      Delivered {slotRecord?.markedAt ? `(${new Date(slotRecord.markedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })})` : ""}
+                                    </span>
+                                  ) : (
+                                    <span
+                                      style={{
+                                        backgroundColor: "#FEF3C7",
+                                        color: "#B45309",
+                                        padding: "3px 8px",
+                                        borderRadius: "6px",
+                                        fontWeight: 700,
+                                        fontSize: "0.74rem",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: "4px",
+                                      }}
+                                    >
+                                      <Clock size={12} />
+                                      Pending
+                                    </span>
+                                  )}
+                                </div>
 
-                        <button
-                          type="button"
-                          onClick={() => handleToggleDelivery(sub)}
-                          className={`${styles.deliveryToggleBtn} ${
-                            isDeliveredToday ? styles.deliveryBtnPending : styles.deliveryBtnDelivered
-                          }`}
-                          title={isDeliveredToday ? "Mark as Pending Delivery" : "Mark as Delivered Today"}
-                        >
-                          {isDeliveredToday ? (
-                            <>
-                              <Clock size={15} />
-                              <span>Mark as Not Delivered</span>
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle2 size={15} />
-                              <span>Mark as Delivered Today</span>
-                            </>
-                          )}
-                        </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleDelivery(sub, slot.id)}
+                                  className={`${styles.deliveryToggleBtn} ${
+                                    isSlotDelivered ? styles.deliveryBtnPending : styles.deliveryBtnDelivered
+                                  }`}
+                                  style={{ padding: "6px 14px", fontSize: "0.82rem" }}
+                                  title={isSlotDelivered ? `Mark ${slot.name} as Pending` : `Mark ${slot.name} as Delivered`}
+                                >
+                                  {isSlotDelivered ? (
+                                    <>
+                                      <Clock size={13} />
+                                      <span>Mark Pending</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <CheckCircle2 size={13} />
+                                      <span>Mark Delivered</span>
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     )}
                   </div>

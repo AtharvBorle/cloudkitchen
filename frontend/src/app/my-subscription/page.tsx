@@ -14,6 +14,7 @@ import { DeliveryTimes, DeliverySlot } from "@/components/my-subscription/delive
 import { SubscriptionBenefits } from "@/components/my-subscription/subscription-benefits";
 import { Footer } from "@/components/explore-desktop/footer";
 import { useLocation } from "@/components/location-provider";
+import { getSafeCurrentPosition } from "@/lib/safe-geolocation";
 import {
   fetchUserMealSubscriptions,
   togglePauseUserSubscription,
@@ -47,10 +48,17 @@ import {
   Navigation,
   Home,
   Briefcase,
+  ChevronDown,
   Check,
   Edit3,
 } from "lucide-react";
 import styles from "./MySubscriptionPage.module.css";
+
+const START_DATE_OPTIONS = [
+  { value: "Tomorrow", label: "Starts Tomorrow (Next Delivery Slot)" },
+  { value: "Monday", label: "Starts Coming Monday" },
+  { value: "1st", label: "Starts 1st of Next Month" },
+];
 
 const PUNE_LOCALITY_SUGGESTIONS = [
   { name: "Kothrud, Pune", pincode: "411038" },
@@ -195,6 +203,10 @@ function MySubscriptionContent() {
   const addressSuggestionsRef = useRef<HTMLDivElement>(null);
   const phoneInputRef = useRef<HTMLInputElement>(null);
 
+  // Custom Start Date Dropdown state
+  const [isStartDateOpen, setIsStartDateOpen] = useState<boolean>(false);
+  const startDateRef = useRef<HTMLDivElement>(null);
+
   // Click outside to close suggestions
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -205,6 +217,19 @@ function MySubscriptionContent() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Click outside to close start date dropdown
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (startDateRef.current && !startDateRef.current.contains(e.target as Node)) {
+        setIsStartDateOpen(false);
+      }
+    }
+    if (isStartDateOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [isStartDateOpen]);
 
   // Sync tab with URL
   useEffect(() => {
@@ -492,6 +517,7 @@ function MySubscriptionContent() {
     setIsEditingPhone(false);
     setShowManualAddressInput(false);
     setShowAddressSuggestions(false);
+    setIsStartDateOpen(false);
 
     // Fetch user saved addresses
     fetchApi("/api/user/addresses")
@@ -527,15 +553,10 @@ function MySubscriptionContent() {
 
   // Handle GPS Location Detection with Nominatim Reverse Geocoding
   const handleDetectGpsLocation = () => {
-    if (!navigator.geolocation) {
-      setSubErrorMsg("Geolocation is not supported by your browser.");
-      return;
-    }
-
     setIsDetectingGps(true);
     setSubErrorMsg(null);
 
-    navigator.geolocation.getCurrentPosition(
+    getSafeCurrentPosition(
       async (position) => {
         try {
           const { latitude, longitude } = position.coords;
@@ -573,7 +594,7 @@ function MySubscriptionContent() {
         setDeliveryAddressInput(fallback);
         setIsChangingAddress(false);
       },
-      { timeout: 8000, enableHighAccuracy: true }
+      { timeout: 5000, enableHighAccuracy: true }
     );
   };
 
@@ -1112,14 +1133,42 @@ function MySubscriptionContent() {
                             subItem.status === "INACTIVE");
                         const isPauseAllowed = (() => {
                           if (isExpired || isPlanInactive) return false;
-                          const pausePeriod = (subItem.plan?.pauseBillingPeriod || "").trim().toLowerCase();
-                          return !(
-                            pausePeriod === "disabled" ||
-                            pausePeriod === "none" ||
-                            pausePeriod === "false" ||
-                            (subItem.plan as any)?.allowPause === false ||
-                            (subItem.plan as any)?.allowPauseBilling === false
+                          const matchedLivePlan = allPlans.find(
+                            (p) =>
+                              (subItem.planId && (p.id === subItem.planId || (p as any).planId === subItem.planId)) ||
+                              (subItem.plan?.id && (p.id === subItem.plan.id || (p as any).planId === subItem.plan.id)) ||
+                              (subItem.plan?.name &&
+                                p.name &&
+                                p.name.trim().toLowerCase() === subItem.plan.name.trim().toLowerCase() &&
+                                (!subItem.sellerId || p.sellerId === subItem.sellerId))
                           );
+
+                          const isValDisabled = (val?: string | boolean | null) => {
+                            if (val === false) return true;
+                            if (typeof val === "string") {
+                              const s = val.trim().toLowerCase();
+                              return s === "none" || s === "disabled" || s === "false" || s === "0" || s === "no";
+                            }
+                            return false;
+                          };
+
+                          if (isValDisabled(subItem.plan?.pauseBillingPeriod)) return false;
+                          if ((subItem.plan as any)?.allowPause === false) return false;
+                          if ((subItem.plan as any)?.allowPauseBilling === false) return false;
+
+                          if (matchedLivePlan) {
+                            if (isValDisabled(matchedLivePlan.pauseBillingPeriod)) return false;
+                            if ((matchedLivePlan as any).allowPause === false) return false;
+                            if ((matchedLivePlan as any).allowPauseBilling === false) return false;
+                          }
+
+                          const effectivePeriod = String(
+                            subItem.plan?.pauseBillingPeriod || matchedLivePlan?.pauseBillingPeriod || ""
+                          ).trim().toLowerCase();
+
+                          if (!effectivePeriod || isValDisabled(effectivePeriod)) return false;
+
+                          return true;
                         })();
 
                         const resolvedStatus = isExpired ? "EXPIRED" : isPlanInactive ? "INACTIVE" : subItem.status;
@@ -1253,6 +1302,7 @@ function MySubscriptionContent() {
                             <div className={styles.detailsGrid}>
                               <DeliveryTimes slots={getSubscriptionSlots(subItem)} />
                               <SubscriptionBenefits
+                                allowPause={isPauseAllowed}
                                 benefits={
                                   subItem.plan?.features && subItem.plan.features.length > 0
                                     ? subItem.plan.features
@@ -1542,25 +1592,44 @@ function MySubscriptionContent() {
                           <div className={styles.featuresSection}>
                             <div className={styles.featuresTitle}>Included In This Plan:</div>
                             <ul className={styles.featuresList}>
-                              {plan.features && plan.features.length > 0 ? (
-                                plan.features.map((feature, fIdx) => (
-                                  <li key={fIdx} className={styles.featureItem}>
-                                    <CheckCircle2 size={14} className={styles.featureIcon} />
-                                    <span>{feature}</span>
-                                  </li>
-                                ))
-                              ) : (
-                                <>
-                                  <li className={styles.featureItem}>
-                                    <CheckCircle2 size={14} className={styles.featureIcon} />
-                                    <span>Daily Freshly Cooked Home Meals</span>
-                                  </li>
-                                  <li className={styles.featureItem}>
-                                    <CheckCircle2 size={14} className={styles.featureIcon} />
-                                    <span>1 Dal + 1 Seasonal Sabzi + Chapatis + Rice</span>
-                                  </li>
-                                </>
-                              )}
+                              {(() => {
+                                const rawPause = (plan.pauseBillingPeriod || "").trim();
+                                const rawPauseLower = rawPause.toLowerCase();
+                                const isPlanPauseAllowed = Boolean(
+                                  rawPause &&
+                                  rawPauseLower !== "none" &&
+                                  rawPauseLower !== "disabled" &&
+                                  rawPauseLower !== "false" &&
+                                  (plan as any).allowPause !== false &&
+                                  (plan as any).allowPauseBilling !== false
+                                );
+                                const rawFeatures = plan.features && plan.features.length > 0 ? plan.features : [];
+                                const filteredFeatures = isPlanPauseAllowed
+                                  ? rawFeatures
+                                  : rawFeatures.filter((f) => !String(f).toLowerCase().includes("pause"));
+
+                                if (filteredFeatures.length > 0) {
+                                  return filteredFeatures.map((feature, fIdx) => (
+                                    <li key={fIdx} className={styles.featureItem}>
+                                      <CheckCircle2 size={14} className={styles.featureIcon} />
+                                      <span>{feature}</span>
+                                    </li>
+                                  ));
+                                }
+
+                                return (
+                                  <>
+                                    <li className={styles.featureItem}>
+                                      <CheckCircle2 size={14} className={styles.featureIcon} />
+                                      <span>Daily Freshly Cooked Home Meals</span>
+                                    </li>
+                                    <li className={styles.featureItem}>
+                                      <CheckCircle2 size={14} className={styles.featureIcon} />
+                                      <span>1 Dal + 1 Seasonal Sabzi + Chapatis + Rice</span>
+                                    </li>
+                                  </>
+                                );
+                              })()}
                               <li className={styles.featureItem}>
                                 <CheckCircle2 size={14} className={styles.featureIcon} />
                                 <span>100% Free Doorstep Delivery</span>
@@ -1569,33 +1638,28 @@ function MySubscriptionContent() {
                           </div>
 
                           {/* Policy Row */}
-                          <div className={styles.policyRow}>
-                            {(() => {
-                              const isPauseDisabled =
-                                !plan.pauseBillingPeriod ||
-                                plan.pauseBillingPeriod.trim().toLowerCase() === "none" ||
-                                plan.pauseBillingPeriod.trim().toLowerCase() === "disabled" ||
-                                plan.pauseBillingPeriod.trim().toLowerCase() === "false" ||
-                                (plan as any).allowPause === false ||
-                                (plan as any).allowPauseBilling === false;
-
-                              if (isPauseDisabled) {
-                                return (
-                                  <span className={styles.policyItem} style={{ color: "#94A3B8" }}>
-                                    <PauseCircle size={12} color="#94A3B8" />
-                                    <span>No pause available</span>
-                                  </span>
-                                );
-                              }
-
-                              return (
+                          {(() => {
+                            const rawPause = (plan.pauseBillingPeriod || "").trim();
+                            const rawPauseLower = rawPause.toLowerCase();
+                            const isPlanPauseAllowed = Boolean(
+                              rawPause &&
+                              rawPauseLower !== "none" &&
+                              rawPauseLower !== "disabled" &&
+                              rawPauseLower !== "false" &&
+                              (plan as any).allowPause !== false &&
+                              (plan as any).allowPauseBilling !== false
+                            );
+                            if (!isPlanPauseAllowed) return null;
+                            const displayPause = rawPauseLower === "monthly" ? "30 Days" : rawPause;
+                            return (
+                              <div className={styles.policyRow}>
                                 <span className={styles.policyItem}>
                                   <PauseCircle size={12} color="#FF5500" />
-                                  <span>Pause: {plan.pauseBillingPeriod || "30 Days"}</span>
+                                  <span>Pause: {displayPause}</span>
                                 </span>
-                              );
-                            })()}
-                          </div>
+                              </div>
+                            );
+                          })()}
 
                           {/* Subscribe CTA Button */}
                           <button
@@ -1915,20 +1979,52 @@ function MySubscriptionContent() {
               </div>
 
               {/* Start Date Preference */}
-              <div className={styles.formGroup}>
+              <div className={styles.formGroup} ref={startDateRef}>
                 <label className={styles.formLabel}>
                   <Calendar size={13} color="#FF5500" />
                   <span>Subscription Start Date</span>
                 </label>
-                <select
-                  value={startDatePreference}
-                  onChange={(e) => setStartDatePreference(e.target.value)}
-                  className={styles.formInput}
-                >
-                  <option value="Tomorrow">Starts Tomorrow (Next Delivery Slot)</option>
-                  <option value="Monday">Starts Coming Monday</option>
-                  <option value="1st">Starts 1st of Next Month</option>
-                </select>
+                <div className={styles.dateDropdownContainer}>
+                  <button
+                    type="button"
+                    className={`${styles.dateDropdownTrigger} ${isStartDateOpen ? styles.dateDropdownTriggerActive : ""}`}
+                    onClick={() => setIsStartDateOpen((prev) => !prev)}
+                    aria-haspopup="listbox"
+                    aria-expanded={isStartDateOpen}
+                  >
+                    <span className={styles.dateDropdownText}>
+                      {START_DATE_OPTIONS.find((opt) => opt.value === startDatePreference)?.label || "Starts Tomorrow (Next Delivery Slot)"}
+                    </span>
+                    <ChevronDown
+                      size={18}
+                      className={`${styles.dateChevronIcon} ${isStartDateOpen ? styles.dateChevronIconOpen : ""}`}
+                    />
+                  </button>
+
+                  {isStartDateOpen && (
+                    <div className={styles.dateDropdownMenu} role="listbox">
+                      {START_DATE_OPTIONS.map((opt) => {
+                        const isSelected = startDatePreference === opt.value;
+                        return (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            role="option"
+                            aria-selected={isSelected}
+                            className={`${styles.dateDropdownOption} ${isSelected ? styles.dateDropdownOptionSelected : ""}`}
+                            onClick={() => {
+                              setStartDatePreference(opt.value);
+                              setIsStartDateOpen(false);
+                            }}
+                          >
+                            <span>{opt.label}</span>
+                            {isSelected && <Check size={16} className={styles.dateOptionCheck} />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Breakdown */}

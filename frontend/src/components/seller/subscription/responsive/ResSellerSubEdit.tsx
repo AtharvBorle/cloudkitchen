@@ -20,8 +20,11 @@ import {
   getStoredMealPlans,
   updateMealPlan,
   deleteMealPlan,
+  fetchMealSlots,
   MealSubscriptionPlan,
 } from "@/lib/meal-subscriptions";
+import { PREDEFINED_MEAL_SLOTS, MealSlotDefinition, normalizeMealSlotIds } from "@/lib/meal-slots";
+import Link from "next/link";
 import styles from "./ResSellerSubEdit.module.css";
 
 export interface MealServingTiming {
@@ -111,14 +114,27 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
   const [features, setFeatures] = useState<string[]>(initialFeatures);
   const [duration, setDuration] = useState(initialDuration);
   const [isDurationMenuOpen, setIsDurationMenuOpen] = useState(false);
-  const [mealTimings, setMealTimings] = useState<MealServingTiming[]>(initialMealTimings);
+  const [slotsWithTimings, setSlotsWithTimings] = useState<MealSlotDefinition[]>(PREDEFINED_MEAL_SLOTS);
+  const [selectedSlotIds, setSelectedSlotIds] = useState<string[]>([]);
   const [allowPauseBilling, setAllowPauseBilling] = useState(initialAllowPauseBilling);
   const [pauseBillingPeriod, setPauseBillingPeriod] = useState("30 Days");
   const [metadata, setMetadata] = useState<PlanMetadataData>(initialMetadata);
 
-  // Edit Timing Modal State
-  const [editingTiming, setEditingTiming] = useState<MealServingTiming | null>(null);
-  const [timingTimeValue, setTimingTimeValue] = useState("");
+  useEffect(() => {
+    fetchMealSlots()
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setSlotsWithTimings(data);
+        }
+      })
+      .catch((err) => console.error("Error fetching meal slots in mobile edit:", err));
+  }, []);
+
+  const handleToggleSlot = (slotId: string) => {
+    setSelectedSlotIds((prev) =>
+      prev.includes(slotId) ? prev.filter((id) => id !== slotId) : [...prev, slotId]
+    );
+  };
 
   // Toast State
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -151,16 +167,10 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
         setPrice(found.weeklyPrice ? found.weeklyPrice.replace(/[^\d.]/g, "") : "499.00");
         setFeatures(found.features || []);
         setDuration(found.duration || "1 Week");
-        setMealTimings(
-          (found.mealTimings || []).map((t, idx) => {
-            const [mealName, time] = t.includes(":") ? t.split(/:\s*(.+)/) : [`Meal ${idx + 1}`, t];
-            return {
-              id: `time-${idx}`,
-              name: mealName || "Meal",
-              time: time || t,
-            };
-          })
-        );
+        const normalizedSlots = found.slotIds && found.slotIds.length > 0
+          ? found.slotIds
+          : normalizeMealSlotIds(found.mealTimings || []);
+        setSelectedSlotIds(normalizedSlots.length > 0 ? normalizedSlots : ["breakfast", "lunch", "dinner"]);
         const pausePeriodRaw = (found.pauseBillingPeriod || "").trim().toLowerCase();
         const isPauseDisabled = !found.pauseBillingPeriod ||
           pausePeriodRaw === "none" ||
@@ -215,25 +225,6 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
     setFeatures((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleOpenEditTiming = (timing: MealServingTiming) => {
-    setEditingTiming(timing);
-    setTimingTimeValue(timing.time);
-  };
-
-  const handleDeleteTiming = (timingId: string) => {
-    setMealTimings((prev) => prev.filter((t) => t.id !== timingId));
-  };
-
-  const handleSaveTiming = () => {
-    if (!editingTiming) return;
-    setMealTimings((prev) =>
-      prev.map((t) =>
-        t.id === editingTiming.id ? { ...t, time: timingTimeValue.trim() || t.time } : t
-      )
-    );
-    setEditingTiming(null);
-  };
-
   const handleSave = async () => {
     const numPrice = parseFloat(price.replace(/[^\d.]/g, ""));
     if (isNaN(numPrice) || numPrice <= 0) {
@@ -242,24 +233,50 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
       return;
     }
 
+    if (selectedSlotIds.length === 0) {
+      setToastMessage("Please select at least one Meal Slot for this plan.");
+      setTimeout(() => setToastMessage(null), 3000);
+      return;
+    }
+
+    // Check if any selected slot is missing delivery timings
+    const missingTimingSlots = selectedSlotIds
+      .map((id) => slotsWithTimings.find((s) => s.id === id) || PREDEFINED_MEAL_SLOTS.find((s) => s.id === id))
+      .filter((s) => !s || !s.defaultTimeRange || s.defaultTimeRange.trim() === "");
+
+    if (missingTimingSlots.length > 0) {
+      const names = missingTimingSlots.map((s) => s?.name || "Slot").join(", ");
+      alert(`Delivery timing is not added for: ${names}. You need to add timings first in Manage Meal Subscription Timings before saving this plan.`);
+      router.push("/seller/subscription/timings");
+      return;
+    }
+
     const validFeatures = features.map((f) => f.trim()).filter((f) => f.length > 0);
     const isWeekly = duration.toLowerCase().includes("week");
+    const selectedSlots = slotsWithTimings.filter((s) => selectedSlotIds.includes(s.id));
     if (targetPlanId) {
-      await updateMealPlan(targetPlanId, {
-        name: planName.trim() || "Bronze Plan",
-        tier: planTier.trim() || "Bronze",
-        weeklyPrice: isWeekly ? `₹${numPrice.toFixed(0)}` : "",
-        monthlyPrice: isWeekly ? "" : `₹${numPrice.toFixed(0)}`,
-        quarterlyPrice: "",
-        yearlyPrice: "",
-        duration,
-        features: validFeatures,
-        mealTimings: mealTimings.map((m) => `${m.name}: ${m.time}`),
-        allowCancel: false,
-        allowPause: allowPauseBilling,
-        allowPauseBilling: allowPauseBilling,
-        pauseBillingPeriod: allowPauseBilling ? (pauseBillingPeriod || "30 Days") : "None",
-      });
+      try {
+        await updateMealPlan(targetPlanId, {
+          name: planName.trim() || "Bronze Plan",
+          tier: planTier.trim() || "Bronze",
+          weeklyPrice: isWeekly ? `₹${numPrice.toFixed(0)}` : "",
+          monthlyPrice: isWeekly ? "" : `₹${numPrice.toFixed(0)}`,
+          quarterlyPrice: "",
+          yearlyPrice: "",
+          duration,
+          features: validFeatures,
+          mealTimings: selectedSlots.map((m) => `${m.name}: ${m.defaultTimeRange}`),
+          slotIds: selectedSlotIds,
+          allowCancel: false,
+          allowPause: allowPauseBilling,
+          allowPauseBilling: allowPauseBilling,
+          pauseBillingPeriod: allowPauseBilling ? (pauseBillingPeriod || "30 Days") : "None",
+        });
+      } catch (err: any) {
+        setToastMessage(err.message || "Failed to update plan");
+        setTimeout(() => setToastMessage(null), 4000);
+        return;
+      }
     }
 
     const payload = {
@@ -268,7 +285,8 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
       price: price.trim() || "499.00",
       duration,
       features: validFeatures,
-      mealTimings,
+      mealTimings: selectedSlots.map((m) => `${m.name}: ${m.defaultTimeRange}`),
+      slotIds: selectedSlotIds,
       allowCancellation: false,
       allowPauseBilling,
       metadata,
@@ -536,41 +554,111 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
             </div>
           </section>
 
-          {/* Section 5: Plan Timing & Schedule */}
+          {/* Section 5: Predefined Meal Slots */}
           <section className={styles.card}>
-            <h2 className={styles.cardTitle}>Plan Timing &amp; Schedule</h2>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+              <h2 className={styles.cardTitle} style={{ margin: 0 }}>Included Meal Slots</h2>
+              <span
+                style={{
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  color: selectedSlotIds.length > 0 ? "#EA580C" : "#EF4444",
+                  backgroundColor: selectedSlotIds.length > 0 ? "#FFF7ED" : "#FEF2F2",
+                  padding: "3px 8px",
+                  borderRadius: "6px",
+                }}
+              >
+                {selectedSlotIds.length} of {slotsWithTimings.length} Selected
+              </span>
+            </div>
+            <p style={{ fontSize: "11.5px", color: "#64748B", margin: "0 0 10px 0" }}>
+              Select all standardized slots included in this plan (minimum 1 required). Delivery timings must be configured before saving.
+            </p>
 
-            {/* Meal Serving Timings */}
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Meal Serving Timings</label>
-              <div className={styles.mealTimingsList}>
-                {mealTimings.map((slot) => (
-                  <div key={slot.id} className={styles.mealTimingSlot}>
-                    <span className={styles.mealName}>{slot.name}</span>
-                    <div className={styles.mealRight}>
-                      <span className={styles.mealTimingText}>{slot.time}</span>
-                      <button
-                        type="button"
-                        className={styles.iconActionBtn}
-                        onClick={() => handleOpenEditTiming(slot)}
-                        aria-label={`Edit ${slot.name} timing`}
-                        title="Edit Timing"
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              {slotsWithTimings.map((slot) => {
+                const isSelected = selectedSlotIds.includes(slot.id);
+                const hasTiming = Boolean(slot.defaultTimeRange && slot.defaultTimeRange.trim().length > 0);
+                return (
+                  <div
+                    key={slot.id}
+                    onClick={() => handleToggleSlot(slot.id)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "10px 12px",
+                      borderRadius: "8px",
+                      border: isSelected
+                        ? (hasTiming ? "1.5px solid #EA580C" : "1.5px solid #F59E0B")
+                        : "1px solid #E2E8F0",
+                      backgroundColor: isSelected ? "#FFFDFB" : "#FFFFFF",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => {}}
+                        style={{ width: "16px", height: "16px", accentColor: "#EA580C" }}
+                      />
+                      <div>
+                        <div style={{ fontSize: "13px", fontWeight: 700, color: isSelected ? "#0F172A" : "#334155" }}>
+                          {slot.name}
+                        </div>
+                        <div style={{ fontSize: "11px", color: "#64748B" }}>
+                          {slot.subtitle}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      {hasTiming ? (
+                        <span
+                          style={{
+                            fontSize: "11px",
+                            fontWeight: 600,
+                            color: isSelected ? "#C2410C" : "#64748B",
+                            backgroundColor: isSelected ? "#FFEDD5" : "#F1F5F9",
+                            padding: "2px 8px",
+                            borderRadius: "5px",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {slot.defaultTimeRange}
+                        </span>
+                      ) : (
+                        <span
+                          style={{
+                            fontSize: "10.5px",
+                            fontWeight: 700,
+                            color: "#D97706",
+                            backgroundColor: "#FEF3C7",
+                            padding: "2px 6px",
+                            borderRadius: "5px",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          ⚠️ No Timing
+                        </span>
+                      )}
+                      <Link
+                        href="/seller/subscription/timings"
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          fontSize: "10.5px",
+                          fontWeight: 600,
+                          color: "#2563EB",
+                          textDecoration: "underline",
+                        }}
                       >
-                        <Pencil size={15} />
-                      </button>
-                      <button
-                        type="button"
-                        className={`${styles.iconActionBtn} ${styles.deleteTimingBtn}`}
-                        onClick={() => handleDeleteTiming(slot.id)}
-                        aria-label={`Delete ${slot.name} timing`}
-                        title="Delete Timing"
-                      >
-                        <Trash2 size={15} />
-                      </button>
+                        {hasTiming ? "Edit" : "Add"}
+                      </Link>
                     </div>
                   </div>
-                ))}
-              </div>
+                );
+              })}
             </div>
           </section>
 
@@ -728,61 +816,6 @@ export const ResSellerSubEdit: React.FC<ResSellerSubEditProps> = ({
 
           <div className={styles.homeIndicator} aria-hidden="true" />
         </main>
-
-        {/* Edit Timing Modal */}
-        {editingTiming && (
-          <div
-            className={styles.modalOverlay}
-            onClick={() => setEditingTiming(null)}
-          >
-            <div
-              className={styles.modalCard}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className={styles.modalHeader}>
-                <h3 className={styles.modalTitle}>
-                  Edit {editingTiming.name} Timing
-                </h3>
-                <button
-                  type="button"
-                  className={styles.modalCloseBtn}
-                  onClick={() => setEditingTiming(null)}
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Slot Timing</label>
-                <input
-                  type="text"
-                  className={styles.input}
-                  value={timingTimeValue}
-                  onChange={(e) => setTimingTimeValue(e.target.value)}
-                  placeholder="e.g. 7:30 AM - 9:30 AM"
-                  autoFocus
-                />
-              </div>
-
-              <div className={styles.modalActionRow}>
-                <button
-                  type="button"
-                  className={styles.cancelModalBtn}
-                  onClick={() => setEditingTiming(null)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className={styles.saveModalBtn}
-                  onClick={handleSaveTiming}
-                >
-                  Save Timing
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Toast Alert */}
         {toastMessage && (

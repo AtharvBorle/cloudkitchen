@@ -24,7 +24,7 @@ import { useSellerNotifications } from "@/hooks/useSellerNotifications";
 import styles from "./ResponsiveSellerSubscription.module.css";
 
 
-export type PlanStatus = "All" | "Active" | "Inactive" | "Draft";
+export type PlanStatus = "All" | "Active" | "Inactive" | "Expired" | "Paused" | "Draft";
 export type PlanTier = "All" | "Bronze" | "Silver" | "Gold" | "Starter" | "Professional" | "Enterprise";
 export type SortOption = "Newest" | "Subscribers" | "Price: Low to High" | "Price: High to Low";
 
@@ -35,7 +35,7 @@ export interface ResponsiveSubscriptionPlan {
   tierVariant?: "orange" | "purple" | "indigo" | "blue";
   price: string;
   subscribersCount: number;
-  status: "Active" | "Inactive" | "Draft" | string;
+  status: "Active" | "Inactive" | "Paused" | "Expired" | "Draft" | string;
   createdAt: string;
   billingCycle?: "Weekly" | "Monthly" | "Quarterly";
   mealsPerDay?: number;
@@ -62,6 +62,8 @@ const STATUS_OPTIONS: { label: string; value: PlanStatus }[] = [
   { label: "All Statuses", value: "All" },
   { label: "Active", value: "Active" },
   { label: "Inactive", value: "Inactive" },
+  { label: "Expired", value: "Expired" },
+  { label: "Paused", value: "Paused" },
 ];
 
 const BASE_TIER_OPTIONS: { label: string; value: PlanTier }[] = [
@@ -226,6 +228,10 @@ export const ResponsiveSellerSubscription: React.FC<ResponsiveSellerSubscription
             if (planStatus !== "active" && planStatus !== "live") return false;
           } else if (targetStatus === "inactive") {
             if (planStatus !== "inactive" && planStatus !== "draft") return false;
+          } else if (targetStatus === "expired") {
+            if (planStatus !== "expired" && planStatus !== "inactive" && planStatus !== "draft") return false;
+          } else if (targetStatus === "paused") {
+            if (planStatus !== "paused") return false;
           } else if (planStatus !== targetStatus) {
             return false;
           }

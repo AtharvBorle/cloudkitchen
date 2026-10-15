@@ -2,6 +2,8 @@ import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { emitMealSubscriptionUpdated } from "@/lib/realtime-events";
+import { SubscriptionPauseService } from "@/services/subscriptionPauseService";
+import { normalizeMealSlotIds, getMealSlotDetails } from "@/lib/meal-slots";
 import Razorpay from "razorpay";
 import crypto from "crypto";
 
@@ -14,7 +16,16 @@ export const getUserMealSubscriptions = async () => {
     const subscriptions = await db.userMealSubscription.findMany({
         where: { userId: session.user.id },
         include: {
-            plan: true,
+            slots: {
+                include: { slot: true }
+            },
+            plan: {
+                include: {
+                    slots: {
+                        include: { slot: true }
+                    }
+                }
+            },
             seller: {
                 select: {
                     id: true,
@@ -115,6 +126,19 @@ export const getUserMealSubscriptions = async () => {
             ? "INACTIVE"
             : sub.status;
 
+        const rawSlots = sub.slots && sub.slots.length > 0
+            ? sub.slots.map((s: any) => s.slotId)
+            : (sub.plan?.slots && sub.plan.slots.length > 0
+                ? sub.plan.slots.map((s: any) => s.slotId)
+                : mealTimings);
+        const resolvedSlotIds = normalizeMealSlotIds(rawSlots);
+        const resolvedSlotDetails = resolvedSlotIds.map((id) => getMealSlotDetails(id));
+
+        const planSlotIds = sub.plan?.slots && sub.plan.slots.length > 0
+            ? sub.plan.slots.map((s: any) => s.slotId)
+            : normalizeMealSlotIds(mealTimings);
+        const planSlotDetails = planSlotIds.map((id) => getMealSlotDetails(id));
+
         return {
             id: sub.id,
             userId: sub.userId,
@@ -132,6 +156,9 @@ export const getUserMealSubscriptions = async () => {
             usedPauseDays: sub.usedPauseDays || 0,
             pauseHistory: parsedPauseHistory,
             dailyDeliveries: parsedDailyDeliveries,
+            mealTimings: resolvedSlotIds,
+            mealSlots: resolvedSlotDetails,
+            slotIds: resolvedSlotIds,
             startDate: sub.startDate.toISOString(),
             endDate: sub.endDate ? sub.endDate.toISOString() : null,
             deliveryAddress: sub.deliveryAddress || "",
@@ -149,7 +176,9 @@ export const getUserMealSubscriptions = async () => {
                 yearlyPrice: sub.plan.yearlyPrice || null,
                 duration: sub.plan.duration,
                 features,
-                mealTimings,
+                mealTimings: planSlotIds,
+                mealSlots: planSlotDetails,
+                slotIds: planSlotIds,
                 status: sub.plan.status,
                 isActive: sub.plan.status === "Live",
                 allowCancel: sub.plan.allowCancel,
@@ -433,6 +462,14 @@ export const createUserMealSubscription = async (req: Request) => {
     const endDate = new Date(startDate);
     endDate.setDate(endDate.getDate() + durationDays);
 
+    const planSlots = await db.sellerMealPlanSlot.findMany({
+        where: { planId: plan.id },
+    });
+    const subSlotIds = planSlots.length > 0
+        ? planSlots.map((s) => s.slotId)
+        : normalizeMealSlotIds(typeof plan.mealTimings === "string" ? JSON.parse(plan.mealTimings) : plan.mealTimings);
+    const validSlotIds = subSlotIds.length > 0 ? subSlotIds : ["lunch"];
+
     const newSub = await db.userMealSubscription.create({
         data: {
             userId: session.user.id,
@@ -449,8 +486,16 @@ export const createUserMealSubscription = async (req: Request) => {
             contactPhone: contactPhone ? String(contactPhone).trim() : (session.user as any).phone || "",
             razorpayOrderId: razorpay_order_id,
             razorpayPaymentId: razorpay_payment_id,
+            slots: {
+                create: validSlotIds.map((sId) => ({
+                    slot: { connect: { id: sId } },
+                })),
+            },
         },
         include: {
+            slots: {
+                include: { slot: true }
+            },
             plan: true,
             seller: {
                 select: {
@@ -629,158 +674,16 @@ export const togglePauseUserMealSubscription = async (
         throw new ApiError("Please log in first to manage your subscription status.", 401);
     }
 
-    const subscription = await db.userMealSubscription.findFirst({
-        where: {
-            id: subscriptionId,
-            userId: session.user.id,
-        },
-        include: { plan: true, seller: true }
-    });
-
-    if (!subscription) {
-        throw new ApiError("Subscription not found", 404);
-    }
-
-    const parseAllowedPauseDays = (period?: string): number => {
-        const p = (period || "").trim().toLowerCase();
-        if (!p || p === "disabled" || p === "none" || p === "false") return 0;
-        if (p.includes("30") || p.includes("month")) return 30;
-        if (p.includes("14") || p.includes("2 week")) return 14;
-        if (p.includes("7") || p.includes("1 week") || p.includes("week")) return 7;
-        const match = p.match(/\d+/);
-        if (match) return parseInt(match[0], 10);
-        return 7;
-    };
-
-    const allowedDays = parseAllowedPauseDays(subscription.plan?.pauseBillingPeriod);
-    const allowPause = (subscription.plan as any)?.allowPause;
-    const allowPauseBilling = (subscription.plan as any)?.allowPauseBilling;
-
     if (isPaused) {
-        // Dynamic seller policy enforcement: check if pause is allowed by kitchen partner
-        if (allowedDays <= 0 || allowPause === false || allowPauseBilling === false) {
-            throw new ApiError("Pausing is disabled for this meal plan by the kitchen partner.", 400);
-        }
-
-        const currentUsed = subscription.usedPauseDays || 0;
-        const remainingQuota = Math.max(0, allowedDays - currentUsed);
-
-        if (remainingQuota <= 0) {
-            throw new ApiError(`You have used all ${allowedDays} pause days allocated for this meal plan. No pause days remaining.`, 400);
-        }
-
-        // Clamp days between 1 and remainingQuota
-        const pauseDays = Math.max(1, Math.min(Number(requestedDays) || 1, remainingQuota));
-        const now = new Date();
-        const pauseEnd = new Date(now.getTime() + pauseDays * 24 * 60 * 60 * 1000);
-
-        // Extend active subscription expiry by the chosen pause days!
-        const baseEndDate = subscription.endDate ? new Date(subscription.endDate) : new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-        const extendedEndDate = new Date(baseEndDate.getTime() + pauseDays * 24 * 60 * 60 * 1000);
-
-        let history: any[] = [];
-        try {
-            history = typeof subscription.pauseHistory === "string" ? JSON.parse(subscription.pauseHistory) : (subscription.pauseHistory || []);
-        } catch {
-            history = [];
-        }
-
-        history.unshift({
-            id: `pause-${Date.now()}`,
-            pausedAt: now.toISOString(),
-            pauseEndDate: pauseEnd.toISOString(),
-            requestedDays: pauseDays,
-            previousEndDate: baseEndDate.toISOString(),
-            newEndDate: extendedEndDate.toISOString(),
-            resumedAt: null,
-            status: "PAUSED",
-        });
-
-        const newUsed = currentUsed + pauseDays;
-
-        const updated = await db.userMealSubscription.update({
-            where: { id: subscriptionId },
-            data: {
-                isPaused: true,
-                status: "PAUSED",
-                pausedAt: now,
-                pauseEndDate: pauseEnd,
-                usedPauseDays: newUsed,
-                endDate: extendedEndDate,
-                pauseHistory: JSON.stringify(history),
-            },
-            include: {
-                plan: true,
-                seller: true,
-            }
-        });
-
-        emitMealSubscriptionUpdated(updated.sellerId, session.user.id, "PAUSE", updated);
-
-        return {
-            success: true,
-            message: `Subscription paused for ${pauseDays} day${pauseDays > 1 ? "s" : ""}. Validity extended by ${pauseDays} days! (${Math.max(0, allowedDays - newUsed)} days quota left)`,
-            subscription: updated,
-            remainingPauseDays: Math.max(0, allowedDays - newUsed),
-            extendedEndDate: extendedEndDate.toISOString(),
-        };
+        return await SubscriptionPauseService.pauseSubscription(
+            subscriptionId,
+            session.user.id,
+            requestedDays
+        );
     } else {
-        // Resuming subscription early
-        const now = new Date();
-        let history: any[] = [];
-        try {
-            history = typeof subscription.pauseHistory === "string" ? JSON.parse(subscription.pauseHistory) : (subscription.pauseHistory || []);
-        } catch {
-            history = [];
-        }
-
-        const lastEntry = history.find((h: any) => !h.resumedAt);
-        let finalUsed = subscription.usedPauseDays || 0;
-        let finalEndDate = subscription.endDate ? new Date(subscription.endDate) : new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-
-        if (lastEntry) {
-            const pausedAtTime = lastEntry.pausedAt ? new Date(lastEntry.pausedAt).getTime() : (subscription.pausedAt ? new Date(subscription.pausedAt).getTime() : now.getTime());
-            const daysElapsed = Math.max(1, Math.ceil((now.getTime() - pausedAtTime) / (24 * 60 * 60 * 1000)));
-            const requested = Number(lastEntry.requestedDays) || 1;
-
-            if (daysElapsed < requested) {
-                const unused = requested - daysElapsed;
-                finalUsed = Math.max(0, finalUsed - unused);
-                finalEndDate = new Date(finalEndDate.getTime() - unused * 24 * 60 * 60 * 1000);
-                lastEntry.resumedAt = now.toISOString();
-                lastEntry.status = "RESUMED_EARLY";
-                lastEntry.actualDaysUsed = daysElapsed;
-            } else {
-                lastEntry.resumedAt = now.toISOString();
-                lastEntry.status = "RESUMED";
-                lastEntry.actualDaysUsed = requested;
-            }
-        }
-
-        const updated = await db.userMealSubscription.update({
-            where: { id: subscriptionId },
-            data: {
-                isPaused: false,
-                status: "ACTIVE",
-                pausedAt: null,
-                pauseEndDate: null,
-                usedPauseDays: finalUsed,
-                endDate: finalEndDate,
-                pauseHistory: JSON.stringify(history),
-            },
-            include: {
-                plan: true,
-                seller: true,
-            }
-        });
-
-        emitMealSubscriptionUpdated(updated.sellerId, session.user.id, "RESUME", updated);
-
-        return {
-            success: true,
-            message: "Subscription resumed successfully! Your daily meals are active again.",
-            subscription: updated,
-            remainingPauseDays: Math.max(0, allowedDays - finalUsed),
-        };
+        return await SubscriptionPauseService.resumeSubscription(
+            subscriptionId,
+            session.user.id
+        );
     }
 };
