@@ -35,8 +35,6 @@ function RoomAddEditContent() {
   const roomId = searchParams ? (searchParams.get("id") || searchParams.get("roomId")) : null;
   const isEditMode = Boolean(roomId);
 
-  if (!isRoomEnabled) return null;
-
   const [initialData, setInitialData] = useState<{
     roomName: string;
     capacity: string | number;
@@ -313,6 +311,8 @@ function RoomAddEditContent() {
       alert("Failed to delete room");
     }
   };
+
+  if (!isRoomEnabled) return null;
 
   if (loading) {
     return (
