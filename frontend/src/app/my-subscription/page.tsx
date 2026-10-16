@@ -152,6 +152,16 @@ function MySubscriptionContent() {
     return false;
   }, []);
 
+  const isSubscriptionUpcoming = useCallback((s: UserActiveMealSubscription) => {
+    if (!s.startDate) return false;
+    const start = new Date(s.startDate);
+    if (isNaN(start.getTime())) return false;
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const startDayStart = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime();
+    return startDayStart > todayStart;
+  }, []);
+
   const activeSubs = useMemo(
     () =>
       userSubs.filter(
@@ -472,6 +482,10 @@ function MySubscriptionContent() {
       const targetSub = userSubs.find((s) => s.id === subId);
       if (targetSub && isSubscriptionExpired(targetSub)) {
         showToast("error", "Cannot pause an expired meal subscription. Pausing is only allowed for eligible, active plans.");
+        return;
+      }
+      if (targetSub && isSubscriptionUpcoming(targetSub)) {
+        showToast("error", "Cannot pause a meal subscription that has not yet started. Pausing is only allowed after the plan becomes active on its start date.");
         return;
       }
       let result: any = null;
@@ -1084,6 +1098,7 @@ function MySubscriptionContent() {
                           {userSubs.map((s) => {
                             const isSelected = selectedSubFilter === s.id;
                             const isExpired = isSubscriptionExpired(s);
+                            const isUpcoming = isSubscriptionUpcoming(s);
                             const isInactive = !isExpired && (s.isPlanDeactivated || s.plan?.status === "Inactive" || s.status === "INACTIVE");
                             return (
                               <button
@@ -1120,6 +1135,8 @@ function MySubscriptionContent() {
                                       ? "#FEE2E2"
                                       : isInactive
                                       ? "#F1F5F9"
+                                      : isUpcoming
+                                      ? "#EFF6FF"
                                       : s.isPaused
                                       ? "#FEF3C7"
                                       : s.status === "ACTIVE"
@@ -1129,6 +1146,8 @@ function MySubscriptionContent() {
                                       ? "#DC2626"
                                       : isInactive
                                       ? "#64748B"
+                                      : isUpcoming
+                                      ? "#1D4ED8"
                                       : s.isPaused
                                       ? "#B45309"
                                       : s.status === "ACTIVE"
@@ -1136,7 +1155,7 @@ function MySubscriptionContent() {
                                       : "#64748B",
                                   }}
                                 >
-                                  {isExpired ? "Expired" : isInactive ? "Inactive" : s.isPaused ? "Paused" : s.status}
+                                  {isExpired ? "Expired" : isInactive ? "Inactive" : isUpcoming ? "Upcoming" : s.isPaused ? "Paused" : s.status}
                                 </span>
                               </button>
                             );
@@ -1149,13 +1168,14 @@ function MySubscriptionContent() {
                     <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
                       {displayedSubs.map((subItem) => {
                         const isExpired = isSubscriptionExpired(subItem);
+                        const isUpcoming = isSubscriptionUpcoming(subItem);
                         const isPlanInactive =
                           !isExpired &&
                           (subItem.isPlanDeactivated ||
                             subItem.plan?.status === "Inactive" ||
                             subItem.status === "INACTIVE");
                         const isPauseAllowed = (() => {
-                          if (isExpired || isPlanInactive) return false;
+                          if (isExpired || isPlanInactive || isUpcoming) return false;
                           const matchedLivePlan = allPlans.find(
                             (p) =>
                               (subItem.planId && (p.id === subItem.planId || (p as any).planId === subItem.planId)) ||
@@ -1194,7 +1214,13 @@ function MySubscriptionContent() {
                           return true;
                         })();
 
-                        const resolvedStatus = isExpired ? "EXPIRED" : isPlanInactive ? "INACTIVE" : subItem.status;
+                        const resolvedStatus = isExpired
+                          ? "EXPIRED"
+                          : isPlanInactive
+                          ? "INACTIVE"
+                          : isUpcoming
+                          ? "UPCOMING"
+                          : subItem.status;
 
                         return (
                           <div
@@ -1265,7 +1291,7 @@ function MySubscriptionContent() {
                               }
                               tier={subItem.tier || subItem.plan?.tier || "Bronze"}
                               statusText={resolvedStatus}
-                              isPaused={!isExpired && !isPlanInactive && subItem.isPaused}
+                              isPaused={!isExpired && !isPlanInactive && !isUpcoming && subItem.isPaused}
                               isExpired={isExpired}
                               startedOn={formatSubStartedOn(subItem)}
                               renewalDate={isExpired ? `${formatSubRenewalDate(subItem)} (Expired)` : isPlanInactive ? "Deactivated" : formatSubRenewalDate(subItem)}
@@ -1286,8 +1312,8 @@ function MySubscriptionContent() {
                               )}
                             </div>
 
-                            {/* Pause Subscription Section */}
-                            {!isExpired && (
+                            {/* Pause Subscription Section - disabled / hidden for plans that haven't started yet */}
+                            {!isExpired && !isUpcoming && (
                               <PauseSubscription
                                 isPaused={subItem.isPaused}
                                 isExpired={isExpired}
@@ -1307,6 +1333,30 @@ function MySubscriptionContent() {
                                 planName={subItem.plan?.name || "Meal Plan"}
                                 onTogglePause={(nextPaused, days) => handleTogglePause(subItem.id, nextPaused, days)}
                               />
+                            )}
+
+                            {/* Upcoming Plan Notice when start date is in the future */}
+                            {!isExpired && isUpcoming && (
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "10px",
+                                  padding: "14px 18px",
+                                  backgroundColor: "#F8FAFC",
+                                  border: "1px solid #E2E8F0",
+                                  borderRadius: "14px",
+                                  color: "#475569",
+                                  fontSize: "0.86rem",
+                                  fontWeight: 600,
+                                  margin: "16px 0",
+                                }}
+                              >
+                                <Clock size={16} color="#EA580C" style={{ flexShrink: 0 }} />
+                                <span>
+                                  Scheduled to start on <strong>{formatSubStartedOn(subItem)}</strong>. Pause Subscription will be available once the plan becomes active on its start date.
+                                </span>
+                              </div>
                             )}
 
                             {/* Delivery Times & Benefits Grid */}
