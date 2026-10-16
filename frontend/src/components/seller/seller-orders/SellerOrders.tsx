@@ -537,66 +537,57 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
       (d: any) => d.date === todayDateStr && (d.slotId === targetSlotId || !d.slotId) && d.status === "DELIVERED"
     );
 
-    // If not delivered yet, open OTP verification modal
-    if (!isCurrentlyDelivered) {
-      const slotObj = getMealSlotDetails(targetSlotId);
-      const record: MealSlotDeliveryRecord = {
-        id: `del-${sub.id}-${targetSlotId}`,
-        subscriptionId: sub.id,
-        slotId: targetSlotId,
-        slotName: slotObj.name,
-        slotSubtitle: slotObj.subtitle,
-        scheduledTime: slotObj.defaultTimeRange,
-        sellerId: "",
-        userId: (sub as any).userId || "",
-        scheduledDate: todayDateStr,
-        status: "PENDING",
-        deliveredAt: null,
-        markedBy: null,
-        note: null,
-        customerName: sub.customerName || "Subscriber",
-        customerPhone: sub.customerPhone || "",
-        customerEmail: sub.customerEmail || "",
-        deliveryAddress: sub.deliveryAddress || "",
-        planName: sub.planName || "Meal Plan",
-        tier: sub.tier || "Bronze",
-        subscription: {
-          id: sub.id,
-          tier: sub.tier || "Bronze",
-          status: sub.status || "ACTIVE",
-          deliveryAddress: sub.deliveryAddress || "",
-          contactPhone: sub.customerPhone || "",
-          user: {
-            id: (sub as any).userId || "",
-            name: sub.customerName || "Subscriber",
-            phone: sub.customerPhone || "",
-            email: sub.customerEmail || "",
-          },
-          plan: {
-            id: sub.planId || "",
-            name: sub.planName || "Meal Plan",
-            tier: sub.tier || "Bronze",
-          },
-        },
-      };
-      setOtpModalDelivery(record);
+    // Once a meal is verified and delivered via OTP, it cannot be reverted to pending
+    if (isCurrentlyDelivered) {
+      setToast({
+        type: "error",
+        text: "This meal has already been delivered and verified via Customer OTP. It cannot be marked as pending again.",
+      });
       return;
     }
 
-    // Toggling back from DELIVERED to NOT_DELIVERED
-    const nextStatus = "NOT_DELIVERED";
-    try {
-      await markSubscriberMealDeliveryStatus(sub.id, todayDateStr, nextStatus, undefined, targetSlotId);
-      const slotObj = getMealSlotDetails(targetSlotId);
-      setToast({
-        type: "success",
-        text: `${slotObj.name} marked as Pending for ${sub.customerName || "Customer"}`,
-      });
-      loadSubscribers(false);
-    } catch (err: any) {
-      setToast({ type: "error", text: err.message || "Failed to update delivery status" });
-      loadSubscribers(true);
-    }
+    // Open OTP verification modal to confirm delivery
+    const slotObj = getMealSlotDetails(targetSlotId);
+    const record: MealSlotDeliveryRecord = {
+      id: `del-${sub.id}-${targetSlotId}`,
+      subscriptionId: sub.id,
+      slotId: targetSlotId,
+      slotName: slotObj.name,
+      slotSubtitle: slotObj.subtitle,
+      scheduledTime: slotObj.defaultTimeRange,
+      sellerId: "",
+      userId: (sub as any).userId || "",
+      scheduledDate: todayDateStr,
+      status: "PENDING",
+      deliveredAt: null,
+      markedBy: null,
+      note: null,
+      customerName: sub.customerName || "Subscriber",
+      customerPhone: sub.customerPhone || "",
+      customerEmail: sub.customerEmail || "",
+      deliveryAddress: sub.deliveryAddress || "",
+      planName: sub.planName || "Meal Plan",
+      tier: sub.tier || "Bronze",
+      subscription: {
+        id: sub.id,
+        tier: sub.tier || "Bronze",
+        status: sub.status || "ACTIVE",
+        deliveryAddress: sub.deliveryAddress || "",
+        contactPhone: sub.customerPhone || "",
+        user: {
+          id: (sub as any).userId || "",
+          name: sub.customerName || "Subscriber",
+          phone: sub.customerPhone || "",
+          email: sub.customerEmail || "",
+        },
+        plan: {
+          id: sub.planId || "",
+          name: sub.planName || "Meal Plan",
+          tier: sub.tier || "Bronze",
+        },
+      },
+    };
+    setOtpModalDelivery(record);
   };
 
   const handleConfirmOrderOtpDelivery = async (otp: string, note?: string) => {
@@ -1955,27 +1946,36 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
                                   )}
                                 </div>
 
-                                <button
-                                  type="button"
-                                  onClick={() => handleToggleDelivery(sub, slot.id)}
-                                  className={`${styles.deliveryToggleBtn} ${
-                                    isSlotDelivered ? styles.deliveryBtnPending : styles.deliveryBtnDelivered
-                                  }`}
-                                  style={{ padding: "6px 14px", fontSize: "0.82rem" }}
-                                  title={isSlotDelivered ? `Mark ${slot.name} as Pending` : `Mark ${slot.name} as Delivered`}
-                                >
-                                  {isSlotDelivered ? (
-                                    <>
-                                      <Clock size={13} />
-                                      <span>Mark Pending</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <CheckCircle2 size={13} />
-                                      <span>Mark Delivered</span>
-                                    </>
-                                  )}
-                                </button>
+                                {isSlotDelivered ? (
+                                  <div
+                                    style={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: "6px",
+                                      padding: "6px 14px",
+                                      borderRadius: "8px",
+                                      fontSize: "0.82rem",
+                                      fontWeight: 700,
+                                      backgroundColor: "#ECFDF5",
+                                      color: "#059669",
+                                      border: "1px solid #A7F3D0",
+                                    }}
+                                  >
+                                    <CheckCircle2 size={14} color="#059669" />
+                                    <span>Delivered (OTP Verified)</span>
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleDelivery(sub, slot.id)}
+                                    className={`${styles.deliveryToggleBtn} ${styles.deliveryBtnDelivered}`}
+                                    style={{ padding: "6px 14px", fontSize: "0.82rem" }}
+                                    title={`Verify OTP & Mark ${slot.name} as Delivered`}
+                                  >
+                                    <CheckCircle2 size={13} />
+                                    <span>Mark Delivered</span>
+                                  </button>
+                                )}
                               </div>
                             );
                           })}

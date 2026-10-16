@@ -110,38 +110,17 @@ export default function DeliveriesCanvas() {
 
   // Handle Delivery Toggle per specific meal slot occurrence
   const handleToggleDeliveryStatus = async (item: MealSlotDeliveryRecord) => {
-    // If not delivered yet, open OTP verification modal
-    if (item.status !== "DELIVERED") {
-      setOtpModalDelivery(item);
+    // Once a meal is verified and delivered via OTP, it cannot be reverted to pending
+    if (item.status === "DELIVERED") {
+      showToast(
+        "This meal has already been delivered and verified via Customer OTP. It cannot be reverted back to pending.",
+        "error"
+      );
       return;
     }
 
-    // If already delivered, toggle back to pending
-    const nextStatus = "NOT_DELIVERED";
-    setActionInProgressId(item.id);
-
-    try {
-      await markSubscriberMealDeliveryStatus(
-        item.subscriptionId,
-        item.scheduledDate,
-        nextStatus,
-        undefined,
-        item.slotId
-      );
-      const recipientName =
-        item.subscription?.user?.name ||
-        (item as any).customerName ||
-        "Subscriber";
-      showToast(
-        `Marked ${item.slotName} as Pending for ${recipientName}`
-      );
-      loadDeliveries(false);
-    } catch (err: any) {
-      showToast(err.message || "Failed to update delivery status", "error");
-      loadDeliveries(true);
-    } finally {
-      setActionInProgressId(null);
-    }
+    // Open OTP modal for delivery
+    setOtpModalDelivery(item);
   };
 
   const handleConfirmDeliveryWithOtp = async (otp: string, note?: string) => {
@@ -883,49 +862,61 @@ export default function DeliveriesCanvas() {
 
                       {/* Action Button */}
                       {!isPaused && (
-                        <button
-                          type="button"
-                          onClick={() => handleToggleDeliveryStatus(item)}
-                          disabled={actionInProgressId === item.id}
-                          style={{
-                            padding: "8px 16px",
-                            borderRadius: "8px",
-                            backgroundColor: isDelivered
-                              ? "#F1F5F9"
-                              : item.isOverdue
-                              ? "#DC2626"
-                              : "#EA580C",
-                            color: isDelivered ? "#475569" : "#FFFFFF",
-                            border: isDelivered ? "1px solid #CBD5E1" : "none",
-                            fontSize: "13px",
-                            fontWeight: 700,
-                            cursor: "pointer",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "6px",
-                            transition: "all 0.15s ease",
-                            boxShadow: isDelivered
-                              ? "none"
-                              : item.isOverdue
-                              ? "0 2px 6px rgba(220, 38, 38, 0.25)"
-                              : "none",
-                          }}
-                        >
-                          {actionInProgressId === item.id ? (
-                            <Loader2 size={14} className="animate-spin" />
-                          ) : isDelivered ? (
-                            <Clock size={14} />
-                          ) : (
-                            <Key size={14} />
-                          )}
-                          <span>
-                            {isDelivered
-                              ? "Mark Pending"
-                              : item.isOverdue
-                              ? `Enter OTP & Deliver Late`
-                              : `Enter OTP & Deliver`}
-                          </span>
-                        </button>
+                        isDelivered ? (
+                          <div
+                            style={{
+                              padding: "8px 16px",
+                              borderRadius: "8px",
+                              backgroundColor: "#ECFDF5",
+                              color: "#059669",
+                              border: "1px solid #A7F3D0",
+                              fontSize: "13px",
+                              fontWeight: 700,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "6px",
+                            }}
+                          >
+                            <CheckCircle2 size={15} color="#059669" />
+                            <span>Delivered (Verified)</span>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleToggleDeliveryStatus(item)}
+                            disabled={actionInProgressId === item.id}
+                            style={{
+                              padding: "8px 16px",
+                              borderRadius: "8px",
+                              backgroundColor: item.isOverdue
+                                ? "#DC2626"
+                                : "#EA580C",
+                              color: "#FFFFFF",
+                              border: "none",
+                              fontSize: "13px",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "6px",
+                              transition: "all 0.15s ease",
+                              boxShadow: item.isOverdue
+                                ? "0 2px 6px rgba(220, 38, 38, 0.25)"
+                                : "none",
+                            }}
+                          >
+                            {actionInProgressId === item.id ? (
+                              <Loader2 size={14} className="animate-spin" />
+                            ) : (
+                              <Key size={14} />
+                            )}
+                            <span>
+                              {item.isOverdue
+                                ? `Enter OTP & Deliver Late`
+                                : `Enter OTP & Deliver`}
+                            </span>
+                          </button>
+                        )
                       )}
                     </div>
                   </div>

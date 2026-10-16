@@ -210,17 +210,17 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/seller/res/manage-delivery",
-        destination: "/seller/res/subscription/deliveries",
+        destination: "/seller/subscription",
         permanent: false,
       },
       {
         source: "/seller/delivery-roster",
-        destination: "/seller/subscription/deliveries",
+        destination: "/seller/subscription",
         permanent: false,
       },
       {
         source: "/seller/res/delivery-roster",
-        destination: "/seller/res/subscription/deliveries",
+        destination: "/seller/subscription",
         permanent: false,
       },
     ];
