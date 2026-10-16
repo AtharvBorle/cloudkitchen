@@ -1638,36 +1638,16 @@ export default function MyOrdersView() {
                         className={`${styles.activeOrderCard} ${isSelected ? styles.orderCardSelected : ""}`}
                         onClick={() => handleSelectOrder(order)}
                       >
-                        {/* Top Details */}
-                        <div className={styles.activeCardTopRow}>
-                          <div className={styles.activeCardTopLeft}>
-                            <div className={styles.cardImageWrapper}>
-                              <Image
-                                src={order.imageUrl}
-                                alt={order.vendorName}
-                                width={64}
-                                height={64}
-                                className={styles.cardImage}
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).src = "/images/places/place-pizza.png";
-                                }}
-                              />
-                            </div>
-                            <div className={styles.cardMetaInfo}>
-                              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "3px" }}>
-                                <h3 className={styles.vendorTitle}>{order.vendorName}</h3>
-                                <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#475569", background: "#F1F5F9", padding: "2px 6px", borderRadius: "4px", border: "1px solid #E2E8F0" }}>
-                                  #{order.orderId}
-                                </span>
-                              </div>
-                              <p className={styles.itemSummaryText}>{order.dishName || order.itemSummary}</p>
-                              <span className={styles.itemCountText}>{order.itemCountText}</span>
-                              <span className={styles.priceHighlight}>₹{order.price}</span>
-                              <span className={styles.dateSingleLine}>{order.orderDate}</span>
-                            </div>
+                        {/* 1. Top Header: Vendor Name + Order ID on Left, Status + Arriving on Right */}
+                        <div className={styles.cardHeaderRow}>
+                          <div className={styles.vendorAndIdGroup}>
+                            <h3 className={styles.vendorTitle}>{order.vendorName}</h3>
+                            <span className={styles.orderIdBadge}>
+                              #{order.orderId}
+                            </span>
                           </div>
 
-                          <div className={styles.activeCardTopRight}>
+                          <div className={styles.headerStatusGroup}>
                             <span
                               className={styles.statusPillGreen}
                               style={
@@ -1689,10 +1669,56 @@ export default function MyOrdersView() {
                                 )}
                               </span>
                             </div>
-                            <div className={styles.chevronBtn}>
-                              <ChevronRight size={18} />
+                          </div>
+                        </div>
+
+                        {/* 2. Middle Body: Food Image + Dish Meta */}
+                        <div className={styles.cardBodyRow}>
+                          <div className={styles.cardImageWrapper}>
+                            <Image
+                              src={order.imageUrl}
+                              alt={order.vendorName}
+                              width={64}
+                              height={64}
+                              className={styles.cardImage}
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = "/images/places/place-pizza.png";
+                              }}
+                            />
+                          </div>
+                          <div className={styles.cardContentCol}>
+                            <h4 className={styles.dishTitleText}>{order.dishName || order.itemSummary}</h4>
+                            <div className={styles.itemAndPriceLine}>
+                              <span className={styles.itemCountText}>{order.itemCountText}</span>
+                              <span className={styles.dotSeparator}>•</span>
+                              <span className={styles.priceHighlight}>₹{order.price}</span>
+                            </div>
+                            <div className={styles.dateAndStatusLine}>
+                              <span className={styles.dateText}>{order.orderDate}</span>
                             </div>
                           </div>
+
+                          {/* Delivery Partner avatar snippet if partner is assigned */}
+                          {order.partner && (
+                            <div className={styles.partnerSnippet} title={`Delivery Partner: ${order.partner.name}`}>
+                              <div className={styles.partnerSnippetAvatarWrapper}>
+                                {order.partner.avatar ? (
+                                  <Image
+                                    src={order.partner.avatar}
+                                    alt={order.partner.name}
+                                    width={40}
+                                    height={40}
+                                    className={styles.partnerSnippetAvatar}
+                                  />
+                                ) : (
+                                  <div className={styles.partnerSnippetAvatarPlaceholder}>
+                                    {order.partner.name.charAt(0).toUpperCase()}
+                                  </div>
+                                )}
+                                <span className={styles.partnerOnlineDot} />
+                              </div>
+                            </div>
+                          )}
                         </div>
 
                         {/* 5-Stage Dynamic Status Tracker */}
@@ -1854,81 +1880,122 @@ export default function MyOrdersView() {
                       className={`${styles.pastOrderCard} ${isSelected ? styles.orderCardSelected : ""}`}
                       onClick={() => handleSelectOrder(order)}
                     >
-                      <div className={styles.pastCardTopLeft}>
+                      {/* 1. Header: Vendor Name + Order ID on Left, Status Badge on Right */}
+                      <div className={styles.cardHeaderRow}>
+                        <div className={styles.vendorAndIdGroup}>
+                          <h3 className={styles.vendorTitle}>{order.vendorName}</h3>
+                          <span className={styles.orderIdBadge}>
+                            #{order.orderId}
+                          </span>
+                        </div>
+                        <div className={styles.headerStatusGroup}>
+                          <span className={isCancelled ? styles.statusPillRed : styles.statusPillGreenLight}>
+                            {order.statusDisplay}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* 2. Body: Food Image + Dish Meta Info */}
+                      <div className={styles.cardBodyRow}>
                         <div className={styles.cardImageWrapper}>
                           <Image
                             src={order.imageUrl}
                             alt={order.vendorName}
-                            width={72}
-                            height={72}
+                            width={64}
+                            height={64}
                             className={styles.cardImage}
                             onError={(e) => {
                               (e.target as HTMLImageElement).src = "/images/places/place-pizza.png";
                             }}
                           />
                         </div>
-                        <div className={styles.cardMetaInfo}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "3px" }}>
-                            <h3 className={styles.vendorTitle}>{order.vendorName}</h3>
-                            <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#475569", background: "#F1F5F9", padding: "2px 6px", borderRadius: "4px", border: "1px solid #E2E8F0" }}>
-                              #{order.orderId}
-                            </span>
+                        <div className={styles.cardContentCol}>
+                          <h4 className={styles.dishTitleText}>{order.dishName || order.itemSummary}</h4>
+                          <div className={styles.itemAndPriceLine}>
+                            <span className={styles.itemCountText}>{order.itemCountText}</span>
+                            <span className={styles.dotSeparator}>•</span>
+                            <span className={styles.priceHighlight}>₹{order.price}</span>
                           </div>
-                          <p className={styles.itemSummaryText}>{order.dishName || order.itemSummary}</p>
-                          <span className={styles.itemCountText}>{order.itemCountText}</span>
-                          <span className={styles.priceSingleLine}>₹{order.price}</span>
-                          <span className={styles.dateSingleLine}>{order.orderDate}</span>
+                          <div className={styles.dateAndStatusLine}>
+                            <span className={styles.dateText}>{order.orderDate}</span>
+                            {order.deliveredLabel && (
+                              <>
+                                <span className={styles.dotSeparator}>•</span>
+                                <span className={isCancelled ? styles.cancelReasonText : styles.deliveredNoteText}>
+                                  {order.deliveredLabel}
+                                </span>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
 
-                      <div className={styles.pastCardActionRow}>
-                        <div className={styles.pastStatusDateRow}>
-                          <span className={isCancelled ? styles.statusPillRed : styles.statusPillGray}>
-                            {order.statusDisplay}
-                          </span>
-                          <div className={styles.deliveredInfo}>
-                            <span className={styles.deliveredLabel}>
-                              {order.deliveredLabel || (isCancelled ? "Seller has not confirmed your order" : "Delivered")}
+                      {/* 3. Footer: Refund status / Rating on Left, Action Buttons on Right */}
+                      <div className={styles.cardFooterRow}>
+                        <div className={styles.footerLeft}>
+                          {isCancelled && (order.refund || order.isPaid || order.price === 0) && (
+                            <span
+                              className={styles.refundStatusBadge}
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                padding: "4px 9px",
+                                borderRadius: "6px",
+                                fontSize: "0.75rem",
+                                fontWeight: 700,
+                                backgroundColor:
+                                  order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED" || (!order.refund && order.price === 0)
+                                    ? "#DCFCE7"
+                                    : order.refund?.status === "REJECTED"
+                                    ? "#FEE2E2"
+                                    : "#FEF3C7",
+                                color:
+                                  order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED" || (!order.refund && order.price === 0)
+                                    ? "#15803D"
+                                    : order.refund?.status === "REJECTED"
+                                    ? "#B91C1C"
+                                    : "#B45309",
+                                border: `1px solid ${
+                                  order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED" || (!order.refund && order.price === 0)
+                                    ? "#BBF7D0"
+                                    : order.refund?.status === "REJECTED"
+                                    ? "#FECACA"
+                                    : "#FDE68A"
+                                }`,
+                              }}
+                            >
+                              {order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED" || (!order.refund && order.price === 0)
+                                ? `✓ Refund: Processed (₹${typeof order.refund?.amount === "number" ? order.refund.amount : order.price})`
+                                : order.refund?.status === "REJECTED"
+                                ? `✕ Refund: Rejected`
+                                : `⏳ Refund: Processing (₹${typeof order.refund?.amount === "number" ? order.refund.amount : order.price})`}
                             </span>
-                            <span className={styles.deliveredDateText}>{order.deliveredTime}</span>
-                          </div>
+                          )}
+                          {isDelivered && order.review && (
+                            <span className={styles.ratedBadge}>
+                              <Star size={13} fill="#059669" color="#059669" />
+                              <span>Rated {order.review.rating}★</span>
+                            </span>
+                          )}
                         </div>
 
-                        <div className={styles.pastButtonsGroup}>
+                        <div className={styles.footerButtonsGroup}>
                           {isDelivered && (
                             <>
-                              <button
-                                type="button"
-                                className={styles.reorderBtn}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleRateOrder(order);
-                                }}
-                                style={
-                                  order.review
-                                    ? {
-                                        backgroundColor: "#ECFDF5",
-                                        color: "#059669",
-                                        borderColor: "#A7F3D0",
-                                      }
-                                    : {
-                                        backgroundColor: "#FFF7ED",
-                                        color: "#EA580C",
-                                        borderColor: "#FFEDD5",
-                                      }
-                                }
-                              >
-                                <Star
-                                  size={14}
-                                  fill={order.review ? "#059669" : "none"}
-                                  color={order.review ? "#059669" : "#EA580C"}
-                                />
-                                <span>
-                                  {order.review
-                                    ? `Rated ${order.review.rating}★`
-                                    : "Rate Order"}
-                                </span>
-                              </button>
+                              {!order.review && (
+                                <button
+                                  type="button"
+                                  className={styles.rateOrderBtn}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRateOrder(order);
+                                  }}
+                                >
+                                  <Star size={14} color="#EA580C" />
+                                  <span>Rate Order</span>
+                                </button>
+                              )}
                               <button
                                 type="button"
                                 className={styles.reorderBtn}
@@ -1943,63 +2010,17 @@ export default function MyOrdersView() {
                             </>
                           )}
 
-                          {isCancelled && (
-                            <>
-                              {(order.refund || order.isPaid || order.price === 0) && (
-                                <span
-                                  className={styles.refundStatusBadge}
-                                  style={{
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: "4px",
-                                    padding: "4px 9px",
-                                    borderRadius: "6px",
-                                    fontSize: "0.75rem",
-                                    fontWeight: 700,
-                                    backgroundColor:
-                                      order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED" || (!order.refund && order.price === 0)
-                                        ? "#DCFCE7"
-                                        : order.refund?.status === "REJECTED"
-                                        ? "#FEE2E2"
-                                        : "#FEF3C7",
-                                    color:
-                                      order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED" || (!order.refund && order.price === 0)
-                                        ? "#15803D"
-                                        : order.refund?.status === "REJECTED"
-                                        ? "#B91C1C"
-                                        : "#B45309",
-                                    border: `1px solid ${
-                                      order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED" || (!order.refund && order.price === 0)
-                                        ? "#BBF7D0"
-                                        : order.refund?.status === "REJECTED"
-                                        ? "#FECACA"
-                                        : "#FDE68A"
-                                    }`,
-                                  }}
-                                >
-                                  {order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED" || (!order.refund && order.price === 0)
-                                    ? `✓ Refund: Processed (₹${typeof order.refund?.amount === "number" ? order.refund.amount : order.price})`
-                                    : order.refund?.status === "REJECTED"
-                                    ? `✕ Refund: Rejected`
-                                    : `⏳ Refund: Processing (₹${typeof order.refund?.amount === "number" ? order.refund.amount : order.price})`}
-                                </span>
-                              )}
-                              <button
-                                type="button"
-                                className={styles.viewDetailsBtn}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleSelectOrder(order);
-                                }}
-                              >
-                                <span>View Details</span>
-                              </button>
-                            </>
-                          )}
-                        </div>
-
-                        <div className={styles.chevronBtn}>
-                          <ChevronRight size={18} />
+                          <button
+                            type="button"
+                            className={styles.viewDetailsBtn}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelectOrder(order);
+                            }}
+                          >
+                            <span>View Details</span>
+                            <ChevronRight size={14} />
+                          </button>
                         </div>
                       </div>
                     </article>
