@@ -27,12 +27,89 @@
   font-weight: 400;
 }
 
+/* Controls Row: Filters + In-page Search */
+.controlsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
 /* Filter Pills */
 .filterPillsRow {
   display: flex;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+/* In-page Search Bar */
+.inPageSearchBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 9999px;
+  height: 40px;
+  padding: 0 14px;
+  min-width: 250px;
+  max-width: 320px;
+  flex: 1 1 250px;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.inPageSearchBar:focus-within {
+  border-color: #ff6b00;
+  box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.12);
+}
+
+.inPageSearchIcon {
+  color: #ff6b00;
+  flex-shrink: 0;
+}
+
+.inPageSearchInput {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 0.85rem;
+  color: #0f172a;
+  font-family: inherit;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+.inPageSearchInput::placeholder {
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.inPageClearBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  border-radius: 50%;
+  transition: color 0.15s ease;
+}
+
+.inPageClearBtn:hover {
+  color: #ff6b00;
+}
+
+@media (max-width: 960px) {
+  .inPageSearchBar {
+    display: none;
+  }
 }
 
 .filterPill {

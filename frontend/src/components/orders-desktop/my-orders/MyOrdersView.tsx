@@ -18,6 +18,7 @@ import {
   Copy,
   Check,
   X,
+  Search,
   Bell,
   ChevronLeft,
   ChevronRight,
@@ -415,6 +416,90 @@ function findMatchingOrder(orderList: OrderItemData[], idToMatch: string): Order
   });
 }
 
+function getOrderSearchableText(order: OrderItemData): string {
+  const parts: string[] = [
+    order.id || "",
+    order.orderId || "",
+    `#${order.orderId || ""}`,
+    order.vendorName || "",
+    order.dishName || "",
+    order.itemSummary || "",
+    order.itemsDetail || "",
+    order.statusDisplay || "",
+  ];
+
+  if (Array.isArray(order.rawItems)) {
+    for (const item of order.rawItems) {
+      if (!item) continue;
+      if (item.name) parts.push(item.name);
+      if (item.title) parts.push(item.title);
+      if (item.foodItem?.name) parts.push(item.foodItem.name);
+      if (item.foodItemName) parts.push(item.foodItemName);
+      if (item.id) parts.push(String(item.id));
+      if (item.foodItemId) parts.push(String(item.foodItemId));
+      if (item.itemId) parts.push(String(item.itemId));
+      if (item.foodItem?.id) parts.push(String(item.foodItem.id));
+    }
+  }
+
+  return parts.join(" ").toLowerCase();
+}
+
+function matchesOrderSearch(order: OrderItemData, query: string): boolean {
+  if (!query) return true;
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+
+  const searchable = getOrderSearchableText(order);
+  const qNoHash = q.replace(/^#/, "");
+
+  if (searchable.includes(q) || searchable.includes(qNoHash)) {
+    return true;
+  }
+
+  const tokens = qNoHash.split(/\s+/).filter(Boolean);
+  if (tokens.length > 1) {
+    return tokens.every((token) => searchable.includes(token));
+  }
+
+  return false;
+}
+
+function getBookingSearchableText(booking: RoomBookingData): string {
+  const parts: string[] = [
+    booking.id || "",
+    booking.bookingRef || "",
+    booking.roomId || "",
+    booking.roomTitle || "",
+    booking.hostName || "",
+    booking.city || "",
+    booking.locality || "",
+    booking.description || "",
+    booking.status || "",
+  ];
+  return parts.join(" ").toLowerCase();
+}
+
+function matchesBookingSearch(booking: RoomBookingData, query: string): boolean {
+  if (!query) return true;
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+
+  const searchable = getBookingSearchableText(booking);
+  const qNoHash = q.replace(/^#/, "");
+
+  if (searchable.includes(q) || searchable.includes(qNoHash)) {
+    return true;
+  }
+
+  const tokens = qNoHash.split(/\s+/).filter(Boolean);
+  if (tokens.length > 1) {
+    return tokens.every((token) => searchable.includes(token));
+  }
+
+  return false;
+}
+
 export default function MyOrdersView() {
   const { isRoomEnabled } = useRoomModule();
   const router = useRouter();
@@ -464,14 +549,35 @@ export default function MyOrdersView() {
   const [orderPage, setOrderPage] = useState(1);
   const [bookingPage, setBookingPage] = useState(1);
 
-  // Reset pagination to page 1 on filter or tab change
+  // Search query state (synced with URL query/search params & global navbar search events)
+  const [searchQuery, setSearchQuery] = useState<string>(() => {
+    return searchParams?.get("query") || searchParams?.get("search") || "";
+  });
+
+  useEffect(() => {
+    const q = searchParams?.get("query") || searchParams?.get("search") || "";
+    setSearchQuery(q);
+  }, [searchParams]);
+
+  useEffect(() => {
+    const handleGlobalSearch = (e: any) => {
+      const q = typeof e.detail === "string" ? e.detail : (e.detail?.query ?? "");
+      setSearchQuery(q);
+    };
+    window.addEventListener("global-navbar-search", handleGlobalSearch);
+    return () => {
+      window.removeEventListener("global-navbar-search", handleGlobalSearch);
+    };
+  }, []);
+
+  // Reset pagination to page 1 on filter, tab, or search query change
   useEffect(() => {
     setOrderPage(1);
-  }, [foodFilter, mainCategory]);
+  }, [foodFilter, mainCategory, searchQuery]);
 
   useEffect(() => {
     setBookingPage(1);
-  }, [roomFilter, mainCategory]);
+  }, [roomFilter, mainCategory, searchQuery]);
 
   // Selected item states
   const [selectedOrder, setSelectedOrder] = useState<OrderItemData | null>(null);
@@ -581,13 +687,12 @@ export default function MyOrdersView() {
   // Filtered Food Orders
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
-      if (foodFilter === "ALL") return true;
-      if (foodFilter === "ONGOING") return order.status === "ONGOING";
-      if (foodFilter === "COMPLETED") return order.status === "DELIVERED";
-      if (foodFilter === "CANCELLED") return order.status === "CANCELLED";
-      return true;
+      if (foodFilter === "ONGOING" && order.status !== "ONGOING") return false;
+      if (foodFilter === "COMPLETED" && order.status !== "DELIVERED") return false;
+      if (foodFilter === "CANCELLED" && order.status !== "CANCELLED") return false;
+      return matchesOrderSearch(order, searchQuery);
     });
-  }, [orders, foodFilter]);
+  }, [orders, foodFilter, searchQuery]);
 
   // Paginated Food Orders (5 items per page)
   const totalOrderPages = Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE));
@@ -596,16 +701,26 @@ export default function MyOrdersView() {
     return filteredOrders.slice(start, start + PAGE_SIZE);
   }, [filteredOrders, orderPage]);
 
+  // Keep selected order in sync with search results
+  useEffect(() => {
+    if (filteredOrders.length > 0) {
+      if (!selectedOrder || !filteredOrders.some((o) => o.id === selectedOrder.id)) {
+        setSelectedOrder(filteredOrders[0]);
+      }
+    } else {
+      setSelectedOrder(null);
+    }
+  }, [filteredOrders]);
+
   // Filtered Room Bookings
   const filteredBookings = useMemo(() => {
     return bookings.filter((booking) => {
-      if (roomFilter === "ALL") return true;
-      if (roomFilter === "CONFIRMED") return booking.status === "CONFIRMED";
-      if (roomFilter === "PENDING") return booking.status === "PENDING";
-      if (roomFilter === "CANCELLED") return booking.status === "CANCELLED";
-      return true;
+      if (roomFilter === "CONFIRMED" && booking.status !== "CONFIRMED") return false;
+      if (roomFilter === "PENDING" && booking.status !== "PENDING") return false;
+      if (roomFilter === "CANCELLED" && booking.status !== "CANCELLED") return false;
+      return matchesBookingSearch(booking, searchQuery);
     });
-  }, [bookings, roomFilter]);
+  }, [bookings, roomFilter, searchQuery]);
 
   // Paginated Room Bookings (5 items per page)
   const totalBookingPages = Math.max(1, Math.ceil(filteredBookings.length / PAGE_SIZE));
@@ -613,6 +728,17 @@ export default function MyOrdersView() {
     const start = (bookingPage - 1) * PAGE_SIZE;
     return filteredBookings.slice(start, start + PAGE_SIZE);
   }, [filteredBookings, bookingPage]);
+
+  // Keep selected booking in sync with search results
+  useEffect(() => {
+    if (filteredBookings.length > 0) {
+      if (!selectedBooking || !filteredBookings.some((b) => b.id === selectedBooking.id)) {
+        setSelectedBooking(filteredBookings[0]);
+      }
+    } else {
+      setSelectedBooking(null);
+    }
+  }, [filteredBookings]);
 
   const getPageNumbers = (currentPage: number, totalPages: number): (number | string)[] => {
     if (totalPages <= 5) {
@@ -1264,77 +1390,133 @@ export default function MyOrdersView() {
               </div>
             )}
 
-            {/* Sub-Filter Pills */}
-            {mainCategory === "FOODS" ? (
-              <div className={styles.filterPillsRow} role="tablist" aria-label="Filter Food Orders">
-                <button
-                  type="button"
-                  className={`${styles.filterPill} ${foodFilter === "ALL" ? styles.filterPillActive : ""}`}
-                  onClick={() => setFoodFilter("ALL")}
-                >
-                  All
-                </button>
+            {/* Controls Row: Sub-Filter Pills & In-page Search Bar */}
+            <div className={styles.controlsRow}>
+              {mainCategory === "FOODS" ? (
+                <div className={styles.filterPillsRow} role="tablist" aria-label="Filter Food Orders">
+                  <button
+                    type="button"
+                    className={`${styles.filterPill} ${foodFilter === "ALL" ? styles.filterPillActive : ""}`}
+                    onClick={() => setFoodFilter("ALL")}
+                  >
+                    All
+                  </button>
 
-                <button
-                  type="button"
-                  className={`${styles.filterPill} ${foodFilter === "ONGOING" ? styles.filterPillActive : ""}`}
-                  onClick={() => setFoodFilter("ONGOING")}
-                >
-                  <span>Ongoing</span>
-                  {ongoingOrdersCount > 0 && <span className={styles.badgeCount}>{ongoingOrdersCount}</span>}
-                </button>
+                  <button
+                    type="button"
+                    className={`${styles.filterPill} ${foodFilter === "ONGOING" ? styles.filterPillActive : ""}`}
+                    onClick={() => setFoodFilter("ONGOING")}
+                  >
+                    <span>Ongoing</span>
+                    {ongoingOrdersCount > 0 && <span className={styles.badgeCount}>{ongoingOrdersCount}</span>}
+                  </button>
 
-                <button
-                  type="button"
-                  className={`${styles.filterPill} ${foodFilter === "COMPLETED" ? styles.filterPillActive : ""}`}
-                  onClick={() => setFoodFilter("COMPLETED")}
-                >
-                  Completed
-                </button>
+                  <button
+                    type="button"
+                    className={`${styles.filterPill} ${foodFilter === "COMPLETED" ? styles.filterPillActive : ""}`}
+                    onClick={() => setFoodFilter("COMPLETED")}
+                  >
+                    Completed
+                  </button>
 
-                <button
-                  type="button"
-                  className={`${styles.filterPill} ${foodFilter === "CANCELLED" ? styles.filterPillActive : ""}`}
-                  onClick={() => setFoodFilter("CANCELLED")}
-                >
-                  Cancelled
-                </button>
+                  <button
+                    type="button"
+                    className={`${styles.filterPill} ${foodFilter === "CANCELLED" ? styles.filterPillActive : ""}`}
+                    onClick={() => setFoodFilter("CANCELLED")}
+                  >
+                    Cancelled
+                  </button>
+                </div>
+              ) : (
+                <div className={styles.filterPillsRow} role="tablist" aria-label="Filter Room Bookings">
+                  <button
+                    type="button"
+                    className={`${styles.filterPill} ${roomFilter === "ALL" ? styles.filterPillActive : ""}`}
+                    onClick={() => setRoomFilter("ALL")}
+                  >
+                    All
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`${styles.filterPill} ${roomFilter === "CONFIRMED" ? styles.filterPillActive : ""}`}
+                    onClick={() => setRoomFilter("CONFIRMED")}
+                  >
+                    <span>Confirmed</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`${styles.filterPill} ${roomFilter === "PENDING" ? styles.filterPillActive : ""}`}
+                    onClick={() => setRoomFilter("PENDING")}
+                  >
+                    <span>Pending</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`${styles.filterPill} ${roomFilter === "CANCELLED" ? styles.filterPillActive : ""}`}
+                    onClick={() => setRoomFilter("CANCELLED")}
+                  >
+                    Cancelled
+                  </button>
+                </div>
+              )}
+
+              {/* In-page Desktop Search Bar */}
+              <div className={styles.inPageSearchBar}>
+                <Search size={16} className={styles.inPageSearchIcon} />
+                <input
+                  type="text"
+                  placeholder={
+                    mainCategory === "FOODS"
+                      ? "Search orders by ID, dish, kitchen..."
+                      : "Search room bookings..."
+                  }
+                  value={searchQuery}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSearchQuery(val);
+                    if (typeof window !== "undefined") {
+                      window.dispatchEvent(
+                        new CustomEvent("global-navbar-search", { detail: { query: val } })
+                      );
+                      const url = new URL(window.location.href);
+                      if (val.trim()) {
+                        url.searchParams.set("query", val.trim());
+                      } else {
+                        url.searchParams.delete("query");
+                        url.searchParams.delete("search");
+                      }
+                      window.history.replaceState(null, "", url.toString());
+                    }
+                  }}
+                  className={styles.inPageSearchInput}
+                  aria-label="Search orders"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery("");
+                      if (typeof window !== "undefined") {
+                        window.dispatchEvent(
+                          new CustomEvent("global-navbar-search", { detail: { query: "" } })
+                        );
+                        const url = new URL(window.location.href);
+                        url.searchParams.delete("query");
+                        url.searchParams.delete("search");
+                        window.history.replaceState(null, "", url.toString());
+                      }
+                    }}
+                    className={styles.inPageClearBtn}
+                    aria-label="Clear search"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
               </div>
-            ) : (
-              <div className={styles.filterPillsRow} role="tablist" aria-label="Filter Room Bookings">
-                <button
-                  type="button"
-                  className={`${styles.filterPill} ${roomFilter === "ALL" ? styles.filterPillActive : ""}`}
-                  onClick={() => setRoomFilter("ALL")}
-                >
-                  All
-                </button>
-
-                <button
-                  type="button"
-                  className={`${styles.filterPill} ${roomFilter === "CONFIRMED" ? styles.filterPillActive : ""}`}
-                  onClick={() => setRoomFilter("CONFIRMED")}
-                >
-                  <span>Confirmed</span>
-                </button>
-
-                <button
-                  type="button"
-                  className={`${styles.filterPill} ${roomFilter === "PENDING" ? styles.filterPillActive : ""}`}
-                  onClick={() => setRoomFilter("PENDING")}
-                >
-                  <span>Pending</span>
-                </button>
-
-                <button
-                  type="button"
-                  className={`${styles.filterPill} ${roomFilter === "CANCELLED" ? styles.filterPillActive : ""}`}
-                  onClick={() => setRoomFilter("CANCELLED")}
-                >
-                  Cancelled
-                </button>
-              </div>
-            )}
+            </div>
           </header>
 
           {/* Cards Stack / States */}
@@ -1398,7 +1580,9 @@ export default function MyOrdersView() {
               <div className={styles.emptyOrdersCard}>
                 <ShoppingBag size={48} color="#EA580C" />
                 <h2 className={styles.emptyStateTitle}>
-                  {foodFilter === "ONGOING"
+                  {searchQuery.trim()
+                    ? `No orders matching "${searchQuery.trim()}"`
+                    : foodFilter === "ONGOING"
                     ? "No active food orders right now"
                     : foodFilter === "COMPLETED"
                     ? "No completed food orders yet"
@@ -1407,11 +1591,34 @@ export default function MyOrdersView() {
                     : "You haven't placed any food orders yet"}
                 </h2>
                 <p className={styles.emptyStateSub}>
-                  Hungry? Explore top chef kitchens and delicious fresh gourmet preparations!
+                  {searchQuery.trim()
+                    ? "Try checking for spelling errors or search with a different dish name, order ID, or kitchen name."
+                    : "Hungry? Explore top chef kitchens and delicious fresh gourmet preparations!"}
                 </p>
-                <Link href="/food-explore" className={styles.exploreBtn}>
-                  Explore Food Menu
-                </Link>
+                {searchQuery.trim() ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery("");
+                      if (typeof window !== "undefined") {
+                        window.dispatchEvent(
+                          new CustomEvent("global-navbar-search", { detail: { query: "" } })
+                        );
+                        const url = new URL(window.location.href);
+                        url.searchParams.delete("query");
+                        url.searchParams.delete("search");
+                        window.history.replaceState(null, "", url.toString());
+                      }
+                    }}
+                    className={styles.exploreBtn}
+                  >
+                    Clear Search
+                  </button>
+                ) : (
+                  <Link href="/food-explore" className={styles.exploreBtn}>
+                    Explore Food Menu
+                  </Link>
+                )}
               </div>
             ) : (
               <>
@@ -1808,7 +2015,9 @@ export default function MyOrdersView() {
               <div className={styles.emptyOrdersCard}>
                 <BedDouble size={48} color="#EA580C" />
                 <h2 className={styles.emptyStateTitle}>
-                  {roomFilter === "CONFIRMED"
+                  {searchQuery.trim()
+                    ? `No bookings matching "${searchQuery.trim()}"`
+                    : roomFilter === "CONFIRMED"
                     ? "No confirmed room bookings"
                     : roomFilter === "PENDING"
                     ? "No pending room bookings"
@@ -1817,11 +2026,34 @@ export default function MyOrdersView() {
                     : "You haven't booked any rooms yet"}
                 </h2>
                 <p className={styles.emptyStateSub}>
-                  Looking for a comfortable, budget-friendly stay? Explore verified room stays!
+                  {searchQuery.trim()
+                    ? "Try checking for spelling errors or search with a different property title, booking reference, or city."
+                    : "Looking for a comfortable, budget-friendly stay? Explore verified room stays!"}
                 </p>
-                <Link href="/room-booking" className={styles.exploreBtn}>
-                  Explore Rooms
-                </Link>
+                {searchQuery.trim() ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery("");
+                      if (typeof window !== "undefined") {
+                        window.dispatchEvent(
+                          new CustomEvent("global-navbar-search", { detail: { query: "" } })
+                        );
+                        const url = new URL(window.location.href);
+                        url.searchParams.delete("query");
+                        url.searchParams.delete("search");
+                        window.history.replaceState(null, "", url.toString());
+                      }
+                    }}
+                    className={styles.exploreBtn}
+                  >
+                    Clear Search
+                  </button>
+                ) : (
+                  <Link href="/room-booking" className={styles.exploreBtn}>
+                    Explore Rooms
+                  </Link>
+                )}
               </div>
             ) : (
               <>

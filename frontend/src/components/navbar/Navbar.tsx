@@ -459,13 +459,22 @@ export const Navbar: React.FC<NavbarProps> = ({
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
-      const q = params.get("query");
-      if (q) {
-        setSearchQuery(q);
-        setMobileSearchQuery(q);
-      }
+      const q = params.get("query") || params.get("search") || "";
+      setSearchQuery(q);
+      setMobileSearchQuery(q);
     }
   }, [pathname]);
+
+  // Sync search state when external components dispatch search events
+  useEffect(() => {
+    const handleGlobalSearchSync = (e: any) => {
+      const q = typeof e.detail === "string" ? e.detail : (e.detail?.query ?? "");
+      setSearchQuery(q);
+      setMobileSearchQuery(q);
+    };
+    window.addEventListener("global-navbar-search", handleGlobalSearchSync);
+    return () => window.removeEventListener("global-navbar-search", handleGlobalSearchSync);
+  }, []);
 
   const toggleCuisine = (id: string) => {
     setSelectedCuisines((prev) =>
@@ -522,6 +531,11 @@ export const Navbar: React.FC<NavbarProps> = ({
     if (onSearch) {
       onSearch(q);
     }
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("global-navbar-search", { detail: { query: q } })
+      );
+    }
     const config = getSectionSearchConfig();
     if (q) {
       router.push(`${config.targetRoute}?query=${encodeURIComponent(q)}`);
@@ -536,6 +550,11 @@ export const Navbar: React.FC<NavbarProps> = ({
     if (onSearch) {
       onSearch(q);
     }
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("global-navbar-search", { detail: { query: q } })
+      );
+    }
     const config = getSectionSearchConfig();
     if (q) {
       router.push(`${config.targetRoute}?query=${encodeURIComponent(q)}`);
@@ -548,6 +567,21 @@ export const Navbar: React.FC<NavbarProps> = ({
     setSearchQuery("");
     setMobileSearchQuery("");
     if (onSearch) onSearch("");
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("global-navbar-search", { detail: { query: "" } })
+      );
+      if (
+        pathname.startsWith("/orders-desktop") ||
+        pathname.startsWith("/orders") ||
+        pathname.startsWith("/my-orders")
+      ) {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("query");
+        url.searchParams.delete("search");
+        window.history.replaceState(null, "", url.toString());
+      }
+    }
     const config = getSectionSearchConfig();
     if (pathname === config.targetRoute) {
       router.push(config.targetRoute);
@@ -1264,9 +1298,29 @@ export const Navbar: React.FC<NavbarProps> = ({
                   placeholder={getSectionSearchConfig().placeholder}
                   value={mobileSearchQuery}
                   onChange={(e) => {
-                    setMobileSearchQuery(e.target.value);
-                    setSearchQuery(e.target.value);
-                    if (onSearch) onSearch(e.target.value);
+                    const val = e.target.value;
+                    setMobileSearchQuery(val);
+                    setSearchQuery(val);
+                    if (onSearch) onSearch(val);
+                    if (typeof window !== "undefined") {
+                      window.dispatchEvent(
+                        new CustomEvent("global-navbar-search", { detail: { query: val } })
+                      );
+                      if (
+                        pathname.startsWith("/orders-desktop") ||
+                        pathname.startsWith("/orders") ||
+                        pathname.startsWith("/my-orders")
+                      ) {
+                        const url = new URL(window.location.href);
+                        if (val.trim()) {
+                          url.searchParams.set("query", val.trim());
+                        } else {
+                          url.searchParams.delete("query");
+                          url.searchParams.delete("search");
+                        }
+                        window.history.replaceState(null, "", url.toString());
+                      }
+                    }
                   }}
                   className={styles.mobileSearchInput}
                   aria-label={`Search in ${getSectionSearchConfig().section}`}
