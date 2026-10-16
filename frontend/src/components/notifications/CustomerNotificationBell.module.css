@@ -130,12 +130,26 @@
   border-radius: 20px;
   box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.18), 0 4px 16px rgba(0, 0, 0, 0.06);
   border: 1px solid #e2e8f0;
-  overflow: hidden;
   z-index: 999;
   display: flex;
   flex-direction: column;
   animation: dropdownPop 0.24s cubic-bezier(0.16, 1, 0.3, 1);
   transform-origin: top right;
+}
+
+/* Upward pointer arrow pointing directly to the trigger bell icon */
+.dropdownArrow {
+  position: absolute;
+  top: -7px;
+  right: 17px;
+  width: 13px;
+  height: 13px;
+  background-color: #ffffff;
+  border-top: 1px solid #e2e8f0;
+  border-left: 1px solid #e2e8f0;
+  transform: rotate(45deg);
+  z-index: 1002;
+  pointer-events: none;
 }
 
 @keyframes dropdownPop {
@@ -154,6 +168,9 @@
   padding: 16px 20px 12px;
   border-bottom: 1px solid #f1f5f9;
   background: linear-gradient(180deg, #ffffff 0%, #fafafa 100%);
+  border-radius: 20px 20px 0 0;
+  position: relative;
+  z-index: 2;
 }
 
 .headerTop {
@@ -591,34 +608,43 @@
   text-decoration: underline;
 }
 
-/* ================= RESPONSIVE MOBILE DRAWER (<=640px) ================= */
+/* ================= RESPONSIVE MOBILE POPOVER (<=640px) ================= */
 @media (max-width: 640px) {
   .dropdown {
     position: fixed;
-    top: auto;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    width: 100vw;
-    max-width: 100vw;
-    border-radius: 24px 24px 0 0;
-    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.2);
-    border: none;
-    max-height: 80vh;
-    animation: slideUpMobile 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    top: 58px;
+    right: 8px;
+    left: auto;
+    bottom: auto;
+    width: calc(100vw - 16px);
+    max-width: 390px;
+    border-radius: 20px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.24), 0 4px 14px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e2e8f0;
+    max-height: min(82vh, 600px);
+    animation: dropdownPopMobile 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+    transform-origin: top right;
   }
 
-  @keyframes slideUpMobile {
+  @keyframes dropdownPopMobile {
     from {
-      transform: translateY(100%);
+      opacity: 0;
+      transform: translateY(-8px) scale(0.96);
     }
     to {
-      transform: translateY(0);
+      opacity: 1;
+      transform: translateY(0) scale(1);
     }
+  }
+
+  .dropdownArrow {
+    right: 18px;
+    top: -7px;
+    display: block;
   }
 
   .listContainer {
-    max-height: calc(80vh - 160px);
+    max-height: calc(min(82vh, 600px) - 150px);
   }
 }
 

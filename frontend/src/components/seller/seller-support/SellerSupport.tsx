@@ -1286,32 +1286,9 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
                 </div>
 
                 <div className={styles.formGroup}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                    <label className={styles.formLabel} style={{ marginBottom: 0 }}>
-                      Description / Details <span className={styles.formLabelRequired}>*</span>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        color: "#EA580C",
-                        cursor: "pointer",
-                        fontSize: "0.78rem",
-                        fontWeight: 700,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "5px",
-                        padding: "2px 6px",
-                        borderRadius: "6px",
-                      }}
-                      title="Attach problem screenshot, photo or document"
-                    >
-                      <Paperclip size={14} />
-                      <span>{attachedFile ? "Change Attachment" : "Attach Screenshot / Document"}</span>
-                    </button>
-                  </div>
+                  <label className={styles.formLabel}>
+                    Description / Details <span className={styles.formLabelRequired}>*</span>
+                  </label>
                   <textarea
                     placeholder="Explain the issue or question in detail. Mention order IDs, subscriber names, or error messages if applicable..."
                     value={newDescription}

@@ -2235,50 +2235,55 @@ export const UserCart: React.FC<UserCartProps> = ({
               ) : (
                 <div className={styles.promoCardWrapper}>
                   <div className={styles.promoCard}>
-                    <div className={styles.promoInputBox}>
-                      <Tag size={18} className={styles.promoTagIcon} />
-                      <input
-                        type="text"
-                        maxLength={20}
-                        placeholder="Enter promo code"
-                        value={promoCode}
-                        onChange={(e) => setPromoCode(e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ""))}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            handleApplyPromo();
-                          }
-                        }}
-                        disabled={isValidatingPromo}
-                        className={styles.promoInput}
-                      />
-
+                    <div className={styles.promoInputRow}>
+                      <div className={styles.promoInputBox}>
+                        <Tag size={18} className={styles.promoTagIcon} />
+                        <input
+                          type="text"
+                          maxLength={20}
+                          placeholder="Enter promo code"
+                          value={promoCode}
+                          onChange={(e) => setPromoCode(e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ""))}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              handleApplyPromo();
+                            }
+                          }}
+                          disabled={isValidatingPromo}
+                          className={styles.promoInput}
+                        />
+                      </div>
                       <button
                         type="button"
-                        className={styles.couponDropdownToggle}
-                        onClick={() => setIsCouponDropdownOpen((prev) => !prev)}
-                        title={isCouponDropdownOpen ? "Hide offers" : "View available offers"}
-                        aria-label="Toggle coupon offers dropdown"
+                        className={styles.applyButton}
+                        onClick={() => handleApplyPromo()}
+                        disabled={!promoCode.trim() || isValidatingPromo}
                       >
-                        <span className={styles.couponOffersBadge}>
-                          <Sparkles size={13} />
-                          <span>
-                            {isLoadingOffers
-                              ? "Offers"
-                              : availableOffers.length > 0
-                              ? `${availableOffers.length} ${availableOffers.length === 1 ? "Offer" : "Offers"}`
-                              : "Offers"}
-                          </span>
-                        </span>
-                        {isCouponDropdownOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                        {isValidatingPromo ? "..." : "Apply"}
                       </button>
                     </div>
+
                     <button
                       type="button"
-                      className={styles.applyButton}
-                      onClick={() => handleApplyPromo()}
-                      disabled={!promoCode.trim() || isValidatingPromo}
+                      className={styles.couponOffersBannerBtn}
+                      onClick={() => setIsCouponDropdownOpen((prev) => !prev)}
+                      title={isCouponDropdownOpen ? "Hide offers" : "View available offers"}
+                      aria-label="Toggle coupon offers dropdown"
                     >
-                      {isValidatingPromo ? "..." : "Apply"}
+                      <div className={styles.couponOffersBannerLeft}>
+                        <Sparkles size={15} />
+                        <span>
+                          {isLoadingOffers
+                            ? "Checking offers..."
+                            : availableOffers.length > 0
+                            ? `${availableOffers.length} ${availableOffers.length === 1 ? "Offer" : "Offers"} Available`
+                            : "View Available Offers"}
+                        </span>
+                      </div>
+                      <div className={styles.couponOffersBannerRight}>
+                        <span>{isCouponDropdownOpen ? "Hide" : "Explore"}</span>
+                        {isCouponDropdownOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                      </div>
                     </button>
                   </div>
 
@@ -2302,10 +2307,10 @@ export const UserCart: React.FC<UserCartProps> = ({
 
                       {/* Search Input for filtering coupons */}
                       <div className={styles.couponSearchBox}>
-                        <Search size={14} className={styles.couponSearchIcon} />
+                        <Search size={16} className={styles.couponSearchIcon} />
                         <input
                           type="text"
-                          placeholder="Search coupon by code or description..."
+                          placeholder="Search coupon by code or offer name..."
                           value={couponSearchQuery}
                           onChange={(e) => setCouponSearchQuery(e.target.value)}
                           className={styles.couponSearchInput}
@@ -2317,7 +2322,7 @@ export const UserCart: React.FC<UserCartProps> = ({
                             onClick={() => setCouponSearchQuery("")}
                             aria-label="Clear search"
                           >
-                            <X size={12} />
+                            <X size={14} />
                           </button>
                         )}
                       </div>

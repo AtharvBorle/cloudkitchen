@@ -102,22 +102,33 @@
 }
 
 .aspectsPills {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 8px;
+  width: 100%;
 }
 
 .aspectPill {
-  padding: 8px 14px;
+  width: 100%;
+  padding: 9px 8px;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
   background: #ffffff;
   color: #475569;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
   font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.aspectPill:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
 }
 
 .aspectPill:hover {
@@ -138,14 +149,16 @@
 }
 
 .quickTagsRow {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 8px;
+  width: 100%;
 }
 
 .quickTag {
-  padding: 6px 12px;
-  border-radius: 8px;
+  width: 100%;
+  padding: 8px 8px;
+  border-radius: 10px;
   border: 1px dashed #cbd5e1;
   background: #f8fafc;
   color: #64748b;
@@ -154,6 +167,15 @@
   cursor: pointer;
   transition: all 0.15s ease;
   font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.quickTag:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
 }
 
 .quickTag:hover {

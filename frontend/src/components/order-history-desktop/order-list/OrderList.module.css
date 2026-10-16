@@ -382,23 +382,78 @@
     flex-direction: column;
     align-items: center;
     gap: 12px;
-    padding: 14px 12px;
+    padding: 14px 8px;
+    width: 100%;
+    box-sizing: border-box;
   }
   .paginationControls {
     width: 100%;
     justify-content: center;
-    flex-wrap: wrap;
-    gap: 6px;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 4px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 4px 2px;
+    box-sizing: border-box;
+  }
+  .paginationControls::-webkit-scrollbar {
+    display: none;
   }
   .pageNavBtn {
-    padding: 6px 10px;
-    font-size: 0.8rem;
+    padding: 6px 8px;
+    font-size: 0.78rem;
+    gap: 3px;
+    flex-shrink: 0;
+    border-radius: 8px;
+  }
+  .pageNumbersList {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
   }
   .pageNumberBtn {
-    min-width: 30px;
-    height: 30px;
-    font-size: 0.8rem;
+    min-width: 28px;
+    height: 28px;
+    font-size: 0.78rem;
     padding: 0 4px;
+    border-radius: 8px;
+    flex-shrink: 0;
+  }
+  .pageEllipsis {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 28px;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    flex-shrink: 0;
   }
 }
+
+@media (max-width: 380px) {
+  .paginationControls {
+    gap: 2px;
+  }
+  .pageNavBtn {
+    padding: 5px 6px;
+    font-size: 0.72rem;
+  }
+  .pageNumbersList {
+    gap: 2px;
+  }
+  .pageNumberBtn {
+    min-width: 26px;
+    height: 26px;
+    font-size: 0.74rem;
+  }
+  .pageEllipsis {
+    width: 14px;
+    font-size: 0.75rem;
+  }
+}
+
 
