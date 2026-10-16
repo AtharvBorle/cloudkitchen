@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { emitOrderCancelled, emitOrderUpdated, emitSellerDashboardRefresh } from "@/lib/realtime-events";
 import { revalidateTag } from "next/cache";
+import { sendOrderStatusNotification } from "@/lib/emailService";
 
 /**
  * 5-minute order acceptance window in milliseconds.
@@ -181,6 +182,24 @@ export const cancelExpiredOrder = async (order: any): Promise<any> => {
                 revalidateTag("explore", {});
                 revalidateTag("public-explore-data", {});
             } catch {}
+
+            // Send order cancellation email asynchronously (failsafe)
+            (async () => {
+                try {
+                    const dbCustomer = await db.user.findUnique({
+                        where: { id: order.userId },
+                        select: { id: true, name: true, email: true, phone: true }
+                    });
+                    await sendOrderStatusNotification(
+                        cancelledOrder,
+                        "CANCELLED",
+                        dbCustomer,
+                        "The kitchen partner was unable to accept the order within the 5-minute window. Any amount paid has been auto-queued for immediate refund."
+                    );
+                } catch (emailErr) {
+                    console.error(`[OrderExpiry] Failed to send auto-cancel email for order #${order.id}:`, emailErr);
+                }
+            })();
         }
 
         return cancelledOrder;

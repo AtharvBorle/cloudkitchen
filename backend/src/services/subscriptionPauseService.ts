@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { ApiError } from "@/lib/api-error";
 import { emitMealSubscriptionUpdated } from "@/lib/realtime-events";
 import { PREDEFINED_MEAL_SLOTS, getMealSlotDetails } from "@/lib/meal-slots";
+import { sendSubscriptionPauseNotification } from "@/lib/emailService";
 
 /**
  * ==============================================================================
@@ -265,6 +266,19 @@ export class SubscriptionPauseService {
 
       emitMealSubscriptionUpdated(updated.sellerId, userId, "PAUSE", updated);
 
+      // Send pause notification email asynchronously (failsafe)
+      (async () => {
+        try {
+          const customer = await db.user.findUnique({
+            where: { id: userId },
+            select: { id: true, name: true, email: true, phone: true }
+          });
+          await sendSubscriptionPauseNotification(updated, true, pauseDays, customer);
+        } catch (err) {
+          console.error("[EmailService] Failed to send subscription pause email:", err);
+        }
+      })();
+
       return {
         success: true,
         message: `Subscription paused for ${pauseDays} day${pauseDays > 1 ? "s" : ""}. Validity extended by ${effectivePauseDaysToAdd} days! (${Math.max(0, allowedDays - newUsedDays)} days quota left)`,
@@ -454,6 +468,19 @@ export class SubscriptionPauseService {
       });
 
       emitMealSubscriptionUpdated(updated.sellerId, userId, "RESUME", updated);
+
+      // Send resume notification email asynchronously (failsafe)
+      (async () => {
+        try {
+          const customer = await db.user.findUnique({
+            where: { id: userId },
+            select: { id: true, name: true, email: true, phone: true }
+          });
+          await sendSubscriptionPauseNotification(updated, false, undefined, customer);
+        } catch (err) {
+          console.error("[EmailService] Failed to send subscription resume email:", err);
+        }
+      })();
 
       return {
         success: true,
