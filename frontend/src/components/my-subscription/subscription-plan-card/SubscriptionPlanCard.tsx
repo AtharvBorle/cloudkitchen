@@ -50,7 +50,8 @@ export const SubscriptionPlanCard: React.FC<SubscriptionPlanCardProps> = ({
 
   const isExpired = Boolean(isExpiredProp) || statusText?.toUpperCase() === "EXPIRED" || isDateReached;
   const isInactive = !isExpired && (statusText?.toUpperCase() === "INACTIVE" || statusText?.toUpperCase() === "DEACTIVATED");
-  const isEffectivelyPaused = !isExpired && !isCancelled && !isInactive && isPaused;
+  const isUpcoming = !isExpired && !isCancelled && !isInactive && statusText?.toUpperCase() === "UPCOMING";
+  const isEffectivelyPaused = !isExpired && !isCancelled && !isInactive && !isUpcoming && isPaused;
 
   const displayStatus = isCancelled
     ? "CANCELLED"
@@ -60,6 +61,8 @@ export const SubscriptionPlanCard: React.FC<SubscriptionPlanCardProps> = ({
     ? "INACTIVE"
     : isEffectivelyPaused
     ? "PAUSED"
+    : isUpcoming
+    ? "UPCOMING"
     : (statusText?.toUpperCase() === "EXPIRED" ? "EXPIRED" : statusText || "ACTIVE");
 
   const displayRenewalDate = isExpired && renewalDate && !renewalDate.includes("(Expired)")
@@ -109,6 +112,8 @@ export const SubscriptionPlanCard: React.FC<SubscriptionPlanCardProps> = ({
               ? styles.inactiveBadge
               : isEffectivelyPaused
               ? styles.pausedBadge
+              : isUpcoming
+              ? styles.upcomingBadge
               : styles.activeBadgeGreen
           }`}
         >
@@ -119,7 +124,7 @@ export const SubscriptionPlanCard: React.FC<SubscriptionPlanCardProps> = ({
       {/* Bottom Stats: Started On, Renewal Date, Plan Price */}
       <div className={styles.statsRow}>
         <div className={styles.statCol}>
-          <span className={styles.statLabel}>STARTED ON</span>
+          <span className={styles.statLabel}>{isUpcoming ? "STARTS ON" : "STARTED ON"}</span>
           <span className={styles.statValue}>{startedOn}</span>
         </div>
 

@@ -43,6 +43,12 @@ function ResponsiveSellerOrdersContent() {
       loadOrders(true);
     },
     onOrder: (payload) => {
+      if (payload.event === "MEAL_SUBSCRIPTION_UPDATED" || payload.event === "MEAL_PLAN_UPDATED") {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("meal-subscriptions-updated"));
+        }
+        return;
+      }
       if (payload.event === "ORDER_CREATED") {
         playNewOrderChime();
         if (payload.order && payload.order.id) {

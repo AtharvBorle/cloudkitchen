@@ -23,8 +23,8 @@ export function extractAttachments(text: string): {
   const attachments: ExtractedAttachment[] = [];
   let clean = text;
 
-  // 1. Explicit Attachment syntax: [Attachment: name|type]\n(url or data:image/...)
-  const attachmentTagRegex = /\[Attachment:\s*([^\]|]+)(?:\|([^\]]+))?\]\s*(data:image\/[a-zA-Z0-9+.-]+;base64,[A-Za-z0-9+/=]+|https?:\/\/[^\s\n]+)/gi;
+  // 1. Explicit Attachment syntax: [Attachment: name|type]\n(url or data:...)
+  const attachmentTagRegex = /\[Attachment:\s*([^\]|]+)(?:\|([^\]]+))?\]\s*(data:[a-zA-Z0-9+.-]+\/[a-zA-Z0-9+.-]+;base64,[A-Za-z0-9+/=]+|https?:\/\/[^\s\n]+)/gi;
   let match: RegExpExecArray | null;
   while ((match = attachmentTagRegex.exec(text)) !== null) {
     const name = match[1]?.trim() || "Attached_Image.png";
@@ -276,7 +276,11 @@ export const TicketAttachmentRenderer: React.FC<TicketAttachmentRendererProps> =
                   }}
                   title={att.name}
                 >
-                  <ImageIcon size={14} color={isCurrentUser ? "#FFFFFF" : "#FF5500"} />
+                  {att.isImage ? (
+                    <ImageIcon size={14} color={isCurrentUser ? "#FFFFFF" : "#FF5500"} />
+                  ) : (
+                    <FileText size={14} color={isCurrentUser ? "#FFFFFF" : "#FF5500"} />
+                  )}
                   <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{att.name}</span>
                 </div>
 

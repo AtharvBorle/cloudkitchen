@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
-import { getNowInIST, getMealDeliveryTimingStatus, getMealDeliveryOtp } from "@/lib/meal-delivery-otp";
+import { getNowInIST, getDateInIST, getMealDeliveryTimingStatus, getMealDeliveryOtp } from "@/lib/meal-delivery-otp";
 import { getMealSlotDetails, normalizeMealSlotIds, normalizeMealSlotId, extractTimeRangeString } from "@/lib/meal-slots";
 
 export type CustomerNotificationCategory =
@@ -346,7 +346,10 @@ export const getUserNotifications = async (req: Request) => {
 
             if (clearedAt && time < clearedAt) continue;
 
-            const subNotifId = `user-sub-${sub.id}-${sub.status.toLowerCase()}-${sub.isPaused ? "paused" : "active"}`;
+            const subStartDateStr = getDateInIST(sub.startDate).dateStr;
+            const isStarted = !subStartDateStr || todayDateStr >= subStartDateStr;
+
+            const subNotifId = `user-sub-${sub.id}-${sub.status.toLowerCase()}-${sub.isPaused ? "paused" : !isStarted ? "upcoming" : "active"}`;
             if (!dismissedSet.has(subNotifId) && !dismissedSet.has(sub.id)) {
                 let title = `Meal Subscription: ${planName}`;
                 let message = `Your subscription with ${sellerName} is active.`;
@@ -356,6 +359,11 @@ export const getUserNotifications = async (req: Request) => {
                     title = `Meal Subscription Paused`;
                     message = `Your ${planName} subscription is paused.${sub.pauseEndDate ? ` Scheduled to resume on ${new Date(sub.pauseEndDate).toLocaleDateString("en-IN")}.` : ""}`;
                     severity = "warning";
+                } else if (!isStarted) {
+                    title = `Subscription Confirmed - ${planName}`;
+                    const formattedStart = new Date(sub.startDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+                    message = `Your meal subscription with ${sellerName} is confirmed. Deliveries will begin on ${formattedStart}.`;
+                    severity = "info";
                 } else if (sub.status === "ACTIVE") {
                     title = `Subscription Active - ${planName}`;
                     message = `Your meal subscription with ${sellerName} is running smoothly.`;
@@ -383,12 +391,13 @@ export const getUserNotifications = async (req: Request) => {
                         planName,
                         isPaused: sub.isPaused,
                         status: sub.status,
+                        isStarted,
                     },
                 });
             }
 
-            // Generate Slot Delivery OTP & Delayed Alerts for Active Subscriptions
-            const isSubActiveToday = sub.status === "ACTIVE" && !sub.isPaused;
+            // Generate Slot Delivery OTP & Delayed Alerts for Active Subscriptions that have started
+            const isSubActiveToday = sub.status === "ACTIVE" && !sub.isPaused && isStarted;
             if (isSubActiveToday) {
                 const sellerTimes = (sub.sellerId ? sellerTimesMap[sub.sellerId] : null) || basePlatformTimes;
                 let planTimings: string[] = [];

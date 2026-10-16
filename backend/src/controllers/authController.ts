@@ -6,6 +6,8 @@ import jwt from "jsonwebtoken";
 import { validateEmail } from "@/lib/email-validation";
 import { validateKitchenName } from "@/lib/kitchen-validation";
 import { isGracePeriodExpired, anonymizeUserAccount, restoreAccountIfWithinGracePeriod } from "@/lib/account-deletion";
+import { generate6DigitOtp, setOtp, verifyOtp, consumeOtp } from "@/lib/otpStore";
+import { sendOtpSms } from "@/lib/smsService";
 
 export const registerUser = async (req: Request) => {
     const contentType = req.headers.get('content-type') || "";
@@ -379,9 +381,12 @@ export const loginUser = async (req: Request) => {
         if (phoneDigits.length !== 10) {
             throw new ApiError("Please provide a valid 10-digit mobile number.", 400);
         }
-        if (trimmedOtp !== "123456") {
-            throw new ApiError("Invalid OTP. Please enter the valid OTP (123456).", 400);
+
+        const isValidOtp = verifyOtp(phoneDigits, trimmedOtp, "login");
+        if (!isValidOtp) {
+            throw new ApiError("Invalid or expired OTP. Please enter the valid 6-digit OTP received via SMS.", 400);
         }
+        consumeOtp(phoneDigits, "login");
 
         const user = await db.user.findFirst({
             where: {
@@ -569,12 +574,27 @@ export const forgotPasswordRequest = async (req: Request) => {
         }
     }
 
+    const generatedOtp = generate6DigitOtp();
+    if (user.phone) {
+        const rawDigits = String(user.phone).replace(/\D/g, "");
+        const phoneDigits = rawDigits.length > 10 ? rawDigits.slice(-10) : rawDigits;
+        setOtp(phoneDigits, generatedOtp, "forgot_password");
+        // Dispatch SMS via Way2Smart
+        sendOtpSms(phoneDigits, generatedOtp).catch((smsErr) => {
+            console.error("[SmsService] Failed to send forgot-password OTP SMS:", smsErr);
+        });
+    }
+    if (user.email) {
+        setOtp(user.email, generatedOtp, "forgot_password");
+    }
+
+    const maskedPhone = user.phone ? ` to your registered mobile number ending in ${user.phone.slice(-4)}` : "";
+
     return {
         success: true,
-        message: "OTP sent successfully. Please enter OTP (use 123456) to reset your password.",
+        message: `OTP sent successfully${maskedPhone}. Valid for 10 minutes.`,
         email: user.email,
         phone: user.phone,
-        otp: "123456"
     };
 };
 
@@ -590,9 +610,6 @@ export const resetPasswordWithOtp = async (req: Request) => {
     }
 
     const trimmedOtp = String(otp).trim();
-    if (trimmedOtp !== "123456") {
-        throw new ApiError("Invalid OTP. Please enter the valid 6-digit OTP (123456).", 400);
-    }
 
     if (!newPassword || typeof newPassword !== "string" || newPassword.length < 6) {
         throw new ApiError("Password must be at least 6 characters long.", 400);
@@ -626,6 +643,18 @@ export const resetPasswordWithOtp = async (req: Request) => {
             throw new ApiError("No user found with this email ID", 403);
         }
     }
+
+    // Verify OTP against otpStore (by phone or email)
+    const cleanUserPhone = user.phone ? String(user.phone).replace(/\D/g, "").slice(-10) : "";
+    const isOtpValid = (user.email && verifyOtp(user.email, trimmedOtp, "forgot_password")) ||
+                       (cleanUserPhone && verifyOtp(cleanUserPhone, trimmedOtp, "forgot_password"));
+
+    if (!isOtpValid) {
+        throw new ApiError("Invalid or expired OTP. Please enter the valid 6-digit OTP received via SMS.", 400);
+    }
+
+    if (user.email) consumeOtp(user.email, "forgot_password");
+    if (cleanUserPhone) consumeOtp(cleanUserPhone, "forgot_password");
 
     const passwordHash = await bcrypt.hash(newPassword, 10);
 

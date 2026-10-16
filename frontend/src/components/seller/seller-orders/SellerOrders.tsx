@@ -42,6 +42,7 @@ import {
 } from "@/lib/meal-subscriptions";
 import {
   PREDEFINED_MEAL_SLOTS,
+  normalizeMealSlotId,
   normalizeMealSlotIds,
   getMealSlotDetails,
   MealSlotDefinition,
@@ -379,7 +380,20 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
     }
   }, []);
 
-  const todayDateStr = useMemo(() => new Date().toISOString().split("T")[0], []);
+  const todayDateStr = useMemo(() => {
+    try {
+      const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: "Asia/Kolkata",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).formatToParts(new Date());
+      const getPart = (t: string) => parts.find((p) => p.type === t)?.value || "";
+      return `${getPart("year")}-${getPart("month")}-${getPart("day")}`;
+    } catch {
+      return new Date().toISOString().split("T")[0];
+    }
+  }, []);
 
   const loadSubscribers = useCallback(async (isSilent = false) => {
     try {
@@ -432,6 +446,49 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
     return [getMealSlotDetails("lunch")];
   }, []);
 
+  // Synchronized Slot Delivery Check across todayDeliveries (relational), mealSlots, and dailyDeliveries
+  const isSubscriberSlotDelivered = useCallback((sub: MealSubscriber, slotId: string): boolean => {
+    const normSlot = normalizeMealSlotId(slotId) || slotId;
+
+    // 1. Check todayDeliveries (authoritative relational MealSubscriptionDelivery records)
+    if (Array.isArray((sub as any).todayDeliveries)) {
+      const td = (sub as any).todayDeliveries.find(
+        (s: any) => normalizeMealSlotId(s.id) === normSlot
+      );
+      if (td && (td.isDelivered || td.todayStatus === "DELIVERED")) {
+        return true;
+      }
+    }
+
+    // 2. Check mealSlots
+    if (Array.isArray(sub.mealSlots)) {
+      const ms = sub.mealSlots.find(
+        (s: any) => normalizeMealSlotId(s.id) === normSlot
+      );
+      if (ms && ((ms as any).isDelivered || (ms as any).todayStatus === "DELIVERED")) {
+        return true;
+      }
+    }
+
+    // 3. Check dailyDeliveries (legacy JSON records)
+    if (Array.isArray(sub.dailyDeliveries)) {
+      const isDel = sub.dailyDeliveries.some((d: any) => {
+        const matchesDate = d.date === todayDateStr;
+        const matchesSlot = normalizeMealSlotId(d.slotId) === normSlot || (!d.slotId && normSlot === "breakfast");
+        return matchesDate && matchesSlot && d.status === "DELIVERED";
+      });
+      if (isDel) return true;
+    }
+
+    return false;
+  }, [todayDateStr]);
+
+  const isSubscriberDeliveredToday = useCallback((sub: MealSubscriber): boolean => {
+    const slots = getSubscriberSlots(sub);
+    if (slots.length === 0) return false;
+    return slots.every((slot) => isSubscriberSlotDelivered(sub, slot.id));
+  }, [getSubscriberSlots, isSubscriberSlotDelivered]);
+
   // 1. Paused subscribers list
   const pausedSubscribers = useMemo(() => {
     return subscribers.filter((s) => Boolean(s.isPaused));
@@ -467,11 +524,8 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
 
   const mealsToDeliverTodayCount = slotCounts.ALL || todayDeliverySubscribers.length;
   const deliveredTodayCount = useMemo(() => {
-    return todayDeliverySubscribers.filter((s) => {
-      const todayRec = s.dailyDeliveries?.find((d: any) => d.date === todayDateStr);
-      return todayRec?.status === "DELIVERED";
-    }).length;
-  }, [todayDeliverySubscribers, todayDateStr]);
+    return todayDeliverySubscribers.filter((s) => isSubscriberDeliveredToday(s)).length;
+  }, [todayDeliverySubscribers, isSubscriberDeliveredToday]);
   const pendingTodayCount = Math.max(0, mealsToDeliverTodayCount - deliveredTodayCount);
   const pausedCount = pausedSubscribers.length;
   const totalSubscribersCount = subscribers.length;
@@ -510,9 +564,7 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
 
     if (subscribersTab === "today" && subDeliveryFilter !== "ALL") {
       list = list.filter((s) => {
-        const isDel = s.dailyDeliveries?.some(
-          (d: any) => d.date === todayDateStr && d.status === "DELIVERED"
-        );
+        const isDel = isSubscriberDeliveredToday(s);
         return subDeliveryFilter === "DELIVERED" ? isDel : !isDel;
       });
     }
@@ -527,15 +579,13 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
     subTierFilter,
     subMealSlotFilter,
     subDeliveryFilter,
-    todayDateStr,
     getSubscriberSlots,
+    isSubscriberDeliveredToday,
   ]);
 
   const handleToggleDelivery = async (sub: MealSubscriber, slotId?: string) => {
     const targetSlotId = slotId || (getSubscriberSlots(sub)[0]?.id || "breakfast");
-    const isCurrentlyDelivered = sub.dailyDeliveries?.some(
-      (d: any) => d.date === todayDateStr && (d.slotId === targetSlotId || !d.slotId) && d.status === "DELIVERED"
-    );
+    const isCurrentlyDelivered = isSubscriberSlotDelivered(sub, targetSlotId);
 
     // Once a meal is verified and delivered via OTP, it cannot be reverted to pending
     if (isCurrentlyDelivered) {
@@ -696,6 +746,13 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
       loadOrders(true);
     },
     onOrder: (payload) => {
+      if (payload.event === "MEAL_SUBSCRIPTION_UPDATED" || payload.event === "MEAL_PLAN_UPDATED") {
+        loadSubscribers(true);
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("meal-subscriptions-updated"));
+        }
+        return;
+      }
       if (payload.event === "ORDER_CREATED") {
         playNewOrderChime();
         if (payload.order && payload.order.id) {
@@ -1724,8 +1781,7 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
             ) : (
               displayedSubscribers.map((sub) => {
                 const tierColors = getTierColors(sub.tier || "Bronze");
-                const todayRecord = sub.dailyDeliveries?.find((d: any) => d.date === todayDateStr);
-                const isDeliveredToday = todayRecord?.status === "DELIVERED";
+                const isDeliveredToday = isSubscriberDeliveredToday(sub);
                 const initialLetter = (sub.customerName || "Customer").charAt(0).toUpperCase();
 
                 return (
@@ -1883,11 +1939,9 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
                         </span>
                         <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                           {getSubscriberSlots(sub).map((slot) => {
-                            const isSlotDelivered = sub.dailyDeliveries?.some(
-                              (d: any) => d.date === todayDateStr && (d.slotId === slot.id || !d.slotId) && d.status === "DELIVERED"
-                            );
+                            const isSlotDelivered = isSubscriberSlotDelivered(sub, slot.id);
                             const slotRecord = sub.dailyDeliveries?.find(
-                              (d: any) => d.date === todayDateStr && (d.slotId === slot.id || !d.slotId)
+                              (d: any) => d.date === todayDateStr && (normalizeMealSlotId(d.slotId) === normalizeMealSlotId(slot.id) || !d.slotId)
                             );
                             return (
                               <div

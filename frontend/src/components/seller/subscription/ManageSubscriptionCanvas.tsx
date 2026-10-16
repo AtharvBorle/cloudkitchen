@@ -29,7 +29,7 @@ import {
   MealPlanMetrics,
 } from "@/lib/meal-subscriptions";
 import { Trash2, Power, Eye, EyeOff } from "lucide-react";
-import { formatMealTimingDisplay } from "@/lib/meal-slots";
+import { formatMealTimingDisplay, getSlotDeliveryTime, extractTimeRangeString } from "@/lib/meal-slots";
 import PaginationControls from "../common/PaginationControls";
 
 export function formatDeliveryAddressDisplay(rawAddress?: string, roomNo?: string): string {
@@ -916,26 +916,29 @@ export default function ManageSubscriptionCanvas({
                 </span>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "6px" }}>
                   {plan.mealSlots && plan.mealSlots.length > 0 ? (
-                    plan.mealSlots.map((slot) => (
-                      <span
-                        key={slot.id}
-                        style={{
-                          fontSize: "11.5px",
-                          fontWeight: 600,
-                          backgroundColor: "#FFF7ED",
-                          color: "#C2410C",
-                          border: "1px solid #FFEDD5",
-                          padding: "3px 8px",
-                          borderRadius: "6px",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "4px",
-                        }}
-                      >
-                        <Clock size={11} color="#EA580C" />
-                        <span>{slot.name}</span>
-                      </span>
-                    ))
+                    plan.mealSlots.map((slot) => {
+                      const timeStr = extractTimeRangeString(slot.defaultTimeRange) || getSlotDeliveryTime(slot.id);
+                      return (
+                        <span
+                          key={slot.id}
+                          style={{
+                            fontSize: "11.5px",
+                            fontWeight: 600,
+                            backgroundColor: "#FFF7ED",
+                            color: "#C2410C",
+                            border: "1px solid #FFEDD5",
+                            padding: "3px 8px",
+                            borderRadius: "6px",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
+                          }}
+                        >
+                          <Clock size={11} color="#EA580C" />
+                          <span>{timeStr ? `${slot.name} (${timeStr})` : slot.name}</span>
+                        </span>
+                      );
+                    })
                   ) : (
                     plan.mealTimings.map((t, idx) => {
                       const parsed = formatMealTimingDisplay(t);

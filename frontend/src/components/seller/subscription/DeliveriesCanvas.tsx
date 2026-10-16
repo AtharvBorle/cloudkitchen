@@ -42,7 +42,20 @@ export default function DeliveriesCanvas() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   // Filter States
-  const todayDateStr = useMemo(() => new Date().toISOString().split("T")[0], []);
+  const todayDateStr = useMemo(() => {
+    try {
+      const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: "Asia/Kolkata",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).formatToParts(new Date());
+      const getPart = (t: string) => parts.find((p) => p.type === t)?.value || "";
+      return `${getPart("year")}-${getPart("month")}-${getPart("day")}`;
+    } catch {
+      return new Date().toISOString().split("T")[0];
+    }
+  }, []);
   const [selectedDate, setSelectedDate] = useState<string>(todayDateStr);
   const [activeSlotId, setActiveSlotId] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
@@ -102,6 +115,12 @@ export default function DeliveriesCanvas() {
 
   useEffect(() => {
     loadDeliveries(true);
+  }, [loadDeliveries]);
+
+  useEffect(() => {
+    const handler = () => loadDeliveries(false);
+    window.addEventListener("meal-subscriptions-updated", handler);
+    return () => window.removeEventListener("meal-subscriptions-updated", handler);
   }, [loadDeliveries]);
 
   useEffect(() => {

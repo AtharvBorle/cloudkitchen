@@ -3,8 +3,8 @@ import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { emitMealSubscriptionUpdated } from "@/lib/realtime-events";
 import { SubscriptionPauseService } from "@/services/subscriptionPauseService";
-import { normalizeMealSlotIds, getMealSlotDetails, extractTimeRangeString } from "@/lib/meal-slots";
-import { getNowInIST, getMealDeliveryTimingStatus, getMealDeliveryOtp } from "@/lib/meal-delivery-otp";
+import { normalizeMealSlotId, normalizeMealSlotIds, getMealSlotDetails, getSlotDeliveryTime, extractTimeRangeString } from "@/lib/meal-slots";
+import { getNowInIST, getDateInIST, getMealDeliveryTimingStatus, getMealDeliveryOtp } from "@/lib/meal-delivery-otp";
 import Razorpay from "razorpay";
 import crypto from "crypto";
 import { sendMealSubscriptionActivatedNotification } from "@/lib/emailService";
@@ -176,6 +176,11 @@ export const getUserMealSubscriptions = async () => {
             return endDayStart <= todayStart;
         })();
         const isExpired = sub.status === "EXPIRED" || isEndReached;
+        const subStartDateIst = getDateInIST(sub.startDate);
+        const subStartDateStr = subStartDateIst.dateStr;
+        const isStarted = !subStartDateStr || todayIst.dateStr >= subStartDateStr;
+        const isSubActiveToday = isStarted && !isExpired && !sub.isPaused && sub.status === "ACTIVE";
+
         const effectiveStatus = isExpired
             ? "EXPIRED"
             : isPlanDeactivated && sub.status === "ACTIVE"
@@ -191,38 +196,51 @@ export const getUserMealSubscriptions = async () => {
         const resolvedSlotDetails = resolvedSlotIds.map((id) => {
             const base = getMealSlotDetails(id);
             const dbSlot = sub.slots?.find((s: any) => s.slotId === id)?.slot || sub.plan?.slots?.find((s: any) => s.slotId === id)?.slot;
-            const customTime = (
+            const planTimingMatch = mealTimings.find(
+                (t: string) => typeof t === "string" && normalizeMealSlotId(t) === id && t.includes(":")
+            );
+            const planTiming = planTimingMatch ? extractTimeRangeString(planTimingMatch) : "";
+            const sellerTiming = extractTimeRangeString(
                 sellerTimes[id] ||
                 sellerTimes[id.replace(/-/g, '_')] ||
-                sellerTimes[id.replace(/_/g, '-')] ||
-                extractTimeRangeString(dbSlot?.defaultTimeRange) ||
-                ""
-            ).trim();
+                sellerTimes[id.replace(/_/g, '-')]
+            );
+            const dbSlotTiming = extractTimeRangeString(dbSlot?.defaultTimeRange);
+            const customTime = (planTiming || sellerTiming || dbSlotTiming || "").trim();
 
             const existingDelivery = (sub as any).deliveries?.find(
                 (d: any) => d.slotId === id || normalizeMealSlotIds([d.slotId])[0] === id
             );
-            const slotDeliveryStatus = existingDelivery?.status || (sub.isPaused ? "SKIPPED_PAUSED" : "PENDING");
-            const timing = getMealDeliveryTimingStatus(todayIst.dateStr, customTime, base, slotDeliveryStatus);
-            const isSubActiveToday = !isExpired && !sub.isPaused && sub.status === "ACTIVE";
+            const slotDeliveryStatus = isStarted
+                ? (existingDelivery?.status || (sub.isPaused ? "SKIPPED_PAUSED" : "PENDING"))
+                : "UPCOMING";
+
+            // If subscription has not started yet, evaluate timing against its upcoming start date, not today!
+            const evaluationDateStr = isStarted ? todayIst.dateStr : subStartDateStr;
+            const timing = getMealDeliveryTimingStatus(evaluationDateStr, customTime, base, slotDeliveryStatus);
+
             const otp = (isSubActiveToday && timing.isOtpActive && slotDeliveryStatus !== "DELIVERED" && slotDeliveryStatus !== "SKIPPED_PAUSED")
                 ? getMealDeliveryOtp(sub.id, todayIst.dateStr, id)
                 : null;
 
+            const effectiveTime = customTime || "";
+
             return {
                 ...base,
-                defaultTimeRange: customTime || "",
+                defaultTimeRange: effectiveTime,
                 todayStatus: slotDeliveryStatus,
-                isDelivered: slotDeliveryStatus === "DELIVERED",
-                deliveredAt: existingDelivery?.deliveredAt ? new Date(existingDelivery.deliveredAt).toISOString() : null,
-                isOverdue: timing.isOverdue,
-                isOtpActive: timing.isOtpActive,
-                overdueMinutes: timing.overdueMinutes,
-                timingStatus: timing.timingStatus,
+                isDelivered: isStarted && slotDeliveryStatus === "DELIVERED",
+                deliveredAt: isStarted && existingDelivery?.deliveredAt ? new Date(existingDelivery.deliveredAt).toISOString() : null,
+                isOverdue: isStarted ? timing.isOverdue : false,
+                isOtpActive: isStarted ? timing.isOtpActive : false,
+                overdueMinutes: isStarted ? timing.overdueMinutes : 0,
+                timingStatus: isStarted ? timing.timingStatus : "UPCOMING",
                 slotStartTime: timing.window.startFormatted,
                 slotEndTime: timing.window.endFormatted,
                 deliveryOtp: otp,
                 otpAvailableAt: timing.window.startFormatted,
+                isStarted,
+                startDateStr: subStartDateStr,
             };
         });
 
@@ -239,13 +257,18 @@ export const getUserMealSubscriptions = async () => {
         const planSlotDetails = planSlotIds.map((id) => {
             const base = getMealSlotDetails(id);
             const dbSlot = sub.plan?.slots?.find((s: any) => s.slotId === id)?.slot;
-            const customTime = (
+            const planTimingMatch = mealTimings.find(
+                (t: string) => typeof t === "string" && normalizeMealSlotId(t) === id && t.includes(":")
+            );
+            const planTiming = planTimingMatch ? extractTimeRangeString(planTimingMatch) : "";
+            const sellerTiming = extractTimeRangeString(
                 sellerTimes[id] ||
                 sellerTimes[id.replace(/-/g, '_')] ||
-                sellerTimes[id.replace(/_/g, '-')] ||
-                extractTimeRangeString(dbSlot?.defaultTimeRange) ||
-                ""
-            ).trim();
+                sellerTimes[id.replace(/_/g, '-')]
+            );
+            const dbSlotTiming = extractTimeRangeString(dbSlot?.defaultTimeRange);
+            const customTime = (planTiming || sellerTiming || dbSlotTiming || "").trim();
+
             return {
                 ...base,
                 defaultTimeRange: customTime || "",
@@ -266,6 +289,8 @@ export const getUserMealSubscriptions = async () => {
             planId: sub.planId,
             status: effectiveStatus,
             isExpired,
+            isStarted,
+            isSubActiveToday,
             isPlanDeactivated: Boolean(isPlanDeactivated),
             tier: sub.tier,
             cycle: sub.cycle,

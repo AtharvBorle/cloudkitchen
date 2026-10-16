@@ -20,6 +20,8 @@ import {
   FileText,
   UploadCloud,
   Download,
+  RefreshCw,
+  Maximize2,
 } from "lucide-react";
 import styles from "./SellerSupport.module.css";
 import { fetchApi } from "@/lib/fetch-api";
@@ -122,10 +124,17 @@ function mapRawMessage(m: any, ticketUser?: any): TicketMessage {
   };
 }
 
-function cleanTicketText(text: string | null | undefined): string {
+function cleanTicketPriorityText(text: string | null | undefined): string {
+  if (!text) return "";
+  return text.replace(/\[Priority:\s*(High|Medium|Low)\]\s*\n?/gi, "").trim();
+}
+
+function cleanTicketPreview(text: string | null | undefined): string {
   if (!text) return "";
   let cleaned = text.replace(/\[Priority:\s*(High|Medium|Low)\]\s*\n?/gi, "");
   cleaned = cleaned.replace(/\[Attachment:\s*[^\]]+\][\s\S]*$/gi, "");
+  cleaned = cleaned.replace(/!\[(.*?)\]\([^)]+\)/gi, "");
+  cleaned = cleaned.replace(/data:[a-zA-Z0-9+.-]+\/[a-zA-Z0-9+.-]+;base64,[A-Za-z0-9+/=]+/gi, "");
   return cleaned.trim();
 }
 
@@ -141,7 +150,9 @@ export function parseTicketMessage(raw: string): {
 } {
   if (!raw) return { text: "", attachment: null };
   const cleaned = raw.replace(/\[Priority:\s*(High|Medium|Low)\]\s*\n?/gi, "").trim();
-  const match = cleaned.match(/\[Attachment:\s*([^\]|]+)(?:\|([^\]]+))?\]\s*([\s\S]*)$/i);
+
+  // 1. Explicit syntax: [Attachment: filename.ext|mime/type]\n(url or data:...)
+  const match = cleaned.match(/\[Attachment:\s*([^\]|]+)(?:\|([^\]]*))?\]\s*([\s\S]*)$/i);
   if (match) {
     const textPart = cleaned.substring(0, match.index).trim();
     const name = match[1]?.trim() || "attachment";
@@ -152,6 +163,19 @@ export function parseTicketMessage(raw: string): {
       attachment: url ? { name, type, url } : null,
     };
   }
+
+  // 2. Markdown image: ![filename](data:... or https://...)
+  const mdMatch = cleaned.match(/!\[(.*?)\]\((data:[^)]+|https?:\/\/[^)]+)\)/i);
+  if (mdMatch) {
+    const textPart = cleaned.replace(mdMatch[0], "").trim();
+    const name = mdMatch[1]?.trim() || "attachment";
+    const url = mdMatch[2]?.trim() || "";
+    return {
+      text: textPart,
+      attachment: url ? { name, type: "image/jpeg", url } : null,
+    };
+  }
+
   return { text: cleaned, attachment: null };
 }
 
@@ -240,7 +264,7 @@ function mapRawTicket(t: any): Ticket {
       const mapped = mapRawMessage(m, t.user);
       return {
         ...mapped,
-        text: cleanTicketText(mapped.text),
+        text: cleanTicketPriorityText(mapped.text),
       };
     });
 
@@ -251,7 +275,7 @@ function mapRawTicket(t: any): Ticket {
       role: "customer",
       initials,
       timestamp: formatMessageTime(t.createdAt),
-      text: cleanTicketText(t.description),
+      text: cleanTicketPriorityText(t.description),
     });
   }
 
@@ -260,7 +284,7 @@ function mapRawTicket(t: any): Ticket {
     ticketNumber: `#TKT-${t.id.slice(-4).toUpperCase()}`,
     category: t.category || "Operations",
     title: t.title || "Support Request",
-    preview: cleanTicketText(t.description),
+    preview: cleanTicketPreview(t.description),
     customerName: name,
     customerInitials: initials,
     customerEmail: t.user?.email || "",
@@ -317,6 +341,9 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const [isReopeningTicket, setIsReopeningTicket] = useState(false);
+
   // Attachment State for Chat Reply
   const [replyAttachedFile, setReplyAttachedFile] = useState<File | null>(null);
   const [replyAttachedPreview, setReplyAttachedPreview] = useState<string | null>(null);
@@ -347,34 +374,43 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
       return;
     }
 
-    if (file.type.startsWith("image/")) {
+    const isImg = file.type
+      ? file.type.toLowerCase().startsWith("image/")
+      : /\.(png|jpe?g|webp|gif|svg)$/i.test(file.name);
+
+    if (isImg) {
       const reader = new FileReader();
       reader.onload = (e) => {
         const result = e.target?.result as string;
+        if (!result) return;
         if (file.size > 600 * 1024) {
           const img = new Image();
           img.onload = () => {
-            const canvas = document.createElement("canvas");
-            const maxDim = 1280;
-            let width = img.width;
-            let height = img.height;
-            if (width > maxDim || height > maxDim) {
-              if (width > height) {
-                height = Math.round((height * maxDim) / width);
-                width = maxDim;
-              } else {
-                width = Math.round((width * maxDim) / height);
-                height = maxDim;
+            try {
+              const canvas = document.createElement("canvas");
+              const maxDim = 1280;
+              let width = img.width;
+              let height = img.height;
+              if (width > maxDim || height > maxDim) {
+                if (width > height) {
+                  height = Math.round((height * maxDim) / width);
+                  width = maxDim;
+                } else {
+                  width = Math.round((width * maxDim) / height);
+                  height = maxDim;
+                }
               }
-            }
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext("2d");
-            if (ctx) {
-              ctx.drawImage(img, 0, 0, width, height);
-              const compressed = canvas.toDataURL("image/jpeg", 0.82);
-              onSuccess(compressed, compressed);
-              return;
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext("2d");
+              if (ctx) {
+                ctx.drawImage(img, 0, 0, width, height);
+                const compressed = canvas.toDataURL("image/jpeg", 0.82);
+                onSuccess(compressed, compressed);
+                return;
+              }
+            } catch (canvasErr) {
+              console.error("Canvas compression error:", canvasErr);
             }
             onSuccess(result, result);
           };
@@ -386,12 +422,20 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
           onSuccess(result, result);
         }
       };
+      reader.onerror = () => {
+        showToast("Failed to read image file. Please try again.", "error");
+      };
       reader.readAsDataURL(file);
     } else {
       const reader = new FileReader();
       reader.onload = (e) => {
         const result = e.target?.result as string;
-        onSuccess(result, null);
+        if (result) {
+          onSuccess(result, null);
+        }
+      };
+      reader.onerror = () => {
+        showToast("Failed to read document file. Please try again.", "error");
       };
       reader.readAsDataURL(file);
     }
@@ -480,6 +524,10 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
 
   const selectedTicket = tickets.find((t) => t.id === selectedTicketId) || tickets[0] || null;
 
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [selectedTicket?.messages]);
+
   const filteredTickets = tickets.filter((ticket) => {
     const q = searchQuery.toLowerCase().trim().replace(/\s+/g, " ");
     const queryWords = q.split(" ").filter(Boolean);
@@ -500,7 +548,32 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
   const handleSelectTicket = (id: string) => {
     setSelectedTicketId(id);
     setActiveMobileView("chat");
+    removeReplyAttachment();
+    setInputMessage("");
     loadTicketDetails(id);
+  };
+
+  const handleReopenTicket = async (ticketId: string) => {
+    try {
+      setIsReopeningTicket(true);
+      const res = await fetchApi(`/api/tickets/${ticketId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "OPEN" }),
+      });
+      if (res.ok) {
+        showToast("Ticket reopened successfully", "success");
+        await fetchTickets(ticketId);
+        await loadTicketDetails(ticketId);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        showToast(data.message || "Failed to reopen ticket", "error");
+      }
+    } catch (err: any) {
+      showToast(err.message || "An unexpected error occurred", "error");
+    } finally {
+      setIsReopeningTicket(false);
+    }
   };
 
   const handleCreateTicket = async (e: React.FormEvent) => {
@@ -518,7 +591,7 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
     try {
       const finalDescription =
         attachedDataUrl && attachedFile
-          ? `${newDescription.trim()}\n\n[Attachment: ${attachedFile.name}|${attachedFile.type}]\n${attachedDataUrl}`
+          ? `${newDescription.trim()}\n\n[Attachment: ${attachedFile.name}|${attachedFile.type || "image/jpeg"}]\n${attachedDataUrl}`
           : newDescription.trim();
 
       const res = await fetchApi("/api/tickets", {
@@ -562,9 +635,14 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
 
     let fullMsg = inputMessage.trim();
     if (replyAttachedDataUrl && replyAttachedFile) {
+      const mime =
+        replyAttachedFile.type ||
+        (/\.(png|jpe?g|webp|gif|svg)$/i.test(replyAttachedFile.name)
+          ? "image/jpeg"
+          : "application/octet-stream");
       fullMsg = fullMsg
-        ? `${fullMsg}\n\n[Attachment: ${replyAttachedFile.name}|${replyAttachedFile.type}]\n${replyAttachedDataUrl}`
-        : `[Attachment: ${replyAttachedFile.name}|${replyAttachedFile.type}]\n${replyAttachedDataUrl}`;
+        ? `${fullMsg}\n\n[Attachment: ${replyAttachedFile.name}|${mime}]\n${replyAttachedDataUrl}`
+        : `[Attachment: ${replyAttachedFile.name}|${mime}]\n${replyAttachedDataUrl}`;
     }
 
     setInputMessage("");
@@ -590,6 +668,10 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
       )
     );
 
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 50);
+
     try {
       const res = await fetchApi(`/api/tickets/${selectedTicket.id}/messages`, {
         method: "POST",
@@ -599,6 +681,9 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
 
       if (res.ok) {
         await loadTicketDetails(selectedTicket.id);
+        setTimeout(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        }, 80);
       } else {
         const data = await res.json();
         showToast(data.message || "Failed to send message", "error");
@@ -898,6 +983,7 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
                               const isImage =
                                 parsed.attachment &&
                                 (parsed.attachment.url.startsWith("data:image/") ||
+                                  (parsed.attachment.type && parsed.attachment.type.startsWith("image/")) ||
                                   /\.(png|jpe?g|webp|gif|svg)$/i.test(parsed.attachment.name || ""));
 
                               return (
@@ -907,14 +993,22 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
                                     <div className={styles.bubbleAttachmentBox}>
                                       {isImage ? (
                                         <div className={styles.bubbleImageContainer}>
-                                          <img
-                                            src={parsed.attachment.url}
-                                            alt={parsed.attachment.name}
-                                            className={styles.bubbleImage}
+                                          <div
+                                            className={styles.bubbleImageWrapper}
                                             onClick={() => setPreviewModalImage(parsed.attachment?.url || null)}
                                             title="Click to view full image"
-                                          />
-                                          <span className={styles.bubbleImageCaption}>
+                                          >
+                                            <img
+                                              src={parsed.attachment.url}
+                                              alt={parsed.attachment.name}
+                                              className={styles.bubbleImage}
+                                            />
+                                            <div className={styles.bubbleImageOverlay}>
+                                              <Maximize2 size={13} />
+                                              <span>View Full Image</span>
+                                            </div>
+                                          </div>
+                                          <span className={styles.bubbleImageCaption} title={parsed.attachment.name}>
                                             {parsed.attachment.name}
                                           </span>
                                         </div>
@@ -926,9 +1020,9 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
                                           target="_blank"
                                           rel="noreferrer"
                                         >
-                                          <FileText size={18} color="#EA580C" />
+                                          <FileText size={20} color="#EA580C" />
                                           <div className={styles.bubbleDocInfo}>
-                                            <span className={styles.bubbleDocName}>
+                                            <span className={styles.bubbleDocName} title={parsed.attachment.name}>
                                               {parsed.attachment.name}
                                             </span>
                                             <span className={styles.bubbleDocAction}>
@@ -954,80 +1048,147 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
                       </div>
                     );
                   })}
+                  <div ref={messagesEndRef} />
                 </div>
 
-                {/* Chat Message Input */}
-                <form onSubmit={handleSendMessage} className={styles.chatInputFooter}>
-                  {replyAttachedFile && (
-                    <div className={styles.replyAttachmentChip}>
-                      {replyAttachedPreview ? (
-                        <img
-                          src={replyAttachedPreview}
-                          alt="preview"
-                          className={styles.replyThumbnail}
-                        />
-                      ) : (
-                        <FileText size={15} color="#EA580C" />
-                      )}
-                      <span className={styles.replyFileName}>
-                        {replyAttachedFile.name}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={removeReplyAttachment}
-                        className={styles.replyRemoveBtn}
-                        title="Remove attachment"
-                      >
-                        <X size={13} />
-                      </button>
+                {/* Chat Message Input or Closed Ticket State */}
+                {selectedTicket.status === "Closed" ? (
+                  <div className={styles.closedTicketBanner}>
+                    <div className={styles.closedTicketInfo}>
+                      <CheckCircle2 size={18} color="#64748B" />
+                      <div>
+                        <strong>This support ticket is marked as Closed.</strong>
+                        <p style={{ margin: "2px 0 0 0", fontSize: "0.78rem", color: "#64748B" }}>
+                          Conversation has been concluded. You can reopen this ticket anytime if you need further help.
+                        </p>
+                      </div>
                     </div>
-                  )}
-                  <div className={styles.inputWrapper}>
-                    <input
-                      ref={replyFileInputRef}
-                      type="file"
-                      accept="image/*,.pdf,.doc,.docx,.txt"
-                      style={{ display: "none" }}
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleReplyFileSelected(file);
-                      }}
-                    />
                     <button
                       type="button"
-                      className={styles.attachmentBtn}
-                      onClick={() => replyFileInputRef.current?.click()}
-                      title="Attach problem screenshot or document"
-                      disabled={selectedTicket.status === "Closed"}
+                      onClick={() => handleReopenTicket(selectedTicket.id)}
+                      disabled={isReopeningTicket}
+                      className={styles.reopenTicketBtn}
                     >
-                      <Paperclip size={17} />
-                    </button>
-                    <input
-                      type="text"
-                      placeholder="Type a reply to support..."
-                      value={inputMessage}
-                      onChange={(e) => setInputMessage(e.target.value)}
-                      className={styles.messageTextInput}
-                      disabled={selectedTicket.status === "Closed"}
-                    />
-                    <button
-                      type="submit"
-                      disabled={
-                        (!inputMessage.trim() && !replyAttachedDataUrl) ||
-                        isSendingMessage ||
-                        selectedTicket.status === "Closed"
-                      }
-                      className={styles.sendBtn}
-                      title="Send reply"
-                    >
-                      {isSendingMessage ? (
-                        <Loader2 size={16} className="animate-spin" />
+                      {isReopeningTicket ? (
+                        <Loader2 size={14} className="animate-spin" />
                       ) : (
-                        <Send size={16} />
+                        <RefreshCw size={14} />
                       )}
+                      <span>Reopen Ticket</span>
                     </button>
                   </div>
-                </form>
+                ) : (
+                  <form onSubmit={handleSendMessage} className={styles.chatInputFooter}>
+                    {/* Rich Attachment Preview before sending */}
+                    {replyAttachedFile && (
+                      <div className={styles.replyAttachmentPreview}>
+                        <div className={styles.replyAttachmentLeft}>
+                          {replyAttachedPreview ? (
+                            <div
+                              className={styles.replyThumbnailWrapper}
+                              onClick={() => setPreviewModalImage(replyAttachedPreview)}
+                              title="Click to preview full image"
+                            >
+                              <img
+                                src={replyAttachedPreview}
+                                alt="preview"
+                                className={styles.replyThumbnail}
+                              />
+                              <div className={styles.thumbnailZoomIcon}>
+                                <Maximize2 size={12} />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className={styles.replyDocIcon}>
+                              <FileText size={20} color="#EA580C" />
+                            </div>
+                          )}
+                          <div className={styles.replyAttachmentMeta}>
+                            <span className={styles.replyFileName} title={replyAttachedFile.name}>
+                              {replyAttachedFile.name}
+                            </span>
+                            <span className={styles.replyFileSize}>
+                              {(replyAttachedFile.size / 1024).toFixed(1)} KB • <span style={{ color: "#059669", fontWeight: 600 }}>Ready to send</span>
+                            </span>
+                          </div>
+                        </div>
+                        <div className={styles.replyAttachmentActions}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (replyFileInputRef.current) {
+                                replyFileInputRef.current.value = "";
+                                replyFileInputRef.current.click();
+                              }
+                            }}
+                            className={styles.replyChangeBtn}
+                            title="Change attached file"
+                          >
+                            Change
+                          </button>
+                          <button
+                            type="button"
+                            onClick={removeReplyAttachment}
+                            className={styles.replyRemoveBtn}
+                            title="Remove attachment"
+                            aria-label="Remove attachment"
+                          >
+                            <X size={15} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className={styles.inputWrapper}>
+                      <input
+                        ref={replyFileInputRef}
+                        type="file"
+                        accept="image/*,.pdf,.doc,.docx,.txt"
+                        style={{ display: "none" }}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleReplyFileSelected(file);
+                          e.target.value = "";
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className={`${styles.attachmentBtn} ${replyAttachedFile ? styles.attachmentBtnActive : ""}`}
+                        onClick={() => {
+                          if (replyFileInputRef.current) {
+                            replyFileInputRef.current.value = "";
+                            replyFileInputRef.current.click();
+                          }
+                        }}
+                        title={replyAttachedFile ? "Attachment added (Click to change)" : "Attach problem screenshot, photo or document"}
+                      >
+                        <Paperclip size={18} />
+                      </button>
+                      <input
+                        type="text"
+                        placeholder="Type a reply to support..."
+                        value={inputMessage}
+                        onChange={(e) => setInputMessage(e.target.value)}
+                        className={styles.messageTextInput}
+                      />
+                      <button
+                        type="submit"
+                        disabled={
+                          (!inputMessage.trim() && !replyAttachedDataUrl) ||
+                          isSendingMessage
+                        }
+                        className={styles.sendBtn}
+                        title="Send reply"
+                      >
+                        {isSendingMessage ? (
+                          <Loader2 size={16} className="animate-spin" />
+                        ) : (
+                          <Send size={16} />
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                )}
               </section>
             ) : (
               <div className={styles.emptyPane}>

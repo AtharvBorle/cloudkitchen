@@ -3,6 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { db } from "./db";
 import bcrypt from "bcryptjs";
 import { isGracePeriodExpired, anonymizeUserAccount, restoreAccountIfWithinGracePeriod } from "./account-deletion";
+import { verifyOtp, consumeOtp } from "./otpStore";
 
 class CustomAuthError extends CredentialsSignin {
     constructor(code: string) {
@@ -72,16 +73,17 @@ export const authConfig: NextAuthConfig = {
                         throw new CustomAuthError("INVALID_OTP");
                     }
 
-                    // Master OTP for development
-                    const MASTER_OTP = "123456";
-                    if (otp !== MASTER_OTP) {
-                        console.log("Invalid OTP for phone:", rawPhone);
-                        throw new CustomAuthError("INVALID_OTP");
-                    }
-
                     // Look up user by phone (last 10 digits)
                     const phoneDigits = rawPhone.length > 10 ? rawPhone.slice(-10) : rawPhone;
                     console.log("OTP login attempt for phone:", phoneDigits);
+
+                    // Verify against real SMS OTP or master OTP
+                    const isValidOtp = verifyOtp(phoneDigits, otp, "login");
+                    if (!isValidOtp) {
+                        console.log("Invalid OTP for phone:", phoneDigits);
+                        throw new CustomAuthError("INVALID_OTP");
+                    }
+                    consumeOtp(phoneDigits, "login");
 
                     const user = await db.user.findFirst({
                         where: {

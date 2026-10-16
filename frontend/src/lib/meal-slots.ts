@@ -170,12 +170,18 @@ export function extractTimeRangeString(str?: string | null): string {
   let s = str.trim();
   if (!s) return "";
 
-  // 1. If wrapped in parentheses "(07:30 PM – 09:30 PM)"
+  // 1. If there are no digits at all in the string, it CANNOT be a time range
+  // Any slot name (e.g. "Morning Meal", "Evening Snack", "Late-Night Snack") is discarded immediately
+  if (!/\d/.test(s)) {
+    return "";
+  }
+
+  // 2. If wrapped in parentheses "(07:30 PM – 09:30 PM)"
   if (s.includes("(") && s.includes(")")) {
     s = s.substring(s.indexOf("(") + 1, s.lastIndexOf(")")).trim();
   }
 
-  // 2. If it has a prefix with a colon e.g. "Breakfast: 07:30 PM – 09:30 PM"
+  // 3. If it has a prefix with a colon e.g. "Breakfast: 07:30 PM – 09:30 PM"
   // The prefix is a slot name or ID (e.g. "Breakfast", "Morning Meal", "morning_meal").
   // It does NOT contain digits.
   const colonIdx = s.indexOf(":");
@@ -187,9 +193,14 @@ export function extractTimeRangeString(str?: string | null): string {
     }
   }
 
-  s = s.replace(/^[:\s]+|[:\s]+$/g, "").trim();
+  s = s.replace(/^[:\s\-–—]+|[:\s\-–—]+$/g, "").trim();
 
-  // If what remains is just a slot ID or slot name without time
+  // 4. Must contain digits to be a valid time range
+  if (!/\d/.test(s)) {
+    return "";
+  }
+
+  // 5. If what remains is just a slot ID or slot name without time
   if (MEAL_SLOTS_MAP.has(s.toLowerCase()) || normalizeMealSlotId(s) === s.toLowerCase()) {
     return "";
   }
@@ -199,7 +210,7 @@ export function extractTimeRangeString(str?: string | null): string {
 
 /**
  * Returns the configured delivery timing for a slot.
- * Does NOT return any arbitrary hardcoded default times.
+ * Falls back to the standardized slot time window if custom time is not set.
  */
 export function getSlotDeliveryTime(slotId: string, customTime?: string): string {
   const norm = normalizeMealSlotId(slotId) || "breakfast";
