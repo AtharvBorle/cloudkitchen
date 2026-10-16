@@ -6,7 +6,7 @@ import jwt from "jsonwebtoken";
 import { validateEmail } from "@/lib/email-validation";
 import { validateKitchenName } from "@/lib/kitchen-validation";
 import { isGracePeriodExpired, anonymizeUserAccount, restoreAccountIfWithinGracePeriod } from "@/lib/account-deletion";
-import { generate6DigitOtp, setOtp, verifyOtp, consumeOtp } from "@/lib/otpStore";
+import { generate6DigitOtp, setOtp, verifyOtp, consumeOtp, isMasterOtpEnabled, MASTER_OTP } from "@/lib/otpStore";
 import { sendOtpSms } from "@/lib/smsService";
 
 export const registerUser = async (req: Request) => {
@@ -574,15 +574,20 @@ export const forgotPasswordRequest = async (req: Request) => {
         }
     }
 
-    const generatedOtp = generate6DigitOtp();
+    const masterMode = isMasterOtpEnabled();
+    const generatedOtp = masterMode ? MASTER_OTP : generate6DigitOtp();
     if (user.phone) {
         const rawDigits = String(user.phone).replace(/\D/g, "");
         const phoneDigits = rawDigits.length > 10 ? rawDigits.slice(-10) : rawDigits;
         setOtp(phoneDigits, generatedOtp, "forgot_password");
-        // Dispatch SMS via Way2Smart
-        sendOtpSms(phoneDigits, generatedOtp).catch((smsErr) => {
-            console.error("[SmsService] Failed to send forgot-password OTP SMS:", smsErr);
-        });
+        if (!masterMode) {
+            // Dispatch SMS via Way2Smart only when master mode is false
+            sendOtpSms(phoneDigits, generatedOtp).catch((smsErr) => {
+                console.error("[SmsService] Failed to send forgot-password OTP SMS:", smsErr);
+            });
+        } else {
+            console.log(`[authController] Master OTP mode active (ALLOW_MASTER_OTP=true). Suppressing SMS to ${phoneDigits}.`);
+        }
     }
     if (user.email) {
         setOtp(user.email, generatedOtp, "forgot_password");

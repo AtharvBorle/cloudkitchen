@@ -59,16 +59,25 @@ export function getStoredOtp(identifier: string, purpose: string = "login"): str
   return entry.otp;
 }
 
+export function isMasterOtpEnabled(): boolean {
+  const val = (process.env.ALLOW_MASTER_OTP || "").trim().toLowerCase();
+  return val === "true" || val === "1";
+}
+
 export function verifyOtp(identifier: string, inputOtp: string, purpose: string = "login"): boolean {
   const trimmed = String(inputOtp || "").trim();
   if (!trimmed) return false;
 
-  // Master OTP allowed for development and testing
-  const allowMaster = process.env.ALLOW_MASTER_OTP !== "false";
-  if (allowMaster && trimmed === MASTER_OTP) {
-    return true;
+  const allowMaster = isMasterOtpEnabled();
+
+  // 1. When ALLOW_MASTER_OTP is true:
+  // ONLY master OTP ("123456") is accepted. Actual SMS OTP sending is stopped.
+  if (allowMaster) {
+    return trimmed === MASTER_OTP;
   }
 
+  // 2. When ALLOW_MASTER_OTP is false:
+  // Master OTP is strictly rejected. Only the real OTP sent via SMS can match.
   const key = normalizeKey(identifier, purpose);
   const entry = otpCache.get(key);
   if (!entry) return false;

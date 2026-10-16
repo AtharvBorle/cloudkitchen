@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { generate6DigitOtp, setOtp } from "@/lib/otpStore";
+import { generate6DigitOtp, setOtp, isMasterOtpEnabled, MASTER_OTP } from "@/lib/otpStore";
 import { sendOtpSms } from "@/lib/smsService";
 
 export async function POST(req: Request) {
@@ -54,12 +54,49 @@ export async function POST(req: Request) {
           { status: 403 }
         );
       }
+    } else if (purpose === "signup" || purpose === "register") {
+      const existingUser = await db.user.findFirst({
+        where: {
+          OR: [
+            { phone: cleanNumber },
+            { phone: `+91${cleanNumber}` },
+            { phone: `+91 ${cleanNumber}` },
+            { phone: { contains: cleanNumber } },
+          ],
+        },
+      });
+
+      if (existingUser) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "An account with this mobile number already exists. Please sign in.",
+          },
+          { status: 409 }
+        );
+      }
     }
 
-    const otp = generate6DigitOtp();
+    const masterMode = isMasterOtpEnabled();
+    const otp = masterMode ? MASTER_OTP : generate6DigitOtp();
     setOtp(cleanNumber, otp, purpose);
 
-    // Dispatch SMS via Way2Smart
+    if (masterMode) {
+      console.log(`[send-otp] Master OTP mode active (ALLOW_MASTER_OTP=true). Suppressing SMS to +91 ${cleanNumber}.`);
+      return NextResponse.json(
+        {
+          success: true,
+          message: `Verification code ready. Master OTP mode active (Code: ${MASTER_OTP}).`,
+          phone: cleanNumber,
+          deliveryStatus: "SKIPPED_MASTER_OTP",
+          masterOtpActive: true,
+          otp: MASTER_OTP,
+        },
+        { status: 200 }
+      );
+    }
+
+    // Dispatch SMS via Way2Smart when master OTP is disabled
     const smsRes = await sendOtpSms(cleanNumber, otp);
 
     return NextResponse.json(
@@ -68,6 +105,7 @@ export async function POST(req: Request) {
         message: `OTP has been sent to +91 ${cleanNumber}. Valid for 10 minutes.`,
         phone: cleanNumber,
         deliveryStatus: smsRes.success ? "DELIVERED" : "QUEUED",
+        masterOtpActive: false,
       },
       { status: 200 }
     );
