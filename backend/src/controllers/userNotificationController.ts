@@ -1,6 +1,8 @@
 import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
+import { getNowInIST, getMealDeliveryTimingStatus, getMealDeliveryOtp } from "@/lib/meal-delivery-otp";
+import { getMealSlotDetails, normalizeMealSlotIds, normalizeMealSlotId, extractTimeRangeString } from "@/lib/meal-slots";
 
 export type CustomerNotificationCategory =
     | "all"
@@ -240,7 +242,8 @@ export const getUserNotifications = async (req: Request) => {
                 severity = "success";
             } else if (ord.status === "CANCELLED") {
                 title = `Order Cancelled - #${ordShort}`;
-                message = `Your order #${ordShort} was cancelled.${ord.cancellationReason ? ` Reason: ${ord.cancellationReason}` : ""}`;
+                const reason = (ord as any).cancellationReason;
+                message = `Your order #${ordShort} was cancelled.${reason ? ` Reason: ${reason}` : ""}`;
                 severity = "critical";
             }
 
@@ -249,7 +252,7 @@ export const getUserNotifications = async (req: Request) => {
                 category: "orders",
                 title,
                 message,
-                details: `Total: ₹${ord.totalAmount} • Payment: ${ord.paymentMethod || "Online"} (${ord.paymentStatus})`,
+                details: `Total: ₹${ord.totalAmount} • Payment: ${ord.paymentMethod || "Online"} (${(ord as any).paymentStatus || "PAID"})`,
                 timestamp: time.toISOString(),
                 timeAgo: calculateTimeAgo(time),
                 isRead: readSet.has(notifId),
@@ -267,22 +270,78 @@ export const getUserNotifications = async (req: Request) => {
         }
     }
 
-    // 2. Fetch Meal Subscriptions
+    // 2. Fetch Meal Subscriptions & Delivery OTP Alerts
     if (prefs.orderUpdates || prefs.deliveryAlerts) {
+        const { dateStr: todayDateStr } = getNowInIST();
+
         const subscriptions = await db.userMealSubscription.findMany({
             where: { userId: user.id },
             include: {
-                plan: { select: { id: true, name: true, tier: true } },
+                plan: {
+                    select: {
+                        id: true,
+                        name: true,
+                        tier: true,
+                        mealTimings: true,
+                        slots: { select: { slotId: true, slot: true } },
+                    },
+                },
                 seller: { select: { id: true, businessName: true } },
-                slots: { select: { slotId: true } },
+                slots: { select: { slotId: true, slot: true } },
             },
             orderBy: { updatedAt: "desc" },
             take: 10,
         });
 
+        // Fetch seller custom timings if any
+        const sellerIds = Array.from(new Set(subscriptions.map((s) => s.sellerId).filter(Boolean)));
+        const sellerSettings = await db.systemSettings.findMany({
+            where: {
+                key: {
+                    in: [
+                        "MEAL_SUBSCRIPTION_SLOTS",
+                        ...sellerIds.map((sid) => `SELLER_MEAL_TIMINGS_${sid}`),
+                    ],
+                },
+            },
+        });
+
+        const platformTimesSetting = sellerSettings.find((s) => s.key === "MEAL_SUBSCRIPTION_SLOTS");
+        let basePlatformTimes: Record<string, string> = {};
+        if (platformTimesSetting?.value) {
+            try { basePlatformTimes = JSON.parse(platformTimesSetting.value); } catch {}
+        }
+        const sellerTimesMap: Record<string, Record<string, string>> = {};
+        for (const sid of sellerIds) {
+            const st = sellerSettings.find((s) => s.key === `SELLER_MEAL_TIMINGS_${sid}`);
+            let stTimes: Record<string, string> = {};
+            if (st?.value) {
+                try { stTimes = JSON.parse(st.value); } catch {}
+            }
+            sellerTimesMap[sid] = { ...basePlatformTimes, ...stTimes };
+        }
+
+        // Fetch today's deliveries for user
+        const todayDeliveries = await db.mealSubscriptionDelivery.findMany({
+            where: {
+                userId: user.id,
+                scheduledDate: todayDateStr,
+            },
+            include: {
+                slot: { select: { name: true, defaultTimeRange: true } },
+                subscription: {
+                    select: {
+                        seller: { select: { businessName: true } },
+                    },
+                },
+            },
+            orderBy: { scheduledDate: "desc" },
+            take: 25,
+        });
+
         for (const sub of subscriptions) {
             const planName = sub.plan?.name || "Meal Plan";
-            const sellerName = sub.seller?.businessName || "Kitchen";
+            const sellerName = sub.seller?.businessName || "Kitchen Partner";
             const time = sub.updatedAt || sub.createdAt;
 
             if (clearedAt && time < clearedAt) continue;
@@ -318,7 +377,7 @@ export const getUserNotifications = async (req: Request) => {
                     isRead: readSet.has(subNotifId),
                     severity,
                     actionLabel: "Manage Subscription",
-                    actionHref: `/my-subscriptions`,
+                    actionHref: `/my-subscription`,
                     metadata: {
                         subscriptionId: sub.id,
                         planName,
@@ -327,67 +386,153 @@ export const getUserNotifications = async (req: Request) => {
                     },
                 });
             }
+
+            // Generate Slot Delivery OTP & Delayed Alerts for Active Subscriptions
+            const isSubActiveToday = sub.status === "ACTIVE" && !sub.isPaused;
+            if (isSubActiveToday) {
+                const sellerTimes = (sub.sellerId ? sellerTimesMap[sub.sellerId] : null) || basePlatformTimes;
+                let planTimings: string[] = [];
+                try {
+                    planTimings = typeof sub.plan?.mealTimings === "string"
+                        ? JSON.parse(sub.plan.mealTimings)
+                        : (Array.isArray(sub.plan?.mealTimings) ? sub.plan.mealTimings : []);
+                } catch {
+                    planTimings = [];
+                }
+                const rawSlots = sub.slots && sub.slots.length > 0
+                    ? sub.slots.map((s) => s.slotId)
+                    : (sub.plan?.slots && sub.plan.slots.length > 0
+                        ? sub.plan.slots.map((s) => s.slotId)
+                        : planTimings);
+                const resolvedSlotIds = normalizeMealSlotIds(rawSlots);
+
+                for (const slotId of resolvedSlotIds) {
+                    const normSlot = normalizeMealSlotId(slotId) || "breakfast";
+                    const slotDef = getMealSlotDetails(normSlot);
+                    const dbSlot = sub.slots?.find((s) => s.slotId === slotId)?.slot || sub.plan?.slots?.find((s) => s.slotId === slotId)?.slot;
+                    const customTime = (
+                        sellerTimes[normSlot] ||
+                        sellerTimes[normSlot.replace(/-/g, '_')] ||
+                        sellerTimes[normSlot.replace(/_/g, '-')] ||
+                        extractTimeRangeString(dbSlot?.defaultTimeRange) ||
+                        ""
+                    ).trim();
+
+                    const existingDelivery = todayDeliveries.find(
+                        (d) => d.subscriptionId === sub.id && (d.slotId === normSlot || normalizeMealSlotId(d.slotId) === normSlot)
+                    );
+                    const deliveryStatus = existingDelivery?.status || "PENDING";
+
+                    // If not delivered yet, check timing and produce OTP alert if window has started
+                    if (deliveryStatus !== "DELIVERED" && deliveryStatus !== "SKIPPED_PAUSED") {
+                        const timing = getMealDeliveryTimingStatus(todayDateStr, customTime, slotDef, deliveryStatus);
+                        if (timing.isOtpActive) {
+                            const otp = getMealDeliveryOtp(sub.id, todayDateStr, normSlot);
+
+                            if (timing.isOverdue) {
+                                const notifId = `user-del-otp-${sub.id}-${todayDateStr}-${normSlot}-overdue`;
+                                if (!dismissedSet.has(notifId)) {
+                                    notifications.push({
+                                        id: notifId,
+                                        category: "subscriptions",
+                                        title: `⚠️ ${slotDef.name} Delayed — Delivery OTP: ${otp}`,
+                                        message: `Your ${slotDef.name} delivery time has passed (${timing.window.endFormatted}). Once your food arrives, share OTP ${otp} with your delivery partner to confirm late delivery.`,
+                                        details: `Kitchen: ${sellerName} • Scheduled: ${timing.window.startFormatted} – ${timing.window.endFormatted}`,
+                                        timestamp: new Date().toISOString(),
+                                        timeAgo: calculateTimeAgo(new Date()),
+                                        isRead: readSet.has(notifId),
+                                        severity: "warning",
+                                        actionLabel: "View OTP",
+                                        actionHref: `/my-subscription`,
+                                        metadata: {
+                                            subscriptionId: sub.id,
+                                            slotId: normSlot,
+                                            otp,
+                                            isOverdue: true,
+                                            overdueMinutes: timing.overdueMinutes,
+                                            status: "OVERDUE",
+                                        },
+                                    });
+                                }
+                            } else {
+                                const notifId = `user-del-otp-${sub.id}-${todayDateStr}-${normSlot}-window`;
+                                if (!dismissedSet.has(notifId)) {
+                                    notifications.push({
+                                        id: notifId,
+                                        category: "subscriptions",
+                                        title: `🔑 ${slotDef.name} Delivery OTP: ${otp}`,
+                                        message: `Your ${slotDef.name} delivery window has started (${timing.window.startFormatted} – ${timing.window.endFormatted}). Share OTP ${otp} with your delivery partner to receive your meal.`,
+                                        details: `Kitchen: ${sellerName} • Delivery Window: ${timing.window.startFormatted} – ${timing.window.endFormatted}`,
+                                        timestamp: new Date().toISOString(),
+                                        timeAgo: calculateTimeAgo(new Date()),
+                                        isRead: readSet.has(notifId),
+                                        severity: "info",
+                                        actionLabel: "View OTP",
+                                        actionHref: `/my-subscription`,
+                                        metadata: {
+                                            subscriptionId: sub.id,
+                                            slotId: normSlot,
+                                            otp,
+                                            isOverdue: false,
+                                            status: "IN_WINDOW",
+                                        },
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
-        // 3. Fetch Recent Meal Deliveries
-        const todayStr = new Date().toISOString().split("T")[0];
-        const recentDeliveries = await db.mealSubscriptionDelivery.findMany({
-            where: {
-                userId: user.id,
-                scheduledDate: { gte: todayStr },
-            },
-            include: {
-                slot: { select: { name: true, defaultTimeRange: true } },
-                subscription: {
-                    select: {
-                        seller: { select: { businessName: true } },
-                    },
-                },
-            },
-            orderBy: { scheduledDate: "desc" },
-            take: 10,
-        });
-
-        for (const del of recentDeliveries) {
-            const slotName = del.slot?.name || del.slotId;
-            const timeRange = del.scheduledTime || del.slot?.defaultTimeRange || "";
+        // 3. Process Delivered Meal Records for Today
+        for (const del of todayDeliveries) {
+            const slotName = del.slot?.name || getMealSlotDetails(del.slotId).name;
             const notifId = `user-del-${del.id}-${del.status.toLowerCase()}`;
 
             if (clearedAt && del.updatedAt < clearedAt) continue;
             if (dismissedSet.has(notifId)) continue;
 
-            let title = `Meal Delivery: ${slotName}`;
-            let message = `Scheduled for ${del.scheduledDate} ${timeRange ? `(${timeRange})` : ""}`;
-            let severity: CustomerNotificationSeverity = "info";
-
             if (del.status === "DELIVERED") {
-                title = `${slotName} Delivered!`;
-                message = `Your ${slotName} meal delivery from ${del.subscription?.seller?.businessName || "Kitchen"} was marked delivered.`;
-                severity = "success";
+                notifications.push({
+                    id: notifId,
+                    category: "subscriptions",
+                    title: `✅ ${slotName} Delivered!`,
+                    message: `Your ${slotName} meal delivery from ${del.subscription?.seller?.businessName || "Kitchen Partner"} was delivered successfully.`,
+                    details: del.deliveredAt ? `Delivered at ${new Date(del.deliveredAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}` : undefined,
+                    timestamp: (del.deliveredAt || del.updatedAt).toISOString(),
+                    timeAgo: calculateTimeAgo(del.deliveredAt || del.updatedAt),
+                    isRead: readSet.has(notifId),
+                    severity: "success",
+                    actionLabel: "View Subscription",
+                    actionHref: `/my-subscription`,
+                    metadata: {
+                        deliveryId: del.id,
+                        slotId: del.slotId,
+                        status: del.status,
+                        date: del.scheduledDate,
+                    },
+                });
             } else if (del.status === "SKIPPED_PAUSED") {
-                title = `${slotName} Skipped (Paused)`;
-                message = `Meal was skipped according to your active pause schedule.`;
-                severity = "info";
+                notifications.push({
+                    id: notifId,
+                    category: "subscriptions",
+                    title: `${slotName} Skipped (Paused)`,
+                    message: `Meal was skipped according to your active pause schedule.`,
+                    timestamp: del.updatedAt.toISOString(),
+                    timeAgo: calculateTimeAgo(del.updatedAt),
+                    isRead: readSet.has(notifId),
+                    severity: "info",
+                    actionLabel: "View Subscription",
+                    actionHref: `/my-subscription`,
+                    metadata: {
+                        deliveryId: del.id,
+                        slotId: del.slotId,
+                        status: del.status,
+                        date: del.scheduledDate,
+                    },
+                });
             }
-
-            notifications.push({
-                id: notifId,
-                category: "subscriptions",
-                title,
-                message,
-                timestamp: del.updatedAt.toISOString(),
-                timeAgo: calculateTimeAgo(del.updatedAt),
-                isRead: readSet.has(notifId),
-                severity,
-                actionLabel: "View Deliveries",
-                actionHref: `/my-subscriptions`,
-                metadata: {
-                    deliveryId: del.id,
-                    slotId: del.slotId,
-                    status: del.status,
-                    date: del.scheduledDate,
-                },
-            });
         }
     }
 
@@ -402,7 +547,7 @@ export const getUserNotifications = async (req: Request) => {
     for (const bk of bookings) {
         const roomName = bk.room?.title || "Room";
         const notifId = `user-bk-${bk.id}-${bk.status.toLowerCase()}`;
-        const time = bk.updatedAt || bk.createdAt;
+        const time = (bk as any).updatedAt || bk.createdAt;
 
         if (clearedAt && time < clearedAt) continue;
         if (dismissedSet.has(notifId) || dismissedSet.has(bk.id)) continue;
@@ -413,7 +558,7 @@ export const getUserNotifications = async (req: Request) => {
 
         if (bk.status === "CONFIRMED") {
             title = `Booking Confirmed - ${roomName}`;
-            message = `Your stay is confirmed from ${new Date(bk.checkIn).toLocaleDateString("en-IN")} to ${new Date(bk.checkOut).toLocaleDateString("en-IN")}.`;
+            message = `Your stay is confirmed from ${new Date(bk.startDate).toLocaleDateString("en-IN")} to ${new Date(bk.endDate).toLocaleDateString("en-IN")}.`;
             severity = "success";
         } else if (bk.status === "CANCELLED") {
             title = `Booking Cancelled - ${roomName}`;
@@ -457,14 +602,14 @@ export const getUserNotifications = async (req: Request) => {
 
             const discountText =
                 c.discountType === "PERCENTAGE"
-                    ? `${c.discountValue}% OFF`
-                    : `₹${c.discountValue} FLAT OFF`;
+                    ? `${c.discountPercentage || 0}% OFF`
+                    : `₹${c.discountAmount || 0} FLAT OFF`;
 
             notifications.push({
                 id: notifId,
                 category: "offers",
                 title: `Special Discount: Use ${c.code}`,
-                message: `Get ${discountText} on your next order! Minimum order ₹${c.minOrderValue || 0}.`,
+                message: `Get ${discountText} on your next order! Minimum order ₹${c.minimumCartValue || 0}.`,
                 timestamp: c.createdAt.toISOString(),
                 timeAgo: calculateTimeAgo(c.createdAt),
                 isRead: readSet.has(notifId),
@@ -473,7 +618,7 @@ export const getUserNotifications = async (req: Request) => {
                 actionHref: `/explore`,
                 metadata: {
                     couponCode: c.code,
-                    discountValue: c.discountValue,
+                    discountValue: c.discountPercentage || c.discountAmount || 0,
                     discountType: c.discountType,
                 },
             });

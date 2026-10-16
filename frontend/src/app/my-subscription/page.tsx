@@ -804,6 +804,37 @@ function MySubscriptionContent() {
   };
 
   const getSubscriptionSlots = (sub: UserActiveMealSubscription): DeliverySlot[] => {
+    // If backend provided enriched mealSlots or todayDeliveries
+    const rawSlotsList = (sub.mealSlots && sub.mealSlots.length > 0)
+      ? sub.mealSlots
+      : (sub.plan?.mealSlots && sub.plan.mealSlots.length > 0 ? sub.plan.mealSlots : []);
+
+    if (rawSlotsList.length > 0) {
+      return rawSlotsList.map((s: any, idx: number) => {
+        const parsed = formatMealTimingDisplay(s.name || s.id);
+        const todayMatch = sub.todayDeliveries?.find(
+          (d: any) => d.slotId === s.id || (s.id && d.slotId?.toLowerCase() === s.id.toLowerCase())
+        );
+
+        return {
+          id: s.id || `slot-${sub.id}-${idx}`,
+          name: `${parsed.name} Delivery`,
+          timeRange: parsed.timeRange || s.defaultTimeRange || todayMatch?.timeRange || "",
+          icon: "",
+          todayStatus: todayMatch?.status || s.todayStatus || (sub.isPaused ? "SKIPPED_PAUSED" : "PENDING"),
+          isDelivered: Boolean(todayMatch?.isDelivered ?? s.isDelivered),
+          deliveredAt: todayMatch?.deliveredAt || s.deliveredAt || null,
+          isOverdue: Boolean(todayMatch?.isOverdue ?? s.isOverdue),
+          isOtpActive: Boolean(todayMatch?.isOtpActive ?? s.isOtpActive),
+          timingStatus: todayMatch?.timingStatus || s.timingStatus || "UPCOMING",
+          slotStartTime: todayMatch?.slotStartTime || s.slotStartTime || "",
+          slotEndTime: todayMatch?.slotEndTime || s.slotEndTime || "",
+          deliveryOtp: todayMatch?.deliveryOtp || s.deliveryOtp || null,
+          otpAvailableAt: todayMatch?.slotStartTime || s.otpAvailableAt || "",
+        };
+      });
+    }
+
     const timings = (sub.plan?.mealTimings && sub.plan.mealTimings.length > 0)
       ? sub.plan.mealTimings
       : (sub.mealTimings && sub.mealTimings.length > 0 ? sub.mealTimings : []);
@@ -815,18 +846,6 @@ function MySubscriptionContent() {
           id: `slot-${sub.id}-${idx}`,
           name: `${parsed.name} Delivery`,
           timeRange: parsed.timeRange,
-          icon: "",
-        };
-      });
-    }
-
-    if (sub.mealSlots && sub.mealSlots.length > 0) {
-      return sub.mealSlots.map((s: any, idx: number) => {
-        const parsed = formatMealTimingDisplay(s.name || s.id);
-        return {
-          id: `slot-${sub.id}-${idx}`,
-          name: `${parsed.name} Delivery`,
-          timeRange: parsed.timeRange || s.defaultTimeRange || "",
           icon: "",
         };
       });

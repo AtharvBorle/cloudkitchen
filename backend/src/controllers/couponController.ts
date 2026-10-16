@@ -180,6 +180,7 @@ export const createCoupon = async (req: Request) => {
 
     const role = session.user.role;
     let approvalStatus = "APPROVED";
+    let finalSellerId: string | null = appliesToSellerId || null;
 
     if (status === "Pending") {
         approvalStatus = "PENDING_APPROVAL";

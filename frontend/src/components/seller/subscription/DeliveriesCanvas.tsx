@@ -17,6 +17,7 @@ import {
   Loader2,
   Sparkles,
   ShieldCheck,
+  Key,
 } from "lucide-react";
 import SellerSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
@@ -34,6 +35,7 @@ import {
   getTierColors,
 } from "@/lib/meal-subscriptions";
 import PaginationControls from "../common/PaginationControls";
+import DeliveryOtpModal from "./DeliveryOtpModal";
 
 export default function DeliveriesCanvas() {
   const seller = useSellerProfile();
@@ -53,6 +55,7 @@ export default function DeliveriesCanvas() {
   const [slotCounts, setSlotCounts] = useState<Record<string, number>>({});
   const [totalDeliveries, setTotalDeliveries] = useState<number>(0);
   const [actionInProgressId, setActionInProgressId] = useState<string | null>(null);
+  const [otpModalDelivery, setOtpModalDelivery] = useState<MealSlotDeliveryRecord | null>(null);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -107,21 +110,15 @@ export default function DeliveriesCanvas() {
 
   // Handle Delivery Toggle per specific meal slot occurrence
   const handleToggleDeliveryStatus = async (item: MealSlotDeliveryRecord) => {
-    const nextStatus = item.status === "DELIVERED" ? "NOT_DELIVERED" : "DELIVERED";
-    setActionInProgressId(item.id);
+    // If not delivered yet, open OTP verification modal
+    if (item.status !== "DELIVERED") {
+      setOtpModalDelivery(item);
+      return;
+    }
 
-    // Optimistic UI update
-    setDeliveries((prev) =>
-      prev.map((d) =>
-        d.id === item.id
-          ? {
-              ...d,
-              status: nextStatus,
-              deliveredAt: nextStatus === "DELIVERED" ? new Date().toISOString() : null,
-            }
-          : d
-      )
-    );
+    // If already delivered, toggle back to pending
+    const nextStatus = "NOT_DELIVERED";
+    setActionInProgressId(item.id);
 
     try {
       await markSubscriberMealDeliveryStatus(
@@ -136,13 +133,42 @@ export default function DeliveriesCanvas() {
         (item as any).customerName ||
         "Subscriber";
       showToast(
-        `Marked ${item.slotName} as ${nextStatus === "DELIVERED" ? "Delivered" : "Pending"} for ${recipientName}`
+        `Marked ${item.slotName} as Pending for ${recipientName}`
       );
-      // Reload in background to refresh counts
       loadDeliveries(false);
     } catch (err: any) {
       showToast(err.message || "Failed to update delivery status", "error");
       loadDeliveries(true);
+    } finally {
+      setActionInProgressId(null);
+    }
+  };
+
+  const handleConfirmDeliveryWithOtp = async (otp: string, note?: string) => {
+    if (!otpModalDelivery) return;
+    const item = otpModalDelivery;
+    setActionInProgressId(item.id);
+
+    try {
+      await markSubscriberMealDeliveryStatus(
+        item.subscriptionId,
+        item.scheduledDate,
+        "DELIVERED",
+        note,
+        item.slotId,
+        otp
+      );
+      const recipientName =
+        item.subscription?.user?.name ||
+        (item as any).customerName ||
+        "Subscriber";
+      showToast(
+        `Marked ${item.slotName} as Delivered for ${recipientName} (Verified via OTP)`
+      );
+      setOtpModalDelivery(null);
+      loadDeliveries(false);
+    } catch (err: any) {
+      throw err; // let modal display the validation error to seller
     } finally {
       setActionInProgressId(null);
     }
@@ -251,6 +277,69 @@ export default function DeliveriesCanvas() {
               </div>
             </div>
           </div>
+
+          {/* Overdue Alert Banner */}
+          {(slotCounts.overdue || 0) > 0 && (
+            <div
+              style={{
+                backgroundColor: "#FEF2F2",
+                border: "1.5px solid #FCA5A5",
+                borderRadius: "14px",
+                padding: "16px 20px",
+                marginBottom: "20px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                flexWrap: "wrap",
+                gap: "14px",
+                boxShadow: "0 2px 8px rgba(220, 38, 38, 0.06)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div
+                  style={{
+                    width: "40px",
+                    height: "40px",
+                    borderRadius: "10px",
+                    backgroundColor: "#FEE2E2",
+                    color: "#DC2626",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  <AlertCircle size={22} />
+                </div>
+                <div>
+                  <div style={{ fontSize: "14.5px", fontWeight: 800, color: "#991B1B" }}>
+                    {slotCounts.overdue} Delivery {slotCounts.overdue === 1 ? "Window Has" : "Windows Have"} Passed (Pending Delivery)
+                  </div>
+                  <div style={{ fontSize: "12.5px", color: "#7F1D1D", marginTop: "2px" }}>
+                    The scheduled window has ended. You can still mark them delivered with the customer&apos;s OTP upon arrival.
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setStatusFilter("OVERDUE")}
+                style={{
+                  padding: "9px 18px",
+                  borderRadius: "8px",
+                  backgroundColor: statusFilter === "OVERDUE" ? "#991B1B" : "#DC2626",
+                  color: "#FFFFFF",
+                  border: "none",
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  boxShadow: "0 2px 6px rgba(220, 38, 38, 0.25)",
+                }}
+              >
+                {statusFilter === "OVERDUE" ? "Viewing Overdue Deliveries" : `View Overdue (${slotCounts.overdue})`}
+              </button>
+            </div>
+          )}
 
           {/* 7 Meal Slots Tabs Row */}
           <div
@@ -413,8 +502,9 @@ export default function DeliveriesCanvas() {
                 }}
               >
                 <option value="ALL">All Delivery Statuses</option>
-                <option value="PENDING">Pending Delivery</option>
-                <option value="DELIVERED">Delivered</option>
+                <option value="OVERDUE">⚠️ Overdue / Time Passed ({slotCounts.overdue || 0})</option>
+                <option value="PENDING">Pending Delivery ({slotCounts.pending || 0})</option>
+                <option value="DELIVERED">Delivered ({slotCounts.delivered || 0})</option>
               </select>
             </div>
 
@@ -662,9 +752,9 @@ export default function DeliveriesCanvas() {
                             fontWeight: 800,
                             padding: "4px 10px",
                             borderRadius: "8px",
-                            backgroundColor: "#FFF7ED",
-                            color: "#C2410C",
-                            border: "1px solid #FED7AA",
+                            backgroundColor: item.isOverdue && !isDelivered ? "#FEF2F2" : "#FFF7ED",
+                            color: item.isOverdue && !isDelivered ? "#DC2626" : "#C2410C",
+                            border: item.isOverdue && !isDelivered ? "1px solid #FECACA" : "1px solid #FED7AA",
                             display: "inline-flex",
                             alignItems: "center",
                             gap: "6px",
@@ -673,8 +763,9 @@ export default function DeliveriesCanvas() {
                           <Utensils size={13} />
                           <span>{item.slotName}</span>
                         </span>
-                        <span style={{ fontSize: "12px", fontWeight: 600, color: "#64748B" }}>
+                        <span style={{ fontSize: "12px", fontWeight: 600, color: item.isOverdue && !isDelivered ? "#DC2626" : "#64748B" }}>
                           🕒 {item.scheduledTime || "Standard Window"}
+                          {item.isOverdue && !isDelivered ? " (Window Ended)" : ""}
                         </span>
                       </div>
                     </div>
@@ -747,6 +838,29 @@ export default function DeliveriesCanvas() {
                           >
                             <span>⏸️ Skipped (Subscription on Pause)</span>
                           </span>
+                        ) : item.isOverdue ? (
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "6px",
+                              backgroundColor: "#FEF2F2",
+                              color: "#DC2626",
+                              border: "1px solid #FECACA",
+                              padding: "6px 12px",
+                              borderRadius: "8px",
+                              fontSize: "12.5px",
+                              fontWeight: 800,
+                            }}
+                          >
+                            <AlertCircle size={16} />
+                            <span>
+                              Window Passed ({item.slotEndTime || ""})
+                              {item.overdueMinutes && item.overdueMinutes > 0
+                                ? ` • ${Math.floor(item.overdueMinutes / 60) > 0 ? `${Math.floor(item.overdueMinutes / 60)}h ` : ""}${item.overdueMinutes % 60}m late`
+                                : ""}
+                            </span>
+                          </span>
                         ) : (
                           <span
                             style={{
@@ -776,7 +890,11 @@ export default function DeliveriesCanvas() {
                           style={{
                             padding: "8px 16px",
                             borderRadius: "8px",
-                            backgroundColor: isDelivered ? "#F1F5F9" : "#EA580C",
+                            backgroundColor: isDelivered
+                              ? "#F1F5F9"
+                              : item.isOverdue
+                              ? "#DC2626"
+                              : "#EA580C",
                             color: isDelivered ? "#475569" : "#FFFFFF",
                             border: isDelivered ? "1px solid #CBD5E1" : "none",
                             fontSize: "13px",
@@ -786,6 +904,11 @@ export default function DeliveriesCanvas() {
                             alignItems: "center",
                             gap: "6px",
                             transition: "all 0.15s ease",
+                            boxShadow: isDelivered
+                              ? "none"
+                              : item.isOverdue
+                              ? "0 2px 6px rgba(220, 38, 38, 0.25)"
+                              : "none",
                           }}
                         >
                           {actionInProgressId === item.id ? (
@@ -793,9 +916,15 @@ export default function DeliveriesCanvas() {
                           ) : isDelivered ? (
                             <Clock size={14} />
                           ) : (
-                            <CheckCircle2 size={14} />
+                            <Key size={14} />
                           )}
-                          <span>{isDelivered ? "Mark Pending" : `Mark ${item.slotName} Delivered`}</span>
+                          <span>
+                            {isDelivered
+                              ? "Mark Pending"
+                              : item.isOverdue
+                              ? `Enter OTP & Deliver Late`
+                              : `Enter OTP & Deliver`}
+                          </span>
                         </button>
                       )}
                     </div>
@@ -846,6 +975,14 @@ export default function DeliveriesCanvas() {
           <span>{toastMessage}</span>
         </div>
       )}
+
+      {/* Customer Delivery OTP Verification Modal */}
+      <DeliveryOtpModal
+        isOpen={Boolean(otpModalDelivery)}
+        onClose={() => setOtpModalDelivery(null)}
+        onConfirm={handleConfirmDeliveryWithOtp}
+        delivery={otpModalDelivery}
+      />
     </div>
   );
 }

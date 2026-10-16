@@ -151,7 +151,7 @@ export const getSuperadminSellers = async (req?: Request) => {
                 filteredList = filteredList.filter(s => 
                     s.businessName.toLowerCase().includes(search) ||
                     s.name.toLowerCase().includes(search) ||
-                    s.email.toLowerCase().includes(search) ||
+                    (s.email && s.email.toLowerCase().includes(search)) ||
                     s.phone.toLowerCase().includes(search) ||
                     (s.trackingId && s.trackingId.toLowerCase().includes(search)) ||
                     s.city.toLowerCase().includes(search) ||

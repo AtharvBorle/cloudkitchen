@@ -12,11 +12,11 @@ export async function OPTIONS() {
 async function handleDeliveryStatusUpdate(req: Request) {
     try {
         const body = await req.json();
-        const { subscriptionId, date, status, note, slotId } = body;
+        const { subscriptionId, date, status, note, slotId, otp } = body;
         if (!subscriptionId || !date || !status) {
             return errorResponse("subscriptionId, date, and status are required", 400);
         }
-        const data = await toggleSubscriberMealDeliveryStatus(subscriptionId, date, status, note, slotId);
+        const data = await toggleSubscriberMealDeliveryStatus(subscriptionId, date, status, note, slotId, otp);
         return successResponse(data, data.message);
     } catch (error: any) {
         if (error instanceof ApiError) return errorResponse(error.message, error.statusCode);

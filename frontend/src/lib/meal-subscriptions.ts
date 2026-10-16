@@ -86,6 +86,17 @@ export interface MealSlotDeliveryRecord {
   deliveredAt: string | null;
   markedBy: string | null;
   note: string | null;
+  isOverdue?: boolean;
+  overdueMinutes?: number;
+  timingStatus?: "UPCOMING" | "IN_WINDOW" | "OVERDUE" | "DELIVERED" | "SKIPPED_PAUSED" | string;
+  slotStartTime?: string;
+  slotEndTime?: string;
+  customerName?: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  deliveryAddress?: string;
+  planName?: string;
+  tier?: string;
   subscription: {
     id: string;
     tier: string;
@@ -107,9 +118,12 @@ export interface MealSlotDeliveryRecord {
 }
 
 export interface MealDeliveriesResponse {
-  date: string;
-  slotId: string;
-  totalDeliveries: number;
+  date?: string;
+  scheduledDate?: string;
+  slotId?: string;
+  totalDeliveries?: number;
+  totalCount?: number;
+  overdueCount?: number;
   slotCounts: Record<string, number>;
   deliveries: MealSlotDeliveryRecord[];
 }
@@ -674,6 +688,20 @@ export interface UserActiveMealSubscription {
     markedBy?: string;
     note?: string;
   }>;
+  todayDeliveries?: Array<{
+    slotId: string;
+    slotName?: string;
+    status: string;
+    isDelivered: boolean;
+    deliveredAt?: string | null;
+    isOverdue?: boolean;
+    isOtpActive?: boolean;
+    deliveryOtp?: string | null;
+    slotStartTime?: string;
+    slotEndTime?: string;
+    timingStatus?: string;
+    timeRange?: string;
+  }>;
   mealTimings?: string[];
   mealSlots?: any[];
   startDate: string;
@@ -694,6 +722,8 @@ export interface UserActiveMealSubscription {
     duration: string;
     features: string[];
     mealTimings: string[];
+    mealSlots?: any[];
+    slotIds?: string[];
     status: string;
     allowCancel: boolean;
     pauseBillingPeriod: string;
@@ -815,13 +845,14 @@ export async function markSubscriberMealDeliveryStatus(
   date: string,
   status: "DELIVERED" | "NOT_DELIVERED",
   note?: string,
-  slotId?: string
+  slotId?: string,
+  otp?: string
 ): Promise<{ success: boolean; message: string; dailyDeliveries?: any[]; delivery?: any }> {
   try {
     const res = await fetchApi("/api/seller/meal-plans/delivery-status", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ subscriptionId, date, status, note, slotId }),
+      body: JSON.stringify({ subscriptionId, date, status, note, slotId, otp }),
     });
     const json = await res.json();
     if (!res.ok) {
@@ -872,6 +903,11 @@ export function formatDeliveryRecord(raw: any): MealSlotDeliveryRecord {
     deliveredAt: raw?.deliveredAt || null,
     markedBy: raw?.markedBy || null,
     note: raw?.note || null,
+    isOverdue: Boolean(raw?.isOverdue),
+    overdueMinutes: raw?.overdueMinutes || 0,
+    timingStatus: raw?.timingStatus || (raw?.status === "DELIVERED" ? "DELIVERED" : (raw?.isOverdue ? "OVERDUE" : "UPCOMING")),
+    slotStartTime: raw?.slotStartTime || "",
+    slotEndTime: raw?.slotEndTime || "",
     subscription: {
       id: raw?.subscription?.id || raw?.subscriptionId || "",
       tier: subTier,
