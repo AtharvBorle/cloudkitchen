@@ -173,81 +173,6 @@
   z-index: 2;
 }
 
-/* ================= CUSTOMIZE NOTIFICATIONS (IMAGE 1) ================= */
-.customizeWrapper {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  margin-left: 2px;
-}
-
-.customizeBtn {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  color: #64748b;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-  padding: 0;
-  outline: none;
-  flex-shrink: 0;
-}
-
-.customizeBtn:hover {
-  background-color: #f1f5f9;
-  color: #0f172a;
-  border-color: #cbd5e1;
-  transform: rotate(35deg);
-}
-
-.customizeTooltip {
-  position: absolute;
-  top: calc(100% + 9px);
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: #09090b;
-  color: #ffffff;
-  padding: 6px 11px;
-  border-radius: 7px;
-  font-size: 11.5px;
-  font-weight: 600;
-  letter-spacing: 0.1px;
-  white-space: nowrap;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  pointer-events: auto;
-  cursor: pointer;
-  z-index: 1010;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.2s, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  user-select: none;
-}
-
-.customizeWrapper:hover .customizeTooltip,
-.customizeBtn:focus-visible + .customizeTooltip,
-.customizeTooltipVisible {
-  opacity: 1 !important;
-  visibility: visible !important;
-  transform: translateX(-50%) translateY(0) !important;
-}
-
-.customizeArrow {
-  position: absolute;
-  top: -5px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 5px solid transparent;
-  border-right: 5px solid transparent;
-  border-bottom: 5px solid #09090b;
-}
-
 .headerTop {
   display: flex;
   align-items: center;
@@ -720,16 +645,6 @@
 
   .listContainer {
     max-height: calc(min(82vh, 600px) - 150px);
-  }
-
-  .customizeTooltip {
-    left: 45px;
-    transform: none;
-  }
-
-  .customizeArrow {
-    left: 14px;
-    transform: none;
   }
 }
 
