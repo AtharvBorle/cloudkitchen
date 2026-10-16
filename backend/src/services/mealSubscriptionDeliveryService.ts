@@ -337,6 +337,40 @@ export class MealSubscriptionDeliveryService {
       throw new ApiError("Subscription not found or not assigned to your kitchen", 404);
     }
 
+    // Disallow reverting an already delivered/verified meal back to pending
+    const existingDelivery = await db.mealSubscriptionDelivery.findUnique({
+      where: {
+        subscriptionId_scheduledDate_slotId: {
+          subscriptionId,
+          scheduledDate: dateStr,
+          slotId: normalizedSlot,
+        },
+      },
+    });
+
+    if (existingDelivery && existingDelivery.status === "DELIVERED" && status !== "DELIVERED") {
+      throw new ApiError(
+        "This meal has already been delivered and verified via Customer OTP. It cannot be reverted back to pending.",
+        400
+      );
+    }
+
+    let existingDeliveriesList: any[] = [];
+    try {
+      existingDeliveriesList = typeof sub.dailyDeliveries === "string" ? JSON.parse(sub.dailyDeliveries) : (sub.dailyDeliveries || []);
+    } catch {
+      existingDeliveriesList = [];
+    }
+    const alreadyDeliveredInLegacy = existingDeliveriesList.some(
+      (d: any) => d.date === dateStr && (d.slotId === normalizedSlot || (!d.slotId && normalizedSlot === "breakfast")) && d.status === "DELIVERED"
+    );
+    if (alreadyDeliveredInLegacy && status !== "DELIVERED") {
+      throw new ApiError(
+        "This meal has already been delivered and verified via Customer OTP. It cannot be reverted back to pending.",
+        400
+      );
+    }
+
     // Strict OTP verification when marking delivery
     let deliveryNote = note;
     if (status === "DELIVERED") {

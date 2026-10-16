@@ -8,7 +8,6 @@ import {
   Users,
   CreditCard,
   CheckCircle2,
-  Calendar,
   Clock,
   Check,
   ChevronRight,
@@ -398,27 +397,6 @@ export default function ManageSubscriptionCanvas({
 
         {/* Top Action Buttons */}
         <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-          <Link
-            href="/seller/subscription/deliveries"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "7px",
-              backgroundColor: "#FFFFFF",
-              color: "#334155",
-              border: "1.5px solid #CBD5E1",
-              padding: "9px 16px",
-              borderRadius: "8px",
-              fontSize: "13.5px",
-              fontWeight: 700,
-              textDecoration: "none",
-              transition: "all 0.15s ease",
-            }}
-          >
-            <Calendar size={16} color="#EA580C" />
-            <span>Deliveries Roster</span>
-          </Link>
-
           <Link
             href="/seller/subscription/timings"
             style={{
