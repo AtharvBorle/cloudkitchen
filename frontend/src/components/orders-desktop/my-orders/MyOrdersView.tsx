@@ -2878,7 +2878,7 @@ export default function MyOrdersView() {
               maxHeight: "90vh",
               overflowY: "auto",
               boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-              padding: "24px",
+              padding: "clamp(16px, 4.5vw, 24px)",
               boxSizing: "border-box",
               display: "flex",
               flexDirection: "column",
@@ -2995,14 +2995,74 @@ export default function MyOrdersView() {
                 style={{
                   backgroundColor: "#F8FAFC",
                   borderRadius: "14px",
-                  padding: "16px",
+                  padding: "14px 16px",
                   border: "1px solid #E2E8F0",
                 }}
               >
-                <label style={{ display: "block", fontSize: "0.9rem", fontWeight: 700, color: "#1E293B", marginBottom: "8px" }}>
-                  Overall Order Experience
-                </label>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: "8px",
+                    marginBottom: "10px",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <label
+                    style={{
+                      fontSize: "0.88rem",
+                      fontWeight: 700,
+                      color: "#1E293B",
+                      margin: 0,
+                    }}
+                  >
+                    Overall Order Experience
+                  </label>
+                  <span
+                    style={{
+                      fontSize: "0.80rem",
+                      fontWeight: 700,
+                      whiteSpace: "nowrap",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      padding: "2.5px 9px",
+                      borderRadius: "9999px",
+                      backgroundColor:
+                        overallRating >= 4
+                          ? "#ECFDF5"
+                          : overallRating === 3
+                          ? "#FFFBEB"
+                          : "#FEF2F2",
+                      color:
+                        overallRating >= 4
+                          ? "#059669"
+                          : overallRating === 3
+                          ? "#D97706"
+                          : "#DC2626",
+                      border: `1px solid ${
+                        overallRating >= 4
+                          ? "#A7F3D0"
+                          : overallRating === 3
+                          ? "#FDE68A"
+                          : "#FECACA"
+                      }`,
+                    }}
+                  >
+                    {overallRating === 5
+                      ? "Excellent! 🌟"
+                      : overallRating === 4
+                      ? "Very Good 😊"
+                      : overallRating === 3
+                      ? "Good 🙂"
+                      : overallRating === 2
+                      ? "Fair 😐"
+                      : "Poor 😞"}
+                  </span>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
                   {[1, 2, 3, 4, 5].map((starVal) => {
                     const activeRating = hoverOverallRating || overallRating;
                     const isFilled = starVal <= activeRating;
@@ -3024,7 +3084,7 @@ export default function MyOrdersView() {
                         }}
                       >
                         <Star
-                          size={32}
+                          size={28}
                           fill={isFilled ? "#F59E0B" : "none"}
                           color={isFilled ? "#F59E0B" : "#CBD5E1"}
                           strokeWidth={2}
@@ -3032,29 +3092,6 @@ export default function MyOrdersView() {
                       </button>
                     );
                   })}
-                  <span
-                    style={{
-                      marginLeft: "8px",
-                      fontSize: "0.88rem",
-                      fontWeight: 700,
-                      color:
-                        overallRating >= 4
-                          ? "#059669"
-                          : overallRating === 3
-                          ? "#D97706"
-                          : "#DC2626",
-                    }}
-                  >
-                    {overallRating === 5
-                      ? "Excellent! 🌟"
-                      : overallRating === 4
-                      ? "Very Good 😊"
-                      : overallRating === 3
-                      ? "Good 🙂"
-                      : overallRating === 2
-                      ? "Fair 😐"
-                      : "Poor 😞"}
-                  </span>
                 </div>
 
                 <textarea
@@ -3101,11 +3138,11 @@ export default function MyOrdersView() {
                             border: "1px solid #E2E8F0",
                           }}
                         >
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <span style={{ fontSize: "0.84rem", fontWeight: 700, color: "#0F172A" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
+                            <span style={{ fontSize: "0.84rem", fontWeight: 700, color: "#0F172A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>
                               {item.name} {item.qty && item.qty > 1 ? `(x${item.qty})` : ""}
                             </span>
-                            <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "2px", flexShrink: 0 }}>
                               {[1, 2, 3, 4, 5].map((s) => {
                                 const activeItemRating = item.hoverRating || item.rating;
                                 const isFilled = s <= activeItemRating;
