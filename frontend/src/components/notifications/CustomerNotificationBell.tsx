@@ -18,6 +18,7 @@ import {
   AlertCircle,
   Truck,
   Calendar,
+  Settings,
 } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
 import styles from "./CustomerNotificationBell.module.css";
@@ -88,8 +89,22 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
   const [dynamicSubscriptions, setDynamicSubscriptions] = useState<any[]>([]);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [showCustomizeHint, setShowCustomizeHint] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const syncChannelRef = useRef<BroadcastChannel | null>(null);
+
+  // Briefly highlight the "Customize your notifications!" tooltip when opened
+  useEffect(() => {
+    if (isOpen) {
+      setShowCustomizeHint(true);
+      const timer = setTimeout(() => {
+        setShowCustomizeHint(false);
+      }, 4500);
+      return () => clearTimeout(timer);
+    } else {
+      setShowCustomizeHint(false);
+    }
+  }, [isOpen]);
 
   // Helper to persist and broadcast read notifications across components & tabs
   const persistAndBroadcastReadIds = (ids: string[]) => {
@@ -617,6 +632,9 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
         <div key="customer-notification-popover">
           <div className={styles.backdrop} onClick={() => setIsOpen(false)} />
           <div className={styles.dropdown} role="dialog" aria-label="Notifications Center">
+            {/* Pointer arrow pointing to the bell icon */}
+            <div className={styles.dropdownArrow} aria-hidden="true" />
+
             {/* Header */}
             <div className={styles.header}>
               {isSelectionMode ? (
@@ -697,6 +715,37 @@ export const CustomerNotificationBell: React.FC<CustomerNotificationBellProps> =
                         {unreadCount} New
                       </span>
                     )}
+
+                    {/* Customize notifications gear icon + tooltip with slightly arrow (Image 1) */}
+                    <div className={styles.customizeWrapper}>
+                      <button
+                        type="button"
+                        className={styles.customizeBtn}
+                        onClick={() => {
+                          setIsOpen(false);
+                          router.push("/notifications-desktop");
+                        }}
+                        title="Customize your notifications"
+                        aria-label="Customize your notifications"
+                      >
+                        <Settings size={14} strokeWidth={2.2} />
+                      </button>
+
+                      {/* Tooltip with upward slight arrow */}
+                      <div
+                        className={`${styles.customizeTooltip} ${
+                          showCustomizeHint ? styles.customizeTooltipVisible : ""
+                        }`}
+                        onClick={() => {
+                          setIsOpen(false);
+                          router.push("/notifications-desktop");
+                        }}
+                        role="tooltip"
+                      >
+                        <div className={styles.customizeArrow} />
+                        <span>Customize your notifications!</span>
+                      </div>
+                    </div>
                   </div>
 
                   <div className={styles.headerActions}>
