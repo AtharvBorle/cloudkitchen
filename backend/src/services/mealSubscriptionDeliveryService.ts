@@ -239,6 +239,24 @@ export class MealSubscriptionDeliveryService {
         planName: plan?.name || "Meal Plan",
         tier: plan?.tier || d.subscription?.tier || "Bronze",
         isPaused: Boolean(d.subscription?.isPaused),
+        subscription: {
+          id: d.subscription?.id || d.subscriptionId,
+          tier: plan?.tier || d.subscription?.tier || "Bronze",
+          status: d.subscription?.status || "ACTIVE",
+          deliveryAddress: d.subscription?.deliveryAddress || "",
+          contactPhone: d.subscription?.contactPhone || user?.phone || "",
+          user: {
+            id: user?.id || "",
+            name: user?.name || "Customer",
+            phone: user?.phone || "",
+            email: user?.email || "",
+          },
+          plan: {
+            id: plan?.id || "",
+            name: plan?.name || "Meal Plan",
+            tier: plan?.tier || d.subscription?.tier || "Bronze",
+          },
+        },
       };
     });
 

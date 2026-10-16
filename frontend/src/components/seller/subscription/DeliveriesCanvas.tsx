@@ -132,7 +132,7 @@ export default function DeliveriesCanvas() {
         item.slotId
       );
       showToast(
-        `Marked ${item.slotName} as ${nextStatus === "DELIVERED" ? "Delivered" : "Pending"} for ${item.subscription.user.name || "Customer"}`
+        `Marked ${item.slotName} as ${nextStatus === "DELIVERED" ? "Delivered" : "Pending"} for ${item.customerName || item.subscription?.user?.name || "Customer"}`
       );
       // Reload in background to refresh counts
       loadDeliveries(false);
@@ -565,9 +565,15 @@ export default function DeliveriesCanvas() {
             <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
               {paginatedDeliveries.map((item) => {
                 const isDelivered = item.status === "DELIVERED";
-                const isPaused = item.status === "SKIPPED_PAUSED";
-                const tierColors = getTierColors(item.subscription.tier || "Bronze");
-                const initial = (item.subscription.user.name || "Subscriber").charAt(0).toUpperCase();
+                const isPaused = item.status === "SKIPPED_PAUSED" || Boolean(item.isPaused);
+                const tier = item.tier || item.subscription?.tier || item.subscription?.plan?.tier || "Bronze";
+                const tierColors = getTierColors(tier);
+                const customerName = item.customerName || item.subscription?.user?.name || "Subscriber";
+                const customerPhone = item.customerPhone || item.subscription?.contactPhone || item.subscription?.user?.phone || "";
+                const customerEmail = item.customerEmail || item.subscription?.user?.email || "";
+                const planName = item.planName || item.subscription?.plan?.name || "Meal Plan";
+                const deliveryAddress = item.deliveryAddress || item.subscription?.deliveryAddress || "Address on record";
+                const initial = customerName.charAt(0).toUpperCase();
 
                 return (
                   <div
@@ -608,7 +614,7 @@ export default function DeliveriesCanvas() {
                         <div>
                           <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                             <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 800, color: "#0F172A" }}>
-                              {item.subscription.user.name || "Subscriber"}
+                              {customerName}
                             </h3>
                             <span
                               style={{
@@ -620,24 +626,24 @@ export default function DeliveriesCanvas() {
                                 color: tierColors.tierColor,
                               }}
                             >
-                              🍱 {item.subscription.plan.name} ({item.subscription.tier})
+                              🍱 {planName} ({tier})
                             </span>
                           </div>
 
                           <div style={{ display: "flex", alignItems: "center", gap: "14px", marginTop: "4px", fontSize: "12.5px", color: "#64748B" }}>
-                            {item.subscription.user.phone && (
+                            {customerPhone && (
                               <a
-                                href={`tel:${item.subscription.user.phone}`}
+                                href={`tel:${customerPhone}`}
                                 style={{ display: "inline-flex", alignItems: "center", gap: "5px", color: "#EA580C", textDecoration: "none", fontWeight: 600 }}
                               >
                                 <Phone size={13} />
-                                <span>{item.subscription.user.phone}</span>
+                                <span>{customerPhone}</span>
                               </a>
                             )}
-                            {item.subscription.user.email && (
+                            {customerEmail && (
                               <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
                                 <Mail size={13} />
-                                <span>{item.subscription.user.email}</span>
+                                <span>{customerEmail}</span>
                               </span>
                             )}
                           </div>
@@ -684,7 +690,7 @@ export default function DeliveriesCanvas() {
                       <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
                         <MapPin size={16} color="#EA580C" style={{ flexShrink: 0, marginTop: "2px" }} />
                         <div style={{ fontSize: "13px", color: "#334155", lineHeight: 1.4 }}>
-                          <strong>Delivery Address:</strong> {item.subscription.deliveryAddress || "Address on record"}
+                          <strong>Delivery Address:</strong> {deliveryAddress}
                         </div>
                       </div>
 

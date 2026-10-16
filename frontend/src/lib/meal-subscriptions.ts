@@ -86,22 +86,29 @@ export interface MealSlotDeliveryRecord {
   deliveredAt: string | null;
   markedBy: string | null;
   note: string | null;
-  subscription: {
-    id: string;
-    tier: string;
-    status: string;
-    deliveryAddress: string;
-    contactPhone: string;
-    user: {
-      id: string;
-      name: string;
-      phone: string;
-      email: string;
+  customerName?: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  deliveryAddress?: string;
+  planName?: string;
+  tier?: string;
+  isPaused?: boolean;
+  subscription?: {
+    id?: string;
+    tier?: string;
+    status?: string;
+    deliveryAddress?: string;
+    contactPhone?: string;
+    user?: {
+      id?: string;
+      name?: string;
+      phone?: string;
+      email?: string;
     };
-    plan: {
-      id: string;
-      name: string;
-      tier: string;
+    plan?: {
+      id?: string;
+      name?: string;
+      tier?: string;
     };
   };
 }
