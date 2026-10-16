@@ -55,6 +55,7 @@ export interface SendSmsResult {
   code?: number | string;
   status?: string;
   error?: string;
+  message?: string;
   data?: any;
 }
 
@@ -69,6 +70,17 @@ export async function sendOtpSms(mobileNumber: string, otp: string): Promise<Sen
     if (cleanNumber.length !== 10) {
       console.warn(`[SmsService] ⚠️ Invalid mobile number: "${mobileNumber}". Must be 10 digits.`);
       return { success: false, error: "Invalid mobile number. Must be 10 digits." };
+    }
+
+    // When ALLOW_MASTER_OTP is enabled, stop sending any actual SMS to mobile numbers!
+    const allowMaster = (process.env.ALLOW_MASTER_OTP || "").trim().toLowerCase();
+    if (allowMaster === "true" || allowMaster === "1") {
+      console.log(`[SmsService] 🛑 ALLOW_MASTER_OTP is true. Suppressing SMS delivery to ${cleanNumber}. Use master OTP 123456.`);
+      return {
+        success: true,
+        status: "SKIPPED_MASTER_OTP",
+        message: "Master OTP mode is enabled; SMS dispatch suppressed.",
+      };
     }
 
     if (!SMS_API_KEY || SMS_API_KEY.includes("YOUR_")) {

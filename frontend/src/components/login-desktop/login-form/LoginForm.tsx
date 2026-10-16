@@ -60,6 +60,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [resendTimer, setResendTimer] = useState(0);
+  const [masterOtpActive, setMasterOtpActive] = useState(false);
 
   // Form Status State
   const [isLoading, setIsLoading] = useState(false);
@@ -143,6 +144,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         return;
       }
 
+      setMasterOtpActive(Boolean(data?.masterOtpActive));
       setSuccessNotice(`Verification code sent to +91 ${rawDigits}!`);
       setOtpSent(true);
       setResendTimer(60);
@@ -462,24 +464,26 @@ export const LoginForm: React.FC<LoginFormProps> = ({
                         <label className={styles.inputLabel} style={{ margin: 0 }}>
                           Enter 6-Digit OTP
                         </label>
-                        <button
-                          type="button"
-                          onClick={handleQuickFillOtp}
-                          style={{
-                            background: "#FFF1E8",
-                            border: "1px solid #FFD0B8",
-                            color: "#FF5500",
-                            fontSize: "11.5px",
-                            fontWeight: 600,
-                            borderRadius: "6px",
-                            padding: "3px 8px",
-                            cursor: "pointer",
-                            transition: "all 0.15s ease",
-                          }}
-                          title="Click to fill default OTP: 123456"
-                        >
-                          Use Default OTP (123456)
-                        </button>
+                        {masterOtpActive && (
+                          <button
+                            type="button"
+                            onClick={handleQuickFillOtp}
+                            style={{
+                              background: "#FFF1E8",
+                              border: "1px solid #FFD0B8",
+                              color: "#FF5500",
+                              fontSize: "11.5px",
+                              fontWeight: 600,
+                              borderRadius: "6px",
+                              padding: "3px 8px",
+                              cursor: "pointer",
+                              transition: "all 0.15s ease",
+                            }}
+                            title="Click to fill master OTP: 123456"
+                          >
+                            Use Master OTP (123456)
+                          </button>
+                        )}
                       </div>
                       <div
                         className={styles.otpContainer}

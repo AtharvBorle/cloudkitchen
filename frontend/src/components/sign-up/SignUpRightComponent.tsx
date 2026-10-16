@@ -89,23 +89,90 @@ export default function SignUpRightComponent({
     };
   }, [resendTimer]);
 
+  // Restore form state and OTP state from sessionStorage on page refresh
+  useEffect(() => {
+    try {
+      const savedName = sessionStorage.getItem("signup_fullName");
+      const savedPhone = sessionStorage.getItem("signup_phone");
+      const savedEmail = sessionStorage.getItem("signup_email");
+      const savedOtpSent = sessionStorage.getItem("signup_otp_sent");
+      const savedOtpVerified = sessionStorage.getItem("signup_otp_verified");
+      const savedResendUntil = sessionStorage.getItem("signup_resend_until");
+
+      if (savedName) setFullName(savedName);
+      if (savedPhone) setPhone(savedPhone);
+      if (savedEmail) setEmail(savedEmail);
+      if (savedOtpVerified === "true") {
+        setOtpVerified(true);
+        setOtpSent(true);
+      } else if (savedOtpSent === "true") {
+        setOtpSent(true);
+      }
+      if (savedResendUntil) {
+        const remaining = Math.ceil((parseInt(savedResendUntil, 10) - Date.now()) / 1000);
+        if (remaining > 0) {
+          setResendTimer(remaining);
+        }
+      }
+    } catch (_) {
+      // Ignore sessionStorage exceptions
+    }
+  }, []);
+
+  // Handle Full Name Input with persistence
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setFullName(val);
+    try {
+      sessionStorage.setItem("signup_fullName", val);
+    } catch (_) {}
+  };
+
+  // Handle Email Input with persistence
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setEmail(val);
+    try {
+      sessionStorage.setItem("signup_email", val);
+    } catch (_) {}
+    if (!val.trim()) {
+      setEmailError("");
+    } else if (emailError) {
+      const res = validateEmail(val);
+      setEmailError(res.isValid ? "" : (res.error || ""));
+    }
+  };
+
   // Handle Mobile Number Input
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/\D/g, "").slice(0, 10);
+  const handlePhoneChange = (val: string) => {
+    const raw = (val || "").replace(/\D/g, "").slice(0, 10);
     setPhone(raw);
+    try {
+      sessionStorage.setItem("signup_phone", raw);
+    } catch (_) {}
     if (otpSent || otpVerified) {
       setOtpSent(false);
       setOtpVerified(false);
       setOtpDigits(["", "", "", "", "", ""]);
       setOtpError("");
+      setGeneratedOtp("");
+      try {
+        sessionStorage.removeItem("signup_otp_sent");
+        sessionStorage.removeItem("signup_otp_verified");
+        sessionStorage.removeItem("signup_resend_until");
+      } catch (_) {}
     }
   };
 
-  // Send 6-Digit OTP
-  const handleSendOtp = () => {
-    const cleaned = phone.replace(/\D/g, "");
+  // Send 6-Digit OTP via Backend API
+  const handleSendOtp = async () => {
+    const cleaned = phone.replace(/\D/g, "").slice(-10);
     if (cleaned.length !== 10) {
       setError("Please enter a valid 10-digit mobile number.");
+      return;
+    }
+
+    if (resendTimer > 0 || otpSending) {
       return;
     }
 
@@ -113,21 +180,53 @@ export default function SignUpRightComponent({
     setOtpSending(true);
     setOtpError("");
 
-    // Simulate sending OTP & generate 6-digit code
-    setTimeout(() => {
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
-      setGeneratedOtp(code);
-      setOtpSent(true);
-      setOtpVerified(false);
-      setOtpDigits(["", "", "", "", "", ""]);
-      setResendTimer(30);
-      setOtpSending(false);
+    try {
+      const res = await fetchApi("/api/auth/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: cleaned,
+          purpose: "signup",
+        }),
+      });
 
-      // Focus first OTP input after render
-      setTimeout(() => {
-        otpInputsRef.current[0]?.focus();
-      }, 100);
-    }, 400);
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data.success) {
+        setOtpSent(true);
+        setOtpVerified(false);
+        setOtpDigits(["", "", "", "", "", ""]);
+        setResendTimer(60);
+        const resendUntil = Date.now() + 60 * 1000;
+
+        if (data.masterOtpActive && data.otp) {
+          setGeneratedOtp(data.otp);
+        } else {
+          setGeneratedOtp("");
+        }
+
+        try {
+          sessionStorage.setItem("signup_phone", cleaned);
+          sessionStorage.setItem("signup_otp_sent", "true");
+          sessionStorage.removeItem("signup_otp_verified");
+          sessionStorage.setItem("signup_resend_until", String(resendUntil));
+        } catch (_) {}
+
+        setTimeout(() => {
+          otpInputsRef.current[0]?.focus();
+        }, 100);
+      } else {
+        const errorMsg = data.message || "Failed to send verification code. Please try again.";
+        setError(errorMsg);
+        setOtpError(errorMsg);
+      }
+    } catch (err: any) {
+      const errorMsg = err.message || "Network error. Failed to send verification code.";
+      setError(errorMsg);
+      setOtpError(errorMsg);
+    } finally {
+      setOtpSending(false);
+    }
   };
 
   // Handle individual digit input
@@ -203,7 +302,7 @@ export default function SignUpRightComponent({
     }
   };
 
-  // Quick-fill helper for demo testing
+  // Quick-fill helper for demo/master testing
   const handleQuickFill = () => {
     const code = generatedOtp || "123456";
     const digits = code.split("");
@@ -211,20 +310,44 @@ export default function SignUpRightComponent({
     verifyCode(code);
   };
 
-  // Verify the 6-Digit Code
-  const verifyCode = (code: string) => {
+  // Verify the 6-Digit Code via backend API
+  const verifyCode = async (code: string) => {
+    const cleaned = phone.replace(/\D/g, "").slice(-10);
+    if (code.length !== 6) {
+      setOtpError("Please enter all 6 digits of the verification code.");
+      return;
+    }
+
     setOtpVerifying(true);
     setOtpError("");
 
-    setTimeout(() => {
-      if (code === generatedOtp || code === "123456") {
+    try {
+      const res = await fetchApi("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: cleaned,
+          otp: code,
+          purpose: "signup",
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data.success) {
         setOtpVerified(true);
         setOtpError("");
+        try {
+          sessionStorage.setItem("signup_otp_verified", "true");
+        } catch (_) {}
       } else {
-        setOtpError("Invalid 6-digit verification code. Please try again.");
+        setOtpError(data.message || "Invalid 6-digit verification code. Please try again.");
       }
+    } catch (err: any) {
+      setOtpError(err.message || "Failed to verify code. Please try again.");
+    } finally {
       setOtpVerifying(false);
-    }, 300);
+    }
   };
 
   const handleManualVerify = () => {
@@ -242,6 +365,12 @@ export default function SignUpRightComponent({
     setOtpSent(false);
     setOtpDigits(["", "", "", "", "", ""]);
     setOtpError("");
+    setGeneratedOtp("");
+    try {
+      sessionStorage.removeItem("signup_otp_sent");
+      sessionStorage.removeItem("signup_otp_verified");
+      sessionStorage.removeItem("signup_resend_until");
+    } catch (_) {}
   };
 
   // Form Submit Handler
@@ -313,10 +442,26 @@ export default function SignUpRightComponent({
         });
 
         if (signInRes?.ok || !signInRes?.error) {
+          try {
+            sessionStorage.removeItem("signup_fullName");
+            sessionStorage.removeItem("signup_phone");
+            sessionStorage.removeItem("signup_email");
+            sessionStorage.removeItem("signup_otp_sent");
+            sessionStorage.removeItem("signup_otp_verified");
+            sessionStorage.removeItem("signup_resend_until");
+          } catch (_) {}
           const params = new URLSearchParams(window.location.search);
           const callbackUrl = params.get("callbackUrl") || onSuccessRedirect;
           window.location.href = callbackUrl;
         } else {
+          try {
+            sessionStorage.removeItem("signup_fullName");
+            sessionStorage.removeItem("signup_phone");
+            sessionStorage.removeItem("signup_email");
+            sessionStorage.removeItem("signup_otp_sent");
+            sessionStorage.removeItem("signup_otp_verified");
+            sessionStorage.removeItem("signup_resend_until");
+          } catch (_) {}
           router.push(`${signInUrl}?registered=true`);
         }
       } else {
@@ -562,7 +707,7 @@ export default function SignUpRightComponent({
                   type="text"
                   placeholder="e.g. Rahul Sharma"
                   value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
+                  onChange={handleNameChange}
                   required
                   style={{
                     width: "100%",
@@ -621,15 +766,12 @@ export default function SignUpRightComponent({
               <PhoneInput
                 id="signup-phone"
                 value={phone}
-                onChange={(val) => {
-                  setPhone(val);
-                  setOtpSent(false);
-                }}
-                disabled={otpVerified}
+                onChange={handlePhoneChange}
+                disabled={otpVerified || (otpSent && resendTimer > 0)}
                 required
                 placeholder="98765 43210"
                 rightAction={
-                  otpVerified ? (
+                  otpSent || otpVerified ? (
                     <button
                       type="button"
                       onClick={handleEditPhone}
@@ -655,19 +797,19 @@ export default function SignUpRightComponent({
                     <button
                       type="button"
                       onClick={handleSendOtp}
-                      disabled={phone.length !== 10 || otpSending}
+                      disabled={phone.length !== 10 || otpSending || resendTimer > 0}
                       style={{
                         padding: "5px 12px",
                         height: "34px",
                         borderRadius: "8px",
                         border: "none",
-                        backgroundColor: phone.length === 10 ? "#FF5500" : "#E2E8F0",
-                        color: phone.length === 10 ? "#FFFFFF" : "#94A3B8",
+                        backgroundColor: phone.length === 10 && resendTimer === 0 ? "#FF5500" : "#E2E8F0",
+                        color: phone.length === 10 && resendTimer === 0 ? "#FFFFFF" : "#94A3B8",
                         fontSize: "12px",
                         fontWeight: 600,
-                        cursor: phone.length === 10 ? "pointer" : "not-allowed",
+                        cursor: phone.length === 10 && resendTimer === 0 ? "pointer" : "not-allowed",
                         transition: "all 0.18s ease",
-                        boxShadow: phone.length === 10 ? "0 2px 8px rgba(255, 85, 0, 0.25)" : "none",
+                        boxShadow: phone.length === 10 && resendTimer === 0 ? "0 2px 8px rgba(255, 85, 0, 0.25)" : "none",
                         whiteSpace: "nowrap",
                         display: "flex",
                         alignItems: "center",
@@ -675,7 +817,7 @@ export default function SignUpRightComponent({
                       }}
                       className="send-otp-btn"
                     >
-                      {otpSending ? "Sending..." : otpSent ? "Resend" : "Verify"}
+                      {otpSending ? "Sending..." : "Verify"}
                     </button>
                   )
                 }
@@ -722,27 +864,29 @@ export default function SignUpRightComponent({
                     </span>
                   </div>
 
-                  {/* Demo Code Auto-fill Chip */}
-                  <div
-                    onClick={handleQuickFill}
-                    style={{
-                      backgroundColor: "#FFEDE0",
-                      border: "1px dashed #FF5500",
-                      borderRadius: "6px",
-                      padding: "3px 8px",
-                      fontSize: "11px",
-                      fontWeight: 600,
-                      color: "#FF5500",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                    }}
-                    title="Click to auto-fill code"
-                  >
-                    <span>Code: <strong>{generatedOtp}</strong></span>
-                    <span style={{ fontSize: "10px", opacity: 0.8 }}>(Auto-fill)</span>
-                  </div>
+                  {/* Demo/Master Code Auto-fill Chip (Only displayed when master OTP mode is active) */}
+                  {Boolean(generatedOtp) && (
+                    <div
+                      onClick={handleQuickFill}
+                      style={{
+                        backgroundColor: "#FFEDE0",
+                        border: "1px dashed #FF5500",
+                        borderRadius: "6px",
+                        padding: "3px 8px",
+                        fontSize: "11px",
+                        fontWeight: 600,
+                        color: "#FF5500",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px",
+                      }}
+                      title="Click to auto-fill code"
+                    >
+                      <span>Code: <strong>{generatedOtp}</strong></span>
+                      <span style={{ fontSize: "10px", opacity: 0.8 }}>(Auto-fill)</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* 6 Discrete Digit Inputs */}
@@ -851,21 +995,23 @@ export default function SignUpRightComponent({
                     <button
                       type="button"
                       onClick={handleSendOtp}
+                      disabled={otpSending}
                       style={{
                         background: "none",
                         border: "none",
                         color: "#FF5500",
                         fontSize: "12px",
                         fontWeight: 600,
-                        cursor: "pointer",
+                        cursor: otpSending ? "not-allowed" : "pointer",
+                        opacity: otpSending ? 0.6 : 1,
                         display: "flex",
                         alignItems: "center",
                         gap: "4px",
                         padding: "4px 6px",
                       }}
                     >
-                      <RefreshCw size={12} />
-                      Resend OTP
+                      <RefreshCw size={12} className={otpSending ? "animate-spin" : ""} />
+                      {otpSending ? "Sending..." : "Resend OTP"}
                     </button>
                   )}
                 </div>
@@ -910,16 +1056,7 @@ export default function SignUpRightComponent({
                   type="email"
                   placeholder="yourname@gmail.com (optional)"
                   value={email}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setEmail(val);
-                    if (!val.trim()) {
-                      setEmailError("");
-                    } else if (emailError) {
-                      const res = validateEmail(val);
-                      setEmailError(res.isValid ? "" : (res.error || ""));
-                    }
-                  }}
+                  onChange={handleEmailChange}
                   onBlur={() => {
                     if (email.trim()) {
                       const res = validateEmail(email);
