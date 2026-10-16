@@ -10,16 +10,19 @@
 
 .topRow {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   padding-bottom: 24px;
   border-bottom: 1px solid #f1f5f9;
+  gap: 14px;
 }
 
 .leftInfo {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 16px;
+  flex: 1;
+  min-width: 0;
 }
 
 .iconCircle {
@@ -80,6 +83,9 @@
   border-radius: 9999px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: 2px;
 }
 
 .activeBadgeGreen {
@@ -144,26 +150,48 @@
 
 @media (max-width: 768px) {
   .cardContainer {
-    padding: 18px 16px;
+    padding: 16px 14px;
     border-radius: 18px;
     margin-bottom: 16px;
   }
 
   .topRow {
-    padding-bottom: 16px;
+    padding-bottom: 14px;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .leftInfo {
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .iconCircle {
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
+    margin-top: 1px;
   }
 
   .planTitle {
-    font-size: 1.1rem;
+    font-size: 1.05rem;
+  }
+
+  .tierPill {
+    font-size: 0.68rem;
+    padding: 2px 8px;
   }
 
   .planSubtitle {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
+    margin-top: 3px;
   }
 
   .activeBadge {
-    padding: 4px 12px;
-    font-size: 0.68rem;
+    padding: 3px 10px;
+    font-size: 0.66rem;
+    margin-top: 2px;
+    align-self: flex-start;
   }
 
   .statsRow {

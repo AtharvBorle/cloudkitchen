@@ -1273,27 +1273,13 @@ function MySubscriptionContent() {
                             />
 
                             {/* Delivery Address & Contact Bar */}
-                            <div
-                              style={{
-                                display: "flex",
-                                flexWrap: "wrap",
-                                gap: "12px",
-                                alignItems: "center",
-                                padding: "12px 16px",
-                                backgroundColor: "#F8FAFC",
-                                borderRadius: "12px",
-                                margin: "16px 0",
-                                fontSize: "0.84rem",
-                                color: "#475569",
-                                border: "1px solid #E2E8F0",
-                              }}
-                            >
-                              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <div className={styles.deliveryBar}>
+                              <div className={styles.deliveryBarItem}>
                                 <MapPin size={15} color="#EA580C" />
                                 <span><strong>Deliver to:</strong> {subItem.deliveryAddress || "Address provided at checkout"}</span>
                               </div>
                               {subItem.contactPhone && (
-                                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginLeft: "auto" }}>
+                                <div className={styles.deliveryBarPhone}>
                                   <Phone size={14} color="#EA580C" />
                                   <span><strong>Phone:</strong> {subItem.contactPhone}</span>
                                 </div>
