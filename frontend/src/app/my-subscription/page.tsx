@@ -475,6 +475,21 @@ function MySubscriptionContent() {
 
   const handleTogglePause = async (subId: string, nextPaused: boolean, days?: number) => {
     try {
+      const targetSub = userSubs.find((s) => s.id === subId) || (subscription?.id === subId ? subscription : null);
+      if (targetSub && nextPaused && targetSub.startDate) {
+        const start = new Date(targetSub.startDate);
+        if (!isNaN(start.getTime())) {
+          const today = new Date();
+          const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+          const startDayStart = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime();
+          if (startDayStart > todayStart) {
+            const formatted = start.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+            showToast("error", `You cannot pause your subscription before it starts on ${formatted}. Pausing is available once your deliveries begin.`);
+            return;
+          }
+        }
+      }
+
       let result: any = null;
       if (subId && !subId.startsWith("sub-demo")) {
         result = await togglePauseUserSubscription(subId, nextPaused, days);
@@ -1396,6 +1411,7 @@ function MySubscriptionContent() {
                             {/* Pause Subscription Section (only for active, non-expired plans) */}
                             {isPauseAllowed && !isExpired && (
                               <PauseSubscription
+                                startDate={subItem.startDate}
                                 isPaused={subItem.isPaused}
                                 disabled={isPlanInactive || subItem.status?.toUpperCase() === "CANCELLED"}
                                 allowPause={isPauseAllowed}
