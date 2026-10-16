@@ -3,7 +3,7 @@ import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { emitMealSubscriptionUpdated } from "@/lib/realtime-events";
 import { SubscriptionPauseService } from "@/services/subscriptionPauseService";
-import { normalizeMealSlotIds, getMealSlotDetails, extractTimeRangeString } from "@/lib/meal-slots";
+import { normalizeMealSlotIds, getMealSlotDetails, getSlotDeliveryTime, extractTimeRangeString } from "@/lib/meal-slots";
 import { getNowInIST, getDateInIST, getMealDeliveryTimingStatus, getMealDeliveryOtp } from "@/lib/meal-delivery-otp";
 import Razorpay from "razorpay";
 import crypto from "crypto";
@@ -219,9 +219,11 @@ export const getUserMealSubscriptions = async () => {
                 ? getMealDeliveryOtp(sub.id, todayIst.dateStr, id)
                 : null;
 
+            const effectiveTime = customTime || base.defaultTimeRange || (timing.window ? `${timing.window.startFormatted} - ${timing.window.endFormatted}` : "") || getSlotDeliveryTime(id);
+
             return {
                 ...base,
-                defaultTimeRange: customTime || "",
+                defaultTimeRange: effectiveTime,
                 todayStatus: slotDeliveryStatus,
                 isDelivered: isStarted && slotDeliveryStatus === "DELIVERED",
                 deliveredAt: isStarted && existingDelivery?.deliveredAt ? new Date(existingDelivery.deliveredAt).toISOString() : null,
@@ -241,7 +243,7 @@ export const getUserMealSubscriptions = async () => {
         const resolvedTimings = resolvedSlotIds.map((id) => {
             const detail = resolvedSlotDetails.find((d) => d.id === id);
             const name = detail?.name || getMealSlotDetails(id).name;
-            const time = detail?.defaultTimeRange || "";
+            const time = detail?.defaultTimeRange || getSlotDeliveryTime(id);
             return time ? `${name}: ${time}` : name;
         });
 
@@ -258,16 +260,17 @@ export const getUserMealSubscriptions = async () => {
                 extractTimeRangeString(dbSlot?.defaultTimeRange) ||
                 ""
             ).trim();
+            const effectiveTime = customTime || base.defaultTimeRange || getSlotDeliveryTime(id);
             return {
                 ...base,
-                defaultTimeRange: customTime || "",
+                defaultTimeRange: effectiveTime,
             };
         });
 
         const planMealTimings = planSlotIds.map((id) => {
             const detail = planSlotDetails.find((d) => d.id === id);
             const name = detail?.name || getMealSlotDetails(id).name;
-            const time = detail?.defaultTimeRange || "";
+            const time = detail?.defaultTimeRange || getSlotDeliveryTime(id);
             return time ? `${name}: ${time}` : name;
         });
 

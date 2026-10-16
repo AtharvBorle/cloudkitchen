@@ -3,7 +3,7 @@ import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { emitMealPlanUpdated, emitMealSubscriptionUpdated } from "@/lib/realtime-events";
 import { getCategoryExpiries } from "@/lib/subscription";
-import { PREDEFINED_MEAL_SLOTS, normalizeMealSlotId, normalizeMealSlotIds, getMealSlotDetails, extractTimeRangeString } from "@/lib/meal-slots";
+import { PREDEFINED_MEAL_SLOTS, normalizeMealSlotId, normalizeMealSlotIds, getMealSlotDetails, getSlotDeliveryTime, extractTimeRangeString } from "@/lib/meal-slots";
 import { getNowInIST, getDateInIST, getMealDeliveryTimingStatus } from "@/lib/meal-delivery-otp";
 import { MealSubscriptionDeliveryService } from "@/services/mealSubscriptionDeliveryService";
 
@@ -279,10 +279,11 @@ export const getSellerMealPlans = async () => {
 
             const evaluationDateStr = isStarted ? todayIst.dateStr : subStartDateStr;
             const timing = getMealDeliveryTimingStatus(evaluationDateStr, customTime, base, slotDeliveryStatus);
+            const effectiveTime = customTime || base.defaultTimeRange || (timing.window ? `${timing.window.startFormatted} - ${timing.window.endFormatted}` : "") || getSlotDeliveryTime(id);
 
             return {
                 ...base,
-                defaultTimeRange: customTime || "",
+                defaultTimeRange: effectiveTime,
                 todayStatus: slotDeliveryStatus,
                 isDelivered: isStarted && slotDeliveryStatus === "DELIVERED",
                 deliveredAt: isStarted && (existingDelivery?.deliveredAt || legacyDelivery?.markedAt)
@@ -302,7 +303,7 @@ export const getSellerMealPlans = async () => {
         const resolvedTimings = resolvedSlotIds.map((id) => {
             const detail = resolvedSlotDetails.find((d) => d.id === id);
             const name = detail?.name || getMealSlotDetails(id).name;
-            const time = detail?.defaultTimeRange || "";
+            const time = detail?.defaultTimeRange || getSlotDeliveryTime(id);
             return time ? `${name}: ${time}` : name;
         });
 
@@ -377,16 +378,17 @@ export const getSellerMealPlans = async () => {
                 extractTimeRangeString(dbSlot?.defaultTimeRange) ||
                 ""
             ).trim();
+            const effectiveTime = customTime || base.defaultTimeRange || getSlotDeliveryTime(id);
             return {
                 ...base,
-                defaultTimeRange: customTime || "",
+                defaultTimeRange: effectiveTime,
             };
         });
 
         const resolvedTimings = planSlotIds.map((id: string) => {
             const detail = planSlotDetails.find((d) => d.id === id);
             const name = detail?.name || getMealSlotDetails(id).name;
-            const time = detail?.defaultTimeRange || "";
+            const time = detail?.defaultTimeRange || getSlotDeliveryTime(id);
             return time ? `${name}: ${time}` : name;
         });
 
@@ -1198,6 +1200,11 @@ export const getPublicMealPlans = async (req: Request) => {
             // 3. Tertiary: slotRecord defaultTimeRange
             if (!configuredTime && slotRecord?.defaultTimeRange) {
                 configuredTime = extractTimeRangeString(slotRecord.defaultTimeRange);
+            }
+
+            // 4. Quaternary: predefined slot default time
+            if (!configuredTime) {
+                configuredTime = getSlotDeliveryTime(slotId);
             }
 
             return configuredTime ? `${slotName}: ${configuredTime}` : slotName;

@@ -69,10 +69,12 @@ export interface SubscriptionEditCanvasProps {
 const DEFAULT_INCLUDED_FEATURES: PlanFeatureItem[] = [];
 
 const DEFAULT_MEAL_TIMINGS: MealTimingItem[] = [
-  { id: "time-1", mealName: "Breakfast", timing: "7:30 AM – 9:30 AM" },
-  { id: "time-2", mealName: "Lunch", timing: "12:30 AM – 1:30 AM" },
-  { id: "time-3", mealName: "Evening Snacks", timing: "5:30 AM – 6:30 AM" },
-  { id: "time-4", mealName: "Dinner", timing: "8:30 AM – 9:30 AM" },
+  { id: "time-1", mealName: "Breakfast", timing: "07:30 AM - 09:30 AM" },
+  { id: "time-2", mealName: "Morning Meal", timing: "10:30 AM - 11:30 AM" },
+  { id: "time-3", mealName: "Lunch", timing: "12:30 PM - 02:30 PM" },
+  { id: "time-4", mealName: "Evening Snack", timing: "04:30 PM - 06:30 PM" },
+  { id: "time-5", mealName: "Dinner", timing: "07:30 PM - 10:00 PM" },
+  { id: "time-6", mealName: "Late-Night Snack", timing: "10:30 PM - 12:30 AM" },
 ];
 
 const DEFAULT_DATA: SubscriptionPlanData = {

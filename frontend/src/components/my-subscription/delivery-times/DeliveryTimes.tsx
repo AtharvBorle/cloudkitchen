@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
+import { extractTimeRangeString, getSlotDeliveryTime } from "@/lib/meal-slots";
 import styles from "./DeliveryTimes.module.css";
 
 export interface DeliverySlot {
@@ -187,7 +188,13 @@ export const DeliveryTimes: React.FC<DeliveryTimesProps> = ({
                 </div>
 
                 <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", justifyContent: "flex-end" }}>
-                  <span className={styles.slotTime}>{slot.timeRange}</span>
+                  {(() => {
+                    const displayTime =
+                      extractTimeRangeString(slot.timeRange) ||
+                      (slot.slotStartTime && slot.slotEndTime ? `${slot.slotStartTime} - ${slot.slotEndTime}` : "") ||
+                      getSlotDeliveryTime(slot.id);
+                    return <span className={styles.slotTime}>{displayTime}</span>;
+                  })()}
 
                   {isDelivered ? (
                     <span
