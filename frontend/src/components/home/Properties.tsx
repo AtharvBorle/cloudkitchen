@@ -1005,38 +1005,10 @@ export default function Properties({
               Array.from({ length: 8 }).map((_, idx) => (
                 <div
                   key={`kitchen-skeleton-${idx}`}
-                  style={{
-                    width: "100%",
-                    height: "250px",
-                    backgroundColor: "#FFFFFF",
-                    borderRadius: "20px",
-                    overflow: "hidden",
-                    border: "1px solid #F1F5F9",
-                    boxShadow: "0 4px 16px rgba(0, 0, 0, 0.04)",
-                    display: "flex",
-                    flexDirection: "column",
-                    boxSizing: "border-box",
-                  }}
                   className="place-card-skeleton"
                 >
-                  <div
-                    className="skeleton-pulse place-card-skeleton-image"
-                    style={{
-                      width: "100%",
-                      height: "155px",
-                    }}
-                  />
-                  <div
-                    style={{
-                      padding: "12px 14px",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "8px",
-                      flex: 1,
-                      justifyContent: "space-between",
-                    }}
-                    className="place-card-content"
-                  >
+                  <div className="skeleton-pulse place-card-skeleton-image" />
+                  <div className="place-card-content">
                     <div>
                       <div className="skeleton-pulse" style={{ width: "70%", height: "18px", borderRadius: "6px", marginBottom: "6px" }} />
                       <div className="skeleton-pulse" style={{ width: "45%", height: "13px", borderRadius: "4px" }} />
@@ -1107,188 +1079,72 @@ export default function Properties({
               displayPlaces.map((place) => {
                 const isClosed = place.isOnline === false;
                 return (
-                <Link
-                  href={getKitchenHref(place)}
-                  key={place.id}
-                  style={{
-                    width: "100%",
-                    height: "250px",
-                    backgroundColor: isClosed ? "#F8FAFC" : "#FFFFFF",
-                    borderRadius: "20px",
-                    overflow: "hidden",
-                    border: isClosed ? "1px solid #E2E8F0" : "1px solid #F1F5F9",
-                    boxShadow: "0 4px 16px rgba(0, 0, 0, 0.04)",
-                    display: "flex",
-                    flexDirection: "column",
-                    cursor: "pointer",
-                    transition: "transform 0.25s ease, box-shadow 0.25s ease",
-                    textDecoration: "none",
-                    color: "inherit",
-                    boxSizing: "border-box",
-                    opacity: isClosed ? 0.85 : 1,
-                  }}
-                  className="place-card"
-                >
-                  {/* Card Food Image */}
                   <div
-                    className="place-card-image-box"
-                    style={{
-                      width: "100%",
-                      height: "155px",
-                      position: "relative",
-                      overflow: "hidden",
-                      backgroundColor: "#F8FAFC",
-                    }}
+                    key={place.id}
+                    className={`place-card ${isClosed ? "is-closed" : ""}`}
                   >
-                  <Image
-                    src={place.imageUrl || "/images/places/place-pizza.png"}
-                    alt={place.name}
-                    fill
-                    sizes="(max-width: 768px) 100vw, 250px"
-                    style={{
-                      objectFit: "cover",
-                      transition: "transform 0.3s ease",
-                      filter: isClosed ? "grayscale(100%)" : "none",
-                    }}
-                    className="place-card-img"
-                  />
-                  <div className="place-card-mobile-overlay" />
-                  {isClosed && (
-                    <div
-                      className="place-card-closed-pill"
-                      style={{
-                        position: "absolute",
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        backgroundColor: "rgba(15, 23, 42, 0.4)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        zIndex: 2,
-                      }}
+                    <Link
+                      href={getKitchenHref(place)}
+                      className="place-card-link"
                     >
-                      <span
-                        className="place-card-closed-text"
-                        style={{
-                          backgroundColor: "#0F172A",
-                          color: "#FFFFFF",
-                          fontSize: "11px",
-                          fontWeight: "800",
-                          letterSpacing: "0.8px",
-                          padding: "5px 12px",
-                          borderRadius: "14px",
-                          textTransform: "uppercase",
-                          boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
-                          border: "1px solid rgba(255,255,255,0.2)",
-                        }}
-                      >
-                        🔴 CLOSED
-                      </span>
-                    </div>
-                  )}
+                      {/* Card Food Image */}
+                      <div className="place-card-image-box">
+                        <Image
+                          src={place.imageUrl || "/images/places/place-pizza.png"}
+                          alt={place.name}
+                          fill
+                          sizes="(max-width: 768px) 140px, 250px"
+                          style={{
+                            objectFit: "cover",
+                            transition: "transform 0.3s ease",
+                            filter: isClosed ? "grayscale(100%)" : "none",
+                          }}
+                          className="place-card-img"
+                        />
+                        <div className="place-card-mobile-overlay" />
+                        {isClosed && (
+                          <div className="place-card-closed-pill">
+                            <span className="place-card-closed-text">
+                              🔴 CLOSED
+                            </span>
+                          </div>
+                        )}
+                      </div>
 
+                      {/* Card Content Footer */}
+                      <div className="place-card-content">
+                        {/* Restaurant Name */}
+                        <div className="place-card-header-line">
+                          <h3 className="place-card-title">
+                            {place.name}
+                          </h3>
+                          {isClosed && (
+                            <span className="place-card-offline-tag">
+                              OFFLINE
+                            </span>
+                          )}
+                        </div>
 
-                </div>
+                        {/* Rating & Delivery Time Meta Row */}
+                        <div className="place-card-meta-line">
+                          {/* Star Rating Badge */}
+                          <div className="place-card-rating-badge">
+                            <Star size={12} className="place-star-icon" fill={isClosed ? "#64748B" : (place.rating > 0 ? "#10B981" : "#94A3B8")} color={isClosed ? "#64748B" : (place.rating > 0 ? "#10B981" : "#94A3B8")} />
+                            <span className="place-rating-text-desktop">{place.rating > 0 ? place.rating.toFixed(1) : "New"}</span>
+                            <span className="place-rating-text-mobile">{Number(place.rating || 0).toFixed(1)}</span>
+                          </div>
 
-                {/* Card Content Footer */}
-                <div
-                  className="place-card-content"
-                  style={{
-                    padding: "12px 14px",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "space-between",
-                    flex: 1,
-                    boxSizing: "border-box",
-                    backgroundColor: isClosed ? "#F1F5F9" : "#FFFFFF",
-                  }}
-                >
-                  {/* Restaurant Name */}
-                  <div className="place-card-header-line" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px" }}>
-                    <h3
-                      className="place-card-title"
-                      style={{
-                        fontSize: "15px",
-                        fontWeight: "700",
-                        color: isClosed ? "#475569" : "#0F172A",
-                        margin: 0,
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-                      }}
-                    >
-                      {place.name}
-                    </h3>
-                    {isClosed && (
-                      <span
-                        className="place-card-offline-tag"
-                        style={{
-                          fontSize: "10px",
-                          fontWeight: "700",
-                          color: "#64748B",
-                          backgroundColor: "#E2E8F0",
-                          padding: "1px 6px",
-                          borderRadius: "4px",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        OFFLINE
-                      </span>
-                    )}
+                          {/* Delivery Time / Closed Text */}
+                          <span className="place-card-time">
+                            {isClosed ? "Not accepting orders" : place.time}
+                          </span>
+                        </div>
+                      </div>
+                    </Link>
                   </div>
-
-                  {/* Rating & Delivery Time Meta Row */}
-                  <div
-                    className="place-card-meta-line"
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                    }}
-                  >
-                    {/* Star Rating Badge */}
-                    <div
-                      className="place-card-rating-badge"
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "4px",
-                        backgroundColor: isClosed ? "#E2E8F0" : (place.rating > 0 ? "#E8FBF2" : "#F1F5F9"),
-                        color: isClosed ? "#64748B" : (place.rating > 0 ? "#10B981" : "#64748B"),
-                        border: isClosed ? "1px solid #CBD5E1" : (place.rating > 0 ? "1px solid rgba(16, 185, 129, 0.2)" : "1px solid #E2E8F0"),
-                        padding: "2px 7px",
-                        borderRadius: "6px",
-                        fontSize: "12.5px",
-                        fontWeight: "700",
-                        fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-                      }}
-                    >
-                      <Star size={12} className="place-star-icon" fill={isClosed ? "#64748B" : (place.rating > 0 ? "#10B981" : "#94A3B8")} color={isClosed ? "#64748B" : (place.rating > 0 ? "#10B981" : "#94A3B8")} />
-                      <span className="place-rating-text-desktop">{place.rating > 0 ? place.rating.toFixed(1) : "New"}</span>
-                      <span className="place-rating-text-mobile">{Number(place.rating || 0).toFixed(1)}</span>
-                    </div>
-
-                    {/* Delivery Time / Closed Text */}
-                    <span
-                      className="place-card-time"
-                      style={{
-                        fontSize: "12px",
-                        color: isClosed ? "#94A3B8" : "#64748B",
-                        fontWeight: "500",
-                        fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-                      }}
-                    >
-                      {isClosed ? "Not accepting orders" : place.time}
-                    </span>
-                  </div>
-                </div>
-              </Link>
-              );
-            })
-          )}
+                );
+              })
+            )}
           </div>
         </div>
       </div>
@@ -1311,8 +1167,67 @@ export default function Properties({
           transform: translateY(-4px);
           box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08) !important;
         }
+        .place-card {
+          width: 100%;
+          height: 250px;
+          background-color: #FFFFFF;
+          border-radius: 20px;
+          overflow: hidden;
+          border: 1px solid #F1F5F9;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+          display: flex;
+          flex-direction: column;
+          cursor: pointer;
+          transition: transform 0.25s ease, box-shadow 0.25s ease;
+          position: relative;
+          box-sizing: border-box;
+        }
+        .place-card.is-closed {
+          background-color: #F8FAFC;
+          border: 1px solid #E2E8F0;
+          opacity: 0.85;
+        }
+        .place-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08) !important;
+        }
         .place-card:hover .place-card-img {
           transform: scale(1.05);
+        }
+        .place-card-link {
+          width: 100%;
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+          text-decoration: none;
+          color: inherit;
+          position: relative;
+          overflow: hidden;
+          border-radius: inherit;
+        }
+        .place-card-skeleton {
+          width: 100%;
+          height: 250px;
+          background-color: #FFFFFF;
+          border-radius: 20px;
+          overflow: hidden;
+          border: 1px solid #F1F5F9;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+          display: flex;
+          flex-direction: column;
+          box-sizing: border-box;
+          position: relative;
+        }
+        .place-card-image-box {
+          width: 100%;
+          height: 155px;
+          position: relative;
+          overflow: hidden;
+          background-color: #F8FAFC;
+        }
+        .place-card-skeleton-image {
+          width: 100%;
+          height: 155px;
         }
         .place-card-mobile-overlay {
           display: none;
@@ -1322,6 +1237,97 @@ export default function Properties({
         }
         .place-rating-text-desktop {
           display: inline;
+        }
+        .place-card-closed-pill {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: rgba(15, 23, 42, 0.4);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 2;
+        }
+        .place-card-closed-text {
+          background-color: #0F172A;
+          color: #FFFFFF;
+          font-size: 11px;
+          font-weight: 800;
+          letter-spacing: 0.8px;
+          padding: 5px 12px;
+          border-radius: 14px;
+          text-transform: uppercase;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+          border: 1px solid rgba(255,255,255,0.2);
+        }
+        .place-card-content {
+          padding: 12px 14px;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          flex: 1;
+          box-sizing: border-box;
+          background-color: #FFFFFF;
+        }
+        .place-card.is-closed .place-card-content {
+          background-color: #F1F5F9;
+        }
+        .place-card-header-line {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 6px;
+        }
+        .place-card-title {
+          font-size: 15px;
+          font-weight: 700;
+          color: #0F172A;
+          margin: 0;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          font-family: var(--font-poppins), 'Poppins', sans-serif;
+        }
+        .place-card.is-closed .place-card-title {
+          color: #475569;
+        }
+        .place-card-offline-tag {
+          font-size: 10px;
+          font-weight: 700;
+          color: #64748B;
+          background-color: #E2E8F0;
+          padding: 1px 6px;
+          border-radius: 4px;
+          white-space: nowrap;
+        }
+        .place-card-meta-line {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+        .place-card-rating-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          background-color: #E8FBF2;
+          color: #10B981;
+          border: 1px solid rgba(16, 185, 129, 0.2);
+          padding: 2px 7px;
+          border-radius: 6px;
+          font-size: 12.5px;
+          font-weight: 700;
+          font-family: var(--font-poppins), 'Poppins', sans-serif;
+        }
+        .place-star-icon {
+          color: #10B981;
+        }
+        .place-card-time {
+          font-size: 12px;
+          color: #64748B;
+          font-weight: 500;
+          font-family: var(--font-poppins), 'Poppins', sans-serif;
         }
         @media (max-width: 1200px) {
           .properties-container {
@@ -1353,64 +1359,100 @@ export default function Properties({
           }
         }
         @media (max-width: 768px) {
+          .properties-wrapper {
+            width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+          .properties-container,
           .Properties {
-            padding: 0 0 24px 0 !important;
-          }
-          .properties-container {
-            gap: 12px !important;
+            width: 100% !important;
+            max-width: 100% !important;
             min-height: auto !important;
+            height: auto !important;
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 12px !important;
+            margin: 0 !important;
+            padding: 0 !important;
           }
+          .properties2-column,
           .Properties2 {
             width: 100% !important;
+            max-width: 100% !important;
             min-width: 0 !important;
             min-height: auto !important;
-            gap: 12px !important;
+            flex: 1 1 100% !important;
+            gap: 10px !important;
           }
           .best-places-header-row {
-            margin-bottom: 0 !important;
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            margin: 0 0 2px 0 !important;
+            width: 100% !important;
           }
           .best-places-title {
-            font-size: 19px !important;
-            font-weight: 700 !important;
-            letter-spacing: -0.2px !important;
+            font-size: 1.25rem !important;
+            font-weight: 800 !important;
+            color: #18181B !important;
+            letter-spacing: -0.02em !important;
+            margin: 0 !important;
+            line-height: 1.2 !important;
           }
           .best-places-count-badge {
             display: none !important;
           }
-          .PlacesGrid {
+          .PlacesGrid,
+          .places-grid-layout {
             display: flex !important;
             flex-direction: row !important;
             flex-wrap: nowrap !important;
             overflow-x: auto !important;
-            -webkit-overflow-scrolling: touch;
-            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch !important;
+            scrollbar-width: none !important;
             gap: 12px !important;
             padding: 2px 2px 8px 2px !important;
             width: 100% !important;
             box-sizing: border-box !important;
           }
-          .PlacesGrid::-webkit-scrollbar {
+          .PlacesGrid::-webkit-scrollbar,
+          .places-grid-layout::-webkit-scrollbar {
             display: none !important;
           }
-          .place-card {
-            flex: 0 0 148px !important;
-            width: 148px !important;
-            min-width: 148px !important;
-            max-width: 148px !important;
-            height: 148px !important;
-            min-height: 148px !important;
-            max-height: 148px !important;
+          .place-card,
+          .place-card-skeleton {
+            flex: 0 0 138px !important;
+            width: 138px !important;
+            min-width: 138px !important;
+            max-width: 138px !important;
+            height: 138px !important;
+            min-height: 138px !important;
+            max-height: 138px !important;
             border-radius: 18px !important;
             position: relative !important;
             overflow: hidden !important;
-            background-color: #1E293B !important;
+            background-color: #0F172A !important;
             border: none !important;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08) !important;
             flex-shrink: 0 !important;
+          }
+          .place-card-link {
+            width: 100% !important;
+            height: 100% !important;
+            position: relative !important;
+            display: block !important;
           }
           .place-card-image-box {
             position: absolute !important;
             inset: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            border-radius: 18px !important;
+            overflow: hidden !important;
+            background-color: #1E293B !important;
+          }
+          .place-card-skeleton-image {
             width: 100% !important;
             height: 100% !important;
             border-radius: 18px !important;
@@ -1424,7 +1466,7 @@ export default function Properties({
             position: absolute !important;
             inset: 0 !important;
             z-index: 1 !important;
-            background: linear-gradient(180deg, rgba(0, 0, 0, 0) 25%, rgba(0, 0, 0, 0.45) 60%, rgba(0, 0, 0, 0.9) 100%) !important;
+            background: linear-gradient(180deg, rgba(0, 0, 0, 0) 30%, rgba(0, 0, 0, 0.45) 60%, rgba(0, 0, 0, 0.88) 100%) !important;
             pointer-events: none;
           }
           .place-card-content {
@@ -1432,9 +1474,9 @@ export default function Properties({
             bottom: 0 !important;
             left: 0 !important;
             right: 0 !important;
-            z-index: 3 !important;
+            z-index: 2 !important;
             background: transparent !important;
-            padding: 8px 10px 10px 10px !important;
+            padding: 8px 10px 9px 10px !important;
             display: flex !important;
             flex-direction: column !important;
             justify-content: flex-end !important;
@@ -1442,7 +1484,7 @@ export default function Properties({
           }
           .place-card-header-line {
             width: 100% !important;
-            gap: 4px !important;
+            display: flex !important;
           }
           .place-card-title {
             color: #FFFFFF !important;
@@ -1453,6 +1495,7 @@ export default function Properties({
             overflow: hidden !important;
             text-overflow: ellipsis !important;
             text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8) !important;
+            margin: 0 !important;
           }
           .place-card-offline-tag {
             display: none !important;
@@ -1468,17 +1511,17 @@ export default function Properties({
             background: transparent !important;
             border: none !important;
             padding: 0 !important;
-            gap: 4px !important;
+            gap: 3px !important;
             color: #FFFFFF !important;
-            font-size: 12.5px !important;
+            font-size: 12px !important;
             font-weight: 600 !important;
             text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8) !important;
           }
           .place-star-icon {
             fill: #F59E0B !important;
             color: #F59E0B !important;
-            width: 12px !important;
-            height: 12px !important;
+            width: 11px !important;
+            height: 11px !important;
           }
           .place-rating-text-desktop {
             display: none !important;
@@ -1493,27 +1536,16 @@ export default function Properties({
             display: none !important;
           }
           .place-card-closed-pill {
+            position: absolute !important;
+            inset: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
             z-index: 2 !important;
           }
           .place-card-closed-text {
             font-size: 10px !important;
             padding: 3px 8px !important;
-          }
-          .place-card-skeleton {
-            flex: 0 0 148px !important;
-            width: 148px !important;
-            min-width: 148px !important;
-            max-width: 148px !important;
-            height: 148px !important;
-            min-height: 148px !important;
-            max-height: 148px !important;
-            border-radius: 18px !important;
-            flex-shrink: 0 !important;
-          }
-          .place-card-skeleton-image {
-            width: 100% !important;
-            height: 100% !important;
-            border-radius: 18px !important;
           }
           .place-card-skeleton .place-card-content {
             display: none !important;
@@ -1522,13 +1554,13 @@ export default function Properties({
         @media (max-width: 540px) {
           .place-card,
           .place-card-skeleton {
-            flex: 0 0 144px !important;
-            width: 144px !important;
-            min-width: 144px !important;
-            max-width: 144px !important;
-            height: 144px !important;
-            min-height: 144px !important;
-            max-height: 144px !important;
+            flex: 0 0 134px !important;
+            width: 134px !important;
+            min-width: 134px !important;
+            max-width: 134px !important;
+            height: 134px !important;
+            min-height: 134px !important;
+            max-height: 134px !important;
           }
         }
       `}</style>

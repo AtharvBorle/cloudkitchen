@@ -35,6 +35,7 @@ export interface PauseSubscriptionProps {
   disabled?: boolean;
   allowPause?: boolean;
   isExpired?: boolean;
+  startDate?: string | null;
   pausePolicyNote?: string;
   pauseBillingPeriod?: string;
   usedPauseDays?: number;
@@ -78,6 +79,7 @@ export const PauseSubscription: React.FC<PauseSubscriptionProps> = ({
   disabled = false,
   allowPause = true,
   isExpired: isExpiredProp,
+  startDate,
   pausePolicyNote,
   pauseBillingPeriod = "7 Days",
   usedPauseDays = 0,
@@ -115,6 +117,17 @@ export const PauseSubscription: React.FC<PauseSubscriptionProps> = ({
 
   const isExpired = Boolean(isExpiredProp) || isDateExpired;
 
+  // Check if subscription has started yet
+  const hasStarted = (() => {
+    if (!startDate) return true;
+    const start = new Date(startDate);
+    if (isNaN(start.getTime())) return true;
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+    const startDayStart = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime();
+    return startDayStart <= todayStart;
+  })();
+
   useEffect(() => {
     if (controlledPaused !== undefined) {
       setInternalPaused(controlledPaused);
@@ -127,7 +140,7 @@ export const PauseSubscription: React.FC<PauseSubscriptionProps> = ({
   const remainingDays = Math.max(0, totalAllowed - (usedPauseDays || 0));
   const isPauseDisabledBySeller = allowPause === false || totalAllowed <= 0;
   const isQuotaExhausted = !activePaused && remainingDays <= 0;
-  const isSwitchDisabled = disabled || isPauseDisabledBySeller || isQuotaExhausted || isExpired;
+  const isSwitchDisabled = disabled || isPauseDisabledBySeller || isQuotaExhausted || isExpired || !hasStarted;
 
   useEffect(() => {
     if (remainingDays > 0 && selectedDays > remainingDays) {
@@ -138,7 +151,7 @@ export const PauseSubscription: React.FC<PauseSubscriptionProps> = ({
   }, [remainingDays, selectedDays]);
 
   const handleToggleClick = () => {
-    if (isSwitchDisabled || isExpired) return;
+    if (isSwitchDisabled || isExpired || !hasStarted) return;
     if (!session?.user) {
       router.push("/login?callbackUrl=/my-subscription");
       return;
@@ -214,22 +227,34 @@ export const PauseSubscription: React.FC<PauseSubscriptionProps> = ({
                   fontWeight: 700,
                   padding: "2px 8px",
                   borderRadius: "999px",
-                  backgroundColor: activePaused
+                  backgroundColor: !hasStarted
+                    ? "#EFF6FF"
+                    : activePaused
                     ? "#FEF3C7"
                     : remainingDays > 0
                     ? "#F0FDF4"
                     : "#FEE2E2",
-                  color: activePaused
+                  color: !hasStarted
+                    ? "#1D4ED8"
+                    : activePaused
                     ? "#B45309"
                     : remainingDays > 0
                     ? "#15803D"
                     : "#B91C1C",
                   border: `1px solid ${
-                    activePaused ? "#FDE68A" : remainingDays > 0 ? "#BBF7D0" : "#FECACA"
+                    !hasStarted
+                      ? "#BFDBFE"
+                      : activePaused
+                      ? "#FDE68A"
+                      : remainingDays > 0
+                      ? "#BBF7D0"
+                      : "#FECACA"
                   }`,
                 }}
               >
-                {activePaused
+                {!hasStarted
+                  ? `📅 Starts ${formatDate(startDate)}`
+                  : activePaused
                   ? "⏸️ Paused"
                   : remainingDays > 0
                   ? `✨ ${remainingDays} of ${totalAllowed} days quota left`
@@ -238,7 +263,9 @@ export const PauseSubscription: React.FC<PauseSubscriptionProps> = ({
             </div>
 
             <p className={styles.subtitle}>
-              {activePaused
+              {!hasStarted
+                ? (pausePolicyNote || `Your subscription starts on ${formatDate(startDate)}. You can pause meal deliveries once your plan becomes active.`)
+                : activePaused
                 ? "Your subscription is currently paused. Deliveries are stopped."
                 : isQuotaExhausted
                 ? `You have used all ${totalAllowed} pause days allowed for this plan.`
@@ -259,7 +286,9 @@ export const PauseSubscription: React.FC<PauseSubscriptionProps> = ({
           onClick={handleToggleClick}
           aria-label="Pause Subscription Switch"
           title={
-            isQuotaExhausted
+            !hasStarted
+              ? `Pausing will become available once your plan begins on ${formatDate(startDate)}`
+              : isQuotaExhausted
               ? "All pause days used for this meal subscription"
               : activePaused
               ? "Click to resume your subscription"
@@ -269,6 +298,30 @@ export const PauseSubscription: React.FC<PauseSubscriptionProps> = ({
           <div className={styles.toggleThumb} />
         </button>
       </div>
+
+      {/* Informative Banner when Subscription Has Not Started Yet */}
+      {!hasStarted && startDate && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            marginTop: "10px",
+            padding: "10px 14px",
+            backgroundColor: "#F0F9FF",
+            border: "1px solid #BAE6FD",
+            borderRadius: "10px",
+            color: "#0369A1",
+            fontSize: "0.82rem",
+            fontWeight: 500,
+          }}
+        >
+          <Calendar size={16} color="#0284C7" style={{ flexShrink: 0 }} />
+          <span>
+            <strong>Scheduled Start Date:</strong> Deliveries begin on {formatDate(startDate)}. You can pause or adjust delivery dates after your subscription starts.
+          </span>
+        </div>
+      )}
 
       {/* Active Pause Info Banner */}
       {activePaused && (

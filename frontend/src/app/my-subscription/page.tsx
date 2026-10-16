@@ -475,6 +475,21 @@ function MySubscriptionContent() {
 
   const handleTogglePause = async (subId: string, nextPaused: boolean, days?: number) => {
     try {
+      const targetSub = userSubs.find((s) => s.id === subId) || (subscription?.id === subId ? subscription : null);
+      if (targetSub && nextPaused && targetSub.startDate) {
+        const start = new Date(targetSub.startDate);
+        if (!isNaN(start.getTime())) {
+          const today = new Date();
+          const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+          const startDayStart = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime();
+          if (startDayStart > todayStart) {
+            const formatted = start.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+            showToast("error", `You cannot pause your subscription before it starts on ${formatted}. Pausing is available once your deliveries begin.`);
+            return;
+          }
+        }
+      }
+
       let result: any = null;
       if (subId && !subId.startsWith("sub-demo")) {
         result = await togglePauseUserSubscription(subId, nextPaused, days);
@@ -804,6 +819,37 @@ function MySubscriptionContent() {
   };
 
   const getSubscriptionSlots = (sub: UserActiveMealSubscription): DeliverySlot[] => {
+    // If backend provided enriched mealSlots or todayDeliveries
+    const rawSlotsList = (sub.mealSlots && sub.mealSlots.length > 0)
+      ? sub.mealSlots
+      : (sub.plan?.mealSlots && sub.plan.mealSlots.length > 0 ? sub.plan.mealSlots : []);
+
+    if (rawSlotsList.length > 0) {
+      return rawSlotsList.map((s: any, idx: number) => {
+        const parsed = formatMealTimingDisplay(s.name || s.id);
+        const todayMatch = sub.todayDeliveries?.find(
+          (d: any) => d.slotId === s.id || (s.id && d.slotId?.toLowerCase() === s.id.toLowerCase())
+        );
+
+        return {
+          id: s.id || `slot-${sub.id}-${idx}`,
+          name: `${parsed.name} Delivery`,
+          timeRange: parsed.timeRange || s.defaultTimeRange || todayMatch?.timeRange || "",
+          icon: "",
+          todayStatus: todayMatch?.status || s.todayStatus || (sub.isPaused ? "SKIPPED_PAUSED" : "PENDING"),
+          isDelivered: Boolean(todayMatch?.isDelivered ?? s.isDelivered),
+          deliveredAt: todayMatch?.deliveredAt || s.deliveredAt || null,
+          isOverdue: Boolean(todayMatch?.isOverdue ?? s.isOverdue),
+          isOtpActive: Boolean(todayMatch?.isOtpActive ?? s.isOtpActive),
+          timingStatus: todayMatch?.timingStatus || s.timingStatus || "UPCOMING",
+          slotStartTime: todayMatch?.slotStartTime || s.slotStartTime || "",
+          slotEndTime: todayMatch?.slotEndTime || s.slotEndTime || "",
+          deliveryOtp: todayMatch?.deliveryOtp || s.deliveryOtp || null,
+          otpAvailableAt: todayMatch?.slotStartTime || s.otpAvailableAt || "",
+        };
+      });
+    }
+
     const timings = (sub.plan?.mealTimings && sub.plan.mealTimings.length > 0)
       ? sub.plan.mealTimings
       : (sub.mealTimings && sub.mealTimings.length > 0 ? sub.mealTimings : []);
@@ -815,18 +861,6 @@ function MySubscriptionContent() {
           id: `slot-${sub.id}-${idx}`,
           name: `${parsed.name} Delivery`,
           timeRange: parsed.timeRange,
-          icon: "",
-        };
-      });
-    }
-
-    if (sub.mealSlots && sub.mealSlots.length > 0) {
-      return sub.mealSlots.map((s: any, idx: number) => {
-        const parsed = formatMealTimingDisplay(s.name || s.id);
-        return {
-          id: `slot-${sub.id}-${idx}`,
-          name: `${parsed.name} Delivery`,
-          timeRange: parsed.timeRange || s.defaultTimeRange || "",
           icon: "",
         };
       });
@@ -1377,6 +1411,7 @@ function MySubscriptionContent() {
                             {/* Pause Subscription Section (only for active, non-expired plans) */}
                             {isPauseAllowed && !isExpired && (
                               <PauseSubscription
+                                startDate={subItem.startDate}
                                 isPaused={subItem.isPaused}
                                 disabled={isPlanInactive || subItem.status?.toUpperCase() === "CANCELLED"}
                                 allowPause={isPauseAllowed}

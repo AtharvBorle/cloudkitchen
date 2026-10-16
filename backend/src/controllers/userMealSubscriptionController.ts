@@ -4,6 +4,7 @@ import { ApiError } from "@/lib/api-error";
 import { emitMealSubscriptionUpdated } from "@/lib/realtime-events";
 import { SubscriptionPauseService } from "@/services/subscriptionPauseService";
 import { normalizeMealSlotIds, getMealSlotDetails, extractTimeRangeString } from "@/lib/meal-slots";
+import { getNowInIST, getMealDeliveryTimingStatus, getMealDeliveryOtp } from "@/lib/meal-delivery-otp";
 import Razorpay from "razorpay";
 import crypto from "crypto";
 
@@ -13,9 +14,13 @@ export const getUserMealSubscriptions = async () => {
         throw new ApiError("Please log in first to view your meal subscriptions.", 401);
     }
 
+    const todayIst = getNowInIST();
     const subscriptions = await db.userMealSubscription.findMany({
         where: { userId: session.user.id },
         include: {
+            deliveries: {
+                where: { scheduledDate: todayIst.dateStr },
+            },
             slots: {
                 include: { slot: true }
             },
@@ -159,6 +164,23 @@ export const getUserMealSubscriptions = async () => {
 
         const sellerTimes = (sub.sellerId ? sellerTimesMap[sub.sellerId] : null) || basePlatformTimes;
 
+        const isPlanDeactivated = sub.plan?.status === "Inactive";
+        const isEndReached = (() => {
+            if (!sub.endDate) return false;
+            const end = new Date(sub.endDate);
+            if (isNaN(end.getTime())) return false;
+            if (end <= now) return true;
+            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+            const endDayStart = new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime();
+            return endDayStart <= todayStart;
+        })();
+        const isExpired = sub.status === "EXPIRED" || isEndReached;
+        const effectiveStatus = isExpired
+            ? "EXPIRED"
+            : isPlanDeactivated && sub.status === "ACTIVE"
+            ? "INACTIVE"
+            : sub.status;
+
         const rawSlots = sub.slots && sub.slots.length > 0
             ? sub.slots.map((s: any) => s.slotId)
             : (sub.plan?.slots && sub.plan.slots.length > 0
@@ -175,9 +197,31 @@ export const getUserMealSubscriptions = async () => {
                 extractTimeRangeString(dbSlot?.defaultTimeRange) ||
                 ""
             ).trim();
+
+            const existingDelivery = (sub as any).deliveries?.find(
+                (d: any) => d.slotId === id || normalizeMealSlotIds([d.slotId])[0] === id
+            );
+            const slotDeliveryStatus = existingDelivery?.status || (sub.isPaused ? "SKIPPED_PAUSED" : "PENDING");
+            const timing = getMealDeliveryTimingStatus(todayIst.dateStr, customTime, base, slotDeliveryStatus);
+            const isSubActiveToday = !isExpired && !sub.isPaused && sub.status === "ACTIVE";
+            const otp = (isSubActiveToday && timing.isOtpActive && slotDeliveryStatus !== "DELIVERED" && slotDeliveryStatus !== "SKIPPED_PAUSED")
+                ? getMealDeliveryOtp(sub.id, todayIst.dateStr, id)
+                : null;
+
             return {
                 ...base,
                 defaultTimeRange: customTime || "",
+                todayStatus: slotDeliveryStatus,
+                isDelivered: slotDeliveryStatus === "DELIVERED",
+                deliveredAt: existingDelivery?.deliveredAt ? new Date(existingDelivery.deliveredAt).toISOString() : null,
+                isOverdue: timing.isOverdue,
+                isOtpActive: timing.isOtpActive,
+                overdueMinutes: timing.overdueMinutes,
+                timingStatus: timing.timingStatus,
+                slotStartTime: timing.window.startFormatted,
+                slotEndTime: timing.window.endFormatted,
+                deliveryOtp: otp,
+                otpAvailableAt: timing.window.startFormatted,
             };
         });
 
@@ -214,23 +258,6 @@ export const getUserMealSubscriptions = async () => {
             return time ? `${name}: ${time}` : name;
         });
 
-        const isPlanDeactivated = sub.plan?.status === "Inactive";
-        const isEndReached = (() => {
-            if (!sub.endDate) return false;
-            const end = new Date(sub.endDate);
-            if (isNaN(end.getTime())) return false;
-            if (end <= now) return true;
-            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-            const endDayStart = new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime();
-            return endDayStart <= todayStart;
-        })();
-        const isExpired = sub.status === "EXPIRED" || isEndReached;
-        const effectiveStatus = isExpired
-            ? "EXPIRED"
-            : isPlanDeactivated && sub.status === "ACTIVE"
-            ? "INACTIVE"
-            : sub.status;
-
         return {
             id: sub.id,
             userId: sub.userId,
@@ -248,6 +275,7 @@ export const getUserMealSubscriptions = async () => {
             usedPauseDays: sub.usedPauseDays || 0,
             pauseHistory: parsedPauseHistory,
             dailyDeliveries: parsedDailyDeliveries,
+            todayDeliveries: resolvedSlotDetails,
             mealTimings: resolvedTimings,
             mealSlots: resolvedSlotDetails,
             slotIds: resolvedSlotIds,

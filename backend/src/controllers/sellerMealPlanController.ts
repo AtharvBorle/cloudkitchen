@@ -1170,7 +1170,8 @@ export const toggleSubscriberMealDeliveryStatus = async (
     date: string,
     status: "DELIVERED" | "NOT_DELIVERED" | "PENDING",
     note?: string,
-    slotId?: string
+    slotId?: string,
+    otp?: string
 ) => {
     const { sellerProfile } = await getAuthenticatedSellerProfile();
 
@@ -1190,7 +1191,8 @@ export const toggleSubscriberMealDeliveryStatus = async (
         date,
         targetSlot,
         status,
-        note
+        note,
+        otp
     );
 };
 

@@ -88,6 +88,28 @@ export class SubscriptionPauseService {
         throw new ApiError("Cannot pause an expired meal subscription. Pausing is only allowed for eligible, active subscriptions.", 400);
       }
 
+      // Check if subscription has not reached its scheduled start date yet
+      const isStarted = (() => {
+        if (!subscription.startDate) return true;
+        const start = new Date(subscription.startDate);
+        if (isNaN(start.getTime())) return true;
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        const startDayStart = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime();
+        return startDayStart <= todayStart;
+      })();
+
+      if (!isStarted) {
+        const startFormatted = new Date(subscription.startDate).toLocaleDateString("en-IN", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        });
+        throw new ApiError(
+          `You cannot pause your subscription before it starts on ${startFormatted}. Pausing is only available once your meal deliveries begin.`,
+          400
+        );
+      }
+
       const plan = subscription.plan;
       const allowedDays = parseAllowedPauseDays(plan?.pauseBillingPeriod);
       const allowPause = (plan as any)?.allowPause;

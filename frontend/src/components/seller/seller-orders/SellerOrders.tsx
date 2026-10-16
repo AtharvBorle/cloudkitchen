@@ -33,9 +33,11 @@ import { playNewOrderChime } from "@/lib/audio-chime";
 import RejectOrderModal from "./RejectOrderModal";
 import ToastNotification from "./ToastNotification";
 import PaginationControls from "../common/PaginationControls";
+import DeliveryOtpModal from "../subscription/DeliveryOtpModal";
 import {
   markSubscriberMealDeliveryStatus,
   MealSubscriber,
+  MealSlotDeliveryRecord,
   getTierColors,
 } from "@/lib/meal-subscriptions";
 import {
@@ -288,6 +290,7 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
   // Subscribers State
   const [subscribers, setSubscribers] = useState<MealSubscriber[]>([]);
   const [loadingSubs, setLoadingSubs] = useState(false);
+  const [otpModalDelivery, setOtpModalDelivery] = useState<MealSlotDeliveryRecord | null>(null);
 
   const tabParam = searchParams?.get("subTab")?.toLowerCase();
   const initialSubTab: "today" | "paused" | "all" =
@@ -533,41 +536,89 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
     const isCurrentlyDelivered = sub.dailyDeliveries?.some(
       (d: any) => d.date === todayDateStr && (d.slotId === targetSlotId || !d.slotId) && d.status === "DELIVERED"
     );
-    const nextStatus: "DELIVERED" | "NOT_DELIVERED" = isCurrentlyDelivered ? "NOT_DELIVERED" : "DELIVERED";
 
-    // Optimistic UI update
-    setSubscribers((prev) =>
-      prev.map((s) => {
-        if (s.id !== sub.id) return s;
-        const currentDeliveries = Array.isArray(s.dailyDeliveries) ? [...s.dailyDeliveries] : [];
-        const idx = currentDeliveries.findIndex(
-          (d: any) => d.date === todayDateStr && (d.slotId === targetSlotId || !d.slotId)
-        );
-        const rec = {
-          date: todayDateStr,
-          slotId: targetSlotId,
-          status: nextStatus,
-          markedAt: new Date().toISOString(),
-        };
-        if (idx >= 0) {
-          currentDeliveries[idx] = rec;
-        } else {
-          currentDeliveries.unshift(rec);
-        }
-        return { ...s, dailyDeliveries: currentDeliveries };
-      })
-    );
+    // If not delivered yet, open OTP verification modal
+    if (!isCurrentlyDelivered) {
+      const slotObj = getMealSlotDetails(targetSlotId);
+      const record: MealSlotDeliveryRecord = {
+        id: `del-${sub.id}-${targetSlotId}`,
+        subscriptionId: sub.id,
+        slotId: targetSlotId,
+        slotName: slotObj.name,
+        slotSubtitle: slotObj.subtitle,
+        scheduledTime: slotObj.defaultTimeRange,
+        sellerId: "",
+        userId: (sub as any).userId || "",
+        scheduledDate: todayDateStr,
+        status: "PENDING",
+        deliveredAt: null,
+        markedBy: null,
+        note: null,
+        customerName: sub.customerName || "Subscriber",
+        customerPhone: sub.customerPhone || "",
+        customerEmail: sub.customerEmail || "",
+        deliveryAddress: sub.deliveryAddress || "",
+        planName: sub.planName || "Meal Plan",
+        tier: sub.tier || "Bronze",
+        subscription: {
+          id: sub.id,
+          tier: sub.tier || "Bronze",
+          status: sub.status || "ACTIVE",
+          deliveryAddress: sub.deliveryAddress || "",
+          contactPhone: sub.customerPhone || "",
+          user: {
+            id: (sub as any).userId || "",
+            name: sub.customerName || "Subscriber",
+            phone: sub.customerPhone || "",
+            email: sub.customerEmail || "",
+          },
+          plan: {
+            id: sub.planId || "",
+            name: sub.planName || "Meal Plan",
+            tier: sub.tier || "Bronze",
+          },
+        },
+      };
+      setOtpModalDelivery(record);
+      return;
+    }
 
+    // Toggling back from DELIVERED to NOT_DELIVERED
+    const nextStatus = "NOT_DELIVERED";
     try {
       await markSubscriberMealDeliveryStatus(sub.id, todayDateStr, nextStatus, undefined, targetSlotId);
       const slotObj = getMealSlotDetails(targetSlotId);
       setToast({
         type: "success",
-        text: `${slotObj.name} marked as ${nextStatus === "DELIVERED" ? "Delivered" : "Pending"} for ${sub.customerName || "Customer"}`,
+        text: `${slotObj.name} marked as Pending for ${sub.customerName || "Customer"}`,
       });
+      loadSubscribers(false);
     } catch (err: any) {
       setToast({ type: "error", text: err.message || "Failed to update delivery status" });
       loadSubscribers(true);
+    }
+  };
+
+  const handleConfirmOrderOtpDelivery = async (otp: string, note?: string) => {
+    if (!otpModalDelivery) return;
+    const item = otpModalDelivery;
+    try {
+      await markSubscriberMealDeliveryStatus(
+        item.subscriptionId,
+        todayDateStr,
+        "DELIVERED",
+        note,
+        item.slotId,
+        otp
+      );
+      setToast({
+        type: "success",
+        text: `${item.slotName} marked as Delivered for ${item.customerName || "Customer"} (Verified via OTP)`,
+      });
+      setOtpModalDelivery(null);
+      loadSubscribers(false);
+    } catch (err: any) {
+      throw err;
     }
   };
 
@@ -1953,6 +2004,14 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
           if (!isRejecting) setOrderToReject(null);
         }}
         onConfirm={handleConfirmRejection}
+      />
+
+      {/* Customer Delivery OTP Verification Modal */}
+      <DeliveryOtpModal
+        isOpen={Boolean(otpModalDelivery)}
+        onClose={() => setOtpModalDelivery(null)}
+        onConfirm={handleConfirmOrderOtpDelivery}
+        delivery={otpModalDelivery}
       />
 
       {/* In-App Toast Notification */}

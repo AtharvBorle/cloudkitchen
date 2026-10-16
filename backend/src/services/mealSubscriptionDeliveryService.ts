@@ -2,19 +2,24 @@ import { db } from "@/lib/db";
 import { ApiError } from "@/lib/api-error";
 import { emitMealSubscriptionUpdated } from "@/lib/realtime-events";
 import { PREDEFINED_MEAL_SLOTS, getMealSlotDetails, normalizeMealSlotId } from "@/lib/meal-slots";
+import {
+  getMealDeliveryTimingStatus,
+  verifyMealDeliveryOtp,
+  getNowInIST,
+} from "@/lib/meal-delivery-otp";
 
 /**
  * ==============================================================================
  * 🚚 Meal Subscription Delivery Management Service
  * ==============================================================================
  * Central service for generating, querying, and updating scheduled daily meal deliveries
- * across the 7 standardized meal slots.
+ * across the standardized meal slots with automatic overdue tracking & OTP verification.
  */
 
 export interface GetDeliveriesOptions {
   dateStr: string;           // YYYY-MM-DD
   slotId?: string;           // "all" or specific slot ID e.g. "breakfast"
-  status?: string;           // "ALL" or "PENDING" | "DELIVERED" | "NOT_DELIVERED" | "SKIPPED_PAUSED"
+  status?: string;           // "ALL" or "PENDING" | "DELIVERED" | "NOT_DELIVERED" | "SKIPPED_PAUSED" | "OVERDUE"
   search?: string;           // Search query (customer name, phone, address, plan)
 }
 
@@ -115,6 +120,7 @@ export class MealSubscriptionDeliveryService {
    */
   static async getSellerDeliveries(sellerId: string, options: GetDeliveriesOptions) {
     const { dateStr, slotId, status, search } = options;
+    const isOverdueFilter = status === "OVERDUE";
 
     // 1. Ensure deliveries exist for the requested date
     await this.ensureSubscriptionDeliveriesForDate(sellerId, dateStr);
@@ -132,11 +138,11 @@ export class MealSubscriptionDeliveryService {
       }
     }
 
-    if (status && status !== "ALL") {
+    if (status && status !== "ALL" && !isOverdueFilter) {
       where.status = status;
     }
 
-    // 3. Query all deliveries for date to compute slot counts
+    // 3. Query all deliveries for date to compute slot counts and overdue counts
     const allDeliveriesForDate = await db.mealSubscriptionDelivery.findMany({
       where: {
         sellerId,
@@ -146,11 +152,16 @@ export class MealSubscriptionDeliveryService {
         id: true,
         slotId: true,
         status: true,
+        scheduledDate: true,
+        scheduledTime: true,
       },
     });
 
     const slotCounts: Record<string, number> = {
       all: allDeliveriesForDate.length,
+      overdue: 0,
+      pending: 0,
+      delivered: 0,
     };
     PREDEFINED_MEAL_SLOTS.forEach((s) => {
       slotCounts[s.id] = 0;
@@ -160,6 +171,16 @@ export class MealSubscriptionDeliveryService {
       const normSlot = normalizeMealSlotId(d.slotId);
       if (normSlot && slotCounts[normSlot] !== undefined) {
         slotCounts[normSlot]++;
+      }
+      if (d.status === "DELIVERED") {
+        slotCounts.delivered++;
+      } else if (d.status === "PENDING") {
+        slotCounts.pending++;
+        const sDef = getMealSlotDetails(d.slotId);
+        const timing = getMealDeliveryTimingStatus(d.scheduledDate, d.scheduledTime, sDef, d.status);
+        if (timing.isOverdue) {
+          slotCounts.overdue++;
+        }
       }
     }
 
@@ -195,11 +216,21 @@ export class MealSubscriptionDeliveryService {
       ],
     });
 
-    // 5. Apply search filter in memory if provided
+    // 5. Apply overdue and search filters in memory
     let results = deliveries;
+
+    if (isOverdueFilter) {
+      results = results.filter((d) => {
+        if (d.status !== "PENDING") return false;
+        const sDef = d.slot ? { ...d.slot, description: d.slot.description || "" } : getMealSlotDetails(d.slotId);
+        const timing = getMealDeliveryTimingStatus(d.scheduledDate, d.scheduledTime || sDef.defaultTimeRange, sDef, d.status);
+        return timing.isOverdue;
+      });
+    }
+
     if (search && search.trim()) {
       const q = search.trim().toLowerCase();
-      results = deliveries.filter((d) => {
+      results = results.filter((d) => {
         const u = d.subscription?.user;
         const p = d.subscription?.plan;
         const addr = d.subscription?.deliveryAddress || "";
@@ -218,7 +249,13 @@ export class MealSubscriptionDeliveryService {
     const formattedDeliveries = results.map((d) => {
       const user = d.subscription?.user;
       const plan = d.subscription?.plan;
-      const slotDef = d.slot || getMealSlotDetails(d.slotId);
+      const slotDef = d.slot ? { ...d.slot, description: d.slot.description || "" } : getMealSlotDetails(d.slotId);
+      const timing = getMealDeliveryTimingStatus(
+        d.scheduledDate,
+        d.scheduledTime || slotDef.defaultTimeRange,
+        slotDef,
+        d.status
+      );
 
       return {
         id: d.id,
@@ -232,6 +269,11 @@ export class MealSubscriptionDeliveryService {
         deliveredAt: d.deliveredAt ? d.deliveredAt.toISOString() : null,
         markedBy: d.markedBy,
         note: d.note,
+        isOverdue: timing.isOverdue,
+        overdueMinutes: timing.overdueMinutes,
+        timingStatus: timing.timingStatus,
+        slotStartTime: timing.window.startFormatted,
+        slotEndTime: timing.window.endFormatted,
         customerName: user?.name || "Customer",
         customerPhone: d.subscription?.contactPhone || user?.phone || "",
         customerEmail: user?.email || "",
@@ -265,11 +307,13 @@ export class MealSubscriptionDeliveryService {
       slotCounts,
       deliveries: formattedDeliveries,
       totalCount: formattedDeliveries.length,
+      overdueCount: slotCounts.overdue,
     };
   }
 
   /**
    * Updates delivery status for a specific occurrence (e.g. mark Breakfast as Delivered).
+   * Validates Customer Delivery OTP before allowing DELIVERED status.
    */
   static async recordDeliveryStatus(
     sellerId: string,
@@ -277,7 +321,8 @@ export class MealSubscriptionDeliveryService {
     dateStr: string,
     slotId: string,
     status: "DELIVERED" | "NOT_DELIVERED" | "PENDING",
-    note?: string
+    note?: string,
+    otp?: string
   ) {
     const normalizedSlot = normalizeMealSlotId(slotId) || "breakfast";
     const slotDef = getMealSlotDetails(normalizedSlot);
@@ -290,6 +335,32 @@ export class MealSubscriptionDeliveryService {
 
     if (!sub) {
       throw new ApiError("Subscription not found or not assigned to your kitchen", 404);
+    }
+
+    // Strict OTP verification when marking delivery
+    let deliveryNote = note;
+    if (status === "DELIVERED") {
+      const isValid = verifyMealDeliveryOtp(otp, subscriptionId, dateStr, normalizedSlot);
+      if (!isValid) {
+        throw new ApiError(
+          "Invalid Delivery OTP. Please ask the customer for the 6-digit OTP displayed in their app notification or active subscription to confirm delivery.",
+          400
+        );
+      }
+
+      const timing = getMealDeliveryTimingStatus(
+        dateStr,
+        slotDef.defaultTimeRange,
+        slotDef,
+        "PENDING"
+      );
+      if (timing.isOverdue) {
+        deliveryNote = deliveryNote
+          ? `${deliveryNote} (Verified via OTP - Late Delivery)`
+          : "Verified via Customer OTP (Late Delivery)";
+      } else {
+        deliveryNote = deliveryNote || "Verified via Customer OTP";
+      }
     }
 
     // Upsert the delivery record
@@ -311,13 +382,13 @@ export class MealSubscriptionDeliveryService {
         status,
         deliveredAt: status === "DELIVERED" ? now : undefined,
         markedBy: sellerId,
-        note: note || undefined,
+        note: deliveryNote || undefined,
       },
       update: {
         status,
         deliveredAt: status === "DELIVERED" ? now : null,
         markedBy: sellerId,
-        note: note || undefined,
+        note: deliveryNote || undefined,
       },
     });
 
