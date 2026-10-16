@@ -33,14 +33,14 @@ fi
 echo ""
 echo "📦 [2/6] Installing Backend Dependencies..."
 cd "$PROJECT_ROOT/backend"
-npm install --production=false
+npm install --legacy-peer-deps
 cd "$PROJECT_ROOT"
 
 # ── 3. Install Frontend Dependencies ─────────────────────────────────────
 echo ""
 echo "📦 [3/6] Installing Frontend Dependencies..."
 cd "$PROJECT_ROOT/frontend"
-npm install --production=false
+npm install --legacy-peer-deps
 cd "$PROJECT_ROOT"
 
 # ── 4. Build Backend & Sync Database ─────────────────────────────────────
