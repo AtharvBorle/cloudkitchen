@@ -259,13 +259,17 @@ export const getSellerMealPlans = async () => {
             const base = getMealSlotDetails(id);
             const dbSlot = sub.slots?.find((s: any) => s.slotId === id)?.slot ||
                            planObj?.slots?.find((s: any) => s.slotId === id)?.slot;
-            const customTime = (
+            const planTimingMatch = parsedMealTimings.find(
+                (t: string) => typeof t === "string" && normalizeMealSlotId(t) === id && t.includes(":")
+            );
+            const planTiming = planTimingMatch ? extractTimeRangeString(planTimingMatch) : "";
+            const sellerTiming = extractTimeRangeString(
                 combinedSellerTimes[id] ||
                 combinedSellerTimes[id.replace(/-/g, '_')] ||
-                combinedSellerTimes[id.replace(/_/g, '-')] ||
-                extractTimeRangeString(dbSlot?.defaultTimeRange) ||
-                ""
-            ).trim();
+                combinedSellerTimes[id.replace(/_/g, '-')]
+            );
+            const dbSlotTiming = extractTimeRangeString(dbSlot?.defaultTimeRange);
+            const customTime = (planTiming || sellerTiming || dbSlotTiming || "").trim();
 
             const existingDelivery = sub.deliveries?.find(
                 (d: any) => d.slotId === id || normalizeMealSlotIds([d.slotId])[0] === id
@@ -279,7 +283,7 @@ export const getSellerMealPlans = async () => {
 
             const evaluationDateStr = isStarted ? todayIst.dateStr : subStartDateStr;
             const timing = getMealDeliveryTimingStatus(evaluationDateStr, customTime, base, slotDeliveryStatus);
-            const effectiveTime = customTime || base.defaultTimeRange || (timing.window ? `${timing.window.startFormatted} - ${timing.window.endFormatted}` : "") || getSlotDeliveryTime(id);
+            const effectiveTime = customTime || "";
 
             return {
                 ...base,
@@ -303,7 +307,7 @@ export const getSellerMealPlans = async () => {
         const resolvedTimings = resolvedSlotIds.map((id) => {
             const detail = resolvedSlotDetails.find((d) => d.id === id);
             const name = detail?.name || getMealSlotDetails(id).name;
-            const time = detail?.defaultTimeRange || getSlotDeliveryTime(id);
+            const time = detail?.defaultTimeRange || "";
             return time ? `${name}: ${time}` : name;
         });
 
@@ -371,24 +375,28 @@ export const getSellerMealPlans = async () => {
         const planSlotDetails = planSlotIds.map((id: string) => {
             const base = getMealSlotDetails(id);
             const dbSlot = plan.slots?.find((s: any) => s.slotId === id)?.slot;
-            const customTime = (
+            const planTimingMatch = (parsedTimings || []).find(
+                (t: string) => typeof t === "string" && normalizeMealSlotId(t) === id && t.includes(":")
+            );
+            const planTiming = planTimingMatch ? extractTimeRangeString(planTimingMatch) : "";
+            const sellerTiming = extractTimeRangeString(
                 combinedSellerTimes[id] ||
                 combinedSellerTimes[id.replace(/-/g, '_')] ||
-                combinedSellerTimes[id.replace(/_/g, '-')] ||
-                extractTimeRangeString(dbSlot?.defaultTimeRange) ||
-                ""
-            ).trim();
-            const effectiveTime = customTime || base.defaultTimeRange || getSlotDeliveryTime(id);
+                combinedSellerTimes[id.replace(/_/g, '-')]
+            );
+            const dbSlotTiming = extractTimeRangeString(dbSlot?.defaultTimeRange);
+            const customTime = (planTiming || sellerTiming || dbSlotTiming || "").trim();
+
             return {
                 ...base,
-                defaultTimeRange: effectiveTime,
+                defaultTimeRange: customTime || "",
             };
         });
 
         const resolvedTimings = planSlotIds.map((id: string) => {
             const detail = planSlotDetails.find((d) => d.id === id);
             const name = detail?.name || getMealSlotDetails(id).name;
-            const time = detail?.defaultTimeRange || getSlotDeliveryTime(id);
+            const time = detail?.defaultTimeRange || "";
             return time ? `${name}: ${time}` : name;
         });
 
@@ -1200,11 +1208,6 @@ export const getPublicMealPlans = async (req: Request) => {
             // 3. Tertiary: slotRecord defaultTimeRange
             if (!configuredTime && slotRecord?.defaultTimeRange) {
                 configuredTime = extractTimeRangeString(slotRecord.defaultTimeRange);
-            }
-
-            // 4. Quaternary: predefined slot default time
-            if (!configuredTime) {
-                configuredTime = getSlotDeliveryTime(slotId);
             }
 
             return configuredTime ? `${slotName}: ${configuredTime}` : slotName;

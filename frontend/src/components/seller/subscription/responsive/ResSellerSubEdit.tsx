@@ -68,12 +68,10 @@ const DEFAULT_METRICS: PlanMetricsData = {
 const DEFAULT_FEATURES: string[] = [];
 
 const DEFAULT_MEAL_TIMINGS: MealServingTiming[] = [
-  { id: "1", name: "Breakfast", time: "07:30 AM - 09:30 AM" },
-  { id: "2", name: "Morning Meal", time: "10:30 AM - 11:30 AM" },
-  { id: "3", name: "Lunch", time: "12:30 PM - 02:30 PM" },
-  { id: "4", name: "Evening Snack", time: "04:30 PM - 06:30 PM" },
-  { id: "5", name: "Dinner", time: "07:30 PM - 10:00 PM" },
-  { id: "6", name: "Late-Night Snack", time: "10:30 PM - 12:30 AM" },
+  { id: "1", name: "Breakfast", time: "7:30 AM - 9:30 AM" },
+  { id: "2", name: "Lunch", time: "12:30 PM - 1:30 PM" },
+  { id: "3", name: "Evening Snacks", time: "5:30 PM - 6:30 PM" },
+  { id: "4", name: "Dinner", time: "8:30 PM - 9:30 PM" },
 ];
 
 const DEFAULT_METADATA: PlanMetadataData = {

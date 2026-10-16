@@ -33,7 +33,7 @@ export const PREDEFINED_MEAL_SLOTS: MealSlotDefinition[] = [
     name: "Breakfast",
     subtitle: "Morning breakfast / Nasta",
     description: "Start the day with fresh morning breakfast and wholesome nasta dishes.",
-    defaultTimeRange: "07:30 AM - 09:30 AM",
+    defaultTimeRange: "",
     startHour: 7,
     startMinute: 30,
     endHour: 9,
@@ -45,7 +45,7 @@ export const PREDEFINED_MEAL_SLOTS: MealSlotDefinition[] = [
     name: "Morning Meal",
     subtitle: "Morning meal",
     description: "Hearty pre-lunch morning meal designed for early workers and students.",
-    defaultTimeRange: "10:30 AM - 11:30 AM",
+    defaultTimeRange: "",
     startHour: 10,
     startMinute: 30,
     endHour: 11,
@@ -57,7 +57,7 @@ export const PREDEFINED_MEAL_SLOTS: MealSlotDefinition[] = [
     name: "Lunch",
     subtitle: "Afternoon meal",
     description: "Complete nutritious afternoon meal thali, mains, and freshly prepared sides.",
-    defaultTimeRange: "12:30 PM - 02:30 PM",
+    defaultTimeRange: "",
     startHour: 12,
     startMinute: 30,
     endHour: 14,
@@ -69,7 +69,7 @@ export const PREDEFINED_MEAL_SLOTS: MealSlotDefinition[] = [
     name: "Evening Snack",
     subtitle: "Evening snacks",
     description: "Warm evening refreshments, savory chai accompaniments, and snacks.",
-    defaultTimeRange: "04:30 PM - 06:30 PM",
+    defaultTimeRange: "",
     startHour: 16,
     startMinute: 30,
     endHour: 18,
@@ -81,7 +81,7 @@ export const PREDEFINED_MEAL_SLOTS: MealSlotDefinition[] = [
     name: "Dinner",
     subtitle: "Night meal",
     description: "Freshly prepared wholesome evening dinner thali and comfort meals.",
-    defaultTimeRange: "07:30 PM - 10:00 PM",
+    defaultTimeRange: "",
     startHour: 19,
     startMinute: 30,
     endHour: 22,
@@ -93,7 +93,7 @@ export const PREDEFINED_MEAL_SLOTS: MealSlotDefinition[] = [
     name: "Late-Night Snack",
     subtitle: "Late-night snacks",
     description: "Convenient late-night bites and comfort food for night owls.",
-    defaultTimeRange: "10:30 PM - 12:30 AM",
+    defaultTimeRange: "",
     startHour: 22,
     startMinute: 30,
     endHour: 24,
@@ -210,7 +210,7 @@ export function extractTimeRangeString(str?: string | null): string {
 
 /**
  * Returns the configured delivery timing for a slot.
- * Falls back to the standardized slot time window if custom time is not set.
+ * Does NOT return any arbitrary hardcoded default times.
  */
 export function getSlotDeliveryTime(slotId: string, customTime?: string): string {
   const norm = normalizeMealSlotId(slotId) || "breakfast";
@@ -226,16 +226,6 @@ export function getSlotDeliveryTime(slotId: string, customTime?: string): string
   if (def?.defaultTimeRange) {
     const extracted = extractTimeRangeString(def.defaultTimeRange);
     if (extracted) return extracted;
-  }
-
-  if (def && typeof def.startHour === "number" && typeof def.endHour === "number") {
-    const formatTime = (h: number, m: number = 0) => {
-      const ampm = h >= 12 && h < 24 ? "PM" : "AM";
-      const h12 = h % 12 === 0 ? 12 : h % 12;
-      const mStr = String(m).padStart(2, "0");
-      return `${String(h12).padStart(2, "0")}:${mStr} ${ampm}`;
-    };
-    return `${formatTime(def.startHour, def.startMinute || 0)} - ${formatTime(def.endHour, def.endMinute || 0)}`;
   }
 
   return "";
@@ -255,12 +245,11 @@ export interface FormattedMealTiming {
  */
 export function formatMealTimingDisplay(timing: string | null | undefined): FormattedMealTiming {
   if (!timing || typeof timing !== "string") {
-    const defaultTime = getSlotDeliveryTime("lunch");
     return {
       slotId: "lunch",
       name: "Lunch",
-      timeRange: defaultTime,
-      fullDisplay: defaultTime ? `Lunch (${defaultTime})` : "Lunch",
+      timeRange: "",
+      fullDisplay: "Lunch",
       icon: "",
     };
   }

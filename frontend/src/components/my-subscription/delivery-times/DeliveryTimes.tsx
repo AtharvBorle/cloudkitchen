@@ -193,7 +193,7 @@ export const DeliveryTimes: React.FC<DeliveryTimesProps> = ({
                       extractTimeRangeString(slot.timeRange) ||
                       (slot.slotStartTime && slot.slotEndTime ? `${slot.slotStartTime} - ${slot.slotEndTime}` : "") ||
                       getSlotDeliveryTime(slot.id);
-                    return <span className={styles.slotTime}>{displayTime}</span>;
+                    return displayTime ? <span className={styles.slotTime}>{displayTime}</span> : null;
                   })()}
 
                   {isDelivered ? (

@@ -25,7 +25,7 @@ import {
   getTierColors,
   UserActiveMealSubscription,
 } from "@/lib/meal-subscriptions";
-import { formatMealTimingDisplay, getMealSlotDetails, getSlotDeliveryTime, extractTimeRangeString } from "@/lib/meal-slots";
+import { formatMealTimingDisplay, getMealSlotDetails, getSlotDeliveryTime, extractTimeRangeString, normalizeMealSlotId } from "@/lib/meal-slots";
 import { fetchApi } from "@/lib/fetch-api";
 import {
   Utensils,
@@ -843,14 +843,12 @@ function MySubscriptionContent() {
         );
 
         const effectiveTime =
-          extractTimeRangeString(parsed.timeRange) ||
           extractTimeRangeString(s.defaultTimeRange) ||
           extractTimeRangeString((todayMatch as any)?.defaultTimeRange) ||
           extractTimeRangeString((todayMatch as any)?.timeRange) ||
           extractTimeRangeString(s.timeRange) ||
           (s.slotStartTime && s.slotEndTime ? `${s.slotStartTime} - ${s.slotEndTime}` : "") ||
-          (todayMatch?.slotStartTime && todayMatch?.slotEndTime ? `${todayMatch.slotStartTime} - ${todayMatch.slotEndTime}` : "") ||
-          getSlotDeliveryTime(s.id || slotDef.id);
+          ((todayMatch as any)?.slotStartTime && (todayMatch as any)?.slotEndTime ? `${(todayMatch as any).slotStartTime} - ${(todayMatch as any).slotEndTime}` : "");
 
         return {
           id: s.id || `slot-${sub.id}-${idx}`,
@@ -879,11 +877,9 @@ function MySubscriptionContent() {
 
     if (timings.length > 0) {
       return timings.map((t: string, idx: number) => {
-        const parsed = formatMealTimingDisplay(t);
-        const slotDef = getMealSlotDetails(parsed.slotId);
-        const effectiveTime =
-          extractTimeRangeString(parsed.timeRange) ||
-          getSlotDeliveryTime(slotDef.id, t);
+        const slotId = normalizeMealSlotId(t) || `slot-${sub.id}-${idx}`;
+        const slotDef = getMealSlotDetails(slotId);
+        const effectiveTime = extractTimeRangeString(t);
 
         return {
           id: `slot-${sub.id}-${idx}`,
