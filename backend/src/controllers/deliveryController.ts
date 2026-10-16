@@ -6,6 +6,7 @@ import crypto from "crypto";
 import { handleCodOrderDelivered } from "@/lib/delivery-wallet";
 import { emitOrderUpdated } from "@/lib/realtime-events";
 import { addOrderDelayMinutes, enrichOrdersWithEta, enrichOrderWithEta, getOrInitOrderTimer } from "@/lib/order-eta";
+import { sendOrderStatusNotification } from "@/lib/emailService";
 
 export const getDeliveryOrders = async () => {
     const session = await getAuthSession();
@@ -132,6 +133,16 @@ export const verifyDeliveryPayment = async (req: Request, orderId: string) => {
             isPaid: true,
             status: "DELIVERED",
             razorpayPaymentId: razorpay_payment_id
+        },
+        include: {
+            user: {
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    phone: true
+                }
+            }
         }
     });
 
@@ -140,6 +151,15 @@ export const verifyDeliveryPayment = async (req: Request, orderId: string) => {
     } catch (e) {
         console.error("Realtime event emission error in delivery payment:", e);
     }
+
+    // Send delivered email asynchronously (failsafe)
+    sendOrderStatusNotification(
+        updatedOrder,
+        "DELIVERED",
+        (updatedOrder as any).user
+    ).catch((err) => {
+        console.error("[EmailService] Failed to send payment delivery notification:", err);
+    });
 
     return updatedOrder;
 };
@@ -204,6 +224,16 @@ export const updateOrderStatus = async (req: Request, orderId: string) => {
             data: {
                 status,
                 isPaid: status === "DELIVERED" && order.paymentMethod === "COD" ? true : order.isPaid
+            },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        phone: true
+                    }
+                }
             }
         });
 
@@ -224,6 +254,17 @@ export const updateOrderStatus = async (req: Request, orderId: string) => {
         emitOrderUpdated(enrichedUpdatedOrder);
     } catch (e) {
         console.error("Realtime event emission error in delivery update:", e);
+    }
+
+    // Send status notification asynchronously (failsafe)
+    if (status && status !== order.status) {
+        sendOrderStatusNotification(
+            enrichedUpdatedOrder,
+            status,
+            (updatedOrder as any).user
+        ).catch((err) => {
+            console.error("[EmailService] Failed to send delivery update notification:", err);
+        });
     }
 
     return { order: enrichedUpdatedOrder };

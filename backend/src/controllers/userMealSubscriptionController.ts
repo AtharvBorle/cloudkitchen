@@ -7,6 +7,7 @@ import { normalizeMealSlotIds, getMealSlotDetails, extractTimeRangeString } from
 import { getNowInIST, getMealDeliveryTimingStatus, getMealDeliveryOtp } from "@/lib/meal-delivery-otp";
 import Razorpay from "razorpay";
 import crypto from "crypto";
+import { sendMealSubscriptionActivatedNotification } from "@/lib/emailService";
 
 export const getUserMealSubscriptions = async () => {
     const session = await getAuthSession();
@@ -676,6 +677,11 @@ export const createUserMealSubscription = async (req: Request) => {
     }).catch(() => {});
 
     emitMealSubscriptionUpdated(newSub.sellerId, newSub.userId, "CREATE", newSub);
+
+    // Send subscription activated email asynchronously (failsafe)
+    sendMealSubscriptionActivatedNotification(newSub, plan, session.user).catch((err) => {
+        console.error("[EmailService] Failed to send subscription activation email:", err);
+    });
 
     return newSub;
 };

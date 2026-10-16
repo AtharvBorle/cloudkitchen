@@ -6,6 +6,7 @@ import { emitOrderUpdated, emitSellerDashboardRefresh } from "@/lib/realtime-eve
 import { autoCancelExpiredOrders, cancelExpiredOrder, isOrderExpired, revertCouponUsageFloorZero } from "@/lib/order-expiry";
 import { enrichOrderWithEta, getOrInitOrderTimer } from "@/lib/order-eta";
 import { revalidateTag } from "next/cache";
+import { sendOrderStatusNotification } from "@/lib/emailService";
 
 export const getSellerOrders = async () => {
     const session = await getAuthSession();
@@ -316,6 +317,17 @@ export const updateSellerOrder = async (req: Request, orderId: string) => {
         emitSellerDashboardRefresh(sellerProfile.id);
     } catch (e) {
         console.error("Realtime event emission error in seller update:", e);
+    }
+
+    // Send order status update email asynchronously (failsafe)
+    if (status && status !== existingOrder.status) {
+        sendOrderStatusNotification(
+            enrichedUpdatedOrder,
+            status,
+            enrichedUpdatedOrder.user
+        ).catch((err) => {
+            console.error("[EmailService] Failed to send status notification:", err);
+        });
     }
 
     try {

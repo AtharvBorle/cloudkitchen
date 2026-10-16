@@ -7,6 +7,7 @@ import {
   verifyMealDeliveryOtp,
   getNowInIST,
 } from "@/lib/meal-delivery-otp";
+import { sendMealSlotDeliveredNotification } from "@/lib/emailService";
 
 /**
  * ==============================================================================
@@ -462,6 +463,13 @@ export class MealSubscriptionDeliveryService {
     });
 
     emitMealSubscriptionUpdated(sellerId, sub.userId, "UPDATE", updatedSub);
+
+    // Send meal delivered email asynchronously (failsafe)
+    if (status === "DELIVERED") {
+      sendMealSlotDeliveredNotification(updatedSub, slotDef.name, updatedSub.user).catch((err) => {
+        console.error("[EmailService] Failed to send meal slot delivered email:", err);
+      });
+    }
 
     return {
       success: true,

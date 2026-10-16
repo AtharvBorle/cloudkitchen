@@ -8,6 +8,7 @@ import { emitOrderCreated, emitOrderCancelled, emitOrderUpdated } from "@/lib/re
 import { calculateDistanceKm, getPincodeCoordinates, MAX_DELIVERY_RADIUS_KM } from "@/lib/geo-distance";
 import { cancelExpiredOrder, isOrderExpired, revertCouponUsageFloorZero } from "@/lib/order-expiry";
 import { enrichOrderWithEta } from "@/lib/order-eta";
+import { sendOrderPlacedNotification, sendOrderStatusNotification } from "@/lib/emailService";
 
 export const validateDeliveryCoverage = async ({
     sellerProfile,
@@ -773,6 +774,11 @@ export const createOrder = async (req: Request) => {
         console.error("Realtime event emission error:", e);
     }
 
+    // Send confirmation email asynchronously (failsafe)
+    sendOrderPlacedNotification(order, dbUser, sellerProfile).catch((err) => {
+        console.error("[EmailService] Failed to send order placed notification:", err);
+    });
+
     try {
         revalidateTag("explore", {});
         revalidateTag("public-explore-data", {});
@@ -796,7 +802,22 @@ export const cancelOrder = async (id: string, ticketId?: string) => {
 
     const order = await db.order.findUnique({
         where: { id: id },
-        select: { userId: true, status: true, isPaid: true, totalAmount: true, items: true, appliedCouponId: true }
+        select: {
+            userId: true,
+            status: true,
+            isPaid: true,
+            totalAmount: true,
+            items: true,
+            appliedCouponId: true,
+            user: {
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    phone: true
+                }
+            }
+        }
     });
 
     if (!order) {
@@ -917,6 +938,18 @@ export const cancelOrder = async (id: string, ticketId?: string) => {
         } catch (e) {
             console.error("Realtime event emission error:", e);
         }
+
+        // Send order cancellation email asynchronously (failsafe)
+        sendOrderStatusNotification(
+            txResult.cancelledOrder,
+            "CANCELLED",
+            order.user || session.user,
+            isAdmin
+                ? "Your order was cancelled by support/admin. Any payment has been processed for refund."
+                : "Your order was cancelled upon your request. Any payment has been processed for refund."
+        ).catch((err) => {
+            console.error("[EmailService] Failed to send order cancelled notification:", err);
+        });
     }
 
     try {
