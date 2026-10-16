@@ -27,12 +27,89 @@
   font-weight: 400;
 }
 
+/* Controls Row: Filters + In-page Search */
+.controlsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
 /* Filter Pills */
 .filterPillsRow {
   display: flex;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+/* In-page Search Bar */
+.inPageSearchBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 9999px;
+  height: 40px;
+  padding: 0 14px;
+  min-width: 250px;
+  max-width: 320px;
+  flex: 1 1 250px;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.inPageSearchBar:focus-within {
+  border-color: #ff6b00;
+  box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.12);
+}
+
+.inPageSearchIcon {
+  color: #ff6b00;
+  flex-shrink: 0;
+}
+
+.inPageSearchInput {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 0.85rem;
+  color: #0f172a;
+  font-family: inherit;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+.inPageSearchInput::placeholder {
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.inPageClearBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  border-radius: 50%;
+  transition: color 0.15s ease;
+}
+
+.inPageClearBtn:hover {
+  color: #ff6b00;
+}
+
+@media (max-width: 960px) {
+  .inPageSearchBar {
+    display: none;
+  }
 }
 
 .filterPill {
@@ -102,14 +179,16 @@
   background: #ffffff;
   border: 1.5px solid #10b981;
   border-radius: 18px;
-  padding: 20px 24px;
+  padding: 18px 22px;
   box-shadow: 0 4px 20px rgba(16, 185, 129, 0.08);
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 14px;
   cursor: pointer;
   transition: all 0.25s ease;
   position: relative;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .activeOrderCard:hover {
@@ -401,10 +480,10 @@
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 18px;
-  padding: 18px 24px;
+  padding: 18px 22px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 14px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
   cursor: pointer;
   transition: all 0.2s ease;
@@ -422,50 +501,59 @@
   box-shadow: 0 0 0 2px rgba(4, 120, 87, 0.15) !important;
 }
 
-.pastCardTopLeft {
+/* Common 3-Tier Card Layout (Header, Body, Footer) */
+.cardHeaderRow {
   display: flex;
   align-items: center;
-  gap: 16px;
-  width: 250px;
-  min-width: 250px;
-  max-width: 260px;
-  flex-shrink: 0;
-}
-
-.pastCardActionRow {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex: 1;
   justify-content: space-between;
-  min-width: 0;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.pastStatusDateRow {
+.vendorAndIdGroup {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.orderIdBadge {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #475569;
+  background: #f1f5f9;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.headerStatusGroup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   flex-shrink: 0;
 }
 
-.refundStatusBadge {
+.statusPillGreenLight {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 9px;
-  border-radius: 6px;
-  font-size: 0.75rem;
+  justify-content: center;
+  background: #ecfdf5;
+  color: #059669;
+  font-size: 0.74rem;
   font-weight: 700;
-}
-
-.orderCard:hover {
-  border-color: #cbd5e1;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
-}
-
-.orderCardSelected {
-  border-color: #047857 !important;
-  box-shadow: 0 0 0 2px rgba(4, 120, 87, 0.15) !important;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  border: 1px solid #a7f3d0;
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .statusPillGray {
@@ -491,62 +579,201 @@
   gap: 5px;
   background: #fee2e2;
   color: #ef4444;
-  font-size: 0.76rem;
-  font-weight: 600;
-  padding: 4px 14px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 4px 12px;
   border-radius: 9999px;
+  border: 1px solid #fecaca;
   white-space: nowrap;
   flex-shrink: 0;
   box-sizing: border-box;
 }
 
-.pastCardActionRow .statusPillGray,
-.pastCardActionRow .statusPillRed {
-  width: 86px;
-  padding: 4px 8px;
+/* Card Body (Image + Content) */
+.cardBodyRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.deliveredInfo {
+.cardContentCol {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-  text-align: right;
-  width: 140px;
-  min-width: 140px;
-  max-width: 140px;
-  flex-shrink: 0;
-  box-sizing: border-box;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
 }
 
-.deliveredLabel {
-  font-size: 0.65rem;
-  color: #94a3b8;
-  font-weight: 500;
-  line-height: 1.15;
-  text-align: right;
-  white-space: normal;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+.dishTitleText {
+  font-size: 0.94rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
 }
 
-.deliveredDateText {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #1e293b;
-  line-height: 1.2;
+.itemAndPriceLine {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: #64748b;
+  flex-wrap: wrap;
+}
+
+.dateAndStatusLine {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  color: #64748b;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.dateText {
+  color: #64748b;
   white-space: nowrap;
 }
 
-.pastButtonsGroup {
+.cancelReasonText {
+  color: #ef4444;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.deliveredNoteText {
+  color: #059669;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Partner Snippet */
+.partnerSnippet {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.partnerSnippetAvatarWrapper {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+}
+
+.partnerSnippetAvatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #10b981;
+}
+
+.partnerSnippetAvatarPlaceholder {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #059669;
+  color: #ffffff;
+  font-size: 0.88rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.partnerOnlineDot {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #10b981;
+  border: 2px solid #ffffff;
+}
+
+/* Card Footer (Badges on Left, Action Buttons on Right) */
+.cardFooterRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+  box-sizing: border-box;
+}
+
+.footerLeft {
   display: flex;
   align-items: center;
   gap: 8px;
-  justify-content: flex-end;
-  flex: 1;
+  flex-wrap: wrap;
   min-width: 0;
+}
+
+.footerButtonsGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.refundStatusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px;
+  border-radius: 6px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ratedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+  white-space: nowrap;
+}
+
+.rateOrderBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #ffedd5;
+  background: #fff7ed;
+  color: #ea580c;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.rateOrderBtn:hover {
+  background: #ffedd5;
+  border-color: #fed7aa;
 }
 
 .reorderBtn {
@@ -558,7 +785,7 @@
   border: 1px solid #e2e8f0;
   background: #ffffff;
   color: #1e293b;
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -572,12 +799,13 @@
 .viewDetailsBtn {
   display: inline-flex;
   align-items: center;
+  gap: 4px;
   padding: 6px 14px;
   border-radius: 8px;
   border: 1px solid #e2e8f0;
   background: #ffffff;
   color: #1e293b;
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -586,6 +814,27 @@
 .viewDetailsBtn:hover {
   background: #f8fafc;
   border-color: #cbd5e1;
+  color: #ea580c;
+}
+
+/* Backwards compatibility for room bookings */
+.pastCardTopLeft {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 250px;
+  min-width: 250px;
+  max-width: 260px;
+  flex-shrink: 0;
+}
+
+.pastCardActionRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  justify-content: space-between;
+  min-width: 0;
 }
 
 /* ================= RIGHT COLUMN: LIVE TRACKING PANEL ================= */
@@ -1079,84 +1328,15 @@
     flex-shrink: 0;
   }
 
-  /* Ongoing Active Card (Spice & Bites Restaurant) */
+  /* Ongoing Active Card */
   .activeOrderCard {
-    padding: 14px 12px;
+    padding: 14px 14px;
     border-radius: 16px;
     gap: 12px;
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
     overflow: hidden;
-  }
-
-  .activeCardTopRow {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-    width: 100%;
-    box-sizing: border-box;
-  }
-
-  .activeCardTopLeft {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    width: 100%;
-    min-width: 0;
-  }
-
-  .cardImageWrapper {
-    width: 54px;
-    height: 54px;
-    border-radius: 10px;
-    flex-shrink: 0;
-  }
-
-  .cardMetaInfo {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-  }
-
-  .vendorTitle {
-    font-size: 0.98rem;
-    line-height: 1.25;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .itemSummaryText {
-    font-size: 0.78rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .activeCardTopRight {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    padding-top: 8px;
-    border-top: 1px solid #f1f5f9;
-    box-sizing: border-box;
-    gap: 8px;
-  }
-
-  .arrivingBox {
-    align-items: flex-end;
-    flex-shrink: 0;
-  }
-
-  .arrivingLabel {
-    font-size: 0.68rem;
-  }
-
-  .arrivingTime {
-    font-size: 1rem;
   }
 
   /* Stepper in Ongoing Card */
@@ -1236,102 +1416,113 @@
     box-sizing: border-box;
   }
 
-  /* Past Order Cards (Pizza Planet, Tandoori House, Burger Hub, Fresh Bowl Co) */
+  /* Past Order Cards */
   .pastOrderCard {
-    padding: 12px 12px;
-    border-radius: 14px;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
+    padding: 14px 14px;
+    border-radius: 16px;
+    gap: 12px;
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
     overflow: hidden;
   }
 
+  .cardHeaderRow {
+    gap: 8px;
+  }
+
+  .vendorTitle {
+    font-size: 0.98rem;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .orderIdBadge {
+    font-size: 0.70rem;
+    padding: 2px 6px;
+  }
+
+  .headerStatusGroup {
+    gap: 8px;
+  }
+
+  .statusPillGreen,
+  .statusPillGreenLight,
+  .statusPillRed {
+    font-size: 0.72rem;
+    padding: 3px 10px;
+  }
+
+  .arrivingBox {
+    align-items: flex-end;
+    flex-shrink: 0;
+  }
+
+  .arrivingLabel {
+    font-size: 0.64rem;
+  }
+
+  .arrivingTime {
+    font-size: 0.95rem;
+  }
+
+  .cardBodyRow {
+    gap: 12px;
+  }
+
+  .cardImageWrapper {
+    width: 54px;
+    height: 54px;
+    min-width: 54px;
+    border-radius: 10px;
+    flex-shrink: 0;
+  }
+
+  .dishTitleText {
+    font-size: 0.90rem;
+  }
+
+  .itemAndPriceLine {
+    font-size: 0.80rem;
+    gap: 5px;
+  }
+
+  .dateAndStatusLine {
+    font-size: 0.74rem;
+    gap: 5px;
+  }
+
+  .cardFooterRow {
+    padding-top: 10px;
+    gap: 8px;
+  }
+
+  .footerButtonsGroup {
+    gap: 6px;
+  }
+
+  .reorderBtn,
+  .rateOrderBtn,
+  .viewDetailsBtn {
+    padding: 6px 12px;
+    font-size: 0.78rem;
+    border-radius: 7px;
+  }
+
+  .refundStatusBadge {
+    font-size: 0.72rem;
+    padding: 3px 7px;
+  }
+
+  /* Backwards compatibility for room bookings */
   .pastCardTopLeft {
     display: flex;
     align-items: flex-start;
     gap: 12px;
     width: 100%;
     min-width: 0;
-  }
-
-  .pastCardActionRow {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    justify-content: flex-start;
-    padding-top: 10px;
-    border-top: 1px solid #f1f5f9;
-    gap: 10px;
-    box-sizing: border-box;
-  }
-
-  .pastStatusDateRow {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    gap: 8px;
-  }
-
-  .statusPillGray,
-  .statusPillRed {
-    font-size: 0.7rem;
-    padding: 3px 8px;
-    flex-shrink: 0;
-  }
-
-  .deliveredInfo {
-    align-items: flex-end;
-    text-align: right;
-    min-width: 0;
-    flex: 1;
-    padding: 0;
-    overflow: hidden;
-  }
-
-  .deliveredLabel {
-    font-size: 0.65rem;
-    line-height: 1.1;
-  }
-
-  .deliveredDateText {
-    font-size: 0.74rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    line-height: 1.1;
-  }
-
-  .pastButtonsGroup {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    flex-wrap: wrap;
-    gap: 8px;
-    width: 100%;
-  }
-
-  .refundStatusBadge {
-    font-size: 0.72rem;
-    padding: 3px 7px;
-    white-space: normal;
-  }
-
-  .reorderBtn,
-  .viewDetailsBtn {
-    padding: 6px 12px;
-    font-size: 0.78rem;
-    border-radius: 7px;
-    flex-shrink: 0;
-  }
-
-  .chevronBtn {
-    display: none;
   }
 
   /* Mobile Drawer Bottom Sheet */
@@ -1397,17 +1588,90 @@
 
   .activeOrderCard,
   .pastOrderCard {
-    padding: 10px 10px;
-    border-radius: 12px;
+    padding: 12px 12px;
+    border-radius: 14px;
+    gap: 10px;
   }
 
-  .cardImageWrapper {
-    width: 46px;
-    height: 46px;
+  .cardHeaderRow {
+    gap: 6px;
   }
 
   .vendorTitle {
+    font-size: 0.90rem;
+    max-width: 140px;
+  }
+
+  .orderIdBadge {
+    font-size: 0.68rem;
+    padding: 1px 5px;
+  }
+
+  .statusPillGreen,
+  .statusPillGreenLight,
+  .statusPillRed {
+    font-size: 0.68rem;
+    padding: 2.5px 8px;
+  }
+
+  .arrivingLabel {
+    font-size: 0.60rem;
+  }
+
+  .arrivingTime {
+    font-size: 0.88rem;
+  }
+
+  .cardBodyRow {
+    gap: 10px;
+  }
+
+  .cardImageWrapper {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    border-radius: 8px;
+  }
+
+  .dishTitleText {
     font-size: 0.86rem;
+  }
+
+  .itemAndPriceLine {
+    font-size: 0.76rem;
+  }
+
+  .dateAndStatusLine {
+    font-size: 0.72rem;
+  }
+
+  .cardFooterRow {
+    padding-top: 8px;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .footerLeft {
+    width: 100%;
+  }
+
+  .footerButtonsGroup {
+    width: 100%;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+
+  .reorderBtn,
+  .rateOrderBtn,
+  .viewDetailsBtn {
+    padding: 5px 9px;
+    font-size: 0.74rem;
+    border-radius: 6px;
+  }
+
+  .refundStatusBadge {
+    font-size: 0.70rem;
+    padding: 2.5px 6px;
   }
 
   .priceSingleLine,
@@ -2134,7 +2398,7 @@
     flex-direction: column;
     align-items: center;
     gap: 12px;
-    padding: 14px 12px;
+    padding: 14px 8px;
     width: 100%;
     box-sizing: border-box;
   }
@@ -2142,24 +2406,79 @@
   .paginationControls {
     width: 100%;
     justify-content: center;
-    flex-wrap: wrap;
-    gap: 6px;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 4px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 4px 2px;
+    box-sizing: border-box;
+  }
+
+  .paginationControls::-webkit-scrollbar {
+    display: none;
   }
 
   .pageNavBtn {
-    padding: 6px 10px;
-    font-size: 0.8rem;
+    padding: 6px 8px;
+    font-size: 0.78rem;
+    gap: 3px;
+    flex-shrink: 0;
+    border-radius: 8px;
   }
 
   .pageNumbersList {
-    gap: 4px;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
   }
 
   .pageNumberBtn {
-    min-width: 32px;
-    height: 32px;
-    font-size: 0.82rem;
+    min-width: 28px;
+    height: 28px;
+    font-size: 0.78rem;
     padding: 0 4px;
+    border-radius: 8px;
+    flex-shrink: 0;
+  }
+
+  .pageEllipsis {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 28px;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    flex-shrink: 0;
+  }
+}
+
+@media (max-width: 380px) {
+  .paginationControls {
+    gap: 2px;
+  }
+
+  .pageNavBtn {
+    padding: 5px 6px;
+    font-size: 0.72rem;
+  }
+
+  .pageNumbersList {
+    gap: 2px;
+  }
+
+  .pageNumberBtn {
+    min-width: 26px;
+    height: 26px;
+    font-size: 0.74rem;
+  }
+
+  .pageEllipsis {
+    width: 14px;
+    font-size: 0.75rem;
   }
 }
 

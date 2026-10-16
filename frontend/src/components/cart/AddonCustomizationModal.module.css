@@ -32,19 +32,20 @@
   flex-direction: column;
   max-height: min(85vh, 600px);
   overflow: hidden;
-  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: popIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   z-index: 100000000;
+  margin: auto;
 }
 
-@keyframes slideUp {
+@keyframes popIn {
   from {
     opacity: 0;
-    transform: translateY(20px) scale(0.98);
+    transform: scale(0.95);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: scale(1);
   }
 }
 
@@ -280,17 +281,62 @@
 /* Responsive */
 @media (max-width: 480px) {
   .overlay {
-    padding: 0;
-    align-items: flex-end;
+    padding: 16px 12px;
+    align-items: center;
+    justify-content: center;
   }
 
   .modalCard {
-    max-width: 100%;
-    border-radius: 20px 20px 0 0;
-    max-height: 85vh;
+    width: 100%;
+    max-width: 420px;
+    border-radius: 20px;
+    max-height: min(85vh, 560px);
+    margin: auto;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  }
+
+  .header {
+    padding: 16px 18px 12px;
+  }
+
+  .dishName {
+    font-size: 1.05rem;
+  }
+
+  .basePrice {
+    font-size: 0.95rem;
+  }
+
+  .content {
+    padding: 12px 16px;
   }
 
   .footer {
-    padding-bottom: max(20px, env(safe-area-inset-bottom));
+    padding: 14px 16px;
+  }
+
+  .totalPrice {
+    font-size: 1.15rem;
+  }
+
+  .submitBtn {
+    height: 44px;
+    font-size: 0.88rem;
+    padding: 0 12px;
   }
 }
+
+@media (max-width: 360px) {
+  .overlay {
+    padding: 12px 8px;
+  }
+
+  .modalCard {
+    border-radius: 16px;
+  }
+
+  .footer {
+    gap: 10px;
+  }
+}
+

@@ -145,6 +145,17 @@ function MySubscriptionContent() {
     if (s.endDate && new Date(s.endDate) < new Date()) return true;
     return false;
   }, []);
+
+  const isSubscriptionUpcoming = useCallback((s: UserActiveMealSubscription) => {
+    if (s.isStarted === false) return true;
+    if (!s.startDate) return false;
+    const start = new Date(s.startDate);
+    if (isNaN(start.getTime())) return false;
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const startDayStart = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime();
+    return startDayStart > todayStart;
+  }, []);
   const activeSubs = useMemo(
     () =>
       userSubs.filter(
@@ -997,8 +1008,9 @@ function MySubscriptionContent() {
                   router.replace("/my-subscriptions-desktop?tab=active", { scroll: false });
                 }}
               >
-                <Calendar size={17} />
-                <span>My Active Subscription{activeSubs.length !== 1 ? "s" : ""}</span>
+                <Calendar size={17} className={styles.tabIcon} />
+                <span className={styles.tabLabelDesktop}>My Active Subscription{activeSubs.length !== 1 ? "s" : ""}</span>
+                <span className={styles.tabLabelMobile}>My Active</span>
                 <span
                   className={
                     activeTab === "active"
@@ -1006,7 +1018,12 @@ function MySubscriptionContent() {
                       : `${styles.tabCountBadge} ${styles.tabCountBadgeInactive}`
                   }
                 >
-                  {activeSubs.length > 1 ? `${activeSubs.length} Active` : activeSubs.length === 1 ? "1 Active" : "0 Active"}
+                  <span className={styles.tabBadgeDesktop}>
+                    {activeSubs.length > 1 ? `${activeSubs.length} Active` : activeSubs.length === 1 ? "1 Active" : "0 Active"}
+                  </span>
+                  <span className={styles.tabBadgeMobile}>
+                    {activeSubs.length > 0 ? `${activeSubs.length} Active` : "0 Active"}
+                  </span>
                 </span>
               </button>
 
@@ -1023,8 +1040,9 @@ function MySubscriptionContent() {
                   router.replace("/my-subscriptions-desktop?tab=plans", { scroll: false });
                 }}
               >
-                <Utensils size={17} />
-                <span>All Subscription Plans</span>
+                <Utensils size={17} className={styles.tabIcon} />
+                <span className={styles.tabLabelDesktop}>All Subscription Plans</span>
+                <span className={styles.tabLabelMobile}>All Plans</span>
                 <span
                   className={
                     activeTab === "plans"
@@ -1148,6 +1166,7 @@ function MySubscriptionContent() {
                           {userSubs.map((s) => {
                             const isSelected = selectedSubFilter === s.id;
                             const isExpired = isSubscriptionExpired(s);
+                            const isUpcoming = isSubscriptionUpcoming(s);
                             const isInactive = !isExpired && (s.isPlanDeactivated || s.plan?.status === "Inactive" || s.status === "INACTIVE");
                             return (
                               <button
@@ -1184,10 +1203,10 @@ function MySubscriptionContent() {
                                       ? "#FEE2E2"
                                       : isInactive
                                       ? "#F1F5F9"
+                                      : isUpcoming
+                                      ? "#EFF6FF"
                                       : s.isPaused
                                       ? "#FEF3C7"
-                                      : s.isStarted === false
-                                      ? "#EFF6FF"
                                       : s.status === "ACTIVE"
                                       ? "#DCFCE7"
                                       : "#F1F5F9",
@@ -1195,16 +1214,16 @@ function MySubscriptionContent() {
                                       ? "#DC2626"
                                       : isInactive
                                       ? "#64748B"
+                                      : isUpcoming
+                                      ? "#1D4ED8"
                                       : s.isPaused
                                       ? "#B45309"
-                                      : s.isStarted === false
-                                      ? "#1D4ED8"
                                       : s.status === "ACTIVE"
                                       ? "#15803D"
                                       : "#64748B",
                                   }}
                                 >
-                                  {isExpired ? "Expired" : isInactive ? "Inactive" : s.isPaused ? "Paused" : s.isStarted === false ? "Upcoming" : s.status}
+                                  {isExpired ? "Expired" : isInactive ? "Inactive" : isUpcoming ? "Upcoming" : s.isPaused ? "Paused" : s.status}
                                 </span>
                               </button>
                             );
@@ -1216,7 +1235,15 @@ function MySubscriptionContent() {
                     {/* Render each active meal plan separately with its details and status */}
                     <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
                       {displayedSubs.map((subItem) => {
+                        const isExpired = isSubscriptionExpired(subItem);
+                        const isUpcoming = isSubscriptionUpcoming(subItem);
+                        const isPlanInactive =
+                          !isExpired &&
+                          (subItem.isPlanDeactivated ||
+                            subItem.plan?.status === "Inactive" ||
+                            subItem.status === "INACTIVE");
                         const isPauseAllowed = (() => {
+                          if (isExpired || isPlanInactive || isUpcoming) return false;
                           const matchedLivePlan = allPlans.find(
                             (p) =>
                               (subItem.planId && (p.id === subItem.planId || (p as any).planId === subItem.planId)) ||
@@ -1255,14 +1282,13 @@ function MySubscriptionContent() {
                           return true;
                         })();
 
-                        const isExpired = isSubscriptionExpired(subItem);
-                        const isPlanInactive =
-                          !isExpired &&
-                          (subItem.isPlanDeactivated ||
-                            subItem.plan?.status === "Inactive" ||
-                            subItem.status === "INACTIVE");
-                        const isUpcoming = !isExpired && !isPlanInactive && subItem.isStarted === false;
-                        const resolvedStatus = isExpired ? "EXPIRED" : isPlanInactive ? "INACTIVE" : isUpcoming ? "UPCOMING" : subItem.status;
+                        const resolvedStatus = isExpired
+                          ? "EXPIRED"
+                          : isPlanInactive
+                          ? "INACTIVE"
+                          : isUpcoming
+                          ? "UPCOMING"
+                          : subItem.status;
 
                         // Check if the underlying meal plan is still Live / available for renewal
                         const liveMatchedPlan = allPlans.find(
@@ -1405,42 +1431,28 @@ function MySubscriptionContent() {
                               }
                               tier={subItem.tier || subItem.plan?.tier || "Bronze"}
                               statusText={resolvedStatus}
-                              isPaused={!isExpired && !isPlanInactive && subItem.isPaused}
+                              isPaused={!isExpired && !isPlanInactive && !isUpcoming && subItem.isPaused}
                               startedOn={formatSubStartedOn(subItem)}
                               renewalDate={isExpired ? `${formatSubRenewalDate(subItem)} (Expired)` : isPlanInactive ? "Deactivated" : formatSubRenewalDate(subItem)}
                               planPrice={formatSubPrice(subItem)}
                             />
 
                             {/* Delivery Address & Contact Bar */}
-                            <div
-                              style={{
-                                display: "flex",
-                                flexWrap: "wrap",
-                                gap: "12px",
-                                alignItems: "center",
-                                padding: "12px 16px",
-                                backgroundColor: "#F8FAFC",
-                                borderRadius: "12px",
-                                margin: "16px 0",
-                                fontSize: "0.84rem",
-                                color: "#475569",
-                                border: "1px solid #E2E8F0",
-                              }}
-                            >
-                              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <div className={styles.deliveryBar}>
+                              <div className={styles.deliveryBarItem}>
                                 <MapPin size={15} color="#EA580C" />
                                 <span><strong>Deliver to:</strong> {subItem.deliveryAddress || "Address provided at checkout"}</span>
                               </div>
                               {subItem.contactPhone && (
-                                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginLeft: "auto" }}>
+                                <div className={styles.deliveryBarPhone}>
                                   <Phone size={14} color="#EA580C" />
                                   <span><strong>Phone:</strong> {subItem.contactPhone}</span>
                                 </div>
                               )}
                             </div>
 
-                            {/* Pause Subscription Section (only for active, non-expired plans) */}
-                            {isPauseAllowed && !isExpired && (
+                            {/* Pause Subscription Section (only for active, non-expired, started plans) */}
+                            {isPauseAllowed && !isExpired && !isUpcoming && (
                               <PauseSubscription
                                 startDate={subItem.startDate}
                                 isPaused={subItem.isPaused}
@@ -1460,6 +1472,30 @@ function MySubscriptionContent() {
                                 planName={subItem.plan?.name || "Meal Plan"}
                                 onTogglePause={(nextPaused, days) => handleTogglePause(subItem.id, nextPaused, days)}
                               />
+                            )}
+
+                            {/* Upcoming Plan Notice when start date is in the future */}
+                            {!isExpired && isUpcoming && (
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "10px",
+                                  padding: "14px 18px",
+                                  backgroundColor: "#F8FAFC",
+                                  border: "1px solid #E2E8F0",
+                                  borderRadius: "14px",
+                                  color: "#475569",
+                                  fontSize: "0.86rem",
+                                  fontWeight: 600,
+                                  margin: "16px 0",
+                                }}
+                              >
+                                <Clock size={16} color="#EA580C" style={{ flexShrink: 0 }} />
+                                <span>
+                                  Scheduled to start on <strong>{formatSubStartedOn(subItem)}</strong>. Pause Subscription will be available once the plan becomes active on its start date.
+                                </span>
+                              </div>
                             )}
 
                             {/* Delivery Times & Benefits Grid */}

@@ -18,6 +18,7 @@ import {
   Copy,
   Check,
   X,
+  Search,
   Bell,
   ChevronLeft,
   ChevronRight,
@@ -29,7 +30,6 @@ import {
   Calendar,
   MapPin,
   Users,
-  User,
   ShieldCheck,
   ExternalLink,
 } from "lucide-react";
@@ -393,7 +393,7 @@ function parseBookingFromDb(b: any): RoomBookingData {
     isPaid: Boolean(b.isPaid),
     paymentMethod: b.paymentMethod || "COD",
     imageUrl: imgUrl,
-    hostPhone: hostUser.phone || seller.phone || "",
+    hostPhone: hostUser.phone || seller.phone || "+91 98765 43210",
     description: room.description || "Comfortable accommodation with modern amenities.",
     createdAt: b.createdAt,
   };
@@ -414,6 +414,90 @@ function findMatchingOrder(orderList: OrderItemData[], idToMatch: string): Order
       oOrderId.startsWith(norm)
     );
   });
+}
+
+function getOrderSearchableText(order: OrderItemData): string {
+  const parts: string[] = [
+    order.id || "",
+    order.orderId || "",
+    `#${order.orderId || ""}`,
+    order.vendorName || "",
+    order.dishName || "",
+    order.itemSummary || "",
+    order.itemsDetail || "",
+    order.statusDisplay || "",
+  ];
+
+  if (Array.isArray(order.rawItems)) {
+    for (const item of order.rawItems) {
+      if (!item) continue;
+      if (item.name) parts.push(item.name);
+      if (item.title) parts.push(item.title);
+      if (item.foodItem?.name) parts.push(item.foodItem.name);
+      if (item.foodItemName) parts.push(item.foodItemName);
+      if (item.id) parts.push(String(item.id));
+      if (item.foodItemId) parts.push(String(item.foodItemId));
+      if (item.itemId) parts.push(String(item.itemId));
+      if (item.foodItem?.id) parts.push(String(item.foodItem.id));
+    }
+  }
+
+  return parts.join(" ").toLowerCase();
+}
+
+function matchesOrderSearch(order: OrderItemData, query: string): boolean {
+  if (!query) return true;
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+
+  const searchable = getOrderSearchableText(order);
+  const qNoHash = q.replace(/^#/, "");
+
+  if (searchable.includes(q) || searchable.includes(qNoHash)) {
+    return true;
+  }
+
+  const tokens = qNoHash.split(/\s+/).filter(Boolean);
+  if (tokens.length > 1) {
+    return tokens.every((token) => searchable.includes(token));
+  }
+
+  return false;
+}
+
+function getBookingSearchableText(booking: RoomBookingData): string {
+  const parts: string[] = [
+    booking.id || "",
+    booking.bookingRef || "",
+    booking.roomId || "",
+    booking.roomTitle || "",
+    booking.hostName || "",
+    booking.city || "",
+    booking.locality || "",
+    booking.description || "",
+    booking.status || "",
+  ];
+  return parts.join(" ").toLowerCase();
+}
+
+function matchesBookingSearch(booking: RoomBookingData, query: string): boolean {
+  if (!query) return true;
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+
+  const searchable = getBookingSearchableText(booking);
+  const qNoHash = q.replace(/^#/, "");
+
+  if (searchable.includes(q) || searchable.includes(qNoHash)) {
+    return true;
+  }
+
+  const tokens = qNoHash.split(/\s+/).filter(Boolean);
+  if (tokens.length > 1) {
+    return tokens.every((token) => searchable.includes(token));
+  }
+
+  return false;
 }
 
 export default function MyOrdersView() {
@@ -465,14 +549,35 @@ export default function MyOrdersView() {
   const [orderPage, setOrderPage] = useState(1);
   const [bookingPage, setBookingPage] = useState(1);
 
-  // Reset pagination to page 1 on filter or tab change
+  // Search query state (synced with URL query/search params & global navbar search events)
+  const [searchQuery, setSearchQuery] = useState<string>(() => {
+    return searchParams?.get("query") || searchParams?.get("search") || "";
+  });
+
+  useEffect(() => {
+    const q = searchParams?.get("query") || searchParams?.get("search") || "";
+    setSearchQuery(q);
+  }, [searchParams]);
+
+  useEffect(() => {
+    const handleGlobalSearch = (e: any) => {
+      const q = typeof e.detail === "string" ? e.detail : (e.detail?.query ?? "");
+      setSearchQuery(q);
+    };
+    window.addEventListener("global-navbar-search", handleGlobalSearch);
+    return () => {
+      window.removeEventListener("global-navbar-search", handleGlobalSearch);
+    };
+  }, []);
+
+  // Reset pagination to page 1 on filter, tab, or search query change
   useEffect(() => {
     setOrderPage(1);
-  }, [foodFilter, mainCategory]);
+  }, [foodFilter, mainCategory, searchQuery]);
 
   useEffect(() => {
     setBookingPage(1);
-  }, [roomFilter, mainCategory]);
+  }, [roomFilter, mainCategory, searchQuery]);
 
   // Selected item states
   const [selectedOrder, setSelectedOrder] = useState<OrderItemData | null>(null);
@@ -582,13 +687,12 @@ export default function MyOrdersView() {
   // Filtered Food Orders
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
-      if (foodFilter === "ALL") return true;
-      if (foodFilter === "ONGOING") return order.status === "ONGOING";
-      if (foodFilter === "COMPLETED") return order.status === "DELIVERED";
-      if (foodFilter === "CANCELLED") return order.status === "CANCELLED";
-      return true;
+      if (foodFilter === "ONGOING" && order.status !== "ONGOING") return false;
+      if (foodFilter === "COMPLETED" && order.status !== "DELIVERED") return false;
+      if (foodFilter === "CANCELLED" && order.status !== "CANCELLED") return false;
+      return matchesOrderSearch(order, searchQuery);
     });
-  }, [orders, foodFilter]);
+  }, [orders, foodFilter, searchQuery]);
 
   // Paginated Food Orders (5 items per page)
   const totalOrderPages = Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE));
@@ -597,16 +701,26 @@ export default function MyOrdersView() {
     return filteredOrders.slice(start, start + PAGE_SIZE);
   }, [filteredOrders, orderPage]);
 
+  // Keep selected order in sync with search results
+  useEffect(() => {
+    if (filteredOrders.length > 0) {
+      if (!selectedOrder || !filteredOrders.some((o) => o.id === selectedOrder.id)) {
+        setSelectedOrder(filteredOrders[0]);
+      }
+    } else {
+      setSelectedOrder(null);
+    }
+  }, [filteredOrders]);
+
   // Filtered Room Bookings
   const filteredBookings = useMemo(() => {
     return bookings.filter((booking) => {
-      if (roomFilter === "ALL") return true;
-      if (roomFilter === "CONFIRMED") return booking.status === "CONFIRMED";
-      if (roomFilter === "PENDING") return booking.status === "PENDING";
-      if (roomFilter === "CANCELLED") return booking.status === "CANCELLED";
-      return true;
+      if (roomFilter === "CONFIRMED" && booking.status !== "CONFIRMED") return false;
+      if (roomFilter === "PENDING" && booking.status !== "PENDING") return false;
+      if (roomFilter === "CANCELLED" && booking.status !== "CANCELLED") return false;
+      return matchesBookingSearch(booking, searchQuery);
     });
-  }, [bookings, roomFilter]);
+  }, [bookings, roomFilter, searchQuery]);
 
   // Paginated Room Bookings (5 items per page)
   const totalBookingPages = Math.max(1, Math.ceil(filteredBookings.length / PAGE_SIZE));
@@ -614,6 +728,17 @@ export default function MyOrdersView() {
     const start = (bookingPage - 1) * PAGE_SIZE;
     return filteredBookings.slice(start, start + PAGE_SIZE);
   }, [filteredBookings, bookingPage]);
+
+  // Keep selected booking in sync with search results
+  useEffect(() => {
+    if (filteredBookings.length > 0) {
+      if (!selectedBooking || !filteredBookings.some((b) => b.id === selectedBooking.id)) {
+        setSelectedBooking(filteredBookings[0]);
+      }
+    } else {
+      setSelectedBooking(null);
+    }
+  }, [filteredBookings]);
 
   const getPageNumbers = (currentPage: number, totalPages: number): (number | string)[] => {
     if (totalPages <= 5) {
@@ -1265,77 +1390,133 @@ export default function MyOrdersView() {
               </div>
             )}
 
-            {/* Sub-Filter Pills */}
-            {mainCategory === "FOODS" ? (
-              <div className={styles.filterPillsRow} role="tablist" aria-label="Filter Food Orders">
-                <button
-                  type="button"
-                  className={`${styles.filterPill} ${foodFilter === "ALL" ? styles.filterPillActive : ""}`}
-                  onClick={() => setFoodFilter("ALL")}
-                >
-                  All
-                </button>
+            {/* Controls Row: Sub-Filter Pills & In-page Search Bar */}
+            <div className={styles.controlsRow}>
+              {mainCategory === "FOODS" ? (
+                <div className={styles.filterPillsRow} role="tablist" aria-label="Filter Food Orders">
+                  <button
+                    type="button"
+                    className={`${styles.filterPill} ${foodFilter === "ALL" ? styles.filterPillActive : ""}`}
+                    onClick={() => setFoodFilter("ALL")}
+                  >
+                    All
+                  </button>
 
-                <button
-                  type="button"
-                  className={`${styles.filterPill} ${foodFilter === "ONGOING" ? styles.filterPillActive : ""}`}
-                  onClick={() => setFoodFilter("ONGOING")}
-                >
-                  <span>Ongoing</span>
-                  {ongoingOrdersCount > 0 && <span className={styles.badgeCount}>{ongoingOrdersCount}</span>}
-                </button>
+                  <button
+                    type="button"
+                    className={`${styles.filterPill} ${foodFilter === "ONGOING" ? styles.filterPillActive : ""}`}
+                    onClick={() => setFoodFilter("ONGOING")}
+                  >
+                    <span>Ongoing</span>
+                    {ongoingOrdersCount > 0 && <span className={styles.badgeCount}>{ongoingOrdersCount}</span>}
+                  </button>
 
-                <button
-                  type="button"
-                  className={`${styles.filterPill} ${foodFilter === "COMPLETED" ? styles.filterPillActive : ""}`}
-                  onClick={() => setFoodFilter("COMPLETED")}
-                >
-                  Completed
-                </button>
+                  <button
+                    type="button"
+                    className={`${styles.filterPill} ${foodFilter === "COMPLETED" ? styles.filterPillActive : ""}`}
+                    onClick={() => setFoodFilter("COMPLETED")}
+                  >
+                    Completed
+                  </button>
 
-                <button
-                  type="button"
-                  className={`${styles.filterPill} ${foodFilter === "CANCELLED" ? styles.filterPillActive : ""}`}
-                  onClick={() => setFoodFilter("CANCELLED")}
-                >
-                  Cancelled
-                </button>
+                  <button
+                    type="button"
+                    className={`${styles.filterPill} ${foodFilter === "CANCELLED" ? styles.filterPillActive : ""}`}
+                    onClick={() => setFoodFilter("CANCELLED")}
+                  >
+                    Cancelled
+                  </button>
+                </div>
+              ) : (
+                <div className={styles.filterPillsRow} role="tablist" aria-label="Filter Room Bookings">
+                  <button
+                    type="button"
+                    className={`${styles.filterPill} ${roomFilter === "ALL" ? styles.filterPillActive : ""}`}
+                    onClick={() => setRoomFilter("ALL")}
+                  >
+                    All
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`${styles.filterPill} ${roomFilter === "CONFIRMED" ? styles.filterPillActive : ""}`}
+                    onClick={() => setRoomFilter("CONFIRMED")}
+                  >
+                    <span>Confirmed</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`${styles.filterPill} ${roomFilter === "PENDING" ? styles.filterPillActive : ""}`}
+                    onClick={() => setRoomFilter("PENDING")}
+                  >
+                    <span>Pending</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`${styles.filterPill} ${roomFilter === "CANCELLED" ? styles.filterPillActive : ""}`}
+                    onClick={() => setRoomFilter("CANCELLED")}
+                  >
+                    Cancelled
+                  </button>
+                </div>
+              )}
+
+              {/* In-page Desktop Search Bar */}
+              <div className={styles.inPageSearchBar}>
+                <Search size={16} className={styles.inPageSearchIcon} />
+                <input
+                  type="text"
+                  placeholder={
+                    mainCategory === "FOODS"
+                      ? "Search orders by ID, dish, kitchen..."
+                      : "Search room bookings..."
+                  }
+                  value={searchQuery}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSearchQuery(val);
+                    if (typeof window !== "undefined") {
+                      window.dispatchEvent(
+                        new CustomEvent("global-navbar-search", { detail: { query: val } })
+                      );
+                      const url = new URL(window.location.href);
+                      if (val.trim()) {
+                        url.searchParams.set("query", val.trim());
+                      } else {
+                        url.searchParams.delete("query");
+                        url.searchParams.delete("search");
+                      }
+                      window.history.replaceState(null, "", url.toString());
+                    }
+                  }}
+                  className={styles.inPageSearchInput}
+                  aria-label="Search orders"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery("");
+                      if (typeof window !== "undefined") {
+                        window.dispatchEvent(
+                          new CustomEvent("global-navbar-search", { detail: { query: "" } })
+                        );
+                        const url = new URL(window.location.href);
+                        url.searchParams.delete("query");
+                        url.searchParams.delete("search");
+                        window.history.replaceState(null, "", url.toString());
+                      }
+                    }}
+                    className={styles.inPageClearBtn}
+                    aria-label="Clear search"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
               </div>
-            ) : (
-              <div className={styles.filterPillsRow} role="tablist" aria-label="Filter Room Bookings">
-                <button
-                  type="button"
-                  className={`${styles.filterPill} ${roomFilter === "ALL" ? styles.filterPillActive : ""}`}
-                  onClick={() => setRoomFilter("ALL")}
-                >
-                  All
-                </button>
-
-                <button
-                  type="button"
-                  className={`${styles.filterPill} ${roomFilter === "CONFIRMED" ? styles.filterPillActive : ""}`}
-                  onClick={() => setRoomFilter("CONFIRMED")}
-                >
-                  <span>Confirmed</span>
-                </button>
-
-                <button
-                  type="button"
-                  className={`${styles.filterPill} ${roomFilter === "PENDING" ? styles.filterPillActive : ""}`}
-                  onClick={() => setRoomFilter("PENDING")}
-                >
-                  <span>Pending</span>
-                </button>
-
-                <button
-                  type="button"
-                  className={`${styles.filterPill} ${roomFilter === "CANCELLED" ? styles.filterPillActive : ""}`}
-                  onClick={() => setRoomFilter("CANCELLED")}
-                >
-                  Cancelled
-                </button>
-              </div>
-            )}
+            </div>
           </header>
 
           {/* Cards Stack / States */}
@@ -1399,7 +1580,9 @@ export default function MyOrdersView() {
               <div className={styles.emptyOrdersCard}>
                 <ShoppingBag size={48} color="#EA580C" />
                 <h2 className={styles.emptyStateTitle}>
-                  {foodFilter === "ONGOING"
+                  {searchQuery.trim()
+                    ? `No orders matching "${searchQuery.trim()}"`
+                    : foodFilter === "ONGOING"
                     ? "No active food orders right now"
                     : foodFilter === "COMPLETED"
                     ? "No completed food orders yet"
@@ -1408,11 +1591,34 @@ export default function MyOrdersView() {
                     : "You haven't placed any food orders yet"}
                 </h2>
                 <p className={styles.emptyStateSub}>
-                  Hungry? Explore top chef kitchens and delicious fresh gourmet preparations!
+                  {searchQuery.trim()
+                    ? "Try checking for spelling errors or search with a different dish name, order ID, or kitchen name."
+                    : "Hungry? Explore top chef kitchens and delicious fresh gourmet preparations!"}
                 </p>
-                <Link href="/food-explore" className={styles.exploreBtn}>
-                  Explore Food Menu
-                </Link>
+                {searchQuery.trim() ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery("");
+                      if (typeof window !== "undefined") {
+                        window.dispatchEvent(
+                          new CustomEvent("global-navbar-search", { detail: { query: "" } })
+                        );
+                        const url = new URL(window.location.href);
+                        url.searchParams.delete("query");
+                        url.searchParams.delete("search");
+                        window.history.replaceState(null, "", url.toString());
+                      }
+                    }}
+                    className={styles.exploreBtn}
+                  >
+                    Clear Search
+                  </button>
+                ) : (
+                  <Link href="/food-explore" className={styles.exploreBtn}>
+                    Explore Food Menu
+                  </Link>
+                )}
               </div>
             ) : (
               <>
@@ -1432,36 +1638,16 @@ export default function MyOrdersView() {
                         className={`${styles.activeOrderCard} ${isSelected ? styles.orderCardSelected : ""}`}
                         onClick={() => handleSelectOrder(order)}
                       >
-                        {/* Top Details */}
-                        <div className={styles.activeCardTopRow}>
-                          <div className={styles.activeCardTopLeft}>
-                            <div className={styles.cardImageWrapper}>
-                              <Image
-                                src={order.imageUrl}
-                                alt={order.vendorName}
-                                width={64}
-                                height={64}
-                                className={styles.cardImage}
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).src = "/images/places/place-pizza.png";
-                                }}
-                              />
-                            </div>
-                            <div className={styles.cardMetaInfo}>
-                              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "3px" }}>
-                                <h3 className={styles.vendorTitle}>{order.vendorName}</h3>
-                                <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#475569", background: "#F1F5F9", padding: "2px 6px", borderRadius: "4px", border: "1px solid #E2E8F0" }}>
-                                  #{order.orderId}
-                                </span>
-                              </div>
-                              <p className={styles.itemSummaryText}>{order.dishName || order.itemSummary}</p>
-                              <span className={styles.itemCountText}>{order.itemCountText}</span>
-                              <span className={styles.priceHighlight}>₹{order.price}</span>
-                              <span className={styles.dateSingleLine}>{order.orderDate}</span>
-                            </div>
+                        {/* 1. Top Header: Vendor Name + Order ID on Left, Status + Arriving on Right */}
+                        <div className={styles.cardHeaderRow}>
+                          <div className={styles.vendorAndIdGroup}>
+                            <h3 className={styles.vendorTitle}>{order.vendorName}</h3>
+                            <span className={styles.orderIdBadge}>
+                              #{order.orderId}
+                            </span>
                           </div>
 
-                          <div className={styles.activeCardTopRight}>
+                          <div className={styles.headerStatusGroup}>
                             <span
                               className={styles.statusPillGreen}
                               style={
@@ -1483,10 +1669,56 @@ export default function MyOrdersView() {
                                 )}
                               </span>
                             </div>
-                            <div className={styles.chevronBtn}>
-                              <ChevronRight size={18} />
+                          </div>
+                        </div>
+
+                        {/* 2. Middle Body: Food Image + Dish Meta */}
+                        <div className={styles.cardBodyRow}>
+                          <div className={styles.cardImageWrapper}>
+                            <Image
+                              src={order.imageUrl}
+                              alt={order.vendorName}
+                              width={64}
+                              height={64}
+                              className={styles.cardImage}
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = "/images/places/place-pizza.png";
+                              }}
+                            />
+                          </div>
+                          <div className={styles.cardContentCol}>
+                            <h4 className={styles.dishTitleText}>{order.dishName || order.itemSummary}</h4>
+                            <div className={styles.itemAndPriceLine}>
+                              <span className={styles.itemCountText}>{order.itemCountText}</span>
+                              <span className={styles.dotSeparator}>•</span>
+                              <span className={styles.priceHighlight}>₹{order.price}</span>
+                            </div>
+                            <div className={styles.dateAndStatusLine}>
+                              <span className={styles.dateText}>{order.orderDate}</span>
                             </div>
                           </div>
+
+                          {/* Delivery Partner avatar snippet if partner is assigned */}
+                          {order.partner && (
+                            <div className={styles.partnerSnippet} title={`Delivery Partner: ${order.partner.name}`}>
+                              <div className={styles.partnerSnippetAvatarWrapper}>
+                                {order.partner.avatar ? (
+                                  <Image
+                                    src={order.partner.avatar}
+                                    alt={order.partner.name}
+                                    width={40}
+                                    height={40}
+                                    className={styles.partnerSnippetAvatar}
+                                  />
+                                ) : (
+                                  <div className={styles.partnerSnippetAvatarPlaceholder}>
+                                    {order.partner.name.charAt(0).toUpperCase()}
+                                  </div>
+                                )}
+                                <span className={styles.partnerOnlineDot} />
+                              </div>
+                            </div>
+                          )}
                         </div>
 
                         {/* 5-Stage Dynamic Status Tracker */}
@@ -1648,81 +1880,122 @@ export default function MyOrdersView() {
                       className={`${styles.pastOrderCard} ${isSelected ? styles.orderCardSelected : ""}`}
                       onClick={() => handleSelectOrder(order)}
                     >
-                      <div className={styles.pastCardTopLeft}>
+                      {/* 1. Header: Vendor Name + Order ID on Left, Status Badge on Right */}
+                      <div className={styles.cardHeaderRow}>
+                        <div className={styles.vendorAndIdGroup}>
+                          <h3 className={styles.vendorTitle}>{order.vendorName}</h3>
+                          <span className={styles.orderIdBadge}>
+                            #{order.orderId}
+                          </span>
+                        </div>
+                        <div className={styles.headerStatusGroup}>
+                          <span className={isCancelled ? styles.statusPillRed : styles.statusPillGreenLight}>
+                            {order.statusDisplay}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* 2. Body: Food Image + Dish Meta Info */}
+                      <div className={styles.cardBodyRow}>
                         <div className={styles.cardImageWrapper}>
                           <Image
                             src={order.imageUrl}
                             alt={order.vendorName}
-                            width={72}
-                            height={72}
+                            width={64}
+                            height={64}
                             className={styles.cardImage}
                             onError={(e) => {
                               (e.target as HTMLImageElement).src = "/images/places/place-pizza.png";
                             }}
                           />
                         </div>
-                        <div className={styles.cardMetaInfo}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "3px" }}>
-                            <h3 className={styles.vendorTitle}>{order.vendorName}</h3>
-                            <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#475569", background: "#F1F5F9", padding: "2px 6px", borderRadius: "4px", border: "1px solid #E2E8F0" }}>
-                              #{order.orderId}
-                            </span>
+                        <div className={styles.cardContentCol}>
+                          <h4 className={styles.dishTitleText}>{order.dishName || order.itemSummary}</h4>
+                          <div className={styles.itemAndPriceLine}>
+                            <span className={styles.itemCountText}>{order.itemCountText}</span>
+                            <span className={styles.dotSeparator}>•</span>
+                            <span className={styles.priceHighlight}>₹{order.price}</span>
                           </div>
-                          <p className={styles.itemSummaryText}>{order.dishName || order.itemSummary}</p>
-                          <span className={styles.itemCountText}>{order.itemCountText}</span>
-                          <span className={styles.priceSingleLine}>₹{order.price}</span>
-                          <span className={styles.dateSingleLine}>{order.orderDate}</span>
+                          <div className={styles.dateAndStatusLine}>
+                            <span className={styles.dateText}>{order.orderDate}</span>
+                            {order.deliveredLabel && (
+                              <>
+                                <span className={styles.dotSeparator}>•</span>
+                                <span className={isCancelled ? styles.cancelReasonText : styles.deliveredNoteText}>
+                                  {order.deliveredLabel}
+                                </span>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
 
-                      <div className={styles.pastCardActionRow}>
-                        <div className={styles.pastStatusDateRow}>
-                          <span className={isCancelled ? styles.statusPillRed : styles.statusPillGray}>
-                            {order.statusDisplay}
-                          </span>
-                          <div className={styles.deliveredInfo}>
-                            <span className={styles.deliveredLabel}>
-                              {order.deliveredLabel || (isCancelled ? "Seller has not confirmed your order" : "Delivered")}
+                      {/* 3. Footer: Refund status / Rating on Left, Action Buttons on Right */}
+                      <div className={styles.cardFooterRow}>
+                        <div className={styles.footerLeft}>
+                          {isCancelled && (order.refund || order.isPaid || order.price === 0) && (
+                            <span
+                              className={styles.refundStatusBadge}
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                padding: "4px 9px",
+                                borderRadius: "6px",
+                                fontSize: "0.75rem",
+                                fontWeight: 700,
+                                backgroundColor:
+                                  order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED" || (!order.refund && order.price === 0)
+                                    ? "#DCFCE7"
+                                    : order.refund?.status === "REJECTED"
+                                    ? "#FEE2E2"
+                                    : "#FEF3C7",
+                                color:
+                                  order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED" || (!order.refund && order.price === 0)
+                                    ? "#15803D"
+                                    : order.refund?.status === "REJECTED"
+                                    ? "#B91C1C"
+                                    : "#B45309",
+                                border: `1px solid ${
+                                  order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED" || (!order.refund && order.price === 0)
+                                    ? "#BBF7D0"
+                                    : order.refund?.status === "REJECTED"
+                                    ? "#FECACA"
+                                    : "#FDE68A"
+                                }`,
+                              }}
+                            >
+                              {order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED" || (!order.refund && order.price === 0)
+                                ? `✓ Refund: Processed (₹${typeof order.refund?.amount === "number" ? order.refund.amount : order.price})`
+                                : order.refund?.status === "REJECTED"
+                                ? `✕ Refund: Rejected`
+                                : `⏳ Refund: Processing (₹${typeof order.refund?.amount === "number" ? order.refund.amount : order.price})`}
                             </span>
-                            <span className={styles.deliveredDateText}>{order.deliveredTime}</span>
-                          </div>
+                          )}
+                          {isDelivered && order.review && (
+                            <span className={styles.ratedBadge}>
+                              <Star size={13} fill="#059669" color="#059669" />
+                              <span>Rated {order.review.rating}★</span>
+                            </span>
+                          )}
                         </div>
 
-                        <div className={styles.pastButtonsGroup}>
+                        <div className={styles.footerButtonsGroup}>
                           {isDelivered && (
                             <>
-                              <button
-                                type="button"
-                                className={styles.reorderBtn}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleRateOrder(order);
-                                }}
-                                style={
-                                  order.review
-                                    ? {
-                                        backgroundColor: "#ECFDF5",
-                                        color: "#059669",
-                                        borderColor: "#A7F3D0",
-                                      }
-                                    : {
-                                        backgroundColor: "#FFF7ED",
-                                        color: "#EA580C",
-                                        borderColor: "#FFEDD5",
-                                      }
-                                }
-                              >
-                                <Star
-                                  size={14}
-                                  fill={order.review ? "#059669" : "none"}
-                                  color={order.review ? "#059669" : "#EA580C"}
-                                />
-                                <span>
-                                  {order.review
-                                    ? `Rated ${order.review.rating}★`
-                                    : "Rate Order"}
-                                </span>
-                              </button>
+                              {!order.review && (
+                                <button
+                                  type="button"
+                                  className={styles.rateOrderBtn}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRateOrder(order);
+                                  }}
+                                >
+                                  <Star size={14} color="#EA580C" />
+                                  <span>Rate Order</span>
+                                </button>
+                              )}
                               <button
                                 type="button"
                                 className={styles.reorderBtn}
@@ -1737,63 +2010,17 @@ export default function MyOrdersView() {
                             </>
                           )}
 
-                          {isCancelled && (
-                            <>
-                              {(order.refund || order.isPaid || order.price === 0) && (
-                                <span
-                                  className={styles.refundStatusBadge}
-                                  style={{
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: "4px",
-                                    padding: "4px 9px",
-                                    borderRadius: "6px",
-                                    fontSize: "0.75rem",
-                                    fontWeight: 700,
-                                    backgroundColor:
-                                      order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED" || (!order.refund && order.price === 0)
-                                        ? "#DCFCE7"
-                                        : order.refund?.status === "REJECTED"
-                                        ? "#FEE2E2"
-                                        : "#FEF3C7",
-                                    color:
-                                      order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED" || (!order.refund && order.price === 0)
-                                        ? "#15803D"
-                                        : order.refund?.status === "REJECTED"
-                                        ? "#B91C1C"
-                                        : "#B45309",
-                                    border: `1px solid ${
-                                      order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED" || (!order.refund && order.price === 0)
-                                        ? "#BBF7D0"
-                                        : order.refund?.status === "REJECTED"
-                                        ? "#FECACA"
-                                        : "#FDE68A"
-                                    }`,
-                                  }}
-                                >
-                                  {order.refund?.status === "APPROVED" || order.refund?.status === "PROCESSED" || (!order.refund && order.price === 0)
-                                    ? `✓ Refund: Processed (₹${typeof order.refund?.amount === "number" ? order.refund.amount : order.price})`
-                                    : order.refund?.status === "REJECTED"
-                                    ? `✕ Refund: Rejected`
-                                    : `⏳ Refund: Processing (₹${typeof order.refund?.amount === "number" ? order.refund.amount : order.price})`}
-                                </span>
-                              )}
-                              <button
-                                type="button"
-                                className={styles.viewDetailsBtn}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleSelectOrder(order);
-                                }}
-                              >
-                                <span>View Details</span>
-                              </button>
-                            </>
-                          )}
-                        </div>
-
-                        <div className={styles.chevronBtn}>
-                          <ChevronRight size={18} />
+                          <button
+                            type="button"
+                            className={styles.viewDetailsBtn}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelectOrder(order);
+                            }}
+                          >
+                            <span>View Details</span>
+                            <ChevronRight size={14} />
+                          </button>
                         </div>
                       </div>
                     </article>
@@ -1809,7 +2036,9 @@ export default function MyOrdersView() {
               <div className={styles.emptyOrdersCard}>
                 <BedDouble size={48} color="#EA580C" />
                 <h2 className={styles.emptyStateTitle}>
-                  {roomFilter === "CONFIRMED"
+                  {searchQuery.trim()
+                    ? `No bookings matching "${searchQuery.trim()}"`
+                    : roomFilter === "CONFIRMED"
                     ? "No confirmed room bookings"
                     : roomFilter === "PENDING"
                     ? "No pending room bookings"
@@ -1818,11 +2047,34 @@ export default function MyOrdersView() {
                     : "You haven't booked any rooms yet"}
                 </h2>
                 <p className={styles.emptyStateSub}>
-                  Looking for a comfortable, budget-friendly stay? Explore verified room stays!
+                  {searchQuery.trim()
+                    ? "Try checking for spelling errors or search with a different property title, booking reference, or city."
+                    : "Looking for a comfortable, budget-friendly stay? Explore verified room stays!"}
                 </p>
-                <Link href="/room-booking" className={styles.exploreBtn}>
-                  Explore Rooms
-                </Link>
+                {searchQuery.trim() ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery("");
+                      if (typeof window !== "undefined") {
+                        window.dispatchEvent(
+                          new CustomEvent("global-navbar-search", { detail: { query: "" } })
+                        );
+                        const url = new URL(window.location.href);
+                        url.searchParams.delete("query");
+                        url.searchParams.delete("search");
+                        window.history.replaceState(null, "", url.toString());
+                      }
+                    }}
+                    className={styles.exploreBtn}
+                  >
+                    Clear Search
+                  </button>
+                ) : (
+                  <Link href="/room-booking" className={styles.exploreBtn}>
+                    Explore Rooms
+                  </Link>
+                )}
               </div>
             ) : (
               <>
@@ -2460,8 +2712,14 @@ export default function MyOrdersView() {
                 {/* Host Details Box */}
                 <div className={styles.deliveryPartnerBox}>
                   <div className={styles.partnerLeft}>
-                    <div className={styles.partnerAvatar} style={{ display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#FFEDD5", color: "#EA580C", fontWeight: 700, borderRadius: "50%", width: 44, height: 44 }}>
-                      {selectedBooking.hostName ? selectedBooking.hostName.trim().charAt(0).toUpperCase() : <User size={20} />}
+                    <div className={styles.partnerAvatar}>
+                      <Image
+                        src="/images/delivery-partner-rohit.jpg"
+                        alt="Property Host"
+                        width={44}
+                        height={44}
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      />
                     </div>
                     <div className={styles.partnerInfo}>
                       <h4 className={styles.partnerName}>{selectedBooking.hostName}</h4>
@@ -2474,15 +2732,13 @@ export default function MyOrdersView() {
                   </div>
 
                   <div className={styles.partnerActions}>
-                    {selectedBooking.hostPhone && (
-                      <a
-                        href={`tel:${selectedBooking.hostPhone}`}
-                        className={styles.partnerActionBtn}
-                        title="Call Host"
-                      >
-                        <Phone size={15} />
-                      </a>
-                    )}
+                    <a
+                      href={`tel:${selectedBooking.hostPhone}`}
+                      className={styles.partnerActionBtn}
+                      title="Call Host"
+                    >
+                      <Phone size={15} />
+                    </a>
                     <button
                       type="button"
                       className={styles.partnerActionBtn}
@@ -2622,7 +2878,7 @@ export default function MyOrdersView() {
               maxHeight: "90vh",
               overflowY: "auto",
               boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-              padding: "24px",
+              padding: "clamp(16px, 4.5vw, 24px)",
               boxSizing: "border-box",
               display: "flex",
               flexDirection: "column",
@@ -2739,14 +2995,74 @@ export default function MyOrdersView() {
                 style={{
                   backgroundColor: "#F8FAFC",
                   borderRadius: "14px",
-                  padding: "16px",
+                  padding: "14px 16px",
                   border: "1px solid #E2E8F0",
                 }}
               >
-                <label style={{ display: "block", fontSize: "0.9rem", fontWeight: 700, color: "#1E293B", marginBottom: "8px" }}>
-                  Overall Order Experience
-                </label>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: "8px",
+                    marginBottom: "10px",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <label
+                    style={{
+                      fontSize: "0.88rem",
+                      fontWeight: 700,
+                      color: "#1E293B",
+                      margin: 0,
+                    }}
+                  >
+                    Overall Order Experience
+                  </label>
+                  <span
+                    style={{
+                      fontSize: "0.80rem",
+                      fontWeight: 700,
+                      whiteSpace: "nowrap",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      padding: "2.5px 9px",
+                      borderRadius: "9999px",
+                      backgroundColor:
+                        overallRating >= 4
+                          ? "#ECFDF5"
+                          : overallRating === 3
+                          ? "#FFFBEB"
+                          : "#FEF2F2",
+                      color:
+                        overallRating >= 4
+                          ? "#059669"
+                          : overallRating === 3
+                          ? "#D97706"
+                          : "#DC2626",
+                      border: `1px solid ${
+                        overallRating >= 4
+                          ? "#A7F3D0"
+                          : overallRating === 3
+                          ? "#FDE68A"
+                          : "#FECACA"
+                      }`,
+                    }}
+                  >
+                    {overallRating === 5
+                      ? "Excellent! 🌟"
+                      : overallRating === 4
+                      ? "Very Good 😊"
+                      : overallRating === 3
+                      ? "Good 🙂"
+                      : overallRating === 2
+                      ? "Fair 😐"
+                      : "Poor 😞"}
+                  </span>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
                   {[1, 2, 3, 4, 5].map((starVal) => {
                     const activeRating = hoverOverallRating || overallRating;
                     const isFilled = starVal <= activeRating;
@@ -2768,7 +3084,7 @@ export default function MyOrdersView() {
                         }}
                       >
                         <Star
-                          size={32}
+                          size={28}
                           fill={isFilled ? "#F59E0B" : "none"}
                           color={isFilled ? "#F59E0B" : "#CBD5E1"}
                           strokeWidth={2}
@@ -2776,29 +3092,6 @@ export default function MyOrdersView() {
                       </button>
                     );
                   })}
-                  <span
-                    style={{
-                      marginLeft: "8px",
-                      fontSize: "0.88rem",
-                      fontWeight: 700,
-                      color:
-                        overallRating >= 4
-                          ? "#059669"
-                          : overallRating === 3
-                          ? "#D97706"
-                          : "#DC2626",
-                    }}
-                  >
-                    {overallRating === 5
-                      ? "Excellent! 🌟"
-                      : overallRating === 4
-                      ? "Very Good 😊"
-                      : overallRating === 3
-                      ? "Good 🙂"
-                      : overallRating === 2
-                      ? "Fair 😐"
-                      : "Poor 😞"}
-                  </span>
                 </div>
 
                 <textarea
@@ -2845,11 +3138,11 @@ export default function MyOrdersView() {
                             border: "1px solid #E2E8F0",
                           }}
                         >
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <span style={{ fontSize: "0.84rem", fontWeight: 700, color: "#0F172A" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
+                            <span style={{ fontSize: "0.84rem", fontWeight: 700, color: "#0F172A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>
                               {item.name} {item.qty && item.qty > 1 ? `(x${item.qty})` : ""}
                             </span>
-                            <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "2px", flexShrink: 0 }}>
                               {[1, 2, 3, 4, 5].map((s) => {
                                 const activeItemRating = item.hoverRating || item.rating;
                                 const isFilled = s <= activeItemRating;

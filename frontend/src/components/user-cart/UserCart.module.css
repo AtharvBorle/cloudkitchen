@@ -649,8 +649,17 @@
   border: 1px solid #E2E8F0;
   padding: 14px 16px;
   display: flex;
-  gap: 12px;
+  flex-direction: column;
+  gap: 10px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+  box-sizing: border-box;
+}
+
+.promoInputRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
   box-sizing: border-box;
 }
 
@@ -659,18 +668,20 @@
   align-items: center;
   gap: 10px;
   flex: 1;
-  border: 1px solid #E2E8F0;
+  min-width: 0;
+  border: 1.5px solid #E2E8F0;
   border-radius: 12px;
-  padding: 0 10px 0 14px;
+  padding: 0 14px;
   height: 48px;
   background: #F8FAFC;
   box-sizing: border-box;
-  transition: border-color 0.15s ease;
+  transition: all 0.15s ease;
 }
 
 .promoInputBox:focus-within {
-  border-color: #F97316;
+  border-color: #EA580C;
   background: #FFFFFF;
+  box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.08);
 }
 
 .promoTagIcon {
@@ -682,19 +693,62 @@
   border: none;
   outline: none;
   background: transparent;
-  font-size: 14px;
+  font-size: 14.5px;
   color: #0F172A;
   width: 100%;
   min-width: 0;
   flex: 1;
   font-family: inherit;
-  font-weight: 500;
+  font-weight: 600;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .promoInput::placeholder {
   color: #94A3B8;
   text-transform: none;
+  font-size: 13.5px;
+  font-weight: 400;
+  letter-spacing: normal;
+}
+
+.couponOffersBannerBtn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 14px;
+  min-height: 42px;
+  border-radius: 10px;
+  background: #FFF7ED;
+  border: 1px solid #FFEDD5;
+  color: #EA580C;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.couponOffersBannerBtn:hover {
+  background: #FFEDD5;
+  border-color: #FED7AA;
+}
+
+.couponOffersBannerLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #C2410C;
+}
+
+.couponOffersBannerRight {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #EA580C;
 }
 
 .couponDropdownToggle {
@@ -794,19 +848,20 @@
 .couponSearchBox {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   background: #F8FAFC;
   border: 1.5px solid #E2E8F0;
-  border-radius: 10px;
-  padding: 0 12px;
-  height: 38px;
+  border-radius: 12px;
+  padding: 0 14px;
+  height: 44px;
   box-sizing: border-box;
-  transition: border-color 0.15s ease;
+  transition: all 0.15s ease;
 }
 
 .couponSearchBox:focus-within {
   border-color: #EA580C;
   background: #FFFFFF;
+  box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.08);
 }
 
 .couponSearchIcon {
@@ -819,7 +874,7 @@
   outline: none;
   background: transparent;
   width: 100%;
-  font-size: 12.5px;
+  font-size: 13.5px;
   color: #0F172A;
   font-family: inherit;
   font-weight: 500;
@@ -828,6 +883,7 @@
 .couponSearchInput::placeholder {
   color: #94A3B8;
   font-weight: 400;
+  font-size: 13px;
 }
 
 .couponSearchClearBtn {
@@ -880,22 +936,31 @@
   background: #EA580C;
   border: none;
   border-radius: 12px;
-  padding: 0 24px;
+  padding: 0 22px;
   height: 48px;
-  font-size: 14.5px;
+  font-size: 14px;
   font-weight: 700;
   color: #FFFFFF;
   cursor: pointer;
   transition: all 0.15s ease;
   flex-shrink: 0;
   font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.applyButton:hover {
-  background: #DC2626;
+.applyButton:disabled {
+  background: #E2E8F0;
+  color: #94A3B8;
+  cursor: not-allowed;
 }
 
-.applyButton:active {
+.applyButton:not(:disabled):hover {
+  background: #C2410C;
+}
+
+.applyButton:not(:disabled):active {
   transform: scale(0.98);
 }
 
@@ -1591,10 +1656,25 @@
     justify-content: space-between;
   }
   .promoCard {
-    flex-direction: column;
+    padding: 12px 14px;
+    gap: 8px;
+  }
+  .promoInputRow {
+    gap: 8px;
+  }
+  .promoInputBox {
+    height: 44px;
+    padding: 0 12px;
   }
   .applyButton {
-    width: 100%;
+    width: auto;
+    height: 44px;
+    padding: 0 16px;
+    font-size: 13.5px;
+  }
+  .couponOffersBannerBtn {
+    padding: 8px 12px;
+    min-height: 38px;
   }
   .offerCard {
     padding: 10px 12px;
