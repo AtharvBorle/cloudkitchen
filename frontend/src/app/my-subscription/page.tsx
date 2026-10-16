@@ -925,8 +925,9 @@ function MySubscriptionContent() {
                   router.replace("/my-subscriptions-desktop?tab=active", { scroll: false });
                 }}
               >
-                <Calendar size={17} />
-                <span>My Active Subscription{activeSubs.length !== 1 ? "s" : ""}</span>
+                <Calendar size={17} className={styles.tabIcon} />
+                <span className={styles.tabLabelDesktop}>My Active Subscription{activeSubs.length !== 1 ? "s" : ""}</span>
+                <span className={styles.tabLabelMobile}>My Active</span>
                 <span
                   className={
                     activeTab === "active"
@@ -934,7 +935,12 @@ function MySubscriptionContent() {
                       : `${styles.tabCountBadge} ${styles.tabCountBadgeInactive}`
                   }
                 >
-                  {activeSubs.length > 1 ? `${activeSubs.length} Active` : activeSubs.length === 1 ? "1 Active" : "0 Active"}
+                  <span className={styles.tabBadgeDesktop}>
+                    {activeSubs.length > 1 ? `${activeSubs.length} Active` : activeSubs.length === 1 ? "1 Active" : "0 Active"}
+                  </span>
+                  <span className={styles.tabBadgeMobile}>
+                    {activeSubs.length > 0 ? `${activeSubs.length} Active` : "0 Active"}
+                  </span>
                 </span>
               </button>
 
@@ -951,8 +957,9 @@ function MySubscriptionContent() {
                   router.replace("/my-subscriptions-desktop?tab=plans", { scroll: false });
                 }}
               >
-                <Utensils size={17} />
-                <span>All Subscription Plans</span>
+                <Utensils size={17} className={styles.tabIcon} />
+                <span className={styles.tabLabelDesktop}>All Subscription Plans</span>
+                <span className={styles.tabLabelMobile}>All Plans</span>
                 <span
                   className={
                     activeTab === "plans"
