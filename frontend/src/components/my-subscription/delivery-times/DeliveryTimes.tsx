@@ -28,17 +28,55 @@ export interface DeliverySlot {
   slotEndTime?: string;
   deliveryOtp?: string | null;
   otpAvailableAt?: string;
+  isStarted?: boolean;
+  startDateStr?: string;
 }
 
 export interface DeliveryTimesProps {
   slots?: DeliverySlot[];
+  isStarted?: boolean;
+  startDate?: string | null;
 }
 
 export const DeliveryTimes: React.FC<DeliveryTimesProps> = ({
   slots,
+  isStarted: isStartedProp,
+  startDate,
 }) => {
   const displaySlots = Array.isArray(slots) ? slots : [];
   const [copiedSlotId, setCopiedSlotId] = useState<string | null>(null);
+
+  // Check if subscription has started:
+  // If isStartedProp is explicitly passed, use it. Otherwise, if any slot has isStarted === false, or if startDate is in future
+  const isStarted = (() => {
+    if (typeof isStartedProp === "boolean") return isStartedProp;
+    if (displaySlots.some((s) => s.isStarted === false)) return false;
+    if (startDate) {
+      const start = new Date(startDate);
+      if (!isNaN(start.getTime())) {
+        const now = new Date();
+        const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime();
+        const todayDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        return startDay <= todayDay;
+      }
+    }
+    return true;
+  })();
+
+  const formattedStartDate = (() => {
+    if (!startDate) return "";
+    try {
+      const d = new Date(startDate);
+      if (isNaN(d.getTime())) return "";
+      return d.toLocaleDateString("en-US", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+    } catch {
+      return "";
+    }
+  })();
 
   const handleCopyOtp = (slotId: string, otpCode: string) => {
     if (!otpCode) return;
@@ -49,23 +87,25 @@ export const DeliveryTimes: React.FC<DeliveryTimesProps> = ({
     }, 2500);
   };
 
-  // Find any slots with an active OTP
-  const activeOtpSlots = displaySlots.filter(
-    (s) => s.deliveryOtp && !s.isDelivered
-  );
+  // Find any slots with an active OTP (only for started subscriptions)
+  const activeOtpSlots = isStarted
+    ? displaySlots.filter((s) => s.deliveryOtp && !s.isDelivered && s.isStarted !== false)
+    : [];
 
   // Find any upcoming slots that will get OTP later today
-  const upcomingOtpSlots = displaySlots.filter(
-    (s) => !s.isDelivered && !s.deliveryOtp && (s.slotStartTime || s.otpAvailableAt)
-  );
+  const upcomingOtpSlots = isStarted
+    ? displaySlots.filter(
+        (s) => !s.isDelivered && !s.deliveryOtp && (s.slotStartTime || s.otpAvailableAt)
+      )
+    : [];
 
   return (
     <div className={styles.cardContainer}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "8px" }}>
         <h3 className={styles.cardHeading} style={{ margin: 0 }}>
           Daily Delivery Schedule & OTP
         </h3>
-        {activeOtpSlots.length > 0 && (
+        {activeOtpSlots.length > 0 ? (
           <span
             style={{
               fontSize: "11px",
@@ -82,8 +122,47 @@ export const DeliveryTimes: React.FC<DeliveryTimesProps> = ({
             <Key size={12} />
             OTP Active
           </span>
-        )}
+        ) : !isStarted && formattedStartDate ? (
+          <span
+            style={{
+              fontSize: "11px",
+              fontWeight: 800,
+              backgroundColor: "#EFF6FF",
+              color: "#1D4ED8",
+              padding: "3px 8px",
+              borderRadius: "6px",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "4px",
+            }}
+          >
+            Starts {formattedStartDate}
+          </span>
+        ) : null}
       </div>
+
+      {!isStarted && formattedStartDate && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            backgroundColor: "#F0F9FF",
+            border: "1px solid #BAE6FD",
+            borderRadius: "10px",
+            padding: "10px 14px",
+            marginBottom: "14px",
+            fontSize: "12.5px",
+            color: "#0369A1",
+            lineHeight: 1.4,
+          }}
+        >
+          <Sparkles size={16} color="#0284C7" style={{ flexShrink: 0 }} />
+          <span>
+            This meal subscription starts on <strong>{formattedStartDate}</strong>. Delivery verification OTPs will be generated here during each scheduled meal window once deliveries begin.
+          </span>
+        </div>
+      )}
 
       {displaySlots.length === 0 ? (
         <p style={{ margin: 0, fontSize: "0.85rem", color: "#64748B", lineHeight: "1.4" }}>
@@ -92,9 +171,9 @@ export const DeliveryTimes: React.FC<DeliveryTimesProps> = ({
       ) : (
         <div className={styles.slotsList}>
           {displaySlots.map((slot) => {
-            const isDelivered = Boolean(slot.isDelivered);
-            const isOverdue = Boolean(slot.isOverdue && !isDelivered);
-            const isSkipped = slot.todayStatus === "SKIPPED_PAUSED";
+            const isDelivered = Boolean(slot.isDelivered && isStarted);
+            const isOverdue = Boolean(slot.isOverdue && !isDelivered && isStarted);
+            const isSkipped = Boolean(slot.todayStatus === "SKIPPED_PAUSED" && isStarted);
 
             return (
               <div key={slot.id} className={styles.slotRow}>
@@ -156,6 +235,19 @@ export const DeliveryTimes: React.FC<DeliveryTimesProps> = ({
                       }}
                     >
                       Paused
+                    </span>
+                  ) : !isStarted ? (
+                    <span
+                      style={{
+                        fontSize: "11px",
+                        fontWeight: 700,
+                        backgroundColor: "#EFF6FF",
+                        color: "#2563EB",
+                        padding: "3px 8px",
+                        borderRadius: "6px",
+                      }}
+                    >
+                      Scheduled
                     </span>
                   ) : null}
                 </div>

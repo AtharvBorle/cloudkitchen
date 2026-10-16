@@ -84,8 +84,8 @@ function ForgotPasswordForm() {
                 return;
             }
 
-            setSuccessMessage("OTP sent successfully. Use testing OTP 123456.");
-            setOtp("123456");
+            setSuccessMessage(data?.message || "OTP sent successfully to your registered mobile number.");
+            setOtp("");
             setResendCooldown(30);
             setStep(2);
         } catch (err: any) {
@@ -118,8 +118,8 @@ function ForgotPasswordForm() {
                 return;
             }
 
-            setSuccessMessage("New OTP sent! (Testing OTP: 123456)");
-            setOtp("123456");
+            setSuccessMessage(data?.message || "New OTP sent to your registered mobile number.");
+            setOtp("");
             setResendCooldown(30);
         } catch (err) {
             setErrorMessage("Could not resend OTP. Please try again.");
@@ -134,13 +134,8 @@ function ForgotPasswordForm() {
         setErrorMessage("");
         setSuccessMessage("");
 
-        if (!otp.trim()) {
-            setErrorMessage("Please enter the 6-digit OTP code.");
-            return;
-        }
-
-        if (otp.trim() !== "123456") {
-            setErrorMessage("Invalid OTP code. Please enter 123456.");
+        if (!otp.trim() || otp.trim().length !== 6) {
+            setErrorMessage("Please enter the complete 6-digit OTP code received on your mobile.");
             return;
         }
 
@@ -430,16 +425,9 @@ function ForgotPasswordForm() {
                             color: "#1E40AF",
                             fontWeight: "600"
                         }}>
-                            <span>💡 Development Test OTP:</span>
-                            <span style={{
-                                backgroundColor: "#DBEAFE",
-                                padding: "2px 8px",
-                                borderRadius: "6px",
-                                letterSpacing: "1px",
-                                fontFamily: "monospace",
-                                fontWeight: "800"
-                            }}>
-                                123456
+                            <span>📲 SMS Sent:</span>
+                            <span style={{ fontWeight: 500, color: "#1E3A8A" }}>
+                                6-digit OTP sent to your registered mobile (valid 10 mins)
                             </span>
                         </div>
 

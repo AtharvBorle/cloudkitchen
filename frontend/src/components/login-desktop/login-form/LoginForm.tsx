@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
 import { discardExistingSession } from "@/lib/logout";
 import { validateEmail } from "@/lib/email-validation";
+import { fetchApi } from "@/lib/fetch-api";
 import styles from "./LoginForm.module.css";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import { PasswordInput } from "@/components/common/PasswordInput/PasswordInput";
@@ -119,20 +120,41 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     }
   };
 
-  const handleSendOtp = () => {
+  const handleSendOtp = async () => {
     const rawDigits = phoneNumber.replace(/\D/g, "").slice(-10);
     if (rawDigits.length !== 10) {
       setError("Please enter a valid 10-digit mobile number.");
       return;
     }
     setError("");
-    setSuccessNotice("Verification code sent! Default OTP is 123456.");
-    setOtpSent(true);
-    setResendTimer(60);
-    // Focus first OTP box automatically
-    setTimeout(() => {
-      otpInputRefs.current[0]?.focus();
-    }, 100);
+    setSuccessNotice("");
+    setIsLoading(true);
+
+    try {
+      const res = await fetchApi("/api/auth/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: rawDigits, purpose: "login" }),
+      });
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        setError(data?.message || "Failed to send verification code. Please check your mobile number.");
+        return;
+      }
+
+      setSuccessNotice(`Verification code sent to +91 ${rawDigits}!`);
+      setOtpSent(true);
+      setResendTimer(60);
+      // Focus first OTP box automatically
+      setTimeout(() => {
+        otpInputRefs.current[0]?.focus();
+      }, 100);
+    } catch {
+      setError("Failed to send verification code. Please check your connection and try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleQuickFillOtp = () => {
@@ -249,14 +271,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       }
 
       if (!otpSent) {
-        handleSendOtp();
-        setError("Verification code sent! Please enter OTP (123456) and sign in.");
+        await handleSendOtp();
         return;
       }
 
       const fullOtp = otp.join("");
       if (fullOtp.length !== 6) {
-        setError("Please enter the complete 6-digit verification code (123456).");
+        setError("Please enter the complete 6-digit verification code sent to your phone.");
         return;
       }
 
@@ -282,7 +303,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             res.error === "INVALID_OTP" ||
             res.error.includes("INVALID_OTP")
           ) {
-            setError("Invalid OTP. Please use default OTP: 123456.");
+            setError("Invalid verification code. Please check the OTP received via SMS.");
           } else if (
             res.error === "INVALID_PHONE" ||
             res.error.includes("INVALID_PHONE")

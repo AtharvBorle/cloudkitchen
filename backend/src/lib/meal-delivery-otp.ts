@@ -269,3 +269,54 @@ export function verifyMealDeliveryOtp(
   if (clean === "123456") return true;
   return false;
 }
+
+/**
+ * Returns date and time breakdown in Indian Standard Time (Asia/Kolkata) for a given date or timestamp.
+ */
+export function getDateInIST(date: Date | string | number | null | undefined): {
+  hours: number;
+  minutes: number;
+  currentMinutes: number;
+  dateStr: string;
+} {
+  if (!date) {
+    return { hours: 0, minutes: 0, currentMinutes: 0, dateStr: "" };
+  }
+  const d = new Date(date);
+  if (isNaN(d.getTime())) {
+    return { hours: 0, minutes: 0, currentMinutes: 0, dateStr: "" };
+  }
+  try {
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Kolkata",
+      hour12: false,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    const parts = formatter.formatToParts(d);
+    const getPart = (type: string) => parts.find((p) => p.type === type)?.value || "";
+    const year = getPart("year");
+    const month = getPart("month");
+    const day = getPart("day");
+    const hours = parseInt(getPart("hour"), 10) || d.getHours();
+    const minutes = parseInt(getPart("minute"), 10) || d.getMinutes();
+    return {
+      hours,
+      minutes,
+      currentMinutes: hours * 60 + minutes,
+      dateStr: `${year}-${month}-${day}`,
+    };
+  } catch {
+    const hours = d.getHours();
+    const minutes = d.getMinutes();
+    return {
+      hours,
+      minutes,
+      currentMinutes: hours * 60 + minutes,
+      dateStr: d.toISOString().split("T")[0],
+    };
+  }
+}

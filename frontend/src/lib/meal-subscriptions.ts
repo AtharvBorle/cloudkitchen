@@ -663,6 +663,8 @@ export interface UserActiveMealSubscription {
   status: "ACTIVE" | "PAUSED" | "CANCELLED" | "EXPIRED" | "INACTIVE" | string;
   isPlanDeactivated?: boolean;
   isExpired?: boolean;
+  isStarted?: boolean;
+  isSubActiveToday?: boolean;
   tier: string;
   cycle: "WEEKLY" | "MONTHLY" | string;
   pricePaid: number;
@@ -701,6 +703,8 @@ export interface UserActiveMealSubscription {
     slotEndTime?: string;
     timingStatus?: string;
     timeRange?: string;
+    isStarted?: boolean;
+    startDateStr?: string;
   }>;
   mealTimings?: string[];
   mealSlots?: any[];

@@ -4,6 +4,7 @@ import { ApiError } from "@/lib/api-error";
 import { emitMealPlanUpdated, emitMealSubscriptionUpdated } from "@/lib/realtime-events";
 import { getCategoryExpiries } from "@/lib/subscription";
 import { PREDEFINED_MEAL_SLOTS, normalizeMealSlotId, normalizeMealSlotIds, getMealSlotDetails, extractTimeRangeString } from "@/lib/meal-slots";
+import { getNowInIST, getDateInIST, getMealDeliveryTimingStatus } from "@/lib/meal-delivery-otp";
 import { MealSubscriptionDeliveryService } from "@/services/mealSubscriptionDeliveryService";
 
 export const getAuthenticatedSellerProfile = async () => {
@@ -56,6 +57,8 @@ export const getAuthenticatedSellerProfile = async () => {
 export const getSellerMealPlans = async () => {
     const { sellerProfile } = await getAuthenticatedSellerProfile();
 
+    const todayIst = getNowInIST();
+
     const dbPlans = await db.sellerMealPlan.findMany({
         where: { sellerId: sellerProfile.id },
         include: {
@@ -64,6 +67,10 @@ export const getSellerMealPlans = async () => {
             },
             userSubscriptions: {
                 include: {
+                    deliveries: {
+                        where: { scheduledDate: todayIst.dateStr },
+                        include: { slot: true }
+                    },
                     slots: {
                         include: { slot: true }
                     },
@@ -86,6 +93,10 @@ export const getSellerMealPlans = async () => {
     const directSubs = await db.userMealSubscription.findMany({
         where: { sellerId: sellerProfile.id },
         include: {
+            deliveries: {
+                where: { scheduledDate: todayIst.dateStr },
+                include: { slot: true }
+            },
             slots: {
                 include: { slot: true }
             },
@@ -206,6 +217,36 @@ export const getSellerMealPlans = async () => {
             parsedDailyDeliveries = [];
         }
 
+        const subStartDateIst = getDateInIST(sub.startDate);
+        const subStartDateStr = subStartDateIst.dateStr;
+        const isStarted = !subStartDateStr || todayIst.dateStr >= subStartDateStr;
+        const isExpired = sub.status === "EXPIRED" || isSubEndReached;
+        const isSubActiveToday = isStarted && !isExpired && !sub.isPaused && isSubscriptionActive(sub);
+
+        // Merge relational deliveries for today into parsedDailyDeliveries to ensure synchrony
+        if (Array.isArray(sub.deliveries)) {
+            for (const del of sub.deliveries) {
+                const normDelSlot = normalizeMealSlotId(del.slotId) || del.slotId;
+                const existingIdx = parsedDailyDeliveries.findIndex(
+                    (d: any) => d.date === del.scheduledDate &&
+                                (normalizeMealSlotId(d.slotId) === normDelSlot || (!d.slotId && normDelSlot === "breakfast"))
+                );
+                const rec = {
+                    date: del.scheduledDate,
+                    slotId: normDelSlot,
+                    status: del.status,
+                    markedAt: del.deliveredAt ? new Date(del.deliveredAt).toISOString() : (del.updatedAt ? new Date(del.updatedAt).toISOString() : new Date().toISOString()),
+                    markedBy: del.markedBy,
+                    note: del.note,
+                };
+                if (existingIdx >= 0) {
+                    parsedDailyDeliveries[existingIdx] = { ...parsedDailyDeliveries[existingIdx], ...rec };
+                } else {
+                    parsedDailyDeliveries.unshift(rec);
+                }
+            }
+        }
+
         const pauseBillingPeriod = planObj?.pauseBillingPeriod || sub.plan?.pauseBillingPeriod || "7 Days";
 
         const rawSubSlots = sub.slots && sub.slots.length > 0
@@ -225,9 +266,36 @@ export const getSellerMealPlans = async () => {
                 extractTimeRangeString(dbSlot?.defaultTimeRange) ||
                 ""
             ).trim();
+
+            const existingDelivery = sub.deliveries?.find(
+                (d: any) => d.slotId === id || normalizeMealSlotIds([d.slotId])[0] === id
+            );
+            const legacyDelivery = parsedDailyDeliveries.find(
+                (d: any) => d.date === todayIst.dateStr && (normalizeMealSlotId(d.slotId) === id || (!d.slotId && id === "breakfast"))
+            );
+            const slotDeliveryStatus = isStarted
+                ? (existingDelivery?.status || legacyDelivery?.status || (sub.isPaused ? "SKIPPED_PAUSED" : "PENDING"))
+                : "UPCOMING";
+
+            const evaluationDateStr = isStarted ? todayIst.dateStr : subStartDateStr;
+            const timing = getMealDeliveryTimingStatus(evaluationDateStr, customTime, base, slotDeliveryStatus);
+
             return {
                 ...base,
                 defaultTimeRange: customTime || "",
+                todayStatus: slotDeliveryStatus,
+                isDelivered: isStarted && slotDeliveryStatus === "DELIVERED",
+                deliveredAt: isStarted && (existingDelivery?.deliveredAt || legacyDelivery?.markedAt)
+                    ? new Date(existingDelivery?.deliveredAt || legacyDelivery?.markedAt).toISOString()
+                    : null,
+                isOverdue: isStarted ? timing.isOverdue : false,
+                isOtpActive: isStarted ? timing.isOtpActive : false,
+                overdueMinutes: isStarted ? timing.overdueMinutes : 0,
+                timingStatus: isStarted ? timing.timingStatus : "UPCOMING",
+                slotStartTime: timing.window.startFormatted,
+                slotEndTime: timing.window.endFormatted,
+                isStarted,
+                startDateStr: subStartDateStr,
             };
         });
 
@@ -256,6 +324,7 @@ export const getSellerMealPlans = async () => {
             usedPauseDays: Number(sub.usedPauseDays || 0),
             pauseHistory: parsedPauseHistory,
             dailyDeliveries: parsedDailyDeliveries,
+            todayDeliveries: resolvedSlotDetails,
             mealTimings: resolvedTimings,
             mealSlots: resolvedSlotDetails,
             slotIds: resolvedSlotIds,
@@ -264,6 +333,8 @@ export const getSellerMealPlans = async () => {
             startDate: sub.startDate instanceof Date ? sub.startDate.toISOString() : String(sub.startDate),
             endDate: sub.endDate ? (sub.endDate instanceof Date ? sub.endDate.toISOString() : String(sub.endDate)) : null,
             pricePaid: resolvedPrice,
+            isStarted,
+            isSubActiveToday,
         });
     };
 
@@ -1185,10 +1256,11 @@ export const toggleSubscriberMealDeliveryStatus = async (
         targetSlot = subSlots[0]?.slotId || "breakfast";
     }
 
+    const effectiveDate = date || getNowInIST().dateStr;
     return await MealSubscriptionDeliveryService.recordDeliveryStatus(
         sellerProfile.id,
         subscriptionId,
-        date,
+        effectiveDate,
         targetSlot,
         status,
         note,
@@ -1199,7 +1271,7 @@ export const toggleSubscriberMealDeliveryStatus = async (
 export const getMealSubscriptionDeliveries = async (req: Request) => {
     const { sellerProfile } = await getAuthenticatedSellerProfile();
     const url = new URL(req.url);
-    const dateStr = url.searchParams.get("date") || new Date().toISOString().split("T")[0];
+    const dateStr = url.searchParams.get("date") || getNowInIST().dateStr;
     const slotId = url.searchParams.get("slotId") || undefined;
     const status = url.searchParams.get("status") || undefined;
     const search = url.searchParams.get("search") || undefined;

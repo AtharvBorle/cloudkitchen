@@ -109,6 +109,12 @@
   border: 1px solid #fca5a5;
 }
 
+.upcomingBadge {
+  background-color: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
 .statsRow {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;

@@ -3,13 +3,25 @@
 import { useEffect, useRef, useState } from "react";
 
 export interface RealtimeOrderPayload {
-  event: "ORDER_CREATED" | "ORDER_UPDATED" | "ORDER_CANCELLED" | "ORDER_STATUS_CHANGED" | "DASHBOARD_REFRESH";
+  event:
+    | "ORDER_CREATED"
+    | "ORDER_UPDATED"
+    | "ORDER_CANCELLED"
+    | "ORDER_STATUS_CHANGED"
+    | "DASHBOARD_REFRESH"
+    | "MEAL_SUBSCRIPTION_UPDATED"
+    | "MEAL_PLAN_UPDATED";
   order?: any;
   orderId?: string;
   status?: string;
   sellerId?: string;
   userId?: string;
   deliveryPersonId?: string | null;
+  subscriptionId?: string;
+  subscription?: any;
+  planId?: string;
+  plan?: any;
+  action?: string;
   timestamp: string;
 }
 

@@ -6,6 +6,7 @@ import {
   getMealDeliveryTimingStatus,
   verifyMealDeliveryOtp,
   getNowInIST,
+  getDateInIST,
 } from "@/lib/meal-delivery-otp";
 import { sendMealSlotDeliveredNotification } from "@/lib/emailService";
 
@@ -53,6 +54,12 @@ export class MealSubscriptionDeliveryService {
     });
 
     for (const sub of subscriptions) {
+      // Ensure subscription has actually started by dateStr in IST
+      const subStartDateStr = getDateInIST(sub.startDate).dateStr;
+      if (subStartDateStr && dateStr < subStartDateStr) {
+        continue;
+      }
+
       // Determine subscription slots
       let slotIds = sub.slots.map((s) => s.slotId);
 
@@ -336,6 +343,20 @@ export class MealSubscriptionDeliveryService {
 
     if (!sub) {
       throw new ApiError("Subscription not found or not assigned to your kitchen", 404);
+    }
+
+    // Disallow marking delivery before subscription scheduled start date
+    const subStartDateStr = getDateInIST(sub.startDate).dateStr;
+    if (subStartDateStr && dateStr < subStartDateStr) {
+      const formattedStart = new Date(sub.startDate).toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+      throw new ApiError(
+        `This subscription is scheduled to begin on ${formattedStart}. Deliveries cannot be marked before the scheduled start date.`,
+        400
+      );
     }
 
     // Disallow reverting an already delivered/verified meal back to pending

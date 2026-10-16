@@ -819,6 +819,16 @@ function MySubscriptionContent() {
   };
 
   const getSubscriptionSlots = (sub: UserActiveMealSubscription): DeliverySlot[] => {
+    const isStarted = sub.isStarted ?? (() => {
+      if (!sub.startDate) return true;
+      const start = new Date(sub.startDate);
+      if (isNaN(start.getTime())) return true;
+      const now = new Date();
+      const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime();
+      const todayDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      return startDay <= todayDay;
+    })();
+
     // If backend provided enriched mealSlots or todayDeliveries
     const rawSlotsList = (sub.mealSlots && sub.mealSlots.length > 0)
       ? sub.mealSlots
@@ -836,16 +846,18 @@ function MySubscriptionContent() {
           name: `${parsed.name} Delivery`,
           timeRange: parsed.timeRange || s.defaultTimeRange || todayMatch?.timeRange || "",
           icon: "",
-          todayStatus: todayMatch?.status || s.todayStatus || (sub.isPaused ? "SKIPPED_PAUSED" : "PENDING"),
-          isDelivered: Boolean(todayMatch?.isDelivered ?? s.isDelivered),
-          deliveredAt: todayMatch?.deliveredAt || s.deliveredAt || null,
-          isOverdue: Boolean(todayMatch?.isOverdue ?? s.isOverdue),
-          isOtpActive: Boolean(todayMatch?.isOtpActive ?? s.isOtpActive),
-          timingStatus: todayMatch?.timingStatus || s.timingStatus || "UPCOMING",
+          todayStatus: !isStarted ? "UPCOMING" : (todayMatch?.status || s.todayStatus || (sub.isPaused ? "SKIPPED_PAUSED" : "PENDING")),
+          isDelivered: Boolean(isStarted && (todayMatch?.isDelivered ?? s.isDelivered)),
+          deliveredAt: isStarted ? (todayMatch?.deliveredAt || s.deliveredAt || null) : null,
+          isOverdue: Boolean(isStarted && (todayMatch?.isOverdue ?? s.isOverdue)),
+          isOtpActive: Boolean(isStarted && (todayMatch?.isOtpActive ?? s.isOtpActive)),
+          timingStatus: isStarted ? (todayMatch?.timingStatus || s.timingStatus || "UPCOMING") : "UPCOMING",
           slotStartTime: todayMatch?.slotStartTime || s.slotStartTime || "",
           slotEndTime: todayMatch?.slotEndTime || s.slotEndTime || "",
-          deliveryOtp: todayMatch?.deliveryOtp || s.deliveryOtp || null,
+          deliveryOtp: isStarted ? (todayMatch?.deliveryOtp || s.deliveryOtp || null) : null,
           otpAvailableAt: todayMatch?.slotStartTime || s.otpAvailableAt || "",
+          isStarted,
+          startDateStr: sub.startDate,
         };
       });
     }
@@ -862,6 +874,8 @@ function MySubscriptionContent() {
           name: `${parsed.name} Delivery`,
           timeRange: parsed.timeRange,
           icon: "",
+          isStarted,
+          startDateStr: sub.startDate,
         };
       });
     }
@@ -1160,6 +1174,8 @@ function MySubscriptionContent() {
                                       ? "#F1F5F9"
                                       : s.isPaused
                                       ? "#FEF3C7"
+                                      : s.isStarted === false
+                                      ? "#EFF6FF"
                                       : s.status === "ACTIVE"
                                       ? "#DCFCE7"
                                       : "#F1F5F9",
@@ -1169,12 +1185,14 @@ function MySubscriptionContent() {
                                       ? "#64748B"
                                       : s.isPaused
                                       ? "#B45309"
+                                      : s.isStarted === false
+                                      ? "#1D4ED8"
                                       : s.status === "ACTIVE"
                                       ? "#15803D"
                                       : "#64748B",
                                   }}
                                 >
-                                  {isExpired ? "Expired" : isInactive ? "Inactive" : s.isPaused ? "Paused" : s.status}
+                                  {isExpired ? "Expired" : isInactive ? "Inactive" : s.isPaused ? "Paused" : s.isStarted === false ? "Upcoming" : s.status}
                                 </span>
                               </button>
                             );
@@ -1231,7 +1249,8 @@ function MySubscriptionContent() {
                           (subItem.isPlanDeactivated ||
                             subItem.plan?.status === "Inactive" ||
                             subItem.status === "INACTIVE");
-                        const resolvedStatus = isExpired ? "EXPIRED" : isPlanInactive ? "INACTIVE" : subItem.status;
+                        const isUpcoming = !isExpired && !isPlanInactive && subItem.isStarted === false;
+                        const resolvedStatus = isExpired ? "EXPIRED" : isPlanInactive ? "INACTIVE" : isUpcoming ? "UPCOMING" : subItem.status;
 
                         // Check if the underlying meal plan is still Live / available for renewal
                         const liveMatchedPlan = allPlans.find(
@@ -1433,7 +1452,11 @@ function MySubscriptionContent() {
 
                             {/* Delivery Times & Benefits Grid */}
                             <div className={styles.detailsGrid}>
-                              <DeliveryTimes slots={getSubscriptionSlots(subItem)} />
+                              <DeliveryTimes
+                                slots={getSubscriptionSlots(subItem)}
+                                isStarted={subItem.isStarted}
+                                startDate={subItem.startDate}
+                              />
                               <SubscriptionBenefits
                                 allowPause={isPauseAllowed}
                                 benefits={
