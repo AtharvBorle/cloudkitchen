@@ -56,6 +56,8 @@ interface ConfirmedOrderData {
     pincode: string;
   };
   paymentMethod: string;
+  isPaid?: boolean;
+  rawPaymentMethod?: string;
   items: ConfirmedOrderItem[];
   subtotal: number;
   discount: number;
@@ -178,6 +180,8 @@ export default function OrderConfirmation() {
         pincode: "",
       },
       paymentMethod: `${rawOrder.paymentMethod === "ONLINE" ? "Online Payment" : (rawOrder.paymentMethod || "COD")} ${rawOrder.isPaid ? "(Paid Online)" : "(Pay on Delivery)"}`,
+      isPaid: Boolean(rawOrder.isPaid),
+      rawPaymentMethod: rawOrder.paymentMethod || (rawOrder.isPaid ? "ONLINE" : "COD"),
       items: parsedItems,
       subtotal: computedItemsSubtotal > 0 ? computedItemsSubtotal : finalTotal,
       discount: computedDiscount,
@@ -332,6 +336,15 @@ export default function OrderConfirmation() {
   const isOutForDelivery = status === "OUT_FOR_DELIVERY";
   const isDelivered = status === "DELIVERED";
   const isCancelled = status === "CANCELLED";
+
+  const isCodOrder = useMemo(() => {
+    if (!orderData) return false;
+    if (orderData.isPaid === true) return false;
+    const raw = (orderData.rawPaymentMethod || "").toUpperCase();
+    if (raw === "COD" || raw === "CASH ON DELIVERY") return true;
+    const pm = (orderData.paymentMethod || "").toUpperCase();
+    return pm.includes("COD") || pm.includes("CASH ON DELIVERY") || pm.includes("PAY ON DELIVERY");
+  }, [orderData]);
 
   const timelineSteps = isCancelled
     ? [
@@ -490,7 +503,9 @@ export default function OrderConfirmation() {
           </h1>
           <p className={styles.heroSubtitle}>
             {isCancelled
-              ? "This order was cancelled. Any online payment has been submitted for instant refund processing."
+              ? isCodOrder
+                ? "This order was cancelled. Since this was a Cash on Delivery (COD) order, no payment was charged."
+                : "This order was cancelled. Any online payment has been submitted for instant refund processing."
               : isDelivered
               ? "Your meal has been successfully delivered to your doorstep. Bon Appétit!"
               : isOutForDelivery
@@ -733,8 +748,10 @@ export default function OrderConfirmation() {
 
                 <div className={styles.pricingTotalRow}>
                   <div>
-                    <span>Total Paid</span>
-                    <span className={styles.paidBadge}>{orderData.grandTotal === 0 ? "FREE" : "PAID"}</span>
+                    <span>{orderData.grandTotal === 0 ? "Total Paid" : isCodOrder ? "Cash on Delivery (COD)" : "Total Paid"}</span>
+                    <span className={orderData.grandTotal === 0 ? styles.paidBadge : isCodOrder ? styles.codBadge : styles.paidBadge}>
+                      {orderData.grandTotal === 0 ? "FREE" : isCodOrder ? "PAY ON DELIVERY" : "PAID"}
+                    </span>
                   </div>
                   <span>₹{orderData.grandTotal.toLocaleString("en-IN")}</span>
                 </div>
@@ -772,6 +789,8 @@ export default function OrderConfirmation() {
                       <p className={styles.infoText} style={{ color: "#b91c1c" }}>
                         {orderData.grandTotal === 0 ? (
                           "This order request was cancelled. Since a 100% discount coupon was applied (₹0 paid), no refund is required."
+                        ) : isCodOrder ? (
+                          "This order request was cancelled. Since this was a Cash on Delivery (COD) order, no payment was deducted and no refund is needed."
                         ) : (
                           `This order request was cancelled by the store. If you made an online payment, a full refund of ₹${orderData.grandTotal.toLocaleString("en-IN")} will be credited to your original payment method within 2-4 business hours.`
                         )}

@@ -2595,7 +2595,13 @@ export default function MyOrdersView() {
                     </div>
                   )}
                   <div className={styles.billTotalRow}>
-                    <span>Total Paid</span>
+                    <span>
+                      {selectedOrder.isPaid
+                        ? "Total Paid"
+                        : (selectedOrder.paymentMethod === "COD" || selectedOrder.paymentMethod === "Cash on Delivery")
+                        ? "Cash on Delivery (COD)"
+                        : "Total Paid"}
+                    </span>
                     <span>₹{selectedOrder.billBreakdown.totalPaid}</span>
                   </div>
                 </div>

@@ -782,6 +782,19 @@
   margin-left: 8px;
 }
 
+.codBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #ffedd5;
+  color: #c2410c;
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  margin-left: 8px;
+}
+
 /* Action CTA Buttons */
 .actionButtonsRow {
   display: flex;
