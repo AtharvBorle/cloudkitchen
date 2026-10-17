@@ -1117,8 +1117,8 @@ function FoodExploreContent() {
                                   {dish.name}
                                 </span>
                                 {dish.sellerName && (
-                                  <span style={{ fontSize: "10.5px", color: "#94A3B8" }}>
-                                    by {dish.sellerName}
+                                  <span style={{ fontSize: "11px", fontWeight: "600", color: "#EA580C", display: "inline-flex", alignItems: "center", gap: "3px" }}>
+                                    <Store size={10} color="#EA580C" /> {dish.sellerName}
                                   </span>
                                 )}
                               </div>
@@ -1877,6 +1877,33 @@ function FoodExploreContent() {
                             </span>
                           </div>
                         )}
+
+                        {/* Kitchen Tag Badge overlay at bottom of image */}
+                        <div
+                          style={{
+                            position: "absolute",
+                            bottom: "8px",
+                            left: "8px",
+                            zIndex: 2,
+                            backgroundColor: "rgba(15, 23, 42, 0.8)",
+                            backdropFilter: "blur(4px)",
+                            color: "#FFFFFF",
+                            fontSize: "11px",
+                            fontWeight: "700",
+                            padding: "3px 8px",
+                            borderRadius: "6px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "5px",
+                            boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+                            maxWidth: "calc(100% - 16px)",
+                          }}
+                        >
+                          <Store size={12} color="#FB923C" style={{ flexShrink: 0 }} />
+                          <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            {dish.sellerName || "Verified Cloud Kitchen"}
+                          </span>
+                        </div>
                       </div>
 
                       {/* Card Info */}
@@ -1907,16 +1934,36 @@ function FoodExploreContent() {
                           <Link
                             href={dish.sellerTrackingId ? `/shop/${dish.sellerTrackingId}${selectedPrice && selectedPrice !== "all" ? `?price=${selectedPrice}` : ""}` : "#"}
                             style={{
-                              fontSize: "0.82rem",
-                              color: "#64748B",
-                              fontWeight: "600",
+                              fontSize: "0.8rem",
+                              color: "#EA580C",
+                              backgroundColor: "#FFF7ED",
+                              border: "1px solid #FFEDD5",
+                              fontWeight: "700",
                               textDecoration: "none",
                               display: "inline-flex",
                               alignItems: "center",
-                              gap: "4px",
+                              gap: "5px",
+                              padding: "3px 8px",
+                              borderRadius: "6px",
+                              width: "fit-content",
+                              marginTop: "3px",
+                              marginBottom: "3px",
+                              transition: "all 0.15s ease",
                             }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = "#FFEDD5";
+                              e.currentTarget.style.borderColor = "#FDBA74";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = "#FFF7ED";
+                              e.currentTarget.style.borderColor = "#FFEDD5";
+                            }}
+                            title={`Kitchen: ${dish.sellerName || "Verified Cloud Kitchen"}`}
                           >
-                            <span>by {dish.sellerName || "Verified Cloud Kitchen"}</span>
+                            <Store size={12} color="#EA580C" style={{ flexShrink: 0 }} />
+                            <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              {dish.sellerName || "Verified Cloud Kitchen"}
+                            </span>
                           </Link>
                         </div>
 

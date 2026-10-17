@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { successResponse, errorResponse } from "@/lib/api-response";
 import { ApiError } from "@/lib/api-error";
 import { getCategoryExpiries } from "@/lib/subscription";
+import { getPublicCoupons } from "@/controllers/publicController";
 
 export async function GET(req: Request, { params }: { params: Promise<{ trackingId: string }> }) {
     try {
@@ -93,11 +94,14 @@ export async function GET(req: Request, { params }: { params: Promise<{ tracking
         }
 
         const { foodExpiry, propertyExpiry } = getCategoryExpiries(seller.subscriptions);
-        const isFoodActive = foodExpiry ? foodExpiry > new Date() : false;
-        const isPropertyActive = propertyExpiry ? propertyExpiry > new Date() : false;
+        const hasFoodSub = foodExpiry ? foodExpiry > new Date() : false;
+        const hasPropertySub = propertyExpiry ? propertyExpiry > new Date() : false;
         const isApproved = seller.verificationStatus === "APPROVED";
 
-        if (!isFoodActive && !isPropertyActive && !isApproved) {
+        const isFoodActive = isApproved || hasFoodSub;
+        const isPropertyActive = isApproved || hasPropertySub;
+
+        if (!isFoodActive && !isPropertyActive) {
             throw new ApiError("Shop is currently inactive (No active subscription)", 404);
         }
 
@@ -112,6 +116,26 @@ export async function GET(req: Request, { params }: { params: Promise<{ tracking
         const totalReviews = seller.reviews.length;
         const sumRating = seller.reviews.reduce((sum, r) => sum + r.rating, 0);
         const averageRating = totalReviews > 0 ? parseFloat((sumRating / totalReviews).toFixed(1)) : 0;
+
+        // Fetch applicable coupons and compute offer text
+        let applicableCoupons: any[] = [];
+        let offerText = "";
+        try {
+            applicableCoupons = await getPublicCoupons(seller.id, null);
+            if (Array.isArray(applicableCoupons) && applicableCoupons.length > 0) {
+                const sellerSpecific = applicableCoupons.find((c: any) => c.appliesToSellerId && (c.appliesToSellerId === seller.id || c.appliesToSellerId === seller.trackingId));
+                const best = sellerSpecific || applicableCoupons[0];
+                if (best.discountPercentage) {
+                    offerText = `${best.discountPercentage}% OFF with code ${best.code}`;
+                } else if (best.discountAmount) {
+                    offerText = `Flat ₹${best.discountAmount} OFF with code ${best.code}`;
+                } else {
+                    offerText = best.description || `Special offer with code ${best.code}`;
+                }
+            }
+        } catch (e) {
+            console.error("Failed to load seller coupons in shop route:", e);
+        }
 
         // Process food items with their average rating
         const processedFoodItems = seller.foodItems.map((item: any) => {
@@ -160,13 +184,15 @@ export async function GET(req: Request, { params }: { params: Promise<{ tracking
             };
         });
 
-        // Construct response with rating stats and active meal plans
+        // Construct response with rating stats, active meal plans, coupons and offerText
         const responseData = {
             ...seller,
             foodItems: processedFoodItems,
             mealPlans: processedMealPlans,
             averageRating,
-            totalReviews
+            totalReviews,
+            coupons: applicableCoupons,
+            offerText
         };
 
         return successResponse(responseData);

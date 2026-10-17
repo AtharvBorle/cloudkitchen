@@ -42,6 +42,8 @@ export interface FoodCardItem {
   sellerId?: string;
   sellerName?: string;
   isAvailable?: boolean;
+  offerBadge?: string | null;
+  couponCode?: string | null;
 }
 
 export interface PopularFoodProps {
@@ -284,6 +286,29 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
                     filter: isGrey ? "grayscale(100%)" : "none",
                   }}
                 />
+                {item.offerBadge && !isGrey && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "6px",
+                      left: "6px",
+                      zIndex: 2,
+                      background: "linear-gradient(135deg, #FF6B00 0%, #EA580C 100%)",
+                      color: "#FFFFFF",
+                      fontSize: "9.5px",
+                      fontWeight: "800",
+                      letterSpacing: "0.4px",
+                      padding: "2px 7px",
+                      borderRadius: "5px",
+                      boxShadow: "0 2px 6px rgba(234, 88, 12, 0.4)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "3px",
+                    }}
+                  >
+                    <span>{item.offerBadge}</span>
+                  </div>
+                )}
                 {isGrey && (
                   <div
                     style={{
@@ -355,8 +380,13 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
                   </p>
 
                   {/* Dietary Tag below description */}
-                  <div style={{ display: "flex", alignItems: "center", gap: "4px", margin: "2px 0 6px 0", flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", margin: "2px 0 6px 0", flexWrap: "wrap" }}>
                     <DietaryTag isVeg={item.isVeg !== false} itemType={(item as any).itemType} size="xs" />
+                    {item.couponCode && !isGrey && (
+                      <span style={{ fontSize: "0.68rem", fontWeight: "700", color: "#C2410C", backgroundColor: "#FFF7ED", border: "1px dashed #FDBA74", padding: "1px 6px", borderRadius: "4px" }}>
+                        🏷️ Code: {item.couponCode}
+                      </span>
+                    )}
                   </div>
 
                   {item.addons && item.addons.length > 0 && (

@@ -33,6 +33,8 @@ export interface FoodCardItem {
   sellerId?: string;
   sellerName?: string;
   isAvailable?: boolean;
+  offerBadge?: string | null;
+  couponCode?: string | null;
 }
 
 export interface KitchenData {

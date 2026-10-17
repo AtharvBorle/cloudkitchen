@@ -454,6 +454,24 @@ async function main() {
             lat: 18.5016,
             lng: 73.8216,
             imageUrl: "https://res.cloudinary.com/daiwwk5v7/image/upload/v1789645244/neo-cloud-room/sellers/pwsniwmlsrivaknk067q.jpg",
+            dishes: [
+                {
+                    name: "Idli Sambar Plate",
+                    price: 50,
+                    type: "VEG",
+                    desc: "Steamed fluffy soft rice idlis served with hot spicy lentil sambar and freshly ground coconut chutney.",
+                    imageUrl: "https://res.cloudinary.com/daiwwk5v7/image/upload/v1782901188/neo-cloud-room/categories/wt278t8swdjesgvh5yso.jpg",
+                    cat: "idli"
+                },
+                {
+                    name: "Homely Veg Thali",
+                    price: 150,
+                    type: "VEG",
+                    desc: "Wholesome daily thali with fresh seasonal vegetables, dal tadka, steamed basmati rice, 3 soft phulkas, and fresh salad.",
+                    imageUrl: "https://res.cloudinary.com/daiwwk5v7/image/upload/v1782971267/neo-cloud-room/categories/zwy6klrcbxepkcjr1big.webp",
+                    cat: "meal"
+                }
+            ]
         },
         {
             email: "tanuja97@gmail.com",
@@ -465,6 +483,24 @@ async function main() {
             lat: 18.4965,
             lng: 73.8188,
             imageUrl: "https://res.cloudinary.com/daiwwk5v7/image/upload/v1789815622/neo-cloud-room/sellers/vycvgi49r2lommmbpgu5.jpg",
+            dishes: [
+                {
+                    name: "Kanda Pohe",
+                    price: 40,
+                    type: "VEG",
+                    desc: "Traditional Maharashtrian flattened rice tossed with sauteed onions, roasted peanuts, mustard seeds, and fresh coriander.",
+                    imageUrl: "https://res.cloudinary.com/daiwwk5v7/image/upload/v1782901318/neo-cloud-room/categories/spopfwsczcalskibua4i.jpg",
+                    cat: "pohe"
+                },
+                {
+                    name: "Rava Upma",
+                    price: 40,
+                    type: "VEG",
+                    desc: "Savory roasted semolina cooked with seasoned curry leaves, green chilies, ginger, and crunchy cashews.",
+                    imageUrl: "https://res.cloudinary.com/daiwwk5v7/image/upload/v1782901346/neo-cloud-room/categories/rut1n8r4au3dl7adsipy.jpg",
+                    cat: "upma"
+                }
+            ]
         },
         {
             email: "ritu@gmail.com",
@@ -476,6 +512,24 @@ async function main() {
             lat: 18.5074,
             lng: 73.8077,
             imageUrl: "https://res.cloudinary.com/daiwwk5v7/image/upload/v1789722849/neo-cloud-room/sellers/ylumdix1wk6lrgciia8m.jpg",
+            dishes: [
+                {
+                    name: "Sabudana Khichdi",
+                    price: 60,
+                    type: "VEG",
+                    desc: "Fluffy soaked sago pearls tempered with roasted crushed peanuts, green chilies, cumin, and fresh lemon.",
+                    imageUrl: "https://res.cloudinary.com/daiwwk5v7/image/upload/v1782901291/neo-cloud-room/categories/x2an3rpbw3jriwv8qkmf.jpg",
+                    cat: "sabudana"
+                },
+                {
+                    name: "Sujatha Kesari Shira",
+                    price: 50,
+                    type: "VEG",
+                    desc: "Rich aromatic semolina halwa cooked in pure desi ghee, flavored with saffron, cardamom, and toasted nuts.",
+                    imageUrl: "https://res.cloudinary.com/daiwwk5v7/image/upload/v1782901306/neo-cloud-room/categories/wphntimbwbduwuvzr6ge.jpg",
+                    cat: "shira"
+                }
+            ]
         },
         {
             email: ".mitesh@gmail.com",
@@ -487,6 +541,16 @@ async function main() {
             lat: 18.5016,
             lng: 73.8216,
             imageUrl: "https://res.cloudinary.com/daiwwk5v7/image/upload/v1789801121/neo-cloud-room/sellers/cabpoo8lzywmfwxlfawb.jpg",
+            dishes: [
+                {
+                    name: "Chicken Dum Biryani",
+                    price: 220,
+                    type: "NON_VEG",
+                    desc: "Aromatic long-grain basmati rice layered with tender spiced chicken cooked on dum, served with raita.",
+                    imageUrl: "https://res.cloudinary.com/daiwwk5v7/image/upload/v1790157604/neo-cloud-room/menu/l8ov0oueeydsqxkhw50j.png",
+                    cat: "meal"
+                }
+            ]
         },
         {
             email: "yashbandgar5550@gmail.com",
@@ -499,8 +563,45 @@ async function main() {
             lng: 73.7389,
             status: "PENDING",
             imageUrl: undefined,
+            dishes: []
         }
     ];
+
+    const defaultFoodPlan = await prisma.subscriptionPlan.findFirst({
+        where: { category: { in: ["FOOD", "BOTH"] } }
+    });
+
+    const oneYearLater = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+
+    // Ensure core approved sellers have active subscription
+    const coreSellers = [yashSeller, radhaSeller, yewaleSeller];
+    if (defaultFoodPlan) {
+        for (const sProfile of coreSellers) {
+            const existingSub = await prisma.subscription.findFirst({
+                where: { sellerId: sProfile.id }
+            });
+            if (!existingSub) {
+                await prisma.subscription.create({
+                    data: {
+                        sellerId: sProfile.id,
+                        planId: defaultFoodPlan.id,
+                        status: "ACTIVE",
+                        amount: defaultFoodPlan.price || 100,
+                        validUntil: oneYearLater,
+                    }
+                });
+            } else if (existingSub.status !== "ACTIVE" || !existingSub.validUntil || new Date(existingSub.validUntil) < new Date()) {
+                await prisma.subscription.update({
+                    where: { id: existingSub.id },
+                    data: {
+                        status: "ACTIVE",
+                        amount: defaultFoodPlan.price || 100,
+                        validUntil: oneYearLater,
+                    }
+                });
+            }
+        }
+    }
 
     for (const s of additionalKitchens) {
         const u = await prisma.user.upsert({
@@ -568,8 +669,190 @@ async function main() {
             create: { sellerId: profile.id, pincode: s.pincode, name: s.locality }
         });
 
+        // Seed dishes for this seller if any
+        if (s.dishes && s.dishes.length > 0) {
+            for (const d of s.dishes) {
+                const catId = foodCatMap.get(d.cat.toLowerCase()) || null;
+                const existingDish = await prisma.foodItem.findFirst({
+                    where: { sellerId: profile.id, name: d.name }
+                });
+                if (!existingDish) {
+                    await prisma.foodItem.create({
+                        data: {
+                            sellerId: profile.id,
+                            name: d.name,
+                            description: d.desc,
+                            price: d.price,
+                            itemType: d.type,
+                            imageUrl: d.imageUrl,
+                            foodCategoryId: catId,
+                            isAvailable: true,
+                            stockQuantity: 20,
+                        }
+                    });
+                } else {
+                    await prisma.foodItem.update({
+                        where: { id: existingDish.id },
+                        data: {
+                            description: d.desc,
+                            price: d.price,
+                            itemType: d.type,
+                            imageUrl: d.imageUrl,
+                            foodCategoryId: catId,
+                            isAvailable: true,
+                        }
+                    });
+                }
+            }
+        }
+
+        // Seed active subscription for approved seller
+        if (defaultFoodPlan && (s.status === undefined || s.status === "APPROVED")) {
+            const existingSub = await prisma.subscription.findFirst({
+                where: { sellerId: profile.id }
+            });
+            if (!existingSub) {
+                await prisma.subscription.create({
+                    data: {
+                        sellerId: profile.id,
+                        planId: defaultFoodPlan.id,
+                        status: "ACTIVE",
+                        amount: defaultFoodPlan.price || 100,
+                        validUntil: oneYearLater,
+                    }
+                });
+            } else if (existingSub.status !== "ACTIVE" || !existingSub.validUntil || new Date(existingSub.validUntil) < new Date()) {
+                await prisma.subscription.update({
+                    where: { id: existingSub.id },
+                    data: {
+                        status: "ACTIVE",
+                        amount: defaultFoodPlan.price || 100,
+                        validUntil: oneYearLater,
+                    }
+                });
+            }
+        }
+
         console.log(`Seeded seller: ${s.businessName}`);
     }
+
+    // E. Authentic Coupons & Offers
+    const authenticCoupons = [
+        {
+            code: "BURGER20",
+            description: "20% OFF on Radha's Kitchen Burgers",
+            discountType: "PERCENTAGE",
+            discountPercentage: 20,
+            discountAmount: null,
+            appliesToSellerId: radhaSeller.id,
+            appliesTo: "ALL",
+            minimumCartValue: 0,
+            isActive: true,
+            approvalStatus: "APPROVED",
+            noExpiry: true,
+            isAutoApply: true,
+            category: "BOTH"
+        },
+        {
+            code: "RADHA15",
+            description: "15% OFF on Radha's Homestyle Platters",
+            discountType: "PERCENTAGE",
+            discountPercentage: 15,
+            discountAmount: null,
+            appliesToSellerId: radhaSeller.id,
+            appliesTo: "ALL",
+            minimumCartValue: 0,
+            isActive: true,
+            approvalStatus: "APPROVED",
+            noExpiry: true,
+            isAutoApply: false,
+            category: "BOTH"
+        },
+        {
+            code: "BIRYANI20",
+            description: "20% OFF on Authentic Dum Biryani",
+            discountType: "PERCENTAGE",
+            discountPercentage: 20,
+            discountAmount: null,
+            appliesToSellerId: yewaleSeller.id,
+            appliesTo: "ALL",
+            minimumCartValue: 0,
+            isActive: true,
+            approvalStatus: "APPROVED",
+            noExpiry: true,
+            isAutoApply: true,
+            category: "BOTH"
+        },
+        {
+            code: "CAKE10",
+            description: "10% OFF on Yash's Kitchen Cakes & Bakes",
+            discountType: "PERCENTAGE",
+            discountPercentage: 10,
+            discountAmount: null,
+            appliesToSellerId: yashSeller.id,
+            appliesTo: "ALL",
+            minimumCartValue: 0,
+            isActive: true,
+            approvalStatus: "APPROVED",
+            noExpiry: true,
+            isAutoApply: true,
+            category: "BOTH"
+        },
+        {
+            code: "HOMELY15",
+            description: "15% OFF on all Homestyle Kitchens",
+            discountType: "PERCENTAGE",
+            discountPercentage: 15,
+            discountAmount: null,
+            appliesToSellerId: null,
+            appliesTo: "ALL",
+            minimumCartValue: 100,
+            isActive: true,
+            approvalStatus: "APPROVED",
+            noExpiry: true,
+            isAutoApply: true,
+            category: "BOTH"
+        },
+        {
+            code: "SUMMER20",
+            description: "Summer Special - Flat 20% OFF on orders above ₹300",
+            discountType: "PERCENTAGE",
+            discountPercentage: 20,
+            discountAmount: null,
+            appliesToSellerId: null,
+            appliesTo: "ALL",
+            minimumCartValue: 300,
+            isActive: true,
+            approvalStatus: "APPROVED",
+            noExpiry: true,
+            isAutoApply: false,
+            category: "BOTH"
+        },
+        {
+            code: "WELCOME50",
+            description: "Flat ₹50 OFF on your first order",
+            discountType: "FLAT",
+            discountPercentage: null,
+            discountAmount: 50,
+            appliesToSellerId: null,
+            appliesTo: "ALL",
+            minimumCartValue: 150,
+            isActive: true,
+            approvalStatus: "APPROVED",
+            noExpiry: true,
+            isAutoApply: false,
+            category: "BOTH"
+        }
+    ];
+
+    for (const c of authenticCoupons) {
+        await prisma.coupon.upsert({
+            where: { code: c.code },
+            update: c,
+            create: c,
+        });
+    }
+    console.log("Seeded authentic coupons and offers successfully!");
 
     console.log("All authentic data seeded successfully!");
 }

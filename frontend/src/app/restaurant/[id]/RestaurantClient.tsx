@@ -13,6 +13,7 @@ import { useCart, generateCartItemId } from "@/context/CartContext";
 import { fetchApi } from "@/lib/fetch-api";
 import { Footer } from "@/components/explore-desktop/footer";
 import { AddonCustomizationModal } from "@/components/cart/AddonCustomizationModal";
+import { getDishOfferBadge } from "@/lib/dietary-filter";
 import styles from "../restaurant.module.css";
 
 interface RestaurantClientProps {
@@ -288,6 +289,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
             }
 
             const rawFoodItems = liveData.foodItems || [];
+            const liveCoupons = liveData.coupons || [];
             const liveItems: FoodCardItem[] = rawFoodItems.map((item: any) => {
               let parsedAddons: Array<{ id: string; name: string; price: number }> = [];
               const rawAddons = item.addons || item.variants;
@@ -317,6 +319,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
                   : (item.rating && !isNaN(parseFloat(String(item.rating))) && parseFloat(String(item.rating)) > 0 ? parseFloat(String(item.rating)) : 0);
 
               const itemRatingDisplay = rawItemRating > 0 ? Number(rawItemRating).toFixed(1) : "New";
+              const offerInfo = getDishOfferBadge(item, liveCoupons, rawFoodItems);
 
               return {
                 id: item.id,
@@ -335,6 +338,8 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
                 itemType: item.itemType,
                 sellerId: liveData.id || liveData.trackingId,
                 sellerName: liveData.businessName || liveData.user?.name,
+                offerBadge: offerInfo.hasOffer ? offerInfo.badgeText : null,
+                couponCode: offerInfo.couponCode || null,
               };
             });
 
