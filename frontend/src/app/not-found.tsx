@@ -64,7 +64,7 @@ export default function NotFound() {
           flexDirection: 'column',
           alignItems: 'center',
           textAlign: 'center',
-          maxWidth: '680px',
+          maxWidth: '740px',
           width: '100%',
           margin: '0 auto',
           position: 'relative',
@@ -77,7 +77,7 @@ export default function NotFound() {
           style={{
             position: 'relative',
             width: '100%',
-            maxWidth: '520px',
+            maxWidth: '620px',
             aspectRatio: '2 / 1',
             margin: '0 auto 12px auto',
             display: 'flex',
@@ -94,7 +94,7 @@ export default function NotFound() {
             style={{
               width: '100%',
               height: 'auto',
-              maxHeight: '320px',
+              maxHeight: '360px',
               objectFit: 'contain',
               filter: 'drop-shadow(0 14px 28px rgba(185, 28, 28, 0.12)) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.04))',
             }}
@@ -106,11 +106,11 @@ export default function NotFound() {
           className="not-found-heading"
           style={{
             fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-            fontSize: 'clamp(1.85rem, 4.5vw, 3rem)',
-            fontWeight: 800,
+            fontSize: 'clamp(2rem, 5vw, 3.25rem)',
+            fontWeight: 400,
             color: '#C5221F',
             margin: '6px 0 8px 0',
-            letterSpacing: '-0.02em',
+            letterSpacing: '0',
             lineHeight: 1.15,
           }}
         >
@@ -211,6 +211,9 @@ export default function NotFound() {
         * {
           font-family: var(--font-poppins), 'Poppins', sans-serif;
         }
+        .not-found-heading {
+          font-weight: 400 !important;
+        }
         .not-found-back-btn:hover {
           background-color: #fff9f2 !important;
           border-color: #e59a58 !important;
@@ -234,7 +237,7 @@ export default function NotFound() {
             max-width: 520px !important;
           }
           .not-found-image-wrap {
-            max-width: 540px !important;
+            max-width: 620px !important;
             margin-bottom: 16px !important;
           }
         }
