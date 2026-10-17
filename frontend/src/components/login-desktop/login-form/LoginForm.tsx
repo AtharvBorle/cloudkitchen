@@ -40,10 +40,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({
 
   useEffect(() => {
     if (authStatus === "authenticated" && session?.user) {
-      const callbackUrl = typeof window !== "undefined"
+      const rawCallback = typeof window !== "undefined"
         ? new URLSearchParams(window.location.search).get("callbackUrl")
         : null;
-      router.replace(callbackUrl || "/");
+      const callbackUrl = (!rawCallback || rawCallback === "/explore" || rawCallback === "/explore-desktop")
+        ? "/"
+        : rawCallback;
+      router.replace(callbackUrl);
     }
   }, [authStatus, session, router]);
 
@@ -106,7 +109,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       onCreateAccount();
     } else {
       const params = new URLSearchParams(window.location.search);
-      const callbackUrl = params.get("callbackUrl");
+      const rawCallback = params.get("callbackUrl");
+      const callbackUrl = (!rawCallback || rawCallback === "/explore" || rawCallback === "/explore-desktop")
+        ? null
+        : rawCallback;
       router.push(
         callbackUrl
           ? `/signup?callbackUrl=${encodeURIComponent(callbackUrl)}`
@@ -258,7 +264,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           }
         } else {
           const params = new URLSearchParams(window.location.search);
-          const callbackUrl = params.get("callbackUrl") || "/";
+          const rawCallback = params.get("callbackUrl");
+          const callbackUrl = (!rawCallback || rawCallback === "/explore" || rawCallback === "/explore-desktop")
+            ? "/"
+            : rawCallback;
           window.location.href = callbackUrl;
         }
       } catch (err) {
@@ -318,7 +327,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           }
         } else {
           const params = new URLSearchParams(window.location.search);
-          const callbackUrl = params.get("callbackUrl") || "/";
+          const rawCallback = params.get("callbackUrl");
+          const callbackUrl = (!rawCallback || rawCallback === "/explore" || rawCallback === "/explore-desktop")
+            ? "/"
+            : rawCallback;
           window.location.href = callbackUrl;
         }
       } catch (err) {

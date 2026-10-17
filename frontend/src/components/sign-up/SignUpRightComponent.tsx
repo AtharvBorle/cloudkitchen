@@ -29,7 +29,7 @@ export interface SignUpRightComponentProps {
 
 export default function SignUpRightComponent({
   signInUrl = "/login",
-  onSuccessRedirect = "/explore-desktop",
+  onSuccessRedirect = "/",
 }: SignUpRightComponentProps) {
   const router = useRouter();
   const { data: session, status: authStatus } = useSession();
@@ -451,7 +451,10 @@ export default function SignUpRightComponent({
             sessionStorage.removeItem("signup_resend_until");
           } catch (_) {}
           const params = new URLSearchParams(window.location.search);
-          const callbackUrl = params.get("callbackUrl") || onSuccessRedirect;
+          const rawCallback = params.get("callbackUrl");
+          const callbackUrl = (!rawCallback || rawCallback === "/explore" || rawCallback === "/explore-desktop")
+            ? (onSuccessRedirect || "/")
+            : rawCallback;
           window.location.href = callbackUrl;
         } else {
           try {
