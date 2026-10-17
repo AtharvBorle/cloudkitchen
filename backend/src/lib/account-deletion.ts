@@ -1,6 +1,12 @@
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import {
+    sendKitchenSoftDeletedEmail,
+    sendKitchenPermanentlyDeletedEmail,
+    sendUserAccountSoftDeletedEmail,
+    sendUserAccountPermanentlyDeletedEmail,
+} from "@/lib/emailService";
 
 export interface AccountDeletionConfig {
     days: number;
@@ -109,6 +115,37 @@ export async function softDeleteAccount(userId: string) {
         }
     });
 
+    try {
+        const graceConfig = getGracePeriodConfig();
+        const formattedScheduledDate = scheduledDeletionDate.toLocaleDateString("en-IN", {
+            day: "numeric",
+            month: "short",
+            year: "numeric"
+        });
+        const daysRemaining = Math.max(1, Math.ceil(graceConfig.gracePeriodMs / (1000 * 60 * 60 * 24)));
+
+        if (user.email) {
+            if (user.role === "SELLER") {
+                sendKitchenSoftDeletedEmail({
+                    sellerName: user.name || undefined,
+                    sellerEmail: user.email,
+                    businessName: user.sellerProfile?.businessName || "Your Kitchen",
+                    scheduledDate: formattedScheduledDate,
+                    daysRemaining,
+                }).catch((err) => console.error("[EmailService] Failed to send kitchen soft delete email:", err));
+            } else {
+                sendUserAccountSoftDeletedEmail({
+                    userName: user.name || "Customer",
+                    userEmail: user.email,
+                    scheduledDeletionDate: formattedScheduledDate,
+                    daysRemaining,
+                }).catch((err) => console.error("[EmailService] Failed to send user account soft delete email:", err));
+            }
+        }
+    } catch (e) {
+        console.error("[EmailService] Error dispatching soft delete notification:", e);
+    }
+
     return {
         success: true,
         deletedAt: now,
@@ -178,6 +215,25 @@ export async function anonymizeUserAccount(userId: string) {
     const anonymizedPhone = `deleted_${shortId}`;
     const anonymizedName = user.role === "SELLER" ? "Deleted Seller" : "Deleted User";
     const unreachablePasswordHash = await bcrypt.hash(crypto.randomUUID() + "-deleted-" + Date.now(), 10);
+
+    try {
+        if (user.email) {
+            if (user.role === "SELLER") {
+                sendKitchenPermanentlyDeletedEmail({
+                    sellerName: user.name || undefined,
+                    sellerEmail: user.email,
+                    businessName: user.sellerProfile?.businessName || "Your Kitchen",
+                }).catch((err) => console.error("[EmailService] Failed to send kitchen permanent delete email:", err));
+            } else {
+                sendUserAccountPermanentlyDeletedEmail({
+                    userName: user.name || "Customer",
+                    userEmail: user.email,
+                }).catch((err) => console.error("[EmailService] Failed to send user permanent delete email:", err));
+            }
+        }
+    } catch (e) {
+        console.error("[EmailService] Error dispatching permanent delete notification:", e);
+    }
 
     return await db.$transaction(async (tx) => {
         // 1. Anonymize user details

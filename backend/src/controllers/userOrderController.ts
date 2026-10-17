@@ -8,7 +8,8 @@ import { emitOrderCreated, emitOrderCancelled, emitOrderUpdated } from "@/lib/re
 import { calculateDistanceKm, getPincodeCoordinates, MAX_DELIVERY_RADIUS_KM } from "@/lib/geo-distance";
 import { cancelExpiredOrder, isOrderExpired, revertCouponUsageFloorZero } from "@/lib/order-expiry";
 import { enrichOrderWithEta } from "@/lib/order-eta";
-import { sendOrderPlacedNotification, sendOrderStatusNotification } from "@/lib/emailService";
+import { sendOrderPlacedNotification, sendOrderStatusNotification, sendRefundInitiatedEmail } from "@/lib/emailService";
+import { sendCouponExpiryReport } from "@/lib/subscriptionNotificationService";
 
 export const validateDeliveryCoverage = async ({
     sellerProfile,
@@ -779,6 +780,15 @@ export const createOrder = async (req: Request) => {
         console.error("[EmailService] Failed to send order placed notification:", err);
     });
 
+    if (validatedCoupon && validatedCoupon.maxUsers) {
+        const newUsage = (Number(validatedCoupon.currentUsersCount) || 0) + 1;
+        if (newUsage >= Number(validatedCoupon.maxUsers)) {
+            sendCouponExpiryReport(validatedCoupon.id, "Reached maximum usage limit").catch((err) => {
+                console.error("[EmailService] Failed to send coupon max usage report:", err);
+            });
+        }
+    }
+
     try {
         revalidateTag("explore", {});
         revalidateTag("public-explore-data", {});
@@ -966,6 +976,22 @@ export const cancelOrder = async (
         ).catch((err) => {
             console.error("[EmailService] Failed to send order cancelled notification:", err);
         });
+
+        if (txResult.refundRecord && txResult.refundRecord.amount > 0) {
+            const customerUser = order.user || session.user;
+            if (customerUser?.email) {
+                sendRefundInitiatedEmail({
+                    customerName: customerUser.name || "Customer",
+                    customerEmail: customerUser.email,
+                    orderId: txResult.cancelledOrder.id,
+                    refundAmount: txResult.refundRecord.amount,
+                    paymentMethod: txResult.cancelledOrder.paymentMethod || "Online",
+                    estimatedDays: "3–5 business days",
+                }).catch((err) => {
+                    console.error("[EmailService] Failed to send refund initiated notification:", err);
+                });
+            }
+        }
     }
 
     try {

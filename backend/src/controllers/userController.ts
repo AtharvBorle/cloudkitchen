@@ -3,6 +3,7 @@ import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import bcrypt from "bcryptjs";
 import { getPincodeCoordinates } from "@/lib/geo-distance";
+import { sendPasswordChangedEmail } from "@/lib/emailService";
 
 export const getUserProfile = async () => {
     const session = await getAuthSession();
@@ -105,6 +106,13 @@ export const updateUserProfile = async (req: Request) => {
             role: true,
         }
     });
+
+    if (body.newPassword && updatedUser.email) {
+        sendPasswordChangedEmail({
+            userName: updatedUser.name,
+            userEmail: updatedUser.email,
+        }).catch((err) => console.error("[EmailService] Failed to send password changed email:", err));
+    }
 
     return { user: updatedUser };
 };

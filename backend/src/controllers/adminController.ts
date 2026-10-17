@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { uploadImage } from "@/lib/upload";
+import { sendSellerApplicationApprovedEmail, sendSellerApplicationRejectedEmail } from "@/lib/emailService";
 
 export const deleteSellerBanner = async (req: Request) => {
     const session = await getAuthSession();
@@ -317,6 +318,28 @@ export const updateSellerRegistrationStatus = async (req: Request) => {
             details: `Seller ${sellerId} verification status set to ${status}`
         }
     });
+
+    try {
+        const sellerUser = await db.user.findUnique({ where: { id: seller.userId } });
+        if (sellerUser?.email) {
+            if (status === "APPROVED") {
+                sendSellerApplicationApprovedEmail({
+                    sellerName: sellerUser.name,
+                    sellerEmail: sellerUser.email,
+                    businessName: updatedProfile.businessName,
+                }).catch((err) => console.error("[EmailService] Failed to send seller approval email:", err));
+            } else if (status === "REJECTED" || status === "REVISION") {
+                sendSellerApplicationRejectedEmail({
+                    sellerName: sellerUser.name,
+                    sellerEmail: sellerUser.email,
+                    businessName: updatedProfile.businessName,
+                    reason: verificationNote || "Incomplete documentation or clarification required on submitted kitchen license.",
+                }).catch((err) => console.error("[EmailService] Failed to send seller rejection email:", err));
+            }
+        }
+    } catch (e) {
+        console.error("Error dispatching seller registration status email:", e);
+    }
 
     return { profile: updatedProfile, status };
 };
