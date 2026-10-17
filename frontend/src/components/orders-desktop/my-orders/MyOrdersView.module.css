@@ -113,6 +113,7 @@
 }
 
 .filterPill {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -121,22 +122,89 @@
   font-size: 0.88rem;
   font-weight: 600;
   cursor: pointer;
-  border: 1px solid #e2e8f0;
+  border: 1.5px solid #e2e8f0;
   background: #ffffff;
   color: #475569;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+  user-select: none;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .filterPill:hover {
-  background: #f8fafc;
-  color: #0f172a;
+  background: #fff8f2;
+  color: #ea580c;
+  border-color: #fed7aa;
+  transform: translateY(-1.5px);
+  box-shadow: 0 4px 12px rgba(255, 107, 0, 0.08);
+}
+
+.filterPill:active {
+  transform: scale(0.96) translateY(0);
 }
 
 .filterPillActive {
-  background: #047857 !important;
+  background: linear-gradient(135deg, #ff7a1a 0%, #ff5400 50%, #ea580c 100%) !important;
   color: #ffffff !important;
-  border-color: #047857 !important;
-  box-shadow: 0 2px 8px rgba(4, 120, 87, 0.2);
+  border-color: transparent !important;
+  font-weight: 700;
+  box-shadow: 0 4px 16px rgba(255, 107, 0, 0.38), 0 1px 3px rgba(255, 81, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.35) !important;
+  transform: translateY(-1.5px);
+  animation: pillPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards, orangeAuraPulse 3s ease-in-out infinite 0.35s;
+}
+
+.filterPillActive:hover {
+  background: linear-gradient(135deg, #ff852e 0%, #ff5d0f 50%, #ea580c 100%) !important;
+  color: #ffffff !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 107, 0, 0.46), 0 2px 6px rgba(255, 81, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.4) !important;
+}
+
+.filterPillActive::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 80%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.35) 50%,
+    transparent 100%
+  );
+  transform: skewX(-25deg);
+  animation: pillShineSweep 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  pointer-events: none;
+}
+
+@keyframes pillPop {
+  0% {
+    transform: scale(0.92);
+  }
+  50% {
+    transform: scale(1.05) translateY(-2px);
+  }
+  100% {
+    transform: scale(1) translateY(-1.5px);
+  }
+}
+
+@keyframes orangeAuraPulse {
+  0%, 100% {
+    box-shadow: 0 4px 16px rgba(255, 107, 0, 0.38), 0 1px 3px rgba(255, 81, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
+  50% {
+    box-shadow: 0 6px 22px rgba(255, 107, 0, 0.52), 0 2px 6px rgba(255, 81, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  }
+}
+
+@keyframes pillShineSweep {
+  0% {
+    left: -120%;
+  }
+  100% {
+    left: 180%;
+  }
 }
 
 .badgeCount {
@@ -149,13 +217,21 @@
   border-radius: 9999px;
   font-size: 0.72rem;
   font-weight: 700;
-  background: #dcfce7;
-  color: #15803d;
+  background: #ffedd5;
+  color: #c2410c;
+  transition: all 0.2s ease;
+}
+
+.filterPill:hover .badgeCount {
+  background: #fed7aa;
+  color: #9a3412;
 }
 
 .filterPillActive .badgeCount {
   background: #ffffff;
-  color: #047857;
+  color: #ea580c;
+  font-weight: 800;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16);
 }
 
 /* 2-Column Main Layout */
@@ -283,7 +359,7 @@
 
 .priceHighlight {
   font-weight: 700;
-  color: #047857;
+  color: #ea580c;
 }
 
 .dotSeparator {
@@ -497,8 +573,8 @@
 }
 
 .orderCardSelected {
-  border-color: #047857 !important;
-  box-shadow: 0 0 0 2px rgba(4, 120, 87, 0.15) !important;
+  border-color: #ff6b00 !important;
+  box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.2), 0 4px 16px rgba(255, 107, 0, 0.08) !important;
 }
 
 /* Common 3-Tier Card Layout (Header, Body, Footer) */
@@ -1006,9 +1082,9 @@
 }
 
 .partnerActionBtn:hover {
-  background: #047857;
+  background: #ff6b00;
   color: #ffffff;
-  border-color: #047857;
+  border-color: #ff6b00;
 }
 
 /* Interactive Visual Delivery Map */
@@ -2184,7 +2260,7 @@
 .cancelModalAmount {
   font-size: 0.88rem;
   font-weight: 700;
-  color: #047857;
+  color: #ea580c;
   margin-top: 4px;
 }
 
