@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -596,10 +596,21 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
   // Order Placement States
   const [isOrderPlaced, setIsOrderPlaced] = useState<boolean>(false);
   const [placedOrderNumber, setPlacedOrderNumber] = useState<string>("");
+  const [placedOrderGrandTotal, setPlacedOrderGrandTotal] = useState<number>(0);
+  const [placedOrderPaymentMethod, setPlacedOrderPaymentMethod] = useState<"UPI" | "COD">("COD");
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [pendingTx, setPendingTx] = useState<PendingOrderTransaction | null>(null);
   const [isRecoveringTx, setIsRecoveringTx] = useState<boolean>(false);
   const [isOffline, setIsOffline] = useState<boolean>(false);
+  const redirectTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (redirectTimerRef.current) {
+        clearTimeout(redirectTimerRef.current);
+      }
+    };
+  }, []);
 
   // Restore applied coupon from Cart page (with empty cart & seller match safeguards)
   useEffect(() => {
@@ -781,11 +792,15 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
       }
 
       setPendingTx(null);
+      setPlacedOrderNumber(finalOrderId);
+      setPlacedOrderGrandTotal(tx.grandTotal || grandTotal);
+      setPlacedOrderPaymentMethod("UPI");
       setIsOrderPlaced(true);
       clearCart();
       showToast("Payment Verified! Order Placed Successfully!");
 
-      setTimeout(() => {
+      if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current);
+      redirectTimerRef.current = setTimeout(() => {
         router.push(`/order-confirmation?orderId=${encodeURIComponent(finalOrderId)}`);
       }, 700);
     } catch (err: any) {
@@ -1794,11 +1809,15 @@ const loadRazorpayScript = (): Promise<boolean> => {
                 console.error("Failed to broadcast order to seller notifications:", bErr);
               }
 
+              setPlacedOrderNumber(finalOrderId);
+              setPlacedOrderGrandTotal(grandTotal);
+              setPlacedOrderPaymentMethod("UPI");
               setIsOrderPlaced(true);
               clearCart();
               showToast("Payment Verified! Order Placed Successfully!");
 
-              setTimeout(() => {
+              if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current);
+              redirectTimerRef.current = setTimeout(() => {
                 router.push(`/order-confirmation?orderId=${encodeURIComponent(finalOrderId)}`);
               }, 700);
             } catch (err: any) {
@@ -1895,7 +1914,10 @@ const loadRazorpayScript = (): Promise<boolean> => {
       const createdOrder = resData.data?.order || resData.order || resData.data;
       const finalOrderId = createdOrder?.id || resData.data?.id || resData.id || ("NCR-" + Math.floor(100000 + Math.random() * 900000));
 
+      const isCodPayment = grandTotal > 0 || paymentMethod !== "UPI";
       setPlacedOrderNumber(finalOrderId);
+      setPlacedOrderGrandTotal(grandTotal);
+      setPlacedOrderPaymentMethod(isCodPayment ? "COD" : "UPI");
 
       const confirmedOrderPayload = {
         orderId: finalOrderId,
@@ -1908,7 +1930,9 @@ const loadRazorpayScript = (): Promise<boolean> => {
           city: city.trim() || "Pune",
           pincode: postalCode.trim() || "",
         },
-        paymentMethod: "Cash on Delivery",
+        paymentMethod: isCodPayment ? "Cash on Delivery" : "Online Payment",
+        isPaid: !isCodPayment,
+        rawPaymentMethod: isCodPayment ? "COD" : "ONLINE",
         items: checkoutItems.map((item) => ({
           id: item.id,
           name: item.name,
@@ -1950,7 +1974,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
           deliveryAddress: fullDeliveryAddress,
           items: checkoutItems.map((ci) => ({ name: ci.name, qty: ci.qty, price: ci.price })),
           totalAmount: grandTotal,
-          paymentMethod: "Cash on Delivery",
+          paymentMethod: isCodPayment ? "Cash on Delivery" : "Online Payment",
           sellerId: sellerId || "seller",
         });
       } catch (bErr) {
@@ -1961,9 +1985,10 @@ const loadRazorpayScript = (): Promise<boolean> => {
       clearCart();
       showToast("Order Placed Successfully!");
 
-      setTimeout(() => {
+      if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current);
+      redirectTimerRef.current = setTimeout(() => {
         router.push(`/order-confirmation?orderId=${encodeURIComponent(finalOrderId)}`);
-      }, 700);
+      }, isCodPayment ? 3000 : 700);
     } catch (err: any) {
       console.error("Error placing order:", err);
       const isNetErr =
@@ -2192,11 +2217,34 @@ const loadRazorpayScript = (): Promise<boolean> => {
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span style={{ color: "#64748B" }}>Payment Method:</span>
-                <strong style={{ color: "#0F172A" }}>{paymentMethod === "UPI" ? "Pay Now (UPI / Card)" : "Cash on Delivery (COD)"}</strong>
+                <strong style={{ color: "#0F172A" }}>
+                  {(placedOrderPaymentMethod || paymentMethod) === "UPI" ? "Pay Now (UPI / Card)" : "Cash on Delivery (COD)"}
+                </strong>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ color: "#64748B" }}>Total Paid:</span>
-                <strong style={{ color: "#FF6B00" }}>₹{grandTotal.toLocaleString("en-IN")}</strong>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ color: "#64748B" }}>
+                  {(placedOrderPaymentMethod || paymentMethod) === "COD" ? "Cash on Delivery (COD):" : "Total Paid:"}
+                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  {(placedOrderPaymentMethod || paymentMethod) === "COD" && (
+                    <span
+                      style={{
+                        fontSize: "0.74rem",
+                        fontWeight: 700,
+                        color: "#C2410C",
+                        backgroundColor: "#FFEDD5",
+                        border: "1px solid #FED7AA",
+                        padding: "2px 8px",
+                        borderRadius: "999px",
+                      }}
+                    >
+                      Pay on Delivery
+                    </span>
+                  )}
+                  <strong style={{ color: "#FF6B00", fontSize: "1.05rem" }}>
+                    ₹{(placedOrderGrandTotal || grandTotal).toLocaleString("en-IN")}
+                  </strong>
+                </div>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span style={{ color: "#64748B" }}>Delivery Address:</span>
@@ -2211,7 +2259,10 @@ const loadRazorpayScript = (): Promise<boolean> => {
             <div style={{ display: "flex", gap: "14px", width: "100%", marginTop: "10px" }}>
               <button
                 type="button"
-                onClick={() => router.push("/orders-desktop")}
+                onClick={() => {
+                  if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current);
+                  router.push("/orders-desktop");
+                }}
                 style={{
                   flex: 1,
                   padding: "14px 20px",
@@ -2235,7 +2286,10 @@ const loadRazorpayScript = (): Promise<boolean> => {
 
               <button
                 type="button"
-                onClick={() => router.push("/explore-desktop")}
+                onClick={() => {
+                  if (redirectTimerRef.current) clearTimeout(redirectTimerRef.current);
+                  router.push("/explore-desktop");
+                }}
                 style={{
                   flex: 1,
                   padding: "14px 20px",

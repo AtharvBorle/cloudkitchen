@@ -306,7 +306,7 @@ export default function OrderInvoicePage({ params }: { params: Promise<{ id: str
                             </div>
                         )}
                         <div style={{ borderTop: '2px solid #E2E8F0', paddingTop: '12px', marginTop: '4px', display: 'flex', justifyContent: 'space-between', fontSize: '1.2rem', fontWeight: '800', color: '#1E293B' }}>
-                            <span>Total Paid:</span>
+                            <span>{order.isPaid ? "Total Paid:" : (order.paymentMethod === "COD" || order.paymentMethod === "Cash on Delivery") ? "Cash on Delivery (COD):" : "Total Paid:"}</span>
                             <span style={{ color: 'var(--coral, #F16F68)' }}>₹{order.totalAmount.toFixed(2)}</span>
                         </div>
                     </div>
