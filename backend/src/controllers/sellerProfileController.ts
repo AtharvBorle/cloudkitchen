@@ -7,8 +7,12 @@ import bcrypt from "bcryptjs";
 import { validateKitchenName } from "@/lib/kitchen-validation";
 import { emitSellerStatusChanged } from "@/lib/realtime-events";
 import { sendPasswordChangedEmail } from "@/lib/emailService";
+import { triggerOpportunisticNotificationChecks } from "@/lib/subscriptionNotificationService";
 
 export const getSellerProfile = async () => {
+    // Opportunistically run automated notification checks in background
+    triggerOpportunisticNotificationChecks();
+
     const session = await getAuthSession();
 
     if (!session?.user) {

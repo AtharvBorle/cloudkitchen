@@ -390,3 +390,42 @@ export async function runAllNotificationChecks() {
     timestamp: new Date().toISOString(),
   };
 }
+
+// ==============================================================================
+// ⏱️ IN-PROCESS SELF-SCHEDULING (NO EXTERNAL CRON REQUIRED)
+// ==============================================================================
+let lastRunTimestamp = 0;
+const THROTTLE_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
+
+/**
+ * Opportunistically triggers notification checks in the background (fire-and-forget),
+ * throttled to at most once per hour. Safe to call on any user/seller request.
+ */
+export function triggerOpportunisticNotificationChecks() {
+  const now = Date.now();
+  if (now - lastRunTimestamp < THROTTLE_INTERVAL_MS) {
+    return;
+  }
+  lastRunTimestamp = now;
+
+  // Run asynchronously without blocking the calling request
+  setTimeout(() => {
+    runAllNotificationChecks().catch((err) => {
+      console.error("[AutoNotifications] In-process notification check failed:", err);
+    });
+  }, 100).unref();
+}
+
+// Automatically start background timer when the backend process is running (e.g. via PM2 / node)
+if (typeof setInterval !== "undefined") {
+  // 1. Initial run 30 seconds after server boot
+  setTimeout(() => {
+    triggerOpportunisticNotificationChecks();
+  }, 30 * 1000).unref();
+
+  // 2. Continuous hourly timer in the Node.js event loop
+  setInterval(() => {
+    triggerOpportunisticNotificationChecks();
+  }, THROTTLE_INTERVAL_MS).unref();
+}
+
