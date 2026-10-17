@@ -32,6 +32,7 @@ import {
   Users,
   ShieldCheck,
   ExternalLink,
+  Compass,
 } from "lucide-react";
 import { useCart, CartItem } from "@/context/CartContext";
 import { fetchApi } from "@/lib/fetch-api";
@@ -2023,6 +2024,20 @@ export default function MyOrdersView() {
                             </>
                           )}
 
+                          {isCancelled && (
+                            <button
+                              type="button"
+                              className={styles.reorderBtn}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleReorder(order);
+                              }}
+                            >
+                              <RotateCcw size={14} />
+                              <span>Reorder</span>
+                            </button>
+                          )}
+
                           <button
                             type="button"
                             className={styles.viewDetailsBtn}
@@ -2628,7 +2643,8 @@ export default function MyOrdersView() {
                       className={styles.sidebarReorderBtn}
                       onClick={() => handleReorder(selectedOrder)}
                       style={
-                        !(selectedOrder.status === "DELIVERED" || selectedOrder.rawStatus === "DELIVERED" || selectedOrder.statusDisplay?.toLowerCase().includes("delivered"))
+                        !(selectedOrder.status === "DELIVERED" || selectedOrder.rawStatus === "DELIVERED" || selectedOrder.statusDisplay?.toLowerCase().includes("delivered")) &&
+                        selectedOrder.status !== "CANCELLED"
                           ? { flex: 1, width: "100%" }
                           : undefined
                       }
@@ -2636,6 +2652,22 @@ export default function MyOrdersView() {
                       <RotateCcw size={15} />
                       <span>Reorder</span>
                     </button>
+
+                    {selectedOrder.status === "CANCELLED" && (
+                      <button
+                        type="button"
+                        className={styles.sidebarRateBtn}
+                        onClick={() => router.push("/food-explore")}
+                        style={{
+                          backgroundColor: "#FFF7ED",
+                          color: "#EA580C",
+                          borderColor: "#FFEDD5",
+                        }}
+                      >
+                        <Compass size={15} />
+                        <span>Explore Food</span>
+                      </button>
+                    )}
 
                     {(selectedOrder.status === "DELIVERED" || selectedOrder.rawStatus === "DELIVERED" || selectedOrder.statusDisplay?.toLowerCase().includes("delivered")) && (
                       <button

@@ -86,101 +86,114 @@ export const CancelOrderModal: React.FC<CancelOrderModalProps> = ({
       >
         {isSuccess ? (
           <div className={styles.successContainer}>
-            {/* Animated Pulsing Ring & Pop-in Icon */}
-            <div className={styles.successBadgeWrapper}>
-              <div className={styles.successPulseRing} />
-              <div className={styles.successPulseRing2} />
-              <div className={styles.successBadgeIcon}>
-                <CheckCircle2 size={40} strokeWidth={2.6} />
-              </div>
-            </div>
+            {/* Top Close Button for quick dismissal */}
+            <button
+              type="button"
+              className={styles.successCloseBtn}
+              onClick={onClose}
+              aria-label="Close"
+            >
+              <X size={18} />
+            </button>
 
-            {/* Main Headline & Message */}
-            <h2 className={styles.successTitle}>Order Cancelled by You</h2>
-            <p className={styles.successSubtitle}>
-              You have successfully cancelled your order.
-            </p>
-
-            {/* Order Details & Refund Card */}
-            <div className={styles.successSummaryCard}>
-              <div className={styles.summaryRow}>
-                <span className={styles.summaryLabel}>Order ID</span>
-                <span className={styles.summaryValue}>#{formattedOrderId}</span>
-              </div>
-
-              {sellerName && (
-                <div className={styles.summaryRow}>
-                  <span className={styles.summaryLabel}>Kitchen / Vendor</span>
-                  <span className={styles.summaryValue}>{sellerName}</span>
+            {/* Scrollable Main Content */}
+            <div className={styles.successContent}>
+              {/* Animated Pulsing Ring & Pop-in Icon */}
+              <div className={styles.successBadgeWrapper}>
+                <div className={styles.successPulseRing} />
+                <div className={styles.successPulseRing2} />
+                <div className={styles.successBadgeIcon}>
+                  <CheckCircle2 size={32} strokeWidth={2.6} />
                 </div>
-              )}
-
-              <div className={styles.summaryRow}>
-                <span className={styles.summaryLabel}>Order Status</span>
-                <span className={styles.statusCancelledPill}>
-                  <span className={styles.statusDot} />
-                  Cancelled
-                </span>
               </div>
 
-              {selectedReason && (
+              {/* Main Headline & Message */}
+              <h2 className={styles.successTitle}>Order Cancelled by You</h2>
+              <p className={styles.successSubtitle}>
+                You have successfully cancelled your order.
+              </p>
+
+              {/* Order Details & Refund Card */}
+              <div className={styles.successSummaryCard}>
                 <div className={styles.summaryRow}>
-                  <span className={styles.summaryLabel}>Reason</span>
-                  <span
-                    className={styles.summaryValue}
-                    style={{
-                      maxWidth: "60%",
-                      textAlign: "right",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                    title={customComment ? `${selectedReason} - ${customComment}` : selectedReason}
-                  >
-                    {customComment ? `${selectedReason} (${customComment})` : selectedReason}
+                  <span className={styles.summaryLabel}>Order ID</span>
+                  <span className={styles.summaryValue}>#{formattedOrderId}</span>
+                </div>
+
+                {sellerName && (
+                  <div className={styles.summaryRow}>
+                    <span className={styles.summaryLabel}>Kitchen / Vendor</span>
+                    <span className={styles.summaryValue}>{sellerName}</span>
+                  </div>
+                )}
+
+                <div className={styles.summaryRow}>
+                  <span className={styles.summaryLabel}>Order Status</span>
+                  <span className={styles.statusCancelledPill}>
+                    <span className={styles.statusDot} />
+                    Cancelled
                   </span>
                 </div>
-              )}
 
-              <div className={styles.summaryDivider} />
-
-              {/* Refund Info Banner */}
-              <div
-                className={`${styles.refundStatusBanner} ${
-                  Number(totalAmount) > 0
-                    ? styles.refundStatusBannerPaid
-                    : styles.refundStatusBannerZero
-                }`}
-              >
-                {Number(totalAmount) > 0 ? (
-                  <>
-                    <CreditCard size={18} style={{ flexShrink: 0, marginTop: "2px", color: "#16A34A" }} />
-                    <div>
-                      <strong style={{ display: "block", color: "#166534", marginBottom: "2px" }}>
-                        100% Refund Initiated
-                      </strong>
-                      <span>
-                        Full refund of ₹{totalAmount} has been initiated to your original payment method (3–5 business days).
-                      </span>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <ShieldCheck size={18} style={{ flexShrink: 0, marginTop: "2px", color: "#475569" }} />
-                    <div>
-                      <strong style={{ display: "block", color: "#334155", marginBottom: "2px" }}>
-                        No Cancellation Fee
-                      </strong>
-                      <span>
-                        100% discount applied (₹0 charged). Your order has been cancelled with no penalty.
-                      </span>
-                    </div>
-                  </>
+                {selectedReason && (
+                  <div className={styles.summaryRow}>
+                    <span className={styles.summaryLabel}>Reason</span>
+                    <span
+                      className={styles.summaryValue}
+                      style={{
+                        maxWidth: "60%",
+                        textAlign: "right",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                      title={customComment ? `${selectedReason} - ${customComment}` : selectedReason}
+                    >
+                      {customComment ? `${selectedReason} (${customComment})` : selectedReason}
+                    </span>
+                  </div>
                 )}
+
+                <div className={styles.summaryDivider} />
+
+                {/* Refund Info Banner */}
+                <div
+                  className={`${styles.refundStatusBanner} ${
+                    Number(totalAmount) > 0
+                      ? styles.refundStatusBannerPaid
+                      : styles.refundStatusBannerZero
+                  }`}
+                >
+                  {Number(totalAmount) > 0 ? (
+                    <>
+                      <CreditCard size={18} style={{ flexShrink: 0, marginTop: "2px", color: "#16A34A" }} />
+                      <div>
+                        <strong style={{ display: "block", color: "#166534", marginBottom: "2px" }}>
+                          100% Refund Initiated
+                        </strong>
+                        <span>
+                          Full refund of ₹{totalAmount} has been initiated to your original payment method (3–5 business days).
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck size={18} style={{ flexShrink: 0, marginTop: "2px", color: "#475569" }} />
+                      <div>
+                        <strong style={{ display: "block", color: "#334155", marginBottom: "2px" }}>
+                          No Cancellation Fee
+                        </strong>
+                        <span>
+                          100% discount applied (₹0 charged). Your order has been cancelled with no penalty.
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Interactive Actions */}
+            {/* Pinned Bottom Interactive Actions - Always 100% Visible & Accessible */}
             <div className={styles.successActions}>
               <button
                 type="button"
