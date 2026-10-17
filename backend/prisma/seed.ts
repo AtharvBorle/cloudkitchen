@@ -213,6 +213,8 @@ async function main() {
             longitude: 73.8216,
             isLocationPinned: true,
             deliveryRadiusKm: 5.0,
+            kitchenImages: JSON.stringify(["https://res.cloudinary.com/daiwwk5v7/image/upload/v1783143685/neo-cloud-room/sellers/frkbtwlzxlk61ihe1myr.jpg"]),
+            bannerImageUrl: "https://res.cloudinary.com/daiwwk5v7/image/upload/v1783143685/neo-cloud-room/sellers/frkbtwlzxlk61ihe1myr.jpg",
         },
         create: {
             userId: radhaUser.id,
@@ -228,6 +230,8 @@ async function main() {
             longitude: 73.8216,
             isLocationPinned: true,
             deliveryRadiusKm: 5.0,
+            kitchenImages: JSON.stringify(["https://res.cloudinary.com/daiwwk5v7/image/upload/v1783143685/neo-cloud-room/sellers/frkbtwlzxlk61ihe1myr.jpg"]),
+            bannerImageUrl: "https://res.cloudinary.com/daiwwk5v7/image/upload/v1783143685/neo-cloud-room/sellers/frkbtwlzxlk61ihe1myr.jpg",
         },
     });
 
@@ -238,17 +242,74 @@ async function main() {
     });
 
     const radhaDishes = [
-        { name: "Grilled Veggie Wrap ", price: 179, type: "VEG", desc: "Fresh grilled vegetables tossed with herbs and creamy dressing in a warm flatbread wrap" },
-        { name: "Paneer Quinoa Bowl", price: 299, type: "VEG", desc: "Nutritious roasted paneer cubes served over seasoned protein-rich quinoa with fresh salad" },
-        { name: "Chiken Thali ", price: 259, type: "NON_VEG", desc: "Traditional slow-cooked chicken gravy served with 3 soft rotis, aromatic rice and salad" },
-        { name: "Jeera Rice Plate ", price: 60, type: "VEG", desc: "Fragrant basmati rice gently tempered with roasted cumin seeds and fresh coriander" },
-        { name: "lemon rice ", price: 89, type: "VEG", desc: "Zesty tempered rice infused with fresh lemon juice, mustard seeds, curry leaves & peanuts" },
-        { name: "Cold Coffee", price: 60, type: "VEG", desc: "Thick creamy chilled blended coffee with a rich frothy top" },
-        { name: "Cheese Burger ", price: 79, type: "VEG", desc: "Crisp potato-herb patty topped with melted cheese, fresh tomato, onion and house sauce" },
-        { name: "Dosa ", price: 79, type: "VEG", desc: "Golden thin crispy crepe served hot with coconut chutney and tangy vegetable sambar" },
+        {
+            name: "Grilled Veggie Wrap ",
+            price: 179,
+            type: "VEG",
+            desc: "Fresh grilled vegetables tossed with herbs and creamy dressing in a warm flatbread wrap",
+            imageUrl: "https://res.cloudinary.com/daiwwk5v7/image/upload/v1790750403/neo-cloud-room/menu/gx4or7ljwlsf4aen31zr.png",
+            cat: "meal"
+        },
+        {
+            name: "Paneer Quinoa Bowl",
+            price: 299,
+            type: "VEG",
+            desc: "Nutritious roasted paneer cubes served over seasoned protein-rich quinoa with fresh salad",
+            imageUrl: "https://res.cloudinary.com/daiwwk5v7/image/upload/v1790750172/neo-cloud-room/menu/soloww11a8kp2pmczyk9.png",
+            cat: "meal"
+        },
+        {
+            name: "Chiken Thali ",
+            price: 259,
+            type: "NON_VEG",
+            desc: "Traditional slow-cooked chicken gravy served with 3 soft rotis, aromatic rice and salad",
+            imageUrl: "https://res.cloudinary.com/daiwwk5v7/image/upload/v1790578751/neo-cloud-room/menu/ml4rfiyk7k1whttlm8mq.png",
+            cat: "meal"
+        },
+        {
+            name: "Jeera Rice Plate ",
+            price: 60,
+            type: "VEG",
+            desc: "Fragrant basmati rice gently tempered with roasted cumin seeds and fresh coriander",
+            imageUrl: "https://res.cloudinary.com/daiwwk5v7/image/upload/v1790659086/neo-cloud-room/menu/acmz5oojk1qjouur7xjp.png",
+            cat: "dalrice"
+        },
+        {
+            name: "lemon rice ",
+            price: 89,
+            type: "VEG",
+            desc: "Zesty tempered rice infused with fresh lemon juice, mustard seeds, curry leaves & peanuts",
+            imageUrl: "https://res.cloudinary.com/daiwwk5v7/image/upload/v1790687241/neo-cloud-room/menu/b4u0b0todmuk14hpr3i5.png",
+            cat: "dalrice"
+        },
+        {
+            name: "Cold Coffee",
+            price: 60,
+            type: "VEG",
+            desc: "Thick creamy chilled blended coffee with a rich frothy top",
+            imageUrl: "https://res.cloudinary.com/daiwwk5v7/image/upload/v1790579225/neo-cloud-room/menu/go58tn78a68zlqlmdrsk.png",
+            cat: "shake"
+        },
+        {
+            name: "Cheese Burger ",
+            price: 79,
+            type: "VEG",
+            desc: "Crisp potato-herb patty topped with melted cheese, fresh tomato, onion and house sauce",
+            imageUrl: "https://res.cloudinary.com/daiwwk5v7/image/upload/v1790578162/neo-cloud-room/menu/e9fehkymyxxc87e38wqh.png",
+            cat: "burger"
+        },
+        {
+            name: "Dosa ",
+            price: 79,
+            type: "VEG",
+            desc: "Golden thin crispy crepe served hot with coconut chutney and tangy vegetable sambar",
+            imageUrl: "https://res.cloudinary.com/daiwwk5v7/image/upload/v1790578827/neo-cloud-room/menu/gywcqerwusk8sftjutt2.png",
+            cat: "dosa"
+        },
     ];
 
     for (const d of radhaDishes) {
+        const catId = foodCatMap.get(d.cat.toLowerCase()) || null;
         const existing = await prisma.foodItem.findFirst({
             where: { sellerId: radhaSeller.id, name: d.name }
         });
@@ -260,13 +321,27 @@ async function main() {
                     description: d.desc,
                     price: d.price,
                     itemType: d.type,
+                    imageUrl: d.imageUrl,
+                    foodCategoryId: catId,
                     isAvailable: true,
                     stockQuantity: 20,
                 }
             });
+        } else {
+            await prisma.foodItem.update({
+                where: { id: existing.id },
+                data: {
+                    description: d.desc,
+                    price: d.price,
+                    itemType: d.type,
+                    imageUrl: d.imageUrl,
+                    foodCategoryId: catId,
+                    isAvailable: true,
+                }
+            });
         }
     }
-    console.log("Seeded radha's kitchen with dishes");
+    console.log("Seeded radha's kitchen with dishes and authentic Cloudinary photos");
 
     // C. Yewale's Kitchens (Deccan Gymkhana 411004)
     const yewaleUser = await prisma.user.upsert({
@@ -306,6 +381,8 @@ async function main() {
             longitude: 73.8415,
             isLocationPinned: true,
             deliveryRadiusKm: 5.0,
+            kitchenImages: JSON.stringify(["https://res.cloudinary.com/daiwwk5v7/image/upload/v1790167021/neo-cloud-room/sellers/eksk0g2fgxqjanqixhnx.png"]),
+            bannerImageUrl: "https://res.cloudinary.com/daiwwk5v7/image/upload/v1790167021/neo-cloud-room/sellers/eksk0g2fgxqjanqixhnx.png",
         },
         create: {
             userId: yewaleUser.id,
@@ -321,6 +398,8 @@ async function main() {
             longitude: 73.8415,
             isLocationPinned: true,
             deliveryRadiusKm: 5.0,
+            kitchenImages: JSON.stringify(["https://res.cloudinary.com/daiwwk5v7/image/upload/v1790167021/neo-cloud-room/sellers/eksk0g2fgxqjanqixhnx.png"]),
+            bannerImageUrl: "https://res.cloudinary.com/daiwwk5v7/image/upload/v1790167021/neo-cloud-room/sellers/eksk0g2fgxqjanqixhnx.png",
         },
     });
 
@@ -330,6 +409,7 @@ async function main() {
         create: { sellerId: yewaleSeller.id, pincode: "411004", name: "Deccan Gymkhana" }
     });
 
+    const mealCatId = foodCatMap.get("meal") || null;
     const existingBiryani = await prisma.foodItem.findFirst({
         where: { sellerId: yewaleSeller.id, name: "Biryani" }
     });
@@ -341,12 +421,26 @@ async function main() {
                 description: "Authentic dum-cooked spiced chicken biryani served with flavored raita and salan.",
                 price: 500,
                 itemType: "NON_VEG",
+                imageUrl: "https://res.cloudinary.com/daiwwk5v7/image/upload/v1790157604/neo-cloud-room/menu/l8ov0oueeydsqxkhw50j.png",
+                foodCategoryId: mealCatId,
                 isAvailable: true,
                 stockQuantity: 20,
             }
         });
+    } else {
+        await prisma.foodItem.update({
+            where: { id: existingBiryani.id },
+            data: {
+                description: "Authentic dum-cooked spiced chicken biryani served with flavored raita and salan.",
+                price: 500,
+                itemType: "NON_VEG",
+                imageUrl: "https://res.cloudinary.com/daiwwk5v7/image/upload/v1790157604/neo-cloud-room/menu/l8ov0oueeydsqxkhw50j.png",
+                foodCategoryId: mealCatId,
+                isAvailable: true,
+            }
+        });
     }
-    console.log("Seeded Yewale's Kitchens with Biryani");
+    console.log("Seeded Yewale's Kitchens with Biryani and authentic Cloudinary photo");
 
     // D. Additional Community Kitchens
     const additionalKitchens = [
@@ -359,6 +453,7 @@ async function main() {
             locality: "Karve Nagar, Pune",
             lat: 18.5016,
             lng: 73.8216,
+            imageUrl: "https://res.cloudinary.com/daiwwk5v7/image/upload/v1789645244/neo-cloud-room/sellers/pwsniwmlsrivaknk067q.jpg",
         },
         {
             email: "tanuja97@gmail.com",
@@ -369,6 +464,7 @@ async function main() {
             locality: "Karve Nagar, Pune",
             lat: 18.4965,
             lng: 73.8188,
+            imageUrl: "https://res.cloudinary.com/daiwwk5v7/image/upload/v1789815622/neo-cloud-room/sellers/vycvgi49r2lommmbpgu5.jpg",
         },
         {
             email: "ritu@gmail.com",
@@ -379,6 +475,7 @@ async function main() {
             locality: "Sahyadri Hospital, Paud Road, Kothrud, Pune",
             lat: 18.5074,
             lng: 73.8077,
+            imageUrl: "https://res.cloudinary.com/daiwwk5v7/image/upload/v1789722849/neo-cloud-room/sellers/ylumdix1wk6lrgciia8m.jpg",
         },
         {
             email: ".mitesh@gmail.com",
@@ -389,6 +486,7 @@ async function main() {
             locality: "Lotus Residency Road, Karve Nagar, Pune",
             lat: 18.5016,
             lng: 73.8216,
+            imageUrl: "https://res.cloudinary.com/daiwwk5v7/image/upload/v1789801121/neo-cloud-room/sellers/cabpoo8lzywmfwxlfawb.jpg",
         },
         {
             email: "yashbandgar5550@gmail.com",
@@ -400,6 +498,7 @@ async function main() {
             lat: 18.5913,
             lng: 73.7389,
             status: "PENDING",
+            imageUrl: undefined,
         }
     ];
 
@@ -427,7 +526,7 @@ async function main() {
             },
         });
 
-        await prisma.sellerProfile.upsert({
+        const profile = await prisma.sellerProfile.upsert({
             where: { userId: u.id },
             update: {
                 businessName: s.businessName,
@@ -441,6 +540,8 @@ async function main() {
                 longitude: s.lng,
                 isLocationPinned: true,
                 deliveryRadiusKm: 5.0,
+                kitchenImages: s.imageUrl ? JSON.stringify([s.imageUrl]) : "[]",
+                bannerImageUrl: s.imageUrl || null,
             },
             create: {
                 userId: u.id,
@@ -456,8 +557,17 @@ async function main() {
                 longitude: s.lng,
                 isLocationPinned: true,
                 deliveryRadiusKm: 5.0,
+                kitchenImages: s.imageUrl ? JSON.stringify([s.imageUrl]) : "[]",
+                bannerImageUrl: s.imageUrl || null,
             },
         });
+
+        await prisma.servedPincode.upsert({
+            where: { sellerId_pincode: { sellerId: profile.id, pincode: s.pincode } },
+            update: { name: s.locality },
+            create: { sellerId: profile.id, pincode: s.pincode, name: s.locality }
+        });
+
         console.log(`Seeded seller: ${s.businessName}`);
     }
 
