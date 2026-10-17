@@ -21,14 +21,18 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         if (!id) return errorResponse("Order ID is required", 400);
 
         let ticketId: string | undefined = undefined;
+        let reason: string | undefined = undefined;
+        let comment: string | undefined = undefined;
         try {
             const body = await req.json();
             ticketId = body?.ticketId;
+            reason = body?.reason;
+            comment = body?.comment;
         } catch (e) {
             // Body might be empty or invalid JSON, ignore
         }
 
-        const cancelledOrder = await cancelOrder(id, ticketId);
+        const cancelledOrder = await cancelOrder(id, ticketId, reason, comment);
         return successResponse(cancelledOrder, "Order cancelled successfully", 200);
     } catch (error: any) {
         if (error instanceof ApiError) return errorResponse(error.message, error.statusCode);

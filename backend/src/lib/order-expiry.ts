@@ -81,7 +81,11 @@ export const cancelExpiredOrder = async (order: any): Promise<any> => {
                     id: order.id,
                     status: { notIn: ["CANCELLED", "DELIVERED"] }
                 },
-                data: { status: "CANCELLED" }
+                data: { 
+                    status: "CANCELLED",
+                    cancelledBy: "SYSTEM",
+                    cancellationReason: "Kitchen partner did not accept within the 5-minute window"
+                }
             });
 
             const currentOrder = await tx.order.findUnique({

@@ -201,7 +201,9 @@ export const updateSellerOrder = async (req: Request, orderId: string) => {
                 data: {
                     status: "CANCELLED",
                     isPaid: typeof isPaid === "boolean" ? isPaid : existingOrder.isPaid,
-                    deliveryPersonId: deliveryPersonId !== undefined ? deliveryPersonId : existingOrder.deliveryPersonId
+                    deliveryPersonId: deliveryPersonId !== undefined ? deliveryPersonId : existingOrder.deliveryPersonId,
+                    cancelledBy: "SELLER",
+                    cancellationReason: "Rejected / cancelled by kitchen partner"
                 }
             });
             newlyCancelled = claim.count > 0;
