@@ -94,6 +94,8 @@ export interface OrderRow {
   date: string;
   time: string;
   deliveryPersonName?: string;
+  cancelledBy?: string | null;
+  cancellationReason?: string | null;
 }
 
 const formatOrderDate = (isoString?: string): string => {
@@ -708,6 +710,10 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
             const orderDateStr = formatOrderDate(o.createdAt);
             const orderTimeStr = formatOrderTime(o.createdAt);
 
+            const isCancelledByUser = o.cancelledBy === "USER" ||
+              (Boolean(o.cancellationReason) && /cancelled by (customer|user|you)/i.test(o.cancellationReason)) ||
+              (Boolean(o.refund?.reason) && /cancelled by (customer|user|you)/i.test(o.refund.reason));
+
             return {
               id: o.id,
               orderId: `#NCR-${o.id.slice(0, 4).toUpperCase()}`,
@@ -722,6 +728,8 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
               date: orderDateStr,
               time: orderTimeStr,
               deliveryPersonName: o.deliveryPerson?.name,
+              cancelledBy: o.cancelledBy || (isCancelledByUser ? "USER" : null),
+              cancellationReason: o.cancellationReason || o.refund?.reason || null,
             };
           });
           setOrderList(mapped);
@@ -805,7 +813,13 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
         }
       } else if (payload.event === "ORDER_CANCELLED" && payload.orderId) {
         setOrderList((prev) =>
-          prev.map((item) => (item.id === payload.orderId ? { ...item, status: "Cancelled", rawStatus: "CANCELLED" } : item))
+          prev.map((item) => (item.id === payload.orderId ? {
+            ...item,
+            status: "Cancelled",
+            rawStatus: "CANCELLED",
+            cancelledBy: payload.order?.cancelledBy || "USER",
+            cancellationReason: payload.order?.cancellationReason || "Cancelled by customer",
+          } : item))
         );
       }
       loadOrders(true);
@@ -1356,14 +1370,42 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
                                 </div>
                               )
                             ) : (
-                              <div
-                                className={`${styles.statusBadge} ${getStatusBadgeClass(
-                                  order.status
-                                )}`}
-                              >
-                                <span className={styles.statusDot} />
-                                <span className={styles.statusLabel}>{order.status}</span>
-                              </div>
+                              (() => {
+                                const isUserCancelled = order.status === "Cancelled" && (
+                                  order.cancelledBy === "USER" ||
+                                  (Boolean(order.cancellationReason) && /cancelled by (customer|user|you)/i.test(order.cancellationReason || ""))
+                                );
+                                return (
+                                  <div>
+                                    <div
+                                      className={`${styles.statusBadge} ${getStatusBadgeClass(
+                                        order.status
+                                      )}`}
+                                      style={isUserCancelled ? { background: "#FEE2E2", color: "#991B1B", border: "1px solid #FECACA" } : undefined}
+                                      title={isUserCancelled ? `Cancelled by customer${order.cancellationReason ? `: ${order.cancellationReason}` : ""}` : undefined}
+                                    >
+                                      <span className={styles.statusDot} style={isUserCancelled ? { background: "#EF4444" } : undefined} />
+                                      <span className={styles.statusLabel}>{isUserCancelled ? "Cancelled by User" : order.status}</span>
+                                    </div>
+                                    {isUserCancelled && order.cancellationReason && (
+                                      <div
+                                        style={{
+                                          fontSize: "0.72rem",
+                                          color: "#DC2626",
+                                          marginTop: "2px",
+                                          maxWidth: "140px",
+                                          whiteSpace: "nowrap",
+                                          overflow: "hidden",
+                                          textOverflow: "ellipsis",
+                                        }}
+                                        title={order.cancellationReason}
+                                      >
+                                        {order.cancellationReason}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()
                             )}
                           </td>
                           <td className={styles.dateTimeCell}>

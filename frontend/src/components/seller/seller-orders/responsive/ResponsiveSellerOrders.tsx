@@ -59,6 +59,8 @@ export interface ResponsiveOrderItem {
   cancelledCount: number;
   status: "New" | "Preparing" | "Out" | "Done" | "Cancelled";
   createdAt?: string;
+  cancelledBy?: string | null;
+  cancellationReason?: string | null;
 }
 
 import { useSellerProfile, isGenericFallbackName } from "@/hooks/useSellerProfile";
@@ -752,7 +754,16 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
                                 {mm}:{ss}
                               </span>
                             ) : (
-                              <span className={styles.cancelledBadge}>Cancelled</span>
+                              (() => {
+                                const isUserCancelled =
+                                  order.cancelledBy === "USER" ||
+                                  (Boolean(order.cancellationReason) && /cancelled by (customer|user|you)/i.test(order.cancellationReason || ""));
+                                return (
+                                  <span className={styles.cancelledBadge}>
+                                    {isUserCancelled ? "Cancelled by User" : "Cancelled"}
+                                  </span>
+                                );
+                              })()
                             );
                           })()
                         ) : (
@@ -784,10 +795,22 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
                       style={{ cursor: "pointer" }}
                     >
                       {order.status === "Cancelled" || (order.status === "New" && getRemainingSeconds(order.createdAt, now) <= 0) ? (
-                        <div className={styles.cancelledStat}>
-                          <span className={styles.statDotRed} />
-                          <span>Cancelled</span>
-                        </div>
+                        (() => {
+                          const isUserCancelled =
+                            order.cancelledBy === "USER" ||
+                            (Boolean(order.cancellationReason) && /cancelled by (customer|user|you)/i.test(order.cancellationReason || ""));
+                          return (
+                            <div className={styles.cancelledStat}>
+                              <span className={styles.statDotRed} />
+                              <span>{isUserCancelled ? "Cancelled by User" : "Cancelled"}</span>
+                              {isUserCancelled && order.cancellationReason && (
+                                <span style={{ marginLeft: "6px", fontSize: "0.74rem", color: "#B91C1C", fontWeight: 500 }}>
+                                  ({order.cancellationReason})
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()
                       ) : (
                         <div className={styles.deliveredStat}>
                           <span className={styles.statDotGreen} />

@@ -65,7 +65,16 @@ function ResponsiveSellerOrdersContent() {
         }
       } else if (payload.event === "ORDER_CANCELLED" && payload.orderId) {
         setOrders((prev) =>
-          prev.map((o) => (o.id === payload.orderId ? { ...o, status: "CANCELLED" } : o))
+          prev.map((o) =>
+            o.id === payload.orderId
+              ? {
+                  ...o,
+                  status: "CANCELLED",
+                  cancelledBy: payload.order?.cancelledBy || "USER",
+                  cancellationReason: payload.order?.cancellationReason || "Cancelled by customer",
+                }
+              : o
+          )
         );
       }
       loadOrders(true);
@@ -125,6 +134,10 @@ function ResponsiveSellerOrdersContent() {
         ? new Date(o.createdAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
         : "Just now";
 
+      const isCancelledByUser = o.cancelledBy === "USER" ||
+        (Boolean(o.cancellationReason) && /cancelled by (customer|user|you)/i.test(o.cancellationReason)) ||
+        (Boolean(o.refund?.reason) && /cancelled by (customer|user|you)/i.test(o.refund.reason));
+
       return {
         id: o.id,
         orderNumber: `#${o.id.slice(0, 6).toUpperCase()}`,
@@ -138,6 +151,8 @@ function ResponsiveSellerOrdersContent() {
         cancelledCount: 0,
         status: statusVal,
         createdAt: o.createdAt,
+        cancelledBy: o.cancelledBy || (isCancelledByUser ? "USER" : null),
+        cancellationReason: o.cancellationReason || o.refund?.reason || null,
       };
     });
   }, [orders]);
