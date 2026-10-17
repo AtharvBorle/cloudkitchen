@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
-    console.log("Starting DB Seed...");
+    console.log("Starting DB Seed with authentic seller and menu data...");
     const hashPassword = await bcrypt.hash("password123", 10);
 
     // 1. Superadmin
@@ -73,309 +73,395 @@ async function main() {
     });
     console.log("Seeded Customer:", customerUser.email);
 
-    // Map existing FoodCategories by lowercase name
+    // 4. Map FoodCategories
     const allFoodCats = await prisma.foodCategory.findMany();
     const foodCatMap = new Map<string, string>();
     allFoodCats.forEach(fc => foodCatMap.set(fc.name.toLowerCase().trim(), fc.id));
 
-    // Kitchen Definitions with strict locality-specific service areas (5 km max)
-    const kitchensToSeed = [
-        {
-            email: "yash@kitchen.com",
-            name: "Yash Kitchen",
-            businessName: "Yash Kitchen",
-            phone: "9876543210",
-            city: "Pune",
-            pincode: "411057",
-            locality: "Rajiv Gandhi Infotech Park, Phase 1, Hinjawadi",
-            lat: 18.5913,
-            lng: 73.7389,
-            type: "HOMELY_FOOD",
-            foodType: "BOTH",
-            trackingId: "TRK-YASH-01",
-            imageUrl: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80",
-            servedPins: [
-                { pincode: "411057", name: "Rajiv Gandhi Infotech Park / Hinjawadi" },
-                { pincode: "411061", name: "Wakad" },
-            ],
-            dishes: [
-                { name: "Special Maharashtrian Veg Thali", cat: "meal", price: 150, type: "VEG", desc: "4 Chapatis, 2 Sabzis, Dal Tadka, Jeera Rice, Gulab Jamun, Papad & Pickle" },
-                { name: "Authentic Kanda Poha", cat: "pohe", price: 45, type: "VEG", desc: "Traditional soft pressed rice flakes with roasted peanuts, mustard & fresh coriander" },
-                { name: "Dal Khichdi Bowl", cat: "dalrice", price: 110, type: "VEG", desc: "Comforting slow-cooked yellow dal khichdi finished with pure desi ghee tadka" },
-                { name: "Special Paneer Handi Combo", cat: "meal", price: 210, type: "VEG", desc: "Rich and creamy cottage cheese curry with 3 butter phulkas and spiced onion salad" },
-                { name: "Desi Ghee Rawa Sheera", cat: "shira", price: 50, type: "VEG", desc: "Warm semolina sweet dessert infused with pure ghee, cardamom and dry fruits" },
-                { name: "Alphonso Mango Thick Shake", cat: "shake", price: 80, type: "VEG", desc: "Creamy seasonal mango milkshake made with real Alphonso mango pulp" },
-            ]
-        },
-        {
-            email: "artisano@domain.com",
-            name: "Artisano Oven",
-            businessName: "Artisano Wood-Fired Oven",
-            phone: "9822004455",
-            city: "Pune",
-            pincode: "411038",
-            locality: "Kothrud",
-            lat: 18.5074,
-            lng: 73.8077,
-            type: "BAKERY",
-            foodType: "BOTH",
-            trackingId: "TRK-ARTISANO-01",
-            imageUrl: "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=600&q=80",
-            servedPins: [
-                { pincode: "411038", name: "Kothrud" },
-                { pincode: "411052", name: "Karve Nagar" },
-            ],
-            dishes: [
-                { name: "Wood-Fired Farmhouse Pizza", cat: "pizza", price: 270, type: "VEG", desc: "Sourdough crust topped with bell peppers, olives, corn & fresh mozzarella" },
-                { name: "Double Smash Cheesy Burger", cat: "burger", price: 180, type: "NON_VEG", desc: "Crisp grilled double patty with melted cheddar and smoky house sauce" },
-                { name: "Dutch Truffle Pastry", cat: "pastry", price: 85, type: "VEG", desc: "Rich dark Belgian chocolate sponge layered with smooth ganache" },
-                { name: "Black Forest Celebration Cake (500g)", cat: "cake", price: 420, type: "VEG", desc: "Classic whipped cream cake layered with tart cherries and chocolate shavings" },
-            ]
-        },
-        {
-            email: "annapurna@domain.com",
-            name: "Annapurna Kitchen",
-            businessName: "Annapurna Homely Mess",
-            phone: "9876501234",
-            city: "Pune",
-            pincode: "411051",
-            locality: "Karve Nagar",
-            lat: 18.5016,
-            lng: 73.8216,
-            type: "HOMELY_FOOD",
-            foodType: "VEG",
-            trackingId: "TRK-ANNAPURNA-01",
-            imageUrl: "https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=600&q=80",
-            servedPins: [
-                { pincode: "411051", name: "Karve Nagar" },
-                { pincode: "411052", name: "Karve Nagar" },
-                { pincode: "411038", name: "Kothrud" },
-            ],
-            dishes: [
-                { name: "Special Puran Poli Thali", cat: "meal", price: 180, type: "VEG", desc: "2 Soft Puran Polis with Katachi Amti, Rice & Batata Bhaji" },
-                { name: "Sabudana Khichdi Special", cat: "sabudana", price: 65, type: "VEG", desc: "Upvas special tapioca pearls roasted with crunchy roasted peanuts" },
-                { name: "Desi Ghee Rawa Sheera", cat: "shira", price: 50, type: "VEG", desc: "Golden semolina sweet pudding cooked in pure milk and saffron" },
-                { name: "Rava Upma Bowl", cat: "upma", price: 40, type: "VEG", desc: "Healthy savory semolina breakfast tempered with mustard and ginger" },
-            ]
-        },
-        {
-            email: "royalhandi@domain.com",
-            name: "Royal Handi",
-            businessName: "Royal Handi & Biryani Hub",
-            phone: "9850112233",
-            city: "Pune",
-            pincode: "411005",
-            locality: "Shivajinagar",
-            lat: 18.5314,
-            lng: 73.8446,
-            type: "MESS",
-            foodType: "BOTH",
-            trackingId: "TRK-ROYALHANDI-01",
-            imageUrl: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80",
-            servedPins: [
-                { pincode: "411005", name: "Shivajinagar" },
-                { pincode: "411004", name: "Deccan Gymkhana" },
-            ],
-            dishes: [
-                { name: "Royal Dum Handi Biryani", cat: "meal", price: 250, type: "BOTH", desc: "Aromatic aged basmati rice cooked on slow dum with royal spices and raita" },
-                { name: "Special Paneer Handi Combo", cat: "meal", price: 210, type: "VEG", desc: "Rich onion-tomato gravy with soft paneer cubes, served with 3 butter rotis" },
-                { name: "Alphonso Mango Thick Shake", cat: "shake", price: 80, type: "VEG", desc: "Fresh seasonal mango puree blended thick with cold whole milk" },
-            ]
-        },
-        {
-            email: "greenearth@domain.com",
-            name: "Green Earth",
-            businessName: "Green Earth South Kitchen",
-            phone: "9890223344",
-            city: "Pune",
-            pincode: "411045",
-            locality: "Baner",
-            lat: 18.5590,
-            lng: 73.7868,
-            type: "HOMELY_FOOD",
-            foodType: "VEG",
-            trackingId: "TRK-GREENEARTH-01",
-            imageUrl: "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=600&q=80",
-            servedPins: [
-                { pincode: "411045", name: "Baner" },
-                { pincode: "411007", name: "Aundh" },
-            ],
-            dishes: [
-                { name: "Crispy Butter Masala Dosa", cat: "dosa", price: 95, type: "VEG", desc: "Crisp fermented crepe roasted with butter, potato masala, coconut chutney & sambar" },
-                { name: "Steamed Button Idli Plate", cat: "idli", price: 60, type: "VEG", desc: "4 pillowy soft steamed rice cakes served hot with drumstick sambar" },
-                { name: "Cold Badam Pista Milkshake", cat: "shake", price: 75, type: "VEG", desc: "Chilled almond-pistachio thick shake flavored with cardamom" },
-            ]
-        },
-        {
-            email: "seller@domain.com",
-            name: "Radha's Kitchen",
-            businessName: "Radha's Kitchen Base",
-            phone: "1122334455",
-            city: "Pune",
-            pincode: "411028",
-            locality: "Hadapsar",
-            lat: 18.5089,
-            lng: 73.9259,
-            type: "HOMELY_FOOD",
-            foodType: "BOTH",
-            trackingId: "TRK-RADHA-01",
-            imageUrl: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80",
-            servedPins: [
-                { pincode: "411028", name: "Hadapsar" },
-            ],
-            dishes: [
-                { name: "Maharashtrian Special Veg Thali", cat: "meal", price: 150, type: "VEG", desc: "4 Chapati, 2 Sabzi, Dal, Jeera Rice, Sweet, Pickle & Papad" },
-                { name: "Dal Khichdi Bowl", cat: "dalrice", price: 110, type: "VEG", desc: "Slow-cooked Moong Dal Khichdi with pure desi ghee tempering" },
-                { name: "Authentic Kanda Poha", cat: "pohe", price: 45, type: "VEG", desc: "Traditional flattened rice seasoned with mustard, curry leaves & peanuts" },
-            ]
-        }
-    ];
-
-    for (const k of kitchensToSeed) {
-        const u = await prisma.user.upsert({
-            where: { email: k.email },
-            update: {
-                passwordHash: hashPassword,
-                role: "SELLER",
-                isActive: true,
-                name: k.name,
-                city: k.city,
-                pincode: k.pincode,
-                phone: k.phone,
-            },
-            create: {
-                email: k.email,
-                passwordHash: hashPassword,
-                role: "SELLER",
-                name: k.name,
-                phone: k.phone,
-                city: k.city,
-                pincode: k.pincode,
-                isActive: true,
-            },
-        });
-
-        const profile = await prisma.sellerProfile.upsert({
-            where: { userId: u.id },
-            update: {
-                businessName: k.businessName,
-                type: k.type,
-                foodType: k.foodType,
-                verificationStatus: "APPROVED",
-                isOnline: true,
-                addressLocality: k.locality,
-                latitude: k.lat,
-                longitude: k.lng,
-                isLocationPinned: true,
-                deliveryRadiusKm: 5.0,
-                kitchenImages: JSON.stringify([k.imageUrl]),
-            },
-            create: {
-                userId: u.id,
-                businessName: k.businessName,
-                type: k.type,
-                foodType: k.foodType,
-                adhaarUrl: "verified-adhaar",
-                trackingId: k.trackingId,
-                verificationStatus: "APPROVED",
-                isOnline: true,
-                addressLocality: k.locality,
-                latitude: k.lat,
-                longitude: k.lng,
-                isLocationPinned: true,
-                deliveryRadiusKm: 5.0,
-                kitchenImages: JSON.stringify([k.imageUrl]),
-            },
-        });
-
-        // Add strict served pincodes
-        for (const sp of k.servedPins) {
-            await prisma.servedPincode.upsert({
-                where: {
-                    sellerId_pincode: {
-                        sellerId: profile.id,
-                        pincode: sp.pincode,
-                    }
-                },
-                update: { name: sp.name },
-                create: {
-                    sellerId: profile.id,
-                    pincode: sp.pincode,
-                    name: sp.name,
-                }
-            });
-        }
-
-        // Add dishes
-        for (const dish of k.dishes) {
-            const catId = foodCatMap.get(dish.cat.toLowerCase()) || null;
-            const existingDish = await prisma.foodItem.findFirst({
-                where: {
-                    sellerId: profile.id,
-                    name: dish.name,
-                }
-            });
-
-            if (!existingDish) {
-                await prisma.foodItem.create({
-                    data: {
-                        sellerId: profile.id,
-                        name: dish.name,
-                        description: dish.desc,
-                        price: dish.price,
-                        itemType: dish.type,
-                        foodCategoryId: catId,
-                        isAvailable: true,
-                        stockQuantity: 50,
-                        imageUrl: k.imageUrl,
-                    }
-                });
-            } else {
-                await prisma.foodItem.update({
-                    where: { id: existingDish.id },
-                    data: {
-                        description: dish.desc,
-                        price: dish.price,
-                        itemType: dish.type,
-                        foodCategoryId: catId,
-                        isAvailable: true,
-                    }
-                });
+    let cakeCatId = foodCatMap.get("cake");
+    if (!cakeCatId) {
+        const createdCat = await prisma.foodCategory.create({
+            data: {
+                name: "Cake",
+                imageUrl: "https://res.cloudinary.com/daiwwk5v7/image/upload/v1782900799/neo-cloud-room/categories/hcqwhfqe99qdzin92zo5.jpg"
             }
-        }
-
-        console.log(`Seeded approved kitchen: ${k.businessName} in ${k.locality} (${k.pincode})`);
+        });
+        cakeCatId = createdCat.id;
+        foodCatMap.set("cake", cakeCatId);
     }
 
-    // Pending seller for testing
-    await prisma.user.upsert({
-        where: { email: "pending_seller@domain.com" },
+    // 5. Authentic Sellers
+    // A. Yash's Kitchen (Hinjawadi 411057)
+    const yashUser = await prisma.user.upsert({
+        where: { email: "yashbandgar5560@gmail.com" },
         update: {
             passwordHash: hashPassword,
             role: "SELLER",
+            name: "Yash's Kitchen",
+            city: "Pune",
+            pincode: "411057",
+            phone: "9876543210",
             isActive: true,
         },
         create: {
-            email: "pending_seller@domain.com",
+            email: "yashbandgar5560@gmail.com",
             passwordHash: hashPassword,
             role: "SELLER",
-            name: "Rahul's Bakery",
-            phone: "9988776655",
-            city: "Mumbai",
-            pincode: "400001",
+            name: "Yash's Kitchen",
+            phone: "9876543210",
+            city: "Pune",
+            pincode: "411057",
             isActive: true,
-            sellerProfile: {
-                create: {
-                    type: "BAKERY",
-                    adhaarUrl: "fake-url-2",
-                    trackingId: "TRK-SEED-99",
-                    verificationStatus: "PENDING",
-                    businessName: "Rahul's Fresh Bakes"
-                }
-            }
         },
     });
-    console.log("Seeded Pending Seller: pending_seller@domain.com");
+
+    const yashSeller = await prisma.sellerProfile.upsert({
+        where: { userId: yashUser.id },
+        update: {
+            businessName: "Yash's Kitchen",
+            trackingId: "SHOP-7DQT3N",
+            type: "Bakery, Cafe, Homely food, Mess, South Indian, Lunch(Homely Food)",
+            foodType: "BOTH",
+            verificationStatus: "APPROVED",
+            isOnline: true,
+            addressLocality: "Kaka Halwai, Hinjawadi Phase 2 Road, Sakhare Vasti, Hinjawadi, Marunji, Mulshi Subdistrict, Pune District, Maharashtra, 411057, India",
+            latitude: 18.59218893338844,
+            longitude: 73.73770513575333,
+            isLocationPinned: true,
+            deliveryRadiusKm: 5.0,
+            kitchenImages: JSON.stringify(["https://res.cloudinary.com/daiwwk5v7/image/upload/v1790162026/neo-cloud-room/sellers/k2l2k0uly4kb3uj3ynam.png"]),
+        },
+        create: {
+            userId: yashUser.id,
+            businessName: "Yash's Kitchen",
+            trackingId: "SHOP-7DQT3N",
+            type: "Bakery, Cafe, Homely food, Mess, South Indian, Lunch(Homely Food)",
+            foodType: "BOTH",
+            adhaarUrl: "verified-adhaar",
+            verificationStatus: "APPROVED",
+            isOnline: true,
+            addressLocality: "Kaka Halwai, Hinjawadi Phase 2 Road, Sakhare Vasti, Hinjawadi, Marunji, Mulshi Subdistrict, Pune District, Maharashtra, 411057, India",
+            latitude: 18.59218893338844,
+            longitude: 73.73770513575333,
+            isLocationPinned: true,
+            deliveryRadiusKm: 5.0,
+            kitchenImages: JSON.stringify(["https://res.cloudinary.com/daiwwk5v7/image/upload/v1790162026/neo-cloud-room/sellers/k2l2k0uly4kb3uj3ynam.png"]),
+        },
+    });
+
+    await prisma.servedPincode.upsert({
+        where: { sellerId_pincode: { sellerId: yashSeller.id, pincode: "411057" } },
+        update: { name: "Rajiv Gandhi Infotech Park / Hinjawadi" },
+        create: { sellerId: yashSeller.id, pincode: "411057", name: "Rajiv Gandhi Infotech Park / Hinjawadi" }
+    });
+
+    const existingBlackForest = await prisma.foodItem.findFirst({
+        where: { sellerId: yashSeller.id, name: "Black Forest " }
+    });
+    if (!existingBlackForest) {
+        await prisma.foodItem.create({
+            data: {
+                sellerId: yashSeller.id,
+                name: "Black Forest ",
+                description: "Rich chocolate sponge layered with whipped cream, dark chocolate shavings, and juicy cherries for a classic Black Forest delight.",
+                price: 499,
+                imageUrl: "https://res.cloudinary.com/daiwwk5v7/image/upload/v1790574319/neo-cloud-room/menu/tklfelaivpz2dzcx076x.png",
+                itemType: "VEG",
+                stockQuantity: 5,
+                isAvailable: true,
+                foodCategoryId: cakeCatId,
+            }
+        });
+    }
+    console.log("Seeded Yash's Kitchen & Black Forest Cake");
+
+    // B. radha's kitchen (Dattawadi / Karve Nagar 411051)
+    const radhaUser = await prisma.user.upsert({
+        where: { email: "seller@domain.com" },
+        update: {
+            passwordHash: hashPassword,
+            role: "SELLER",
+            name: "seller",
+            city: "Pune",
+            pincode: "411051",
+            phone: "1122334455",
+            isActive: true,
+        },
+        create: {
+            email: "seller@domain.com",
+            passwordHash: hashPassword,
+            role: "SELLER",
+            name: "seller",
+            phone: "1122334455",
+            city: "Pune",
+            pincode: "411051",
+            isActive: true,
+        },
+    });
+
+    const radhaSeller = await prisma.sellerProfile.upsert({
+        where: { userId: radhaUser.id },
+        update: {
+            businessName: "radha's kitchen",
+            trackingId: "SHOP-IBIGV2",
+            type: "HOMELY_FOOD",
+            foodType: "BOTH",
+            verificationStatus: "APPROVED",
+            isOnline: true,
+            addressLocality: "201 2nd floor, dattawadi near mhasoba chouk, near pmc school",
+            latitude: 18.5016,
+            longitude: 73.8216,
+            isLocationPinned: true,
+            deliveryRadiusKm: 5.0,
+        },
+        create: {
+            userId: radhaUser.id,
+            businessName: "radha's kitchen",
+            trackingId: "SHOP-IBIGV2",
+            type: "HOMELY_FOOD",
+            foodType: "BOTH",
+            adhaarUrl: "fake-url",
+            verificationStatus: "APPROVED",
+            isOnline: true,
+            addressLocality: "201 2nd floor, dattawadi near mhasoba chouk, near pmc school",
+            latitude: 18.5016,
+            longitude: 73.8216,
+            isLocationPinned: true,
+            deliveryRadiusKm: 5.0,
+        },
+    });
+
+    await prisma.servedPincode.upsert({
+        where: { sellerId_pincode: { sellerId: radhaSeller.id, pincode: "411051" } },
+        update: { name: "Karve Nagar / Dattawadi" },
+        create: { sellerId: radhaSeller.id, pincode: "411051", name: "Karve Nagar / Dattawadi" }
+    });
+
+    const radhaDishes = [
+        { name: "Grilled Veggie Wrap ", price: 179, type: "VEG", desc: "Fresh grilled vegetables tossed with herbs and creamy dressing in a warm flatbread wrap" },
+        { name: "Paneer Quinoa Bowl", price: 299, type: "VEG", desc: "Nutritious roasted paneer cubes served over seasoned protein-rich quinoa with fresh salad" },
+        { name: "Chiken Thali ", price: 259, type: "NON_VEG", desc: "Traditional slow-cooked chicken gravy served with 3 soft rotis, aromatic rice and salad" },
+        { name: "Jeera Rice Plate ", price: 60, type: "VEG", desc: "Fragrant basmati rice gently tempered with roasted cumin seeds and fresh coriander" },
+        { name: "lemon rice ", price: 89, type: "VEG", desc: "Zesty tempered rice infused with fresh lemon juice, mustard seeds, curry leaves & peanuts" },
+        { name: "Cold Coffee", price: 60, type: "VEG", desc: "Thick creamy chilled blended coffee with a rich frothy top" },
+        { name: "Cheese Burger ", price: 79, type: "VEG", desc: "Crisp potato-herb patty topped with melted cheese, fresh tomato, onion and house sauce" },
+        { name: "Dosa ", price: 79, type: "VEG", desc: "Golden thin crispy crepe served hot with coconut chutney and tangy vegetable sambar" },
+    ];
+
+    for (const d of radhaDishes) {
+        const existing = await prisma.foodItem.findFirst({
+            where: { sellerId: radhaSeller.id, name: d.name }
+        });
+        if (!existing) {
+            await prisma.foodItem.create({
+                data: {
+                    sellerId: radhaSeller.id,
+                    name: d.name,
+                    description: d.desc,
+                    price: d.price,
+                    itemType: d.type,
+                    isAvailable: true,
+                    stockQuantity: 20,
+                }
+            });
+        }
+    }
+    console.log("Seeded radha's kitchen with dishes");
+
+    // C. Yewale's Kitchens (Deccan Gymkhana 411004)
+    const yewaleUser = await prisma.user.upsert({
+        where: { email: "saiyewale13@gmail.com" },
+        update: {
+            passwordHash: hashPassword,
+            role: "SELLER",
+            name: "Sai Yewale",
+            city: "Pune",
+            pincode: "411004",
+            phone: "9988776611",
+            isActive: true,
+        },
+        create: {
+            email: "saiyewale13@gmail.com",
+            passwordHash: hashPassword,
+            role: "SELLER",
+            name: "Sai Yewale",
+            phone: "9988776611",
+            city: "Pune",
+            pincode: "411004",
+            isActive: true,
+        },
+    });
+
+    const yewaleSeller = await prisma.sellerProfile.upsert({
+        where: { userId: yewaleUser.id },
+        update: {
+            businessName: "Yewale's Kitchens",
+            trackingId: "SHOP-1XJWXN",
+            type: "MESS",
+            foodType: "BOTH",
+            verificationStatus: "APPROVED",
+            isOnline: true,
+            addressLocality: "Kashibai Vishnu Sane Path, Deccan Gymkhana, Pune",
+            latitude: 18.5165629,
+            longitude: 73.8415,
+            isLocationPinned: true,
+            deliveryRadiusKm: 5.0,
+        },
+        create: {
+            userId: yewaleUser.id,
+            businessName: "Yewale's Kitchens",
+            trackingId: "SHOP-1XJWXN",
+            type: "MESS",
+            foodType: "BOTH",
+            adhaarUrl: "fake-url",
+            verificationStatus: "APPROVED",
+            isOnline: true,
+            addressLocality: "Kashibai Vishnu Sane Path, Deccan Gymkhana, Pune",
+            latitude: 18.5165629,
+            longitude: 73.8415,
+            isLocationPinned: true,
+            deliveryRadiusKm: 5.0,
+        },
+    });
+
+    await prisma.servedPincode.upsert({
+        where: { sellerId_pincode: { sellerId: yewaleSeller.id, pincode: "411004" } },
+        update: { name: "Deccan Gymkhana" },
+        create: { sellerId: yewaleSeller.id, pincode: "411004", name: "Deccan Gymkhana" }
+    });
+
+    const existingBiryani = await prisma.foodItem.findFirst({
+        where: { sellerId: yewaleSeller.id, name: "Biryani" }
+    });
+    if (!existingBiryani) {
+        await prisma.foodItem.create({
+            data: {
+                sellerId: yewaleSeller.id,
+                name: "Biryani",
+                description: "Authentic dum-cooked spiced chicken biryani served with flavored raita and salan.",
+                price: 500,
+                itemType: "NON_VEG",
+                isAvailable: true,
+                stockQuantity: 20,
+            }
+        });
+    }
+    console.log("Seeded Yewale's Kitchens with Biryani");
+
+    // D. Additional Community Kitchens
+    const additionalKitchens = [
+        {
+            email: "pranav@gmail.com",
+            name: "Pranav",
+            businessName: "Pranav Kitchen",
+            trackingId: "SHOP-J0ADU0",
+            pincode: "411051",
+            locality: "Karve Nagar, Pune",
+            lat: 18.5016,
+            lng: 73.8216,
+        },
+        {
+            email: "tanuja97@gmail.com",
+            name: "tanuja",
+            businessName: "tanuja's Kitchen",
+            trackingId: "SHOP-1F4UDW",
+            pincode: "411051",
+            locality: "Karve Nagar, Pune",
+            lat: 18.4965,
+            lng: 73.8188,
+        },
+        {
+            email: "ritu@gmail.com",
+            name: "Ritu",
+            businessName: "Ritu's Kitchen",
+            trackingId: "SHOP-ID1CNL",
+            pincode: "411038",
+            locality: "Sahyadri Hospital, Paud Road, Kothrud, Pune",
+            lat: 18.5074,
+            lng: 73.8077,
+        },
+        {
+            email: ".mitesh@gmail.com",
+            name: "1234567890",
+            businessName: "Sagar Kitchen",
+            trackingId: "SHOP-RZROKV",
+            pincode: "411051",
+            locality: "Lotus Residency Road, Kothrud, Karve Nagar, Pune",
+            lat: 18.5016,
+            lng: 73.8216,
+        },
+        {
+            email: "yashbandgar5550@gmail.com",
+            name: "Yash Bandgar",
+            businessName: "Strawberry Bites",
+            trackingId: "SHOP-MGEW9M",
+            pincode: "411057",
+            locality: "Hinjawadi, Pune",
+            lat: 18.5913,
+            lng: 73.7389,
+            status: "PENDING",
+        }
+    ];
+
+    for (const s of additionalKitchens) {
+        const u = await prisma.user.upsert({
+            where: { email: s.email },
+            update: {
+                passwordHash: hashPassword,
+                role: "SELLER",
+                name: s.name,
+                city: "Pune",
+                pincode: s.pincode,
+                phone: "9988776655",
+                isActive: true,
+            },
+            create: {
+                email: s.email,
+                passwordHash: hashPassword,
+                role: "SELLER",
+                name: s.name,
+                phone: "9988776655",
+                city: "Pune",
+                pincode: s.pincode,
+                isActive: true,
+            },
+        });
+
+        await prisma.sellerProfile.upsert({
+            where: { userId: u.id },
+            update: {
+                businessName: s.businessName,
+                trackingId: s.trackingId,
+                type: "HOMELY_FOOD",
+                foodType: "BOTH",
+                verificationStatus: s.status || "APPROVED",
+                isOnline: true,
+                addressLocality: s.locality,
+                latitude: s.lat,
+                longitude: s.lng,
+                isLocationPinned: true,
+                deliveryRadiusKm: 5.0,
+            },
+            create: {
+                userId: u.id,
+                businessName: s.businessName,
+                trackingId: s.trackingId,
+                type: "HOMELY_FOOD",
+                foodType: "BOTH",
+                adhaarUrl: "fake-url",
+                verificationStatus: s.status || "APPROVED",
+                isOnline: true,
+                addressLocality: s.locality,
+                latitude: s.lat,
+                longitude: s.lng,
+                isLocationPinned: true,
+                deliveryRadiusKm: 5.0,
+            },
+        });
+        console.log(`Seeded seller: ${s.businessName}`);
+    }
+
+    console.log("All authentic data seeded successfully!");
 }
 
 main()
