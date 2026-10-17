@@ -109,7 +109,7 @@ export default function NotFound() {
             fontSize: 'clamp(2rem, 5vw, 3.25rem)',
             fontWeight: 400,
             color: '#C5221F',
-            margin: '6px 0 8px 0',
+            margin: '6px 0 18px 0',
             letterSpacing: '0',
             lineHeight: 1.15,
           }}
