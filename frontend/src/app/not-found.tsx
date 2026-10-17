@@ -13,24 +13,28 @@ export default function NotFound() {
   const role = session?.user?.role?.toUpperCase();
 
   let homeHref = '/';
-  let homeLabel = 'Continue to home page';
+  let homeLabel = 'Go to Home';
 
   if (role === 'SELLER') {
     homeHref = '/seller/dashboard';
-    homeLabel = 'Go to Seller Dashboard';
+    homeLabel = 'Go to Home';
   } else if (role === 'ADMIN' || role === 'SUPERADMIN') {
     homeHref = '/dashboard/admin';
-    homeLabel = 'Go to Admin Console';
+    homeLabel = 'Go to Home';
   } else if (role === 'DELIVERY') {
     homeHref = '/dashboard/delivery';
-    homeLabel = 'Go to Delivery Dashboard';
+    homeLabel = 'Go to Home';
   }
 
   const handleGoBack = () => {
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      router.back();
-    } else {
-      router.push(homeHref);
+    if (typeof window !== 'undefined') {
+      if (window.history.length > 1) {
+        window.history.back();
+      } else if (document.referrer && document.referrer !== window.location.href) {
+        window.location.href = document.referrer;
+      } else {
+        router.push(homeHref);
+      }
     }
   };
 
