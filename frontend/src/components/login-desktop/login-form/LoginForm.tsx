@@ -40,10 +40,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({
 
   useEffect(() => {
     if (authStatus === "authenticated" && session?.user) {
-      const callbackUrl = typeof window !== "undefined"
+      const rawCallback = typeof window !== "undefined"
         ? new URLSearchParams(window.location.search).get("callbackUrl")
         : null;
-      router.replace(callbackUrl || "/");
+      const callbackUrl = (!rawCallback || rawCallback === "/explore" || rawCallback === "/explore-desktop")
+        ? "/"
+        : rawCallback;
+      router.replace(callbackUrl);
     }
   }, [authStatus, session, router]);
 
@@ -70,12 +73,14 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   // Refs for 6 OTP boxes
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // Check URL query params for registered success notice
+  // Check URL query params for notices (registered or deletion scheduled)
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       if (params.get("registered") === "true") {
         setSuccessNotice("Account created successfully! Please sign in to continue.");
+      } else if (params.get("deletion_scheduled") === "true") {
+        setSuccessNotice("Account deletion scheduled with 30-day recovery grace period. Logging in anytime within 30 days will automatically restore your account.");
       }
     }
   }, []);
@@ -104,7 +109,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       onCreateAccount();
     } else {
       const params = new URLSearchParams(window.location.search);
-      const callbackUrl = params.get("callbackUrl");
+      const rawCallback = params.get("callbackUrl");
+      const callbackUrl = (!rawCallback || rawCallback === "/explore" || rawCallback === "/explore-desktop")
+        ? null
+        : rawCallback;
       router.push(
         callbackUrl
           ? `/signup?callbackUrl=${encodeURIComponent(callbackUrl)}`
@@ -256,7 +264,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           }
         } else {
           const params = new URLSearchParams(window.location.search);
-          const callbackUrl = params.get("callbackUrl") || "/";
+          const rawCallback = params.get("callbackUrl");
+          const callbackUrl = (!rawCallback || rawCallback === "/explore" || rawCallback === "/explore-desktop")
+            ? "/"
+            : rawCallback;
           window.location.href = callbackUrl;
         }
       } catch (err) {
@@ -316,7 +327,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           }
         } else {
           const params = new URLSearchParams(window.location.search);
-          const callbackUrl = params.get("callbackUrl") || "/";
+          const rawCallback = params.get("callbackUrl");
+          const callbackUrl = (!rawCallback || rawCallback === "/explore" || rawCallback === "/explore-desktop")
+            ? "/"
+            : rawCallback;
           window.location.href = callbackUrl;
         }
       } catch (err) {
