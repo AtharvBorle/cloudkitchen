@@ -385,7 +385,14 @@ export const LocationModal: React.FC = () => {
     });
     setRecentSearches(getRecentSearches());
 
-    showNotification("success", `Location selected: ${locality} (${pin})`);
+    showNotification("success", `✓ Location selected: ${locality} (${pin})`);
+    setTimeout(() => {
+      closeLocationModal();
+      if (typeof window !== "undefined") {
+        const el = document.getElementById("places-section");
+        if (el) el.scrollIntoView({ behavior: "smooth" });
+      }
+    }, 300);
   };
 
   // Handle clicking a recent searched location chip
@@ -418,16 +425,23 @@ export const LocationModal: React.FC = () => {
         .then(() => refreshAddress())
         .catch(() => {});
     }
-    showNotification("success", `Location selected: ${item.name} (${item.pincode})`);
+    showNotification("success", `✓ Location selected: ${item.name} (${item.pincode})`);
     saveRecentSearch(item);
     setRecentSearches(getRecentSearches());
+    setTimeout(() => {
+      closeLocationModal();
+      if (typeof window !== "undefined") {
+        const el = document.getElementById("places-section");
+        if (el) el.scrollIntoView({ behavior: "smooth" });
+      }
+    }, 300);
   };
 
   // 1. Handle Pincode / Area Selection (Centers Map on Area & Updates Pin)
   const handleSelectAreaOrPin = async (
     targetInput: string,
     areaOverride?: { pincode: string; name: string; lat: number; lng: number } | null,
-    autoClose: boolean = false
+    autoClose: boolean = true
   ) => {
     const raw = (targetInput || "").trim();
     if (!raw && !areaOverride) {
@@ -572,16 +586,16 @@ export const LocationModal: React.FC = () => {
     setRecentSearches(getRecentSearches());
 
     if (autoClose) {
-      showNotification("success", `✓ PIN Code updated to ${effectivePin} (${effectiveLocality})!`);
+      showNotification("success", `✓ Delivery location set to ${effectiveLocality}!`);
       setTimeout(() => {
         closeLocationModal();
         if (typeof window !== "undefined") {
           const el = document.getElementById("places-section");
           if (el) el.scrollIntoView({ behavior: "smooth" });
         }
-      }, 500);
+      }, 300);
     } else {
-      showNotification("success", `PIN Code updated to ${effectivePin} (${effectiveLocality}). Adjust doorstep pin below if needed.`);
+      showNotification("success", `Delivery location updated to ${effectiveLocality}. Adjust doorstep pin below if needed.`);
     }
   };
 
@@ -930,8 +944,11 @@ export const LocationModal: React.FC = () => {
                       e.preventDefault();
                       setShowSuggestions(false);
                       if (pincodeInput.trim()) {
-                        const cleanDigits = pincodeInput.replace(/\D/g, "");
-                        handleSelectAreaOrPin(pincodeInput, null, cleanDigits.length === 6);
+                        if (suggestions.length > 0 && showSuggestions && !/^\d{6}$/.test(pincodeInput.trim())) {
+                          handleSelectSuggestion(suggestions[0]);
+                        } else {
+                          handleSelectAreaOrPin(pincodeInput, null, true);
+                        }
                       }
                     }
                   }}
@@ -967,8 +984,7 @@ export const LocationModal: React.FC = () => {
                 disabled={!pincodeInput.trim() || isSearchingLocation}
                 onClick={() => {
                   setShowSuggestions(false);
-                  const cleanDigits = pincodeInput.replace(/\D/g, "");
-                  handleSelectAreaOrPin(pincodeInput, null, cleanDigits.length === 6);
+                  handleSelectAreaOrPin(pincodeInput, null, true);
                 }}
               >
                 {isSearchingLocation ? (
