@@ -13,11 +13,9 @@ import {
   CalendarCheck,
   Star,
   CreditCard,
-  Settings,
   CheckCheck,
   Trash2,
   ChevronRight,
-  SlidersHorizontal,
   Search,
   X,
   Tag,
@@ -94,7 +92,6 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
 
   const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [showBanner, setShowBanner] = useState(true);
 
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQueryProp || "");
   const searchQuery = searchQueryProp !== undefined ? searchQueryProp : localSearchQuery;
@@ -382,48 +379,8 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
               <span>Clear all</span>
             </button>
           )}
-
-          <Link href="/seller/settings?tab=notifications" className={styles.actionBtn}>
-            <Settings size={16} />
-            <span>Preferences</span>
-          </Link>
         </div>
       </div>
-
-      {/* 2. Settings Notification Preferences Banner */}
-      {showBanner && (
-        <div className={styles.settingsBanner}>
-          <div className={styles.settingsBannerLeft}>
-            <SlidersHorizontal size={18} className={styles.settingsBannerIcon} />
-            <p className={styles.settingsBannerText}>
-              Notifications are delivered based on your active preferences in <strong>Settings &gt; Notifications</strong>. You can customize audio chimes, low-stock thresholds, and closing alerts at any time.
-            </p>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
-            <Link href="/seller/settings?tab=notifications" className={styles.settingsLink}>
-              Manage Alerts
-            </Link>
-            <button
-              type="button"
-              onClick={() => setShowBanner(false)}
-              style={{
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                padding: "4px",
-                color: "#C2410C",
-                display: "inline-flex",
-                alignItems: "center",
-                opacity: 0.8,
-              }}
-              title="Dismiss banner"
-              aria-label="Dismiss banner"
-            >
-              <X size={16} />
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* In-page Search Bar */}
       <div
