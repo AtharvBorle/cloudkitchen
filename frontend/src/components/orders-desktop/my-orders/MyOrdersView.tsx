@@ -55,6 +55,8 @@ export interface OrderItemData {
   rawStatus: string;
   statusDisplay: string;
   deliveredLabel?: string;
+  cancelledBy?: string | null;
+  cancellationReason?: string | null;
   deliveredTime?: string;
   arrivingIn?: string;
   deliveryTimerStartedAt?: string | null;
@@ -299,7 +301,13 @@ function parseOrderFromDb(o: any): OrderItemData {
     status,
     rawStatus,
     statusDisplay,
-    deliveredLabel: status === "CANCELLED" ? "Seller has not confirmed your order" : "Delivered",
+    deliveredLabel: (status === "CANCELLED" || rawStatus === "CANCELLED" || rawStatus === "REJECTED")
+      ? ((o.cancelledBy === "USER" || (o.refund?.reason && /cancelled by (customer|user|you)/i.test(o.refund.reason)))
+          ? "Order cancelled by you"
+          : "Seller has not confirmed your order")
+      : "Delivered",
+    cancelledBy: o.cancelledBy || ((o.refund?.reason && /cancelled by (customer|user|you)/i.test(o.refund.reason)) ? "USER" : null),
+    cancellationReason: o.cancellationReason || null,
     deliveredTime,
     arrivingIn,
     deliveryTimerStartedAt,
@@ -1139,7 +1147,9 @@ export default function MyOrdersView() {
             status: "CANCELLED",
             rawStatus: "CANCELLED",
             statusDisplay: "Cancelled",
-            deliveredLabel: "Seller has not confirmed your order",
+            deliveredLabel: "Order cancelled by you",
+            cancelledBy: "USER",
+            cancellationReason: reason || "Cancelled by user",
             deliveredTime: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }),
             arrivingIn: "Cancelled",
           };
@@ -1183,7 +1193,9 @@ export default function MyOrdersView() {
         status: "CANCELLED",
         rawStatus: "CANCELLED",
         statusDisplay: "Cancelled",
-        deliveredLabel: "Seller has not confirmed your order",
+        deliveredLabel: "Order cancelled by you",
+        cancelledBy: "USER",
+        cancellationReason: reason || "Cancelled by user",
         deliveredTime: new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }),
         arrivingIn: "Cancelled",
         refund: refundData,
@@ -1198,6 +1210,7 @@ export default function MyOrdersView() {
       }
 
       setCancelError(null);
+      showToast("You have successfully cancelled your order.");
       loadData();
       return true;
     } catch (err: any) {
@@ -2287,10 +2300,18 @@ export default function MyOrdersView() {
                       </div>
                       <div className={styles.partnerInfo}>
                         <h4 className={styles.partnerName} style={{ color: "#991B1B", fontSize: "0.92rem" }}>
-                          Order Cancelled
+                          {selectedOrder.cancelledBy === "USER" ||
+                          selectedOrder.deliveredLabel === "Order cancelled by you" ||
+                          (selectedOrder.refund?.reason && /cancelled by (customer|user|you)/i.test(selectedOrder.refund.reason))
+                            ? "Order Cancelled by You"
+                            : "Order Cancelled"}
                         </h4>
                         <p className={styles.partnerRole} style={{ color: "#B91C1C" }}>
-                          No delivery partner assigned. This order has been cancelled.
+                          {selectedOrder.cancelledBy === "USER" ||
+                          selectedOrder.deliveredLabel === "Order cancelled by you" ||
+                          (selectedOrder.refund?.reason && /cancelled by (customer|user|you)/i.test(selectedOrder.refund.reason))
+                            ? "You have cancelled this order prior to food preparation."
+                            : "No delivery partner assigned. This order has been cancelled."}
                         </p>
                       </div>
                     </div>
@@ -2368,7 +2389,11 @@ export default function MyOrdersView() {
                       {selectedOrder.status === "DELIVERED"
                         ? "Order has been delivered successfully"
                         : selectedOrder.status === "CANCELLED"
-                        ? "Seller has not confirmed your order"
+                        ? (selectedOrder.cancelledBy === "USER" ||
+                           selectedOrder.deliveredLabel === "Order cancelled by you" ||
+                           (selectedOrder.refund?.reason && /cancelled by (customer|user|you)/i.test(selectedOrder.refund.reason))
+                            ? "Order cancelled by you"
+                            : "Seller has not confirmed your order")
                         : selectedOrder.rawStatus === "PENDING" || selectedOrder.rawStatus === "PLACED"
                         ? "Waiting for confirmation by seller"
                         : selectedOrder.partner?.name
@@ -2379,7 +2404,11 @@ export default function MyOrdersView() {
                       {selectedOrder.status === "DELIVERED"
                         ? `Delivered on ${selectedOrder.deliveredTime}`
                         : selectedOrder.status === "CANCELLED"
-                        ? "The kitchen partner was unable to confirm this order. Any online payment will be refunded."
+                        ? (selectedOrder.cancelledBy === "USER" ||
+                           selectedOrder.deliveredLabel === "Order cancelled by you" ||
+                           (selectedOrder.refund?.reason && /cancelled by (customer|user|you)/i.test(selectedOrder.refund.reason))
+                            ? "You have successfully cancelled this order. Any online payment will be refunded."
+                            : "The kitchen partner was unable to confirm this order. Any online payment will be refunded.")
                         : selectedOrder.rawStatus === "PENDING" || selectedOrder.rawStatus === "PLACED"
                         ? "The seller will review and accept your order shortly"
                         : `Expected arrival in ${computeLiveArrivingIn(

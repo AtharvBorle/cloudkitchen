@@ -791,7 +791,12 @@ export const createOrder = async (req: Request) => {
     };
 };
 
-export const cancelOrder = async (id: string, ticketId?: string) => {
+export const cancelOrder = async (
+    id: string, 
+    ticketId?: string, 
+    userReason?: string, 
+    userComment?: string
+) => {
     const session = await getAuthSession();
     if (!session?.user) {
         throw new ApiError("Please log in first to cancel an order.", 401);
@@ -837,13 +842,21 @@ export const cancelOrder = async (id: string, ticketId?: string) => {
         throw new ApiError("Order has already been confirmed or processed by the seller and cannot be cancelled", 400);
     }
 
+    const fullCancellationReason = userComment 
+        ? `${userReason || "Cancelled by user"}: ${userComment}` 
+        : userReason || "Cancelled by user";
+
     const txResult = await db.$transaction(async (tx) => {
         const claim = await tx.order.updateMany({
             where: {
                 id: id,
                 status: { notIn: ["CANCELLED", "DELIVERED"] }
             },
-            data: { status: "CANCELLED" }
+            data: { 
+                status: "CANCELLED",
+                cancelledBy: isAdmin ? "ADMIN" : "USER",
+                cancellationReason: fullCancellationReason
+            }
         });
 
         const newlyCancelled = claim.count > 0;
@@ -897,6 +910,9 @@ export const cancelOrder = async (id: string, ticketId?: string) => {
             let baseReason = isAdmin 
                 ? `Order #${id} was cancelled by Admin/Superadmin prior to preparation.` 
                 : `Order #${id} was cancelled by customer prior to preparation.`;
+            if (userReason) {
+                baseReason += ` Reason: ${userReason}${userComment ? ` (${userComment})` : ""}.`;
+            }
             if (refundAmount === 0) {
                 baseReason += ` 100% discount coupon applied (₹0 paid by customer). No refund required.`;
             } else {
