@@ -150,6 +150,22 @@ export default function HeroSection({
     const suggestions: SuggestionItem[] = [];
     const seen = new Set<string>();
 
+    // 0. Check if user typed or searched an area (strictly single matched locality)
+    const resolvedArea = resolveLocationCoordinates(searchQuery);
+    if (resolvedArea) {
+      const areaTitle = `${resolvedArea.locality}, ${resolvedArea.city}`;
+      const key = `area-${resolvedArea.pincode}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        suggestions.push({
+          id: `area-${resolvedArea.pincode}`,
+          title: areaTitle,
+          type: "tag",
+          subtitle: `Delivery Area (${resolvedArea.pincode})`,
+        });
+      }
+    }
+
     // 1. Check available kitchen names (e.g. "Yash's Kitchen", "7/12 Cloud Kitchen", "Maa Ki Rasoi")
     if (availableKitchens && availableKitchens.length > 0) {
       availableKitchens.forEach((k) => {

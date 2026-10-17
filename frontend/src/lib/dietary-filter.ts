@@ -1,3 +1,5 @@
+import { resolveLocationCoordinates, normalizeLocalityQuery } from "./geo-distance";
+
 export type DietaryOption = "all" | "veg" | "pure_veg" | "non_veg" | "non-veg" | "vegan" | "jain";
 
 export function normalizeDietary(diet?: string | null): DietaryOption {
@@ -830,20 +832,51 @@ export function matchesDishSearch(
   if (!query || !query.trim()) return true;
   const q = query.toLowerCase().trim();
 
-  // 1. Direct standard search query matches
+  // 1. If query is an area/locality search (e.g. "Kothrud", "kothrudh, pune", "Karve Nagar"):
+  const resolvedArea = resolveLocationCoordinates(q);
+  if (resolvedArea) {
+    const normTargetArea = resolvedArea.locality.toLowerCase().trim();
+    const targetPin = resolvedArea.pincode.trim();
+
+    if (dish.sellerPincode && dish.sellerPincode.trim() === targetPin) {
+      return true;
+    }
+    if (dish.sellerLocality) {
+      const locClean = normalizeLocalityQuery(dish.sellerLocality);
+      const locLower = dish.sellerLocality.toLowerCase();
+      if (locClean === normTargetArea || locLower.includes(normTargetArea)) {
+        return true;
+      }
+    }
+    // Strictly isolate: do not check dish name or general city if user searched for a specific area
+    return false;
+  }
+
+  // 2. Direct standard search query matches on dish
   if (
     matchesSearchQuery(dish.name, q) ||
     matchesSearchQuery(dish.categoryName, q) ||
     matchesSearchQuery(dish.description, q) ||
-    matchesSearchQuery(dish.sellerName, q) ||
-    matchesSearchQuery(dish.sellerLocality, q) ||
-    matchesSearchQuery(dish.sellerCity, q) ||
-    matchesSearchQuery(dish.sellerPincode, q)
+    matchesSearchQuery(dish.sellerName, q)
   ) {
     return true;
   }
 
-  // 2. Check if search query matches a category rule
+  // Locality match on dish seller (excluding generic city tokens)
+  const GENERIC_CITY_TOKENS = new Set(["pune", "maharashtra", "india", "district", "city", "subdistrict"]);
+  if (dish.sellerLocality && !GENERIC_CITY_TOKENS.has(q)) {
+    const locLower = dish.sellerLocality.toLowerCase();
+    const locSegments = locLower
+      .split(/[\/,]/)
+      .map((s) => s.trim().toLowerCase())
+      .filter((s) => s && !GENERIC_CITY_TOKENS.has(s));
+
+    if (locSegments.some((seg) => seg === q || (seg.length >= 4 && (seg.includes(q) || q.includes(seg))))) {
+      return true;
+    }
+  }
+
+  // 3. Check if search query matches a category rule
   const normKey = normalizeSearchString(q);
   const ruleKey = Object.keys(CATEGORY_RULES).find(
     (key) =>
@@ -882,34 +915,56 @@ export function matchesKitchenOrDishSearch(
   if (!query || !query.trim()) return true;
   const q = query.toLowerCase().trim();
 
-  // 1. Direct match on kitchen name
+  // 1. Direct match on kitchen name first
   if (matchesSearchQuery(kitchen.name, q)) {
     return true;
   }
 
-  // 2. Match on kitchen locality, city, pincode, or category (Area search!)
-  if (
-    matchesSearchQuery(kitchen.locality, q) ||
-    matchesSearchQuery(kitchen.category, q) ||
-    (kitchen.city && matchesSearchQuery(kitchen.city, q)) ||
-    (kitchen.pincode && matchesSearchQuery(kitchen.pincode, q))
-  ) {
+  // 2. Check if the query is an area/locality search (e.g. "Kothrud", "kothrudh, pune", "Karve Nagar", "411038")
+  const resolvedArea = resolveLocationCoordinates(q);
+  if (resolvedArea) {
+    // When searching for an explicit area, strictly match ONLY this single area
+    const normTargetArea = resolvedArea.locality.toLowerCase().trim();
+    const targetPin = resolvedArea.pincode.trim();
+
+    // Check pincode match
+    if (kitchen.pincode && kitchen.pincode.trim() === targetPin) {
+      return true;
+    }
+
+    // Check locality match
+    if (kitchen.locality) {
+      const locClean = normalizeLocalityQuery(kitchen.locality);
+      const locLower = kitchen.locality.toLowerCase();
+      if (locClean === normTargetArea || locLower.includes(normTargetArea)) {
+        return true;
+      }
+    }
+
+    // Strictly isolated: do not check dishes or city if this was an area search
+    return false;
+  }
+
+  // 3. For general non-area queries (e.g. category, cuisine)
+  if (matchesSearchQuery(kitchen.category, q)) {
     return true;
   }
 
-  // Also check reverse partial match for locality segments (e.g. "Karve" in "Karve Nagar")
-  if (kitchen.locality) {
+  // Locality match for non-generic queries (avoiding generic city matches like "pune")
+  const GENERIC_CITY_TOKENS = new Set(["pune", "maharashtra", "india", "district", "city", "subdistrict"]);
+  if (kitchen.locality && !GENERIC_CITY_TOKENS.has(q)) {
     const locLower = kitchen.locality.toLowerCase();
-    if (locLower.includes(q) || q.includes(locLower)) {
-      return true;
-    }
-    const locSegments = locLower.split(/[\/,]/).map((s) => s.trim()).filter(Boolean);
-    if (locSegments.some((seg) => seg && (seg.includes(q) || q.includes(seg)))) {
+    const locSegments = locLower
+      .split(/[\/,]/)
+      .map((s) => s.trim().toLowerCase())
+      .filter((s) => s && !GENERIC_CITY_TOKENS.has(s));
+
+    if (locSegments.some((seg) => seg === q || (seg.length >= 4 && (seg.includes(q) || q.includes(seg))))) {
       return true;
     }
   }
 
-  // 3. Check actual child dishes of this kitchen
+  // 4. Check actual child dishes of this kitchen
   if (foodItems && foodItems.length > 0) {
     const kitchenDishes = foodItems.filter((f) => {
       const matchId = kitchen.id && f.sellerId && String(f.sellerId).toLowerCase() === String(kitchen.id).toLowerCase();

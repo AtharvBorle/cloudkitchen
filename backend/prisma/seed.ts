@@ -386,7 +386,7 @@ async function main() {
             businessName: "Sagar Kitchen",
             trackingId: "SHOP-RZROKV",
             pincode: "411051",
-            locality: "Lotus Residency Road, Kothrud, Karve Nagar, Pune",
+            locality: "Lotus Residency Road, Karve Nagar, Pune",
             lat: 18.5016,
             lng: 73.8216,
         },

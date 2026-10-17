@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { PINCODE_COORDINATES } from "@/lib/geo-distance";
+import { PINCODE_COORDINATES, normalizeLocalityQuery, resolveLocationCoordinates } from "@/lib/geo-distance";
 
 export interface NormalizedAddressDetails {
     pincode: string;
@@ -201,11 +201,45 @@ export async function getPlacesAutocomplete(
 
     // Fallback: Local Pune directory & Nominatim
     const suggestions: PlaceSuggestion[] = [];
-    const lower = query.toLowerCase();
+    const normalizedLoc = normalizeLocalityQuery(query);
+    const resolvedDirect = resolveLocationCoordinates(query);
 
-    // 1. Check Pune Pincodes catalog
+    // 1. Check Pune Pincodes catalog with strict locality matching
+    if (resolvedDirect) {
+        suggestions.push({
+            placeId: `pin-${resolvedDirect.pincode}`,
+            description: `${resolvedDirect.locality}, ${resolvedDirect.city} - ${resolvedDirect.pincode}`,
+            mainText: resolvedDirect.locality,
+            secondaryText: `${resolvedDirect.city}, Maharashtra ${resolvedDirect.pincode}`,
+            types: ["postal_code"],
+            lat: resolvedDirect.lat,
+            lng: resolvedDirect.lng,
+            details: {
+                pincode: resolvedDirect.pincode,
+                locality: resolvedDirect.locality,
+                city: resolvedDirect.city,
+                state: "Maharashtra",
+                formattedAddress: `${resolvedDirect.locality}, ${resolvedDirect.city}, Maharashtra ${resolvedDirect.pincode}`,
+                street: "",
+                landmark: "",
+                houseNumber: "",
+                lat: resolvedDirect.lat,
+                lng: resolvedDirect.lng,
+            },
+        });
+        // Strict single area isolation: when a specific Pune area is resolved, return it directly
+        return { suggestions, provider: "local_pincode_catalog" };
+    }
+
+    const lower = query.toLowerCase().trim();
     for (const [pin, info] of Object.entries(PINCODE_COORDINATES)) {
-        if (pin.includes(lower) || info.locality.toLowerCase().includes(lower)) {
+        const locLower = info.locality.toLowerCase().trim();
+        if (
+            pin === lower ||
+            (lower.length >= 3 && pin.startsWith(lower)) ||
+            locLower === normalizedLoc ||
+            (normalizedLoc && normalizedLoc.length >= 4 && (locLower.includes(normalizedLoc) || normalizedLoc.includes(locLower)))
+        ) {
             suggestions.push({
                 placeId: `pin-${pin}`,
                 description: `${info.locality}, ${info.city} - ${pin}`,
@@ -231,7 +265,11 @@ export async function getPlacesAutocomplete(
         }
     }
 
-    // 2. Query Nominatim
+    if (suggestions.length > 0 && normalizedLoc) {
+        return { suggestions, provider: "local_pincode_catalog" };
+    }
+
+    // 2. Query Nominatim (only if not an exact catalog locality)
     try {
         const nomQuery = query.toLowerCase().includes("pune") ? query : `${query}, Pune, Maharashtra`;
         const nomRes = await fetch(
@@ -258,6 +296,14 @@ export async function getPlacesAutocomplete(
                         addr.neighbourhood ||
                         item.display_name.split(",")[0].trim();
                     const secondaryText = item.display_name.split(",").slice(1, 4).join(",").trim();
+
+                    // Filter out contradictory localities if user specified a distinct locality
+                    if (normalizedLoc && normalizedLoc.length >= 4) {
+                        const itemSub = (addr.suburb || addr.neighbourhood || "").toLowerCase();
+                        if (itemSub && !itemSub.includes(normalizedLoc) && !normalizedLoc.includes(itemSub)) {
+                            return; // drop mismatching locality
+                        }
+                    }
 
                     suggestions.push({
                         placeId: `osm-${item.place_id || idx}`,

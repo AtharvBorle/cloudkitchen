@@ -21,7 +21,7 @@ export function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lo
 export const PINCODE_COORDINATES: Record<string, { lat: number; lng: number; locality: string; city: string }> = {
   // Pune Central & West
   "411038": { lat: 18.5074, lng: 73.8077, locality: "Kothrud", city: "Pune" },
-  "411051": { lat: 18.5016, lng: 73.8216, locality: "Dattawadi / Karve Nagar", city: "Pune" },
+  "411051": { lat: 18.5016, lng: 73.8216, locality: "Karve Nagar", city: "Pune" },
   "411052": { lat: 18.4965, lng: 73.8188, locality: "Karve Nagar", city: "Pune" },
   "411004": { lat: 18.5173, lng: 73.8415, locality: "Deccan Gymkhana", city: "Pune" },
   "411030": { lat: 18.5124, lng: 73.8478, locality: "Sadashiv Peth / Narayan Peth", city: "Pune" },
@@ -62,6 +62,41 @@ export const PINCODE_COORDINATES: Record<string, { lat: number; lng: number; loc
   "400053": { lat: 19.1363, lng: 72.8277, locality: "Andheri West", city: "Mumbai" },
 };
 
+export const COMMON_LOCALITY_TYPOS: Record<string, string> = {
+  kothrudh: "kothrud",
+  khotrud: "kothrud",
+  kotrud: "kothrud",
+  khothrud: "kothrud",
+  karvenagar: "karve nagar",
+  karve: "karve nagar",
+  kalyaninagar: "kalyani nagar",
+  kalyani: "kalyani nagar",
+  hinjewadi: "hinjawadi",
+  hinjewadii: "hinjawadi",
+  vimannagar: "viman nagar",
+  banerr: "baner",
+  aund: "aundh",
+  aundhh: "aundh",
+  hadpsar: "hadapsar",
+  hadapsarr: "hadapsar",
+  wakadd: "wakad",
+};
+
+export function normalizeLocalityQuery(input?: string | null): string {
+  if (!input) return "";
+  const clean = input
+    .toLowerCase()
+    .replace(/[^\w\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // Strip generic city / state tokens: "pune", "maharashtra", "india"
+  const tokens = clean.split(" ").filter((t) => !["pune", "maharashtra", "india", "city", "district", "subdistrict"].includes(t));
+  const normalizedTokens = tokens.map((t) => COMMON_LOCALITY_TYPOS[t] || t);
+  const combined = normalizedTokens.join(" ").trim();
+  return COMMON_LOCALITY_TYPOS[combined] || combined;
+}
+
 /**
  * Resolves pincode, coordinates, locality, and city from a pincode OR locality / address text.
  */
@@ -77,15 +112,24 @@ export function resolveLocationCoordinates(input?: string | null): { pincode: st
     return { pincode: pinMatch[0], ...info };
   }
 
-  // 2. Locality keyword / segment match against known PINCODE_COORDINATES
-  const lower = str.toLowerCase();
+  // 2. Normalized locality matching (strictly 1 locality at a time)
+  const norm = normalizeLocalityQuery(str);
+  if (!norm) return null;
+
+  // 2a. Exact locality match against known PINCODE_COORDINATES
   for (const [pin, info] of Object.entries(PINCODE_COORDINATES)) {
-    const locLower = info.locality.toLowerCase();
+    const locLower = info.locality.toLowerCase().trim();
+    if (locLower === norm) {
+      return { pincode: pin, ...info };
+    }
+  }
+
+  // 2b. Segment / word boundary match against known PINCODE_COORDINATES
+  for (const [pin, info] of Object.entries(PINCODE_COORDINATES)) {
+    const locLower = info.locality.toLowerCase().trim();
     const segments = locLower.split(/[\/,]/).map((s) => s.trim().toLowerCase()).filter(Boolean);
     if (
-      lower.includes(locLower) ||
-      locLower.includes(lower) ||
-      segments.some((seg) => lower.includes(seg) || seg.includes(lower))
+      segments.some((seg) => seg === norm || (seg.length >= 4 && norm.includes(seg)) || (norm.length >= 4 && seg.includes(norm)))
     ) {
       return { pincode: pin, ...info };
     }

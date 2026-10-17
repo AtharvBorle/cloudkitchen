@@ -5,6 +5,7 @@
  */
 
 import { fetchApi } from "./fetch-api";
+import { resolveLocationCoordinates } from "./geo-distance";
 
 export interface NormalizedAddressDetails {
   pincode?: string;
@@ -625,6 +626,34 @@ export async function fetchPlaceSuggestions(
 ): Promise<PlacePredictionItem[]> {
   const q = (query || "").trim();
   if (!q) return [];
+
+  // 0. Instant locality resolution: if user typed an exact known area, return it strictly isolated
+  const resolvedArea = resolveLocationCoordinates(q);
+  if (resolvedArea) {
+    return [
+      {
+        placeId: `pin-${resolvedArea.pincode}`,
+        description: `${resolvedArea.locality}, ${resolvedArea.city} - ${resolvedArea.pincode}`,
+        mainText: resolvedArea.locality,
+        secondaryText: `${resolvedArea.city}, Maharashtra ${resolvedArea.pincode}`,
+        types: ["postal_code"],
+        lat: resolvedArea.lat,
+        lng: resolvedArea.lng,
+        details: {
+          pincode: resolvedArea.pincode,
+          locality: resolvedArea.locality,
+          city: resolvedArea.city,
+          state: "Maharashtra",
+          formattedAddress: `${resolvedArea.locality}, ${resolvedArea.city}, Maharashtra ${resolvedArea.pincode}`,
+          street: "",
+          landmark: "",
+          houseNumber: "",
+          lat: resolvedArea.lat,
+          lng: resolvedArea.lng,
+        },
+      },
+    ];
+  }
 
   // 1. Try client-side Google Places Autocomplete first
   const clientResults = await fetchPlaceSuggestionsClient(q, options);
