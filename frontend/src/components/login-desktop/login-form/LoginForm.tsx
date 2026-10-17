@@ -70,12 +70,14 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   // Refs for 6 OTP boxes
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // Check URL query params for registered success notice
+  // Check URL query params for notices (registered or deletion scheduled)
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       if (params.get("registered") === "true") {
         setSuccessNotice("Account created successfully! Please sign in to continue.");
+      } else if (params.get("deletion_scheduled") === "true") {
+        setSuccessNotice("Account deletion scheduled with 30-day recovery grace period. Logging in anytime within 30 days will automatically restore your account.");
       }
     }
   }, []);

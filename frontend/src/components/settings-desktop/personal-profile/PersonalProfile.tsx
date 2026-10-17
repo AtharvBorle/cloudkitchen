@@ -18,6 +18,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
+import { performLogout } from "@/lib/logout";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import styles from "./PersonalProfile.module.css";
 
@@ -71,7 +72,7 @@ export const PersonalProfile: React.FC<PersonalProfileProps> = ({
 
   // Dedicated Delete Account States
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
@@ -265,21 +266,27 @@ export const PersonalProfile: React.FC<PersonalProfileProps> = ({
   };
 
   const handleConfirmDeleteAccount = async () => {
+    if (deleteConfirmText.trim().toUpperCase() !== "DELETE") {
+      setDeleteError("Please type DELETE to confirm account deletion.");
+      return;
+    }
+
     setDeleteLoading(true);
     setDeleteError(null);
     try {
       const res = await fetchApi("/api/user/delete-account", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: deletePassword || undefined })
+        body: JSON.stringify({ confirmation: "DELETE" })
       });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
         setDeleteError(data.message || data.error || "Failed to schedule account deletion.");
         return;
       }
       setDeleteModalOpen(false);
-      await signOut({ callbackUrl: "/login?deletion_scheduled=true" });
+      setDeleteConfirmText("");
+      await performLogout({ redirectTo: "/login?deletion_scheduled=true" });
     } catch (err: any) {
       setDeleteError(err.message || "An unexpected network error occurred.");
     } finally {
@@ -370,7 +377,7 @@ export const PersonalProfile: React.FC<PersonalProfileProps> = ({
               className={styles.deleteAccountBtn}
               onClick={() => {
                 setDeleteError(null);
-                setDeletePassword("");
+                setDeleteConfirmText("");
                 setDeleteModalOpen(true);
               }}
               aria-label="Delete Account"
@@ -728,7 +735,13 @@ export const PersonalProfile: React.FC<PersonalProfileProps> = ({
             zIndex: 9999,
             padding: "16px",
           }}
-          onClick={() => !deleteLoading && setDeleteModalOpen(false)}
+          onClick={() => {
+            if (!deleteLoading) {
+              setDeleteModalOpen(false);
+              setDeleteConfirmText("");
+              setDeleteError(null);
+            }
+          }}
         >
           <div
             style={{
@@ -774,7 +787,13 @@ export const PersonalProfile: React.FC<PersonalProfileProps> = ({
               </div>
               <button
                 type="button"
-                onClick={() => !deleteLoading && setDeleteModalOpen(false)}
+                onClick={() => {
+                  if (!deleteLoading) {
+                    setDeleteModalOpen(false);
+                    setDeleteConfirmText("");
+                    setDeleteError(null);
+                  }
+                }}
                 style={{
                   background: "none",
                   border: "none",
@@ -835,24 +854,29 @@ export const PersonalProfile: React.FC<PersonalProfileProps> = ({
               </div>
             )}
 
-            {/* Password input for security */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-              <label style={{ fontSize: "0.76rem", fontWeight: 700, color: "#475569" }}>
-                ENTER PASSWORD TO CONFIRM (OPTIONAL)
+            {/* Mandatory confirmation text input */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#475569" }}>
+                To confirm deletion, please type <strong style={{ color: "#DC2626" }}>DELETE</strong> below:
               </label>
               <input
-                type="password"
-                value={deletePassword}
-                onChange={(e) => setDeletePassword(e.target.value)}
-                placeholder="Enter your current password"
+                type="text"
+                value={deleteConfirmText}
+                onChange={(e) => {
+                  setDeleteConfirmText(e.target.value);
+                  if (deleteError) setDeleteError(null);
+                }}
+                placeholder="Type DELETE to confirm"
+                autoFocus
                 style={{
                   width: "100%",
                   padding: "10px 12px",
                   borderRadius: "8px",
-                  border: "1.5px solid #CBD5E1",
+                  border: deleteConfirmText.trim().toUpperCase() === "DELETE" ? "1.5px solid #DC2626" : "1.5px solid #CBD5E1",
                   fontSize: "0.88rem",
                   outline: "none",
                   boxSizing: "border-box",
+                  letterSpacing: "0.5px",
                 }}
               />
             </div>
@@ -861,7 +885,13 @@ export const PersonalProfile: React.FC<PersonalProfileProps> = ({
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px" }}>
               <button
                 type="button"
-                onClick={() => setDeleteModalOpen(false)}
+                onClick={() => {
+                  if (!deleteLoading) {
+                    setDeleteModalOpen(false);
+                    setDeleteConfirmText("");
+                    setDeleteError(null);
+                  }
+                }}
                 disabled={deleteLoading}
                 style={{
                   padding: "9px 18px",
@@ -879,20 +909,21 @@ export const PersonalProfile: React.FC<PersonalProfileProps> = ({
               <button
                 type="button"
                 onClick={handleConfirmDeleteAccount}
-                disabled={deleteLoading}
+                disabled={deleteConfirmText.trim().toUpperCase() !== "DELETE" || deleteLoading}
                 style={{
                   padding: "9px 18px",
-                  backgroundColor: "#DC2626",
-                  color: "#FFFFFF",
+                  backgroundColor: deleteConfirmText.trim().toUpperCase() === "DELETE" ? "#DC2626" : "#E2E8F0",
+                  color: deleteConfirmText.trim().toUpperCase() === "DELETE" ? "#FFFFFF" : "#94A3B8",
                   border: "none",
                   borderRadius: "8px",
                   fontSize: "0.85rem",
                   fontWeight: 600,
-                  cursor: deleteLoading ? "not-allowed" : "pointer",
+                  cursor: deleteConfirmText.trim().toUpperCase() === "DELETE" && !deleteLoading ? "pointer" : "not-allowed",
                   display: "inline-flex",
                   alignItems: "center",
                   gap: "6px",
-                  opacity: deleteLoading ? 0.7 : 1,
+                  transition: "all 0.15s ease",
+                  boxShadow: deleteConfirmText.trim().toUpperCase() === "DELETE" ? "0 2px 8px rgba(220, 38, 38, 0.25)" : "none",
                 }}
               >
                 {deleteLoading && <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} />}
