@@ -24,7 +24,7 @@ import { matchesSearchQuery } from "@/lib/dietary-filter";
 import { useRoomModule } from "@/context/RoomModuleContext";
 import { reverseGeocodeCoords } from "@/lib/google-maps";
 import { getSafeCurrentPosition } from "@/lib/safe-geolocation";
-import { getPincodeCoordinates } from "@/lib/geo-distance";
+import { getPincodeCoordinates, resolveLocationCoordinates } from "@/lib/geo-distance";
 
 interface SuggestionItem {
   id: string;
@@ -245,6 +245,19 @@ export default function HeroSection({
         if (el) el.scrollIntoView({ behavior: "smooth" });
       }
       return;
+    }
+
+    // Check if user typed an area name (e.g., Karve Nagar, Kothrud, Hadapsar, Baner)
+    const resolvedArea = resolveLocationCoordinates(finalQuery);
+    if (resolvedArea && (finalQuery.length >= 3 || resolvedArea.locality.toLowerCase().includes(finalQuery.toLowerCase()))) {
+      setGuestLocation(
+        resolvedArea.pincode,
+        resolvedArea.locality,
+        resolvedArea.city,
+        resolvedArea.lat,
+        resolvedArea.lng
+      );
+      setSelectedLocation(`${resolvedArea.locality}, ${resolvedArea.city}`);
     }
 
     // 2. If onSearch handler is provided (e.g. Home Page), invoke it and scroll in-place

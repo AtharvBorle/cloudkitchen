@@ -17,6 +17,7 @@ import type { ActiveHomeFilters } from "@/components/home/FilterRow";
 import PopupBannerDisplay from "@/components/PopupBannerDisplay";
 import { useHomeData } from "@/lib/useHomeData";
 import { useLocation } from "@/components/location-provider";
+import { resolveLocationCoordinates } from "@/lib/geo-distance";
 import { MapPin } from "lucide-react";
 import { Footer } from "@/components/explore-desktop/footer";
 import {
@@ -212,6 +213,16 @@ export default function Home() {
       setGuestLocation(pinMatch[0]);
       setHomeSearchQuery("");
       return;
+    }
+    const resolvedArea = resolveLocationCoordinates(q);
+    if (resolvedArea && (q.length >= 3 || resolvedArea.locality.toLowerCase().includes(q.toLowerCase()))) {
+      setGuestLocation(
+        resolvedArea.pincode,
+        resolvedArea.locality,
+        resolvedArea.city,
+        resolvedArea.lat,
+        resolvedArea.lng
+      );
     }
     setHomeSearchQuery(q);
   };

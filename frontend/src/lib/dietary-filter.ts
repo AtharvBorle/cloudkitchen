@@ -822,6 +822,9 @@ export function matchesDishSearch(
     categoryName?: string | null;
     description?: string | null;
     sellerName?: string | null;
+    sellerLocality?: string | null;
+    sellerCity?: string | null;
+    sellerPincode?: string | null;
   }
 ): boolean {
   if (!query || !query.trim()) return true;
@@ -832,7 +835,10 @@ export function matchesDishSearch(
     matchesSearchQuery(dish.name, q) ||
     matchesSearchQuery(dish.categoryName, q) ||
     matchesSearchQuery(dish.description, q) ||
-    matchesSearchQuery(dish.sellerName, q)
+    matchesSearchQuery(dish.sellerName, q) ||
+    matchesSearchQuery(dish.sellerLocality, q) ||
+    matchesSearchQuery(dish.sellerCity, q) ||
+    matchesSearchQuery(dish.sellerPincode, q)
   ) {
     return true;
   }
@@ -861,6 +867,8 @@ export function matchesKitchenOrDishSearch(
     category?: string | null;
     foodType?: string | null;
     locality?: string | null;
+    city?: string | null;
+    pincode?: string | null;
   },
   foodItems?: Array<{
     sellerId?: string | null;
@@ -879,7 +887,29 @@ export function matchesKitchenOrDishSearch(
     return true;
   }
 
-  // 2. Check actual child dishes of this kitchen
+  // 2. Match on kitchen locality, city, pincode, or category (Area search!)
+  if (
+    matchesSearchQuery(kitchen.locality, q) ||
+    matchesSearchQuery(kitchen.category, q) ||
+    (kitchen.city && matchesSearchQuery(kitchen.city, q)) ||
+    (kitchen.pincode && matchesSearchQuery(kitchen.pincode, q))
+  ) {
+    return true;
+  }
+
+  // Also check reverse partial match for locality segments (e.g. "Karve" in "Karve Nagar")
+  if (kitchen.locality) {
+    const locLower = kitchen.locality.toLowerCase();
+    if (locLower.includes(q) || q.includes(locLower)) {
+      return true;
+    }
+    const locSegments = locLower.split(/[\/,]/).map((s) => s.trim()).filter(Boolean);
+    if (locSegments.some((seg) => seg && (seg.includes(q) || q.includes(seg)))) {
+      return true;
+    }
+  }
+
+  // 3. Check actual child dishes of this kitchen
   if (foodItems && foodItems.length > 0) {
     const kitchenDishes = foodItems.filter((f) => {
       const matchId = kitchen.id && f.sellerId && String(f.sellerId).toLowerCase() === String(kitchen.id).toLowerCase();
@@ -892,13 +922,10 @@ export function matchesKitchenOrDishSearch(
     });
 
     if (kitchenDishes.length > 0) {
-      return kitchenDishes.some((d) => matchesDishSearch(q, d));
+      if (kitchenDishes.some((d) => matchesDishSearch(q, d))) {
+        return true;
+      }
     }
-  }
-
-  // 3. Fallback on locality or category ONLY if no dishes exist
-  if (matchesSearchQuery(kitchen.locality, q) || matchesSearchQuery(kitchen.category, q)) {
-    return true;
   }
 
   return false;
