@@ -89,7 +89,8 @@ export const getSellerNotifications = async (req: Request) => {
         },
         include: {
             user: { select: { id: true, name: true, phone: true } },
-            deliveryPerson: { select: { id: true, name: true, phone: true } }
+            deliveryPerson: { select: { id: true, name: true, phone: true } },
+            refund: true
         },
         orderBy: { createdAt: "desc" },
         take: 30
@@ -140,12 +141,21 @@ export const getSellerNotifications = async (req: Request) => {
                 metadata: { orderId: ord.id, deliveryPersonId: ord.deliveryPersonId }
             });
         } else if (ord.status === "CANCELLED" || ord.status === "REJECTED") {
+            const isUserCancelled = ord.cancelledBy === "USER" ||
+                (Boolean(ord.cancellationReason) && /cancelled by (customer|user|you)/i.test(ord.cancellationReason!)) ||
+                (Boolean(ord.refund?.reason) && /cancelled by (customer|user|you)/i.test(ord.refund!.reason));
+            const customerName = ord.user?.name || "Customer";
+            const reason = ord.cancellationReason || ord.refund?.reason;
             notifications.push({
                 id: `ord-can-${ord.id}`,
                 category: "orders",
-                title: `Order Cancelled #ORD-${ordShort}`,
-                message: `Order #ORD-${ordShort} for ₹${ord.totalAmount.toFixed(0)} was cancelled.`,
-                details: "Customer requested cancellation or time window elapsed.",
+                title: isUserCancelled ? `Order Cancelled by Customer #ORD-${ordShort}` : `Order Cancelled #ORD-${ordShort}`,
+                message: isUserCancelled 
+                    ? `Order #ORD-${ordShort} was cancelled by ${customerName}.${reason ? ` Reason: ${reason}` : ""}`
+                    : `Order #ORD-${ordShort} for ₹${ord.totalAmount.toFixed(0)} was cancelled.`,
+                details: isUserCancelled 
+                    ? (reason || "Customer cancelled this order prior to preparation.")
+                    : "Customer requested cancellation or time window elapsed.",
                 timestamp: ord.updatedAt.toISOString(),
                 timeAgo: calculateTimeAgo(ord.updatedAt),
                 isRead: true,

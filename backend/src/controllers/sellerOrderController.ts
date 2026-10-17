@@ -51,7 +51,8 @@ export const getSellerOrders = async () => {
                     isActive: true,
                     outstandingBalance: true
                 }
-            }
+            },
+            refund: true
         },
         orderBy: { createdAt: 'desc' }
     });
@@ -108,7 +109,8 @@ export const getSellerOrderById = async (orderId: string) => {
                     vehicleNumber: true,
                     isActive: true
                 }
-            }
+            },
+            refund: true
         }
     });
 

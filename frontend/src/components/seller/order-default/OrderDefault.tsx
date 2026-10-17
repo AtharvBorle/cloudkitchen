@@ -45,6 +45,8 @@ export interface OrderDetailsData {
   grandTotal?: string;
   paymentMethod: string;
   deliveryPersonName?: string;
+  cancelledBy?: string | null;
+  cancellationReason?: string | null;
 }
 
 export type OrderDetailData = OrderDetailsData;
@@ -231,6 +233,8 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
               grandTotal: `₹${totalNum}`,
               paymentMethod: `${target.paymentMethod || "COD"} (${target.isPaid ? "Paid" : "Unpaid"})`,
               deliveryPersonName: target.deliveryPerson?.name,
+              cancelledBy: target.cancelledBy || ((Boolean(target.refund?.reason) && /cancelled by (customer|user|you)/i.test(target.refund.reason)) ? "USER" : null),
+              cancellationReason: target.cancellationReason || target.refund?.reason || null,
             });
           }
         }
@@ -373,6 +377,10 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
   const isExpired = (rawStatus === "PENDING" || !rawStatus || order?.status === "Pending") && remainingSec <= 0;
   const isCancelled = rawStatus === "CANCELLED" || order?.status === "Cancelled" || isExpired;
   const isPending = (rawStatus === "PENDING" || !rawStatus || order?.status === "Pending") && !isCancelled;
+  const isCancelledByUser = isCancelled && (
+    order?.cancelledBy === "USER" ||
+    (Boolean(order?.cancellationReason) && /cancelled by (customer|user|you)/i.test(order?.cancellationReason!))
+  );
 
   useEffect(() => {
     if (order && (order.status === "Pending" || order.rawStatus === "PENDING") && isExpired) {
@@ -538,9 +546,20 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
 
           {/* Cancelled Banner */}
           {isCancelled && (
-            <div style={{ padding: "14px 20px", backgroundColor: "#FEE2E2", border: "1px solid #FCA5A5", borderRadius: "12px", color: "#B91C1C", fontWeight: "600", fontSize: "0.9rem", display: "flex", alignItems: "center", gap: "10px" }}>
-              <AlertCircle size={20} />
-              <span>This order has been cancelled.</span>
+            <div style={{ padding: "14px 20px", backgroundColor: "#FEE2E2", border: "1px solid #FCA5A5", borderRadius: "12px", color: "#B91C1C", fontWeight: "600", fontSize: "0.9rem", display: "flex", alignItems: "center", gap: "12px" }}>
+              <AlertCircle size={22} style={{ flexShrink: 0 }} />
+              <div>
+                <div style={{ fontWeight: 700, fontSize: "0.95rem" }}>
+                  {isCancelledByUser ? "Order Cancelled by Customer" : "This order has been cancelled."}
+                </div>
+                <div style={{ fontSize: "0.84rem", fontWeight: 500, marginTop: "2px", color: "#7F1D1D" }}>
+                  {isCancelledByUser
+                    ? (activeOrderData.cancellationReason
+                        ? `The customer cancelled this order prior to preparation. Reason: ${activeOrderData.cancellationReason}`
+                        : "The customer cancelled this order prior to food preparation.")
+                    : "This order was rejected/cancelled or acceptance window elapsed."}
+                </div>
+              </div>
             </div>
           )}
 
@@ -639,7 +658,7 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
                 <h3 className={styles.cardTitle} style={{ margin: 0 }}>Order Delivery Lifecycle</h3>
                 {isCancelled ? (
                   <span style={{ fontSize: "0.75rem", color: "#DC2626", fontWeight: "700", backgroundColor: "#FEF2F2", padding: "3px 9px", borderRadius: "6px", border: "1px solid #FECACA" }}>
-                    • Cancelled
+                    • {isCancelledByUser ? "Cancelled by User" : "Cancelled"}
                   </span>
                 ) : isDelivered ? (
                   <span style={{ fontSize: "0.75rem", color: "#10B981", fontWeight: "700", backgroundColor: "#ECFDF5", padding: "3px 9px", borderRadius: "6px", border: "1px solid #A7F3D0" }}>
@@ -684,10 +703,13 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
                     </div>
                     <div className={styles.timelineText}>
                       <h4 className={`${styles.stepTitle} ${styles.stepTitleCancelled}`}>
-                        Order Rejected / Cancelled
+                        {isCancelledByUser ? "Order Cancelled by Customer" : "Order Rejected / Cancelled"}
                       </h4>
                       <span className={`${styles.stepSubtitle} ${styles.stepSubtitleCancelled}`}>
-                        {activeOrderData.cancelledTime || "Order Terminated"} • Rejected by kitchen partner. Lifecycle closed.
+                        {activeOrderData.cancelledTime || "Order Terminated"} •{" "}
+                        {isCancelledByUser
+                          ? `Cancelled by customer prior to preparation.${activeOrderData.cancellationReason ? ` Reason: ${activeOrderData.cancellationReason}` : ""}`
+                          : "Rejected by kitchen partner. Lifecycle closed."}
                       </span>
                     </div>
                   </div>
@@ -817,10 +839,14 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
                   }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#DC2626", fontWeight: "700", fontSize: "0.92rem" }}>
                       <XCircle size={18} />
-                      <span>Order Cancelled &amp; Closed</span>
+                      <span>{isCancelledByUser ? "Cancelled by Customer" : "Order Cancelled & Closed"}</span>
                     </div>
                     <p style={{ margin: 0, fontSize: "0.82rem", color: "#7F1D1D", lineHeight: 1.45 }}>
-                      This order has been rejected/cancelled. All preparation, rider assignment, and delivery stages have concluded.
+                      {isCancelledByUser
+                        ? (activeOrderData.cancellationReason
+                            ? `Customer cancelled this order. Reason: "${activeOrderData.cancellationReason}".`
+                            : "Customer cancelled this order before preparation began.")
+                        : "This order has been rejected/cancelled. All preparation, rider assignment, and delivery stages have concluded."}
                     </p>
                     <button
                       type="button"

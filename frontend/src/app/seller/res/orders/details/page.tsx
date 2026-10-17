@@ -202,6 +202,8 @@ function DetailsContent() {
       paymentMethod={`${order?.paymentMethod || "COD"} (${order?.isPaid ? "Paid" : "Unpaid"})`}
       initialStatus={order ? mapStatusToStep(order.status) : "Order Placed"}
       createdAt={order?.createdAt}
+      cancelledBy={order?.cancelledBy}
+      cancellationReason={order?.cancellationReason || order?.refund?.reason}
       onBack={handleBack}
       onStatusChange={async (newStep) => {
         if (!order?.id) return;

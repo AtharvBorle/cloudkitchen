@@ -46,6 +46,8 @@ export interface ResponsiveSellerOrdersDetailsProps {
   paymentMethod?: string;
   initialStatus?: OrderTimelineStep;
   createdAt?: string;
+  cancelledBy?: string | null;
+  cancellationReason?: string | null;
   onBack?: () => void;
   onCallRider?: () => void;
   onStatusChange?: (newStatus: OrderTimelineStep) => Promise<void> | void;
@@ -72,6 +74,8 @@ export const ResponsiveSellerOrdersDetails: React.FC<
   paymentMethod = "COD",
   initialStatus = "Order Placed",
   createdAt,
+  cancelledBy,
+  cancellationReason,
   onBack,
   onCallRider,
   onStatusChange,
@@ -97,6 +101,10 @@ export const ResponsiveSellerOrdersDetails: React.FC<
   const isPendingOrder = initialStatus === "Order Placed" && currentStatus === "Order Placed";
   const isExpired = isPendingOrder && remainingSec <= 0;
   const isCancelled = currentStatus === "Cancelled" || (isPendingOrder && isExpired);
+  const isCancelledByUser = isCancelled && (
+    cancelledBy === "USER" ||
+    (Boolean(cancellationReason) && /cancelled by (customer|user|you)/i.test(cancellationReason!))
+  );
   const pinColor = currentStatus === "Cancelled" ? "#DC2626" : currentStatus === "Delivered" ? "#10B981" : "#EA4335";
 
   useEffect(() => {
@@ -420,7 +428,7 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                       <XCircle size={16} />
                     </div>
                     <span className={`${styles.stepLabel} ${styles.stepLabelCancelled}`}>
-                      Cancelled
+                      {isCancelledByUser ? "Cancelled by User" : "Cancelled"}
                     </span>
                   </div>
                 </>
@@ -679,11 +687,18 @@ export const ResponsiveSellerOrdersDetails: React.FC<
             <section className={styles.cancelledNoticeCard}>
               <div className={styles.cancelledNoticeHeader}>
                 <XCircle size={18} />
-                <span>Order Rejected / Cancelled</span>
+                <span>{isCancelledByUser ? "Order Cancelled by Customer" : "Order Rejected / Cancelled"}</span>
               </div>
               <p className={styles.cancelledNoticeText}>
-                This order was rejected/cancelled. All preparation, rider assignment, and delivery stages have concluded.
+                {isCancelledByUser
+                  ? "The customer cancelled this order prior to preparation. No food should be prepared or dispatched."
+                  : "This order was rejected/cancelled. All preparation, rider assignment, and delivery stages have concluded."}
               </p>
+              {isCancelledByUser && cancellationReason && (
+                <div style={{ marginTop: "10px", fontSize: "0.82rem", color: "#991B1B", background: "#FEE2E2", padding: "6px 12px", borderRadius: "8px", display: "inline-block", textAlign: "left" }}>
+                  <strong>Cancellation Reason:</strong> {cancellationReason}
+                </div>
+              )}
             </section>
           ) : (
             <section className={styles.riderCard}>
