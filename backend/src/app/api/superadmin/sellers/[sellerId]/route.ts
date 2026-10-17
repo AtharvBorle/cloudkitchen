@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
+import {
+    sendSellerApplicationApprovedEmail,
+    sendSellerApplicationRejectedEmail,
+    sendKitchenPermanentlyDeletedEmail,
+} from "@/lib/emailService";
 
 export async function PUT(req: Request, { params }: { params: Promise<{ sellerId: string }> }) {
     try {
@@ -66,7 +71,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ sellerId
                 resolvedBusinessCategory = "PROPERTY";
             }
 
-            await db.sellerProfile.update({
+            const updatedSellerProfile = await db.sellerProfile.update({
                 where: { userId: sellerId },
                 data: {
                     businessName: businessName || existingUser.sellerProfile.businessName,
@@ -79,6 +84,23 @@ export async function PUT(req: Request, { params }: { params: Promise<{ sellerId
                     ...(foodType !== undefined && typeof foodType === "string" && foodType.trim() ? { foodType: foodType.trim().toUpperCase() } : {})
                 }
             });
+
+            if (verificationStatus && verificationStatus !== existingUser.sellerProfile.verificationStatus) {
+                if (verificationStatus === "APPROVED" && existingUser.email) {
+                    sendSellerApplicationApprovedEmail({
+                        sellerName: existingUser.name,
+                        sellerEmail: existingUser.email,
+                        businessName: updatedSellerProfile.businessName,
+                    }).catch(err => console.error("Error sending approved email:", err));
+                } else if (verificationStatus === "REJECTED" && existingUser.email) {
+                    sendSellerApplicationRejectedEmail({
+                        sellerName: existingUser.name,
+                        sellerEmail: existingUser.email,
+                        businessName: updatedSellerProfile.businessName,
+                        reason: body.rejectionReason || body.reason || "Documents could not be verified or requirements were not met. Please review and re-upload your verification details.",
+                    }).catch(err => console.error("Error sending rejected email:", err));
+                }
+            }
         }
 
         return NextResponse.json({ message: "Seller updated successfully" }, { status: 200 });
@@ -102,7 +124,10 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ selle
         const { sellerId } = await params;
 
         // Ensure we are only deleting SELLERs
-        const existingUser = await db.user.findUnique({ where: { id: sellerId } });
+        const existingUser = await db.user.findUnique({ 
+            where: { id: sellerId },
+            include: { sellerProfile: true }
+        });
         if (!existingUser || existingUser.role !== "SELLER") {
             return NextResponse.json({ success: false, message: "The specified seller account could not be found.", error: "The specified seller account could not be found." }, { status: 404 });
         }
@@ -117,6 +142,14 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ selle
         await db.user.delete({
             where: { id: sellerId }
         });
+
+        if (existingUser.email) {
+            sendKitchenPermanentlyDeletedEmail({
+                sellerName: existingUser.name,
+                sellerEmail: existingUser.email,
+                businessName: existingUser.sellerProfile?.businessName || "Your Kitchen",
+            }).catch(err => console.error("Error sending kitchen permanent delete email:", err));
+        }
 
         return NextResponse.json({ message: "Seller deleted successfully" }, { status: 200 });
 

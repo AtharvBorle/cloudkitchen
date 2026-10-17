@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
+import { sendRefundCompletedEmail } from "@/lib/emailService";
 
 export const createRefundRequest = async (req: Request) => {
     const session = await getAuthSession();
@@ -231,6 +232,24 @@ export const updateRefundStatus = async (req: Request, refundId: string) => {
                 details: `Refund ID ${refundId} of ₹${refund.amount} was ${status.toLowerCase()} by Superadmin. Admin Note: ${adminNote || "None"}. Reference ID: ${transactionId || "None"}`
             }
         }).catch(() => {});
+
+        if (status === "APPROVED") {
+            try {
+                const recipientUser = await db.user.findUnique({ where: { id: refund.userId } });
+                if (recipientUser?.email) {
+                    sendRefundCompletedEmail({
+                        customerName: recipientUser.name || "Customer",
+                        customerEmail: recipientUser.email,
+                        orderId: refund.orderId || refund.id,
+                        refundAmount: refund.amount,
+                        transactionId: transactionId || null,
+                        adminNote: adminNote || null,
+                    }).catch((err) => console.error("[EmailService] Failed to send refund completed email:", err));
+                }
+            } catch (emailErr) {
+                console.error("[EmailService] Error looking up recipient for refund completed email:", emailErr);
+            }
+        }
     } catch (err) {
         console.error("Failed to send user refund notification:", err);
     }

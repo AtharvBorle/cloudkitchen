@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -337,14 +337,13 @@ export default function OrderConfirmation() {
   const isDelivered = status === "DELIVERED";
   const isCancelled = status === "CANCELLED";
 
-  const isCodOrder = useMemo(() => {
-    if (!orderData) return false;
-    if (orderData.isPaid === true) return false;
-    const raw = (orderData.rawPaymentMethod || "").toUpperCase();
-    if (raw === "COD" || raw === "CASH ON DELIVERY") return true;
-    const pm = (orderData.paymentMethod || "").toUpperCase();
-    return pm.includes("COD") || pm.includes("CASH ON DELIVERY") || pm.includes("PAY ON DELIVERY");
-  }, [orderData]);
+  const isCodOrder =
+    !orderData.isPaid &&
+    ((orderData.rawPaymentMethod || "").toUpperCase() === "COD" ||
+      (orderData.rawPaymentMethod || "").toUpperCase() === "CASH ON DELIVERY" ||
+      (orderData.paymentMethod || "").toUpperCase().includes("COD") ||
+      (orderData.paymentMethod || "").toUpperCase().includes("CASH ON DELIVERY") ||
+      (orderData.paymentMethod || "").toUpperCase().includes("PAY ON DELIVERY"));
 
   const timelineSteps = isCancelled
     ? [

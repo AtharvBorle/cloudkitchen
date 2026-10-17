@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import Razorpay from "razorpay";
 import crypto from "crypto";
 import { ApiError } from "@/lib/api-error";
+import { sendSellerSubscriptionInvoiceEmail } from "@/lib/emailService";
 
 export const createSubscriptionOrder = async (req: Request) => {
     const session = await getAuthSession();
@@ -253,6 +254,25 @@ export const verifySubscriptionPayment = async (req: Request) => {
         } catch (e) {
             console.error("Failed to increment coupon usage:", e);
         }
+    }
+
+    try {
+        if (session.user.email) {
+            sendSellerSubscriptionInvoiceEmail({
+                sellerName: session.user.name,
+                sellerEmail: session.user.email,
+                businessName: sellerProfile.businessName || "Your Kitchen",
+                planName: plan.name,
+                planCategory: plan.category || "General",
+                amountPaid: parseFloat(amountPaid) || plan.price,
+                invoiceNumber: `INV-${newSubscription.id.substring(0, 8).toUpperCase()}`,
+                invoiceDate: new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+                validUntil: validUntil.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+                paymentId: razorpay_payment_id,
+            }).catch((err) => console.error("[EmailService] Failed to send subscription invoice email:", err));
+        }
+    } catch (e) {
+        console.error("Error dispatching subscription invoice email:", e);
     }
 
     return { subscription: newSubscription };

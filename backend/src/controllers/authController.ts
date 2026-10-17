@@ -8,6 +8,7 @@ import { validateKitchenName } from "@/lib/kitchen-validation";
 import { isGracePeriodExpired, anonymizeUserAccount, restoreAccountIfWithinGracePeriod } from "@/lib/account-deletion";
 import { generate6DigitOtp, setOtp, verifyOtp, consumeOtp, isMasterOtpEnabled, MASTER_OTP } from "@/lib/otpStore";
 import { sendOtpSms } from "@/lib/smsService";
+import { sendSellerApplicationSubmittedEmail, sendPasswordChangedEmail } from "@/lib/emailService";
 
 export const registerUser = async (req: Request) => {
     const contentType = req.headers.get('content-type') || "";
@@ -360,6 +361,17 @@ export const registerUser = async (req: Request) => {
                 } : undefined
             };
         });
+ 
+        if (result.sellerProfile && result.user.email) {
+            sendSellerApplicationSubmittedEmail({
+                sellerName: result.user.name,
+                sellerEmail: result.user.email,
+                businessName: result.sellerProfile.businessName,
+                trackingId: result.sellerProfile.trackingId,
+                category: finalBusinessCategory || "FOOD",
+                phone: finalPhone || ""
+            }).catch((err) => console.error("[EmailService] Failed to send seller application submitted email:", err));
+        }
 
         return result;
     } catch (dbError: any) {
@@ -667,6 +679,15 @@ export const resetPasswordWithOtp = async (req: Request) => {
         where: { email: normalizedEmail },
         data: { passwordHash }
     });
+
+    if (user.email) {
+        sendPasswordChangedEmail({
+            userName: user.name,
+            userEmail: user.email,
+            role: user.role,
+            timestamp: new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })
+        }).catch((err) => console.error("[EmailService] Failed to send password reset email:", err));
+    }
 
     return {
         success: true,

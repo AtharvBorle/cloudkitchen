@@ -8,8 +8,12 @@ import { getNowInIST, getDateInIST, getMealDeliveryTimingStatus, getMealDelivery
 import Razorpay from "razorpay";
 import crypto from "crypto";
 import { sendMealSubscriptionActivatedNotification } from "@/lib/emailService";
+import { triggerOpportunisticNotificationChecks } from "@/lib/subscriptionNotificationService";
 
 export const getUserMealSubscriptions = async () => {
+    // Opportunistically run automated notification checks in background
+    triggerOpportunisticNotificationChecks();
+
     const session = await getAuthSession();
     if (!session?.user) {
         throw new ApiError("Please log in first to view your meal subscriptions.", 401);

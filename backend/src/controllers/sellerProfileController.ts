@@ -6,8 +6,13 @@ import { revalidateTag } from "next/cache";
 import bcrypt from "bcryptjs";
 import { validateKitchenName } from "@/lib/kitchen-validation";
 import { emitSellerStatusChanged } from "@/lib/realtime-events";
+import { sendPasswordChangedEmail } from "@/lib/emailService";
+import { triggerOpportunisticNotificationChecks } from "@/lib/subscriptionNotificationService";
 
 export const getSellerProfile = async () => {
+    // Opportunistically run automated notification checks in background
+    triggerOpportunisticNotificationChecks();
+
     const session = await getAuthSession();
 
     if (!session?.user) {
@@ -195,6 +200,13 @@ export const updateSellerProfile = async (req: Request) => {
             where: { id: session.user.id },
             data: userDataToUpdate
         });
+
+        if (newPassword && session.user.email) {
+            sendPasswordChangedEmail({
+                userName: session.user.name,
+                userEmail: session.user.email,
+            }).catch((err) => console.error("[EmailService] Failed to send seller password changed email:", err));
+        }
     }
 
     const profileUpdateData: any = {};

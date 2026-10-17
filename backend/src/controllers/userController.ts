@@ -3,8 +3,13 @@ import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import bcrypt from "bcryptjs";
 import { getPincodeCoordinates } from "@/lib/geo-distance";
+import { sendPasswordChangedEmail } from "@/lib/emailService";
+import { triggerOpportunisticNotificationChecks } from "@/lib/subscriptionNotificationService";
 
 export const getUserProfile = async () => {
+    // Opportunistically run automated notification checks in background
+    triggerOpportunisticNotificationChecks();
+
     const session = await getAuthSession();
     if (!session?.user) {
         throw new ApiError("Please log in first to view your profile.", 401);
@@ -105,6 +110,13 @@ export const updateUserProfile = async (req: Request) => {
             role: true,
         }
     });
+
+    if (body.newPassword && updatedUser.email) {
+        sendPasswordChangedEmail({
+            userName: updatedUser.name,
+            userEmail: updatedUser.email,
+        }).catch((err) => console.error("[EmailService] Failed to send password changed email:", err));
+    }
 
     return { user: updatedUser };
 };

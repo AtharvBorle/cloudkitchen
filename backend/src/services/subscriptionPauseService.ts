@@ -273,7 +273,10 @@ export class SubscriptionPauseService {
             where: { id: userId },
             select: { id: true, name: true, email: true, phone: true }
           });
-          await sendSubscriptionPauseNotification(updated, true, pauseDays, customer);
+          const pauseStartDateStr = now.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+          const pauseEndDateStr = pauseEndDate.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+          const extendedEndDateStr = extendedEndDate ? extendedEndDate.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : undefined;
+          await sendSubscriptionPauseNotification(updated, true, pauseDays, customer, pauseStartDateStr, pauseEndDateStr, extendedEndDateStr);
         } catch (err) {
           console.error("[EmailService] Failed to send subscription pause email:", err);
         }
@@ -476,7 +479,9 @@ export class SubscriptionPauseService {
             where: { id: userId },
             select: { id: true, name: true, email: true, phone: true }
           });
-          await sendSubscriptionPauseNotification(updated, false, undefined, customer);
+          const resumeDateStr = now.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+          const updatedEndDateStr = finalEndDate ? finalEndDate.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : undefined;
+          await sendSubscriptionPauseNotification(updated, false, undefined, customer, undefined, undefined, updatedEndDateStr);
         } catch (err) {
           console.error("[EmailService] Failed to send subscription resume email:", err);
         }
