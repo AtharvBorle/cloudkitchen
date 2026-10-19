@@ -108,12 +108,15 @@ function FoodExploreContent() {
   // Popover & Modal state
   const [openPricePopover, setOpenPricePopover] = useState(false);
   const [openCuisinePopover, setOpenCuisinePopover] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const pricePopoverRef = React.useRef<HTMLDivElement>(null);
   const cuisinePopoverRef = React.useRef<HTMLDivElement>(null);
+  const searchContainerRef = React.useRef<HTMLDivElement>(null);
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
   const [addedIds, setAddedIds] = useState<Record<string, boolean>>({});
   const [addonModalDish, setAddonModalDish] = useState<(DynamicFoodItem & { parsedAddons: AddonItem[] }) | null>(null);
 
-  // Outside click to close price and cuisine popovers
+  // Outside click to close price, cuisine, and search popovers
   React.useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (pricePopoverRef.current && !pricePopoverRef.current.contains(e.target as Node)) {
@@ -122,12 +125,15 @@ function FoodExploreContent() {
       if (cuisinePopoverRef.current && !cuisinePopoverRef.current.contains(e.target as Node)) {
         setOpenCuisinePopover(false);
       }
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setIsSearchFocused(false);
+      }
     }
-    if (openPricePopover || openCuisinePopover) {
+    if (openPricePopover || openCuisinePopover || isSearchFocused) {
       document.addEventListener("mousedown", handleClickOutside);
       return () => document.removeEventListener("mousedown", handleClickOutside);
     }
-  }, [openPricePopover, openCuisinePopover]);
+  }, [openPricePopover, openCuisinePopover, isSearchFocused]);
 
   // Sync state if URL changes
   React.useEffect(() => {
@@ -581,6 +587,33 @@ function FoodExploreContent() {
     }));
   }, [homeData.categories, homeData.foodItems, selectedDiet]);
 
+  // Interactive live search suggestions for autocomplete popover
+  const searchSuggestions = useMemo(() => {
+    const q = (searchQuery || "").trim().toLowerCase();
+    if (!q) return { dishes: [], kitchens: [] };
+
+    const matchingDishes = homeData.foodItems
+      .filter((f) => matchesDishSearch(q, f))
+      .slice(0, 5);
+
+    const matchingKitchens = homeData.kitchens
+      .filter((k) => matchesKitchenOrDishSearch(q, k, homeData.foodItems))
+      .slice(0, 3);
+
+    return { dishes: matchingDishes, kitchens: matchingKitchens };
+  }, [searchQuery, homeData.foodItems, homeData.kitchens]);
+
+  const popularCravings = useMemo(() => [
+    "Biryani",
+    "Thali",
+    "Pizza",
+    "Burger",
+    "Poha",
+    "Dosa",
+    "Khichdi",
+    "Cake",
+  ], []);
+
   const activeFiltersCount =
     (selectedDiet !== "all" ? 1 : 0) +
     (selectedPrice !== "all" ? 1 : 0) +
@@ -780,53 +813,375 @@ function FoodExploreContent() {
             </p>
           </div>
 
-          {/* Search Input on Right */}
+          {/* Search Input on Right with Interactive Popover */}
           <div
+            ref={searchContainerRef}
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              flex: "0 1 420px",
+              position: "relative",
+              flex: "0 1 430px",
               width: "100%",
-              maxWidth: "420px",
-              backgroundColor: "#FFFFFF",
-              borderRadius: "14px",
-              padding: "10px 16px",
-              border: "1.5px solid #E2E8F0",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
+              maxWidth: "430px",
             }}
           >
-            <Search size={18} color="#94A3B8" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search dishes, biryani, cakes, burgers, cloud kitchens..."
+            <div
               style={{
-                border: "none",
-                outline: "none",
-                backgroundColor: "transparent",
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
                 width: "100%",
-                fontSize: "0.9rem",
-                color: "#18181B",
-                fontWeight: "500",
+                height: "44px",
+                backgroundColor: "#FFFFFF",
+                borderRadius: "9999px",
+                padding: "0 16px",
+                border: isSearchFocused ? "1.5px solid #FF6B00" : "1.5px solid #E2E8F0",
+                boxShadow: isSearchFocused
+                  ? "0 0 0 3.5px rgba(255, 107, 0, 0.14), 0 8px 24px rgba(255, 107, 0, 0.1)"
+                  : "0 2px 8px rgba(0, 0, 0, 0.03)",
+                transform: isSearchFocused ? "translateY(-1.5px) scale(1.01)" : "translateY(0) scale(1)",
+                transition: "all 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
+                boxSizing: "border-box",
+                cursor: "text",
               }}
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery("")}
+              onClick={() => searchInputRef.current?.focus()}
+            >
+              <Search
+                size={18}
+                color={isSearchFocused ? "#FF6B00" : "#94A3B8"}
                 style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  padding: "2px",
-                  display: "flex",
-                  alignItems: "center",
+                  transition: "all 0.2s ease",
+                  transform: isSearchFocused ? "scale(1.08)" : "scale(1)",
+                  flexShrink: 0,
                 }}
+              />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onFocus={() => setIsSearchFocused(true)}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    setIsSearchFocused(false);
+                  }
+                }}
+                placeholder="Search dishes, biryani, cakes, burgers, cloud kitchens..."
+                style={{
+                  border: "none",
+                  outline: "none",
+                  backgroundColor: "transparent",
+                  width: "100%",
+                  fontSize: "0.88rem",
+                  color: "#18181B",
+                  fontWeight: "500",
+                  fontFamily: "inherit",
+                }}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSearchQuery("");
+                    searchInputRef.current?.focus();
+                  }}
+                  style={{
+                    background: "#F1F5F9",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: "4px",
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#64748B",
+                    transition: "all 0.15s ease",
+                    flexShrink: 0,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "#FFE8D6";
+                    e.currentTarget.style.color = "#FF6B00";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "#F1F5F9";
+                    e.currentTarget.style.color = "#64748B";
+                  }}
+                  aria-label="Clear search"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            {/* Interactive Popover Dropdown Panel */}
+            {isSearchFocused && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "calc(100% + 8px)",
+                  left: 0,
+                  right: 0,
+                  backgroundColor: "#FFFFFF",
+                  borderRadius: "18px",
+                  boxShadow: "0 18px 42px rgba(0, 0, 0, 0.14), 0 4px 16px rgba(255, 107, 0, 0.08)",
+                  border: "1.5px solid #FFD8BE",
+                  padding: "14px 16px",
+                  zIndex: 60,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "12px",
+                  animation: "foodExploreSearchPopover 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+                  boxSizing: "border-box",
+                }}
+                onClick={(e) => e.stopPropagation()}
               >
-                <X size={16} color="#94A3B8" />
-              </button>
+                {!searchQuery.trim() ? (
+                  <>
+                    <div>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          fontSize: "11px",
+                          fontWeight: "800",
+                          color: "#FF6B00",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.6px",
+                          marginBottom: "8px",
+                        }}
+                      >
+                        <Sparkles size={13} color="#FF6B00" />
+                        <span>Popular Cravings</span>
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                        {popularCravings.map((tag) => (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() => {
+                              setSearchQuery(tag);
+                              setIsSearchFocused(false);
+                            }}
+                            style={{
+                              padding: "5px 12px",
+                              borderRadius: "9999px",
+                              backgroundColor: "#FFF8F2",
+                              border: "1px solid #FFEDD5",
+                              color: "#C2410C",
+                              fontSize: "12px",
+                              fontWeight: "600",
+                              cursor: "pointer",
+                              transition: "all 0.15s ease",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "4px",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = "#FF6B00";
+                              e.currentTarget.style.color = "#FFFFFF";
+                              e.currentTarget.style.borderColor = "#FF6B00";
+                              e.currentTarget.style.transform = "translateY(-1px) scale(1.03)";
+                              e.currentTarget.style.boxShadow = "0 3px 10px rgba(255, 107, 0, 0.25)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = "#FFF8F2";
+                              e.currentTarget.style.color = "#C2410C";
+                              e.currentTarget.style.borderColor = "#FFEDD5";
+                              e.currentTarget.style.transform = "none";
+                              e.currentTarget.style.boxShadow = "none";
+                            }}
+                          >
+                            <span>{tag}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {homeData.kitchens.length > 0 && (
+                      <div>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            fontSize: "11px",
+                            fontWeight: "800",
+                            color: "#64748B",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.6px",
+                            marginBottom: "6px",
+                          }}
+                        >
+                          <Store size={13} color="#FF6B00" />
+                          <span>Featured Kitchens</span>
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                          {homeData.kitchens.slice(0, 3).map((k) => (
+                            <div
+                              key={k.id}
+                              onClick={() => {
+                                setSearchQuery(k.name);
+                                setIsSearchFocused(false);
+                              }}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                padding: "6px 10px",
+                                borderRadius: "8px",
+                                cursor: "pointer",
+                                transition: "all 0.15s ease",
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = "#FFF8F2";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = "transparent";
+                              }}
+                            >
+                              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                <Store size={14} color="#FF6B00" />
+                                <span style={{ fontSize: "13px", fontWeight: "600", color: "#18181B" }}>
+                                  {k.name}
+                                </span>
+                              </div>
+                              {k.locality && (
+                                <span style={{ fontSize: "11px", color: "#94A3B8", fontWeight: "500" }}>
+                                  {k.locality}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        fontSize: "11px",
+                        fontWeight: "800",
+                        color: "#64748B",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.6px",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <Search size={12} color="#FF6B00" />
+                        <span>Live Suggestions</span>
+                      </div>
+                      <span style={{ fontSize: "11px", color: "#94A3B8", fontWeight: "600" }}>
+                        {searchSuggestions.dishes.length + searchSuggestions.kitchens.length} matches
+                      </span>
+                    </div>
+
+                    {searchSuggestions.dishes.length === 0 && searchSuggestions.kitchens.length === 0 ? (
+                      <div style={{ padding: "12px 6px", textAlign: "center", fontSize: "12.5px", color: "#64748B" }}>
+                        No quick matches for &quot;{searchQuery}&quot;. Press Enter to view all results.
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "4px", maxHeight: "260px", overflowY: "auto" }}>
+                        {searchSuggestions.dishes.map((dish) => (
+                          <div
+                            key={dish.id}
+                            onClick={() => {
+                              setSearchQuery(dish.name);
+                              setIsSearchFocused(false);
+                            }}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              padding: "7px 10px",
+                              borderRadius: "10px",
+                              cursor: "pointer",
+                              transition: "all 0.15s ease",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = "#FFF8F2";
+                              e.currentTarget.style.transform = "translateX(2px)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = "transparent";
+                              e.currentTarget.style.transform = "none";
+                            }}
+                          >
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+                              <UtensilsCrossed size={14} color="#FF6B00" style={{ flexShrink: 0 }} />
+                              <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+                                <span style={{ fontSize: "13px", fontWeight: "600", color: "#18181B", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                  {dish.name}
+                                </span>
+                                {dish.sellerName && (
+                                  <span style={{ fontSize: "11px", fontWeight: "600", color: "#EA580C", display: "inline-flex", alignItems: "center", gap: "3px" }}>
+                                    <Store size={10} color="#EA580C" /> {dish.sellerName}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <span
+                              style={{
+                                fontSize: "12px",
+                                fontWeight: "700",
+                                color: "#EA580C",
+                                backgroundColor: "#FFF3EB",
+                                padding: "2px 8px",
+                                borderRadius: "6px",
+                                flexShrink: 0,
+                              }}
+                            >
+                              ₹{dish.price}
+                            </span>
+                          </div>
+                        ))}
+
+                        {searchSuggestions.kitchens.map((k) => (
+                          <div
+                            key={k.id}
+                            onClick={() => {
+                              setSearchQuery(k.name);
+                              setIsSearchFocused(false);
+                            }}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              padding: "7px 10px",
+                              borderRadius: "10px",
+                              cursor: "pointer",
+                              transition: "all 0.15s ease",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = "#FFF8F2";
+                              e.currentTarget.style.transform = "translateX(2px)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = "transparent";
+                              e.currentTarget.style.transform = "none";
+                            }}
+                          >
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <Store size={14} color="#FF6B00" />
+                              <span style={{ fontSize: "13px", fontWeight: "600", color: "#18181B" }}>
+                                {k.name}
+                              </span>
+                            </div>
+                            {k.locality && (
+                              <span style={{ fontSize: "11px", color: "#94A3B8" }}>
+                                {k.locality}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -1522,6 +1877,33 @@ function FoodExploreContent() {
                             </span>
                           </div>
                         )}
+
+                        {/* Kitchen Tag Badge overlay at bottom of image */}
+                        <div
+                          style={{
+                            position: "absolute",
+                            bottom: "8px",
+                            left: "8px",
+                            zIndex: 2,
+                            backgroundColor: "rgba(15, 23, 42, 0.8)",
+                            backdropFilter: "blur(4px)",
+                            color: "#FFFFFF",
+                            fontSize: "11px",
+                            fontWeight: "700",
+                            padding: "3px 8px",
+                            borderRadius: "6px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "5px",
+                            boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+                            maxWidth: "calc(100% - 16px)",
+                          }}
+                        >
+                          <Store size={12} color="#FB923C" style={{ flexShrink: 0 }} />
+                          <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            {dish.sellerName || "Verified Cloud Kitchen"}
+                          </span>
+                        </div>
                       </div>
 
                       {/* Card Info */}
@@ -1552,16 +1934,36 @@ function FoodExploreContent() {
                           <Link
                             href={dish.sellerTrackingId ? `/shop/${dish.sellerTrackingId}${selectedPrice && selectedPrice !== "all" ? `?price=${selectedPrice}` : ""}` : "#"}
                             style={{
-                              fontSize: "0.82rem",
-                              color: "#64748B",
-                              fontWeight: "600",
+                              fontSize: "0.8rem",
+                              color: "#EA580C",
+                              backgroundColor: "#FFF7ED",
+                              border: "1px solid #FFEDD5",
+                              fontWeight: "700",
                               textDecoration: "none",
                               display: "inline-flex",
                               alignItems: "center",
-                              gap: "4px",
+                              gap: "5px",
+                              padding: "3px 8px",
+                              borderRadius: "6px",
+                              width: "fit-content",
+                              marginTop: "3px",
+                              marginBottom: "3px",
+                              transition: "all 0.15s ease",
                             }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = "#FFEDD5";
+                              e.currentTarget.style.borderColor = "#FDBA74";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = "#FFF7ED";
+                              e.currentTarget.style.borderColor = "#FFEDD5";
+                            }}
+                            title={`Kitchen: ${dish.sellerName || "Verified Cloud Kitchen"}`}
                           >
-                            <span>by {dish.sellerName || "Verified Cloud Kitchen"}</span>
+                            <Store size={12} color="#EA580C" style={{ flexShrink: 0 }} />
+                            <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              {dish.sellerName || "Verified Cloud Kitchen"}
+                            </span>
                           </Link>
                         </div>
 
@@ -2343,6 +2745,16 @@ function FoodExploreContent() {
       <Footer />
 
       <style jsx>{`
+        @keyframes foodExploreSearchPopover {
+          0% {
+            opacity: 0;
+            transform: translateY(-8px) scale(0.97);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
         .food-explore-card:hover {
           transform: translateY(-4px);
           box-shadow: 0 14px 30px rgba(0, 0, 0, 0.08) !important;

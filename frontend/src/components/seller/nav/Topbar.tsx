@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import {
@@ -14,11 +14,13 @@ import {
   Calendar,
   Clock,
   Star,
+  Check,
   CheckCheck,
   ChevronRight,
   Inbox,
   AlertCircle,
   DollarSign,
+  Trash2,
 } from "lucide-react";
 import styles from "./Topbar.module.css";
 import { useSellerProfile, computeInitials, isGenericFallbackName, toggleSellerOnlineStatus } from "@/hooks/useSellerProfile";
@@ -68,11 +70,15 @@ export default function Topbar({
     unreadCount: liveUnreadCount,
     markAsRead,
     markAllAsRead,
+    deleteNotification,
   } = useSellerNotifications();
   const effectiveUnreadCount = typeof unreadCountProp === "number" ? unreadCountProp : liveUnreadCount;
   const [localSearchQuery, setLocalSearchQuery] = useState(propSearchQuery || "");
   const searchQuery = propSearchQuery !== undefined ? propSearchQuery : localSearchQuery;
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"all" | "orders" | "updates">("all");
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const handleMenu = onMenuToggle || onMenuClick;
 
@@ -96,6 +102,13 @@ export default function Topbar({
     };
   }, [isDropdownOpen]);
 
+  useEffect(() => {
+    if (!isDropdownOpen) {
+      setIsSelectionMode(false);
+      setSelectedIds([]);
+    }
+  }, [isDropdownOpen]);
+
   const effectiveOwnerName =
     ownerName && !isGenericFallbackName(ownerName)
       ? ownerName
@@ -107,43 +120,190 @@ export default function Topbar({
       ? avatarInitials
       : (seller.avatarInitials || computeInitials(effectiveOwnerName));
 
-  const getCategoryIcon = (category: NotificationCategory) => {
-    switch (category) {
-      case "orders":
-        return <ShoppingBag size={16} />;
-      case "stock":
-        return <Package size={16} />;
-      case "delivery":
-        return <Truck size={16} />;
-      case "bookings":
-        return <Calendar size={16} />;
-      case "timings":
-        return <Clock size={16} />;
-      case "reviews":
-        return <Star size={16} />;
-      case "settlements":
-        return <DollarSign size={16} />;
-      default:
-        return <AlertCircle size={16} />;
+  const filteredNotifications = useMemo(() => {
+    if (activeTab === "orders") {
+      return notifications.filter(
+        (n) => n.category === "orders" || n.title?.toLowerCase().includes("order")
+      );
+    }
+    if (activeTab === "updates") {
+      return notifications.filter(
+        (n) => n.category !== "orders" && !n.title?.toLowerCase().includes("order")
+      );
+    }
+    return notifications;
+  }, [notifications, activeTab]);
+
+  const isAllFilteredSelected =
+    filteredNotifications.length > 0 &&
+    filteredNotifications.every((n) => selectedIds.includes(n.id));
+  const isSomeFilteredSelected =
+    filteredNotifications.some((n) => selectedIds.includes(n.id)) && !isAllFilteredSelected;
+
+  const handleToggleSelectAll = () => {
+    if (isAllFilteredSelected) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredNotifications.map((n) => n.id));
     }
   };
 
-  const getCategoryClass = (category: NotificationCategory) => {
+  const handleToggleSelectItem = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleDeleteSelected = () => {
+    selectedIds.forEach((id) => deleteNotification(id));
+    setSelectedIds([]);
+    setIsSelectionMode(false);
+  };
+
+  const handleDeleteSingle = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    deleteNotification(id);
+    setSelectedIds((prev) => prev.filter((item) => item !== id));
+  };
+
+  const handleMarkItemRead = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    markAsRead(id);
+  };
+
+  const getItemTag = (item: any) => {
+    if (item.category === "stock") return { text: "STOCK ALERT", color: "red" };
+    if (item.category === "orders") {
+      const isCancelled = item.severity === "cancelled" || item.title?.toLowerCase().includes("cancelled");
+      return { text: isCancelled ? "CANCELLED" : "ORDER UPDATE", color: isCancelled ? "red" : "orange" };
+    }
+    if (item.category === "delivery") return { text: "DELIVERY", color: "green" };
+    if (item.category === "offers") return { text: "OFFER", color: "green" };
+    if (item.category === "timings") return { text: "TIMING ALERT", color: "orange" };
+    if (item.category === "reviews") return { text: "REVIEW", color: "purple" };
+    return { text: (item.category || "UPDATE").toUpperCase(), color: "blue" };
+  };
+
+  const getTagColorClass = (color: string) => {
+    switch (color) {
+      case "orange":
+        return styles.tagOrange;
+      case "green":
+        return styles.tagGreen;
+      case "purple":
+        return styles.tagPurple;
+      case "blue":
+        return styles.tagBlue;
+      case "red":
+        return styles.tagRed;
+      default:
+        return styles.tagOrange;
+    }
+  };
+
+  const getItemActionText = (item: any) => {
+    if (item.actionLabel) return item.actionLabel;
+    if (item.category === "orders") return "View Details";
+    if (item.category === "stock") return "Manage Stock";
+    return "View Details";
+  };
+
+  const renderItemIcon = (category: NotificationCategory) => {
     switch (category) {
       case "orders":
-        return styles.iconOrders;
+        return (
+          <div className={`${styles.itemIconBox} ${styles.iconOrders}`}>
+            <Package size={18} strokeWidth={2.2} />
+          </div>
+        );
       case "stock":
-        return styles.iconStock;
+        return (
+          <div className={`${styles.itemIconBox} ${styles.iconStock}`}>
+            <Package size={18} strokeWidth={2.2} />
+          </div>
+        );
       case "delivery":
-        return styles.iconDelivery;
-      case "bookings":
-        return styles.iconBookings;
+        return (
+          <div className={`${styles.itemIconBox} ${styles.iconDelivery}`}>
+            <Truck size={18} strokeWidth={2.2} />
+          </div>
+        );
+      case "offers":
+        return (
+          <div className={`${styles.itemIconBox} ${styles.iconOffers}`}>
+            <ShoppingBag size={18} strokeWidth={2.2} />
+          </div>
+        );
       case "timings":
-        return styles.iconTimings;
+        return (
+          <div className={`${styles.itemIconBox} ${styles.iconTimings}`}>
+            <Clock size={18} strokeWidth={2.2} />
+          </div>
+        );
       case "reviews":
-        return styles.iconReviews;
+        return (
+          <div className={`${styles.itemIconBox} ${styles.iconReviews}`}>
+            <Star size={18} strokeWidth={2.2} />
+          </div>
+        );
       default:
-        return styles.iconOrders;
+        return (
+          <div className={`${styles.itemIconBox} ${styles.iconSystem}`}>
+            <Bell size={18} strokeWidth={2.2} />
+          </div>
+        );
+    }
+  };
+
+  const resolveTargetHref = (item: any) => {
+    let targetHref = item.actionHref;
+    if (
+      item.category === "orders" ||
+      item.actionLabel === "View Order" ||
+      item.actionLabel === "Track Delivery" ||
+      item.actionLabel === "Track Dispatch" ||
+      item.title?.toLowerCase().includes("order")
+    ) {
+      let orderId = item.metadata?.orderId;
+      if (!orderId) {
+        const idMatch = item.id?.match(/^(?:notif-order-|notif-deliv-|ord-[a-z]+-)(.+)$/);
+        if (idMatch && idMatch[1]) {
+          orderId = idMatch[1].replace(/^ORD-/i, "");
+        }
+      }
+      if (!orderId && targetHref) {
+        try {
+          const parsed = new URL(targetHref, "http://localhost");
+          const paramId = parsed.searchParams.get("orderId") || parsed.searchParams.get("id");
+          if (paramId) orderId = paramId.replace(/^#/, "").replace(/^ORD-/i, "");
+        } catch {}
+      }
+      if (!orderId) {
+        const match = item.title?.match(/#([A-Za-z0-9-]+)/);
+        if (match && match[1]) {
+          orderId = match[1].replace(/^(?:ORD|NCR)-/i, "");
+        }
+      }
+      if (orderId) {
+        return `/seller/orders/details?orderId=${encodeURIComponent(orderId)}`;
+      }
+    }
+    return targetHref || "/seller/notifications";
+  };
+
+  const handleItemClick = (item: any) => {
+    if (isSelectionMode) {
+      setSelectedIds((prev) =>
+        prev.includes(item.id) ? prev.filter((id) => id !== item.id) : [...prev, item.id]
+      );
+      return;
+    }
+    markAsRead(item.id);
+    setIsDropdownOpen(false);
+    const target = resolveTargetHref(item);
+    if (target) {
+      router.push(target);
     }
   };
 
@@ -347,121 +507,273 @@ export default function Topbar({
           {/* Notification Popup Dropdown */}
           {isDropdownOpen && (
             <div className={styles.notificationDropdown} role="dialog" aria-label="Notifications list">
+              {/* Upward pointer arrow */}
+              <div className={styles.dropdownArrow} aria-hidden="true" />
+
               {/* Header */}
-              <div className={styles.dropdownHeader}>
-                <div className={styles.dropdownHeaderLeft}>
-                  <h4 className={styles.dropdownTitle}>Notifications</h4>
-                  {effectiveUnreadCount > 0 ? (
-                    <span className={styles.dropdownBadge}>{effectiveUnreadCount} New</span>
-                  ) : (
-                    <span style={{ fontSize: "11px", fontWeight: 600, color: "#16A34A" }}>
-                      All caught up
-                    </span>
-                  )}
-                </div>
+              <div className={styles.header}>
+                {isSelectionMode ? (
+                  <div className={styles.selectionHeaderTop}>
+                    <div
+                      className={styles.selectAllGroup}
+                      onClick={handleToggleSelectAll}
+                      role="button"
+                      tabIndex={0}
+                      aria-label="Select all notifications"
+                    >
+                      <div
+                        className={`${styles.checkbox} ${
+                          isAllFilteredSelected
+                            ? styles.checkboxChecked
+                            : isSomeFilteredSelected
+                            ? styles.checkboxIndeterminate
+                            : ""
+                        }`}
+                      >
+                        {isAllFilteredSelected && <Check size={12} strokeWidth={3} color="#FFFFFF" />}
+                        {!isAllFilteredSelected && isSomeFilteredSelected && (
+                          <span className={styles.indeterminateBar} />
+                        )}
+                      </div>
+                      <span className={styles.selectAllText}>Select all</span>
+                      {selectedIds.length > 0 && (
+                        <span className={styles.selectedCountPill}>{selectedIds.length}</span>
+                      )}
+                    </div>
 
-                {effectiveUnreadCount > 0 && (
-                  <button
-                    type="button"
-                    className={styles.markAllReadBtn}
-                    onClick={() => {
-                      markAllAsRead();
-                    }}
-                  >
-                    <CheckCheck size={14} />
-                    <span>Mark all read</span>
-                  </button>
-                )}
-              </div>
+                    <div className={styles.selectionActions}>
+                      <button
+                        type="button"
+                        className={styles.deleteSelectedBtn}
+                        onClick={handleDeleteSelected}
+                        disabled={selectedIds.length === 0}
+                        title={
+                          selectedIds.length > 0
+                            ? `Delete ${selectedIds.length} selected notification${selectedIds.length > 1 ? "s" : ""}`
+                            : "Select notifications to delete"
+                        }
+                      >
+                        <Trash2 size={13} strokeWidth={2.2} />
+                        <span>Delete{selectedIds.length > 0 ? ` (${selectedIds.length})` : ""}</span>
+                      </button>
 
-              {/* List */}
-              <div className={styles.dropdownList}>
-                {notifications.length === 0 ? (
-                  <div className={styles.dropdownEmpty}>
-                    <Inbox size={28} color="#94A3B8" />
-                    <p className={styles.dropdownEmptyTitle}>No Notifications</p>
-                    <p className={styles.dropdownEmptyDesc}>You are completely caught up!</p>
+                      <button
+                        type="button"
+                        className={styles.cancelSelectionBtn}
+                        onClick={() => {
+                          setIsSelectionMode(false);
+                          setSelectedIds([]);
+                        }}
+                        title="Cancel selection"
+                      >
+                        <X size={14} strokeWidth={2.4} />
+                        <span>Cancel</span>
+                      </button>
+                    </div>
                   </div>
                 ) : (
-                  notifications.slice(0, 6).map((item) => (
-                    <div
-                      key={item.id}
-                      className={`${styles.dropdownItem} ${!item.isRead ? styles.unreadItem : ""}`}
-                      onClick={() => {
-                        markAsRead(item.id);
-                        setIsDropdownOpen(false);
-                        let targetHref = item.actionHref;
-                        if (
-                          item.category === "orders" ||
-                          item.actionLabel === "View Order" ||
-                          item.actionLabel === "Track Delivery" ||
-                          item.actionLabel === "Track Dispatch" ||
-                          item.title?.toLowerCase().includes("order")
-                        ) {
-                          let orderId = item.metadata?.orderId;
-                          if (!orderId) {
-                            const idMatch = item.id.match(/^(?:notif-order-|notif-deliv-|ord-[a-z]+-)(.+)$/);
-                            if (idMatch && idMatch[1]) {
-                              orderId = idMatch[1].replace(/^ORD-/i, "");
-                            }
-                          }
-                          if (!orderId && targetHref) {
-                            try {
-                              const parsed = new URL(targetHref, "http://localhost");
-                              const paramId = parsed.searchParams.get("orderId") || parsed.searchParams.get("id");
-                              if (paramId) orderId = paramId.replace(/^#/, "").replace(/^ORD-/i, "");
-                            } catch {}
-                          }
-                          if (!orderId) {
-                            const match = item.title?.match(/#([A-Za-z0-9-]+)/);
-                            if (match && match[1]) {
-                              orderId = match[1].replace(/^(?:ORD|NCR)-/i, "");
-                            }
-                          }
-                          if (orderId) {
-                            targetHref = `/seller/orders/details?orderId=${encodeURIComponent(orderId)}`;
-                          }
-                        }
-                        if (targetHref) {
-                          router.push(targetHref);
-                        }
-                      }}
-                    >
-                      <div className={`${styles.dropdownIconWrapper} ${getCategoryClass(item.category)}`}>
-                        {getCategoryIcon(item.category)}
+                  <div className={styles.headerTop}>
+                    <div className={styles.headerTitleGroup}>
+                      <div className={styles.headerIconBox}>
+                        <Bell size={16} strokeWidth={2.4} />
                       </div>
-                      <div className={styles.dropdownItemContent}>
-                        <div className={styles.dropdownItemHeader}>
-                          <h5 className={styles.dropdownItemTitle}>
-                            {!item.isRead && <span className={styles.unreadDot} />}
-                            {item.title}
-                          </h5>
-                          <span
-                            className={styles.dropdownItemTime}
-                            title={item.timestamp ? new Date(item.timestamp).toLocaleString("en-IN") : undefined}
-                          >
-                            {formatNotificationTime(item.timestamp, item.timeAgo)}
-                          </span>
-                        </div>
-                        <p className={styles.dropdownItemMessage}>{item.message}</p>
-                      </div>
+                      <h4 className={styles.title}>Notifications</h4>
+                      {effectiveUnreadCount > 0 ? (
+                        <span className={styles.unreadCountPill}>
+                          {effectiveUnreadCount} New
+                        </span>
+                      ) : (
+                        <span className={styles.allReadPill}>
+                          All caught up
+                        </span>
+                      )}
                     </div>
-                  ))
+
+                    <div className={styles.headerActions}>
+                      {effectiveUnreadCount > 0 && (
+                        <button
+                          type="button"
+                          className={styles.markAllReadBtn}
+                          onClick={() => markAllAsRead()}
+                          title="Mark all notifications as read"
+                        >
+                          <CheckCheck size={14} />
+                          <span>Read all</span>
+                        </button>
+                      )}
+                      {notifications.length > 0 && (
+                        <button
+                          type="button"
+                          className={styles.clearAllBtn}
+                          onClick={() => setIsSelectionMode(true)}
+                          title="Select & delete notifications"
+                          aria-label="Select and delete notifications"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Filter Tabs */}
+                <div className={styles.tabList} role="tablist">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={activeTab === "all"}
+                    className={`${styles.tabBtn} ${activeTab === "all" ? styles.tabBtnActive : ""}`}
+                    onClick={() => setActiveTab("all")}
+                  >
+                    All
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={activeTab === "orders"}
+                    className={`${styles.tabBtn} ${activeTab === "orders" ? styles.tabBtnActive : ""}`}
+                    onClick={() => setActiveTab("orders")}
+                  >
+                    Orders
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={activeTab === "updates"}
+                    className={`${styles.tabBtn} ${activeTab === "updates" ? styles.tabBtnActive : ""}`}
+                    onClick={() => setActiveTab("updates")}
+                  >
+                    Updates
+                  </button>
+                </div>
+              </div>
+
+              {/* Notification Card List */}
+              <div className={styles.listContainer}>
+                {filteredNotifications.length === 0 ? (
+                  <div className={styles.emptyState}>
+                    <div className={styles.emptyIconBox}>
+                      <Bell size={24} strokeWidth={1.8} />
+                    </div>
+                    <h5 className={styles.emptyTitle}>All caught up!</h5>
+                    <p className={styles.emptyDesc}>
+                      You have no notifications in this category.
+                    </p>
+                  </div>
+                ) : (
+                  filteredNotifications.slice(0, 8).map((item) => {
+                    const isItemSelected = selectedIds.includes(item.id);
+                    const tagInfo = getItemTag(item);
+                    return (
+                      <div
+                        key={item.id}
+                        className={`${styles.item} ${!item.isRead ? styles.itemUnread : ""} ${
+                          isItemSelected ? styles.itemSelected : ""
+                        } ${isSelectionMode ? styles.itemInSelectionMode : ""}`}
+                        onClick={() => handleItemClick(item)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            handleItemClick(item);
+                          }
+                        }}
+                      >
+                        {/* Checkbox in selection mode */}
+                        {isSelectionMode && (
+                          <div
+                            className={styles.itemCheckboxWrapper}
+                            onClick={(e) => handleToggleSelectItem(item.id, e)}
+                            role="checkbox"
+                            aria-checked={isItemSelected}
+                            aria-label="Select notification"
+                          >
+                            <div
+                              className={`${styles.checkbox} ${
+                                isItemSelected ? styles.checkboxChecked : ""
+                              }`}
+                            >
+                              {isItemSelected && (
+                                <Check size={12} strokeWidth={3} color="#FFFFFF" />
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {renderItemIcon(item.category)}
+
+                        <div className={styles.itemBody}>
+                          <div className={styles.itemTopRow}>
+                            <h5 className={styles.itemTitle}>{item.title}</h5>
+                            <div className={styles.itemMetaRow}>
+                              <span
+                                className={styles.itemTime}
+                                title={item.timestamp ? new Date(item.timestamp).toLocaleString("en-IN") : undefined}
+                              >
+                                {formatNotificationTime(item.timestamp, item.timeAgo)}
+                              </span>
+                              {!isSelectionMode && (
+                                <>
+                                  {!item.isRead && (
+                                    <button
+                                      type="button"
+                                      className={styles.markReadSingleBtn}
+                                      onClick={(e) => handleMarkItemRead(item.id, e)}
+                                      title="Mark as read"
+                                      aria-label="Mark as read"
+                                    >
+                                      <Check size={13} strokeWidth={2.4} />
+                                    </button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    className={styles.deleteSingleBtn}
+                                    onClick={(e) => handleDeleteSingle(item.id, e)}
+                                    title="Delete notification"
+                                    aria-label="Delete notification"
+                                  >
+                                    <Trash2 size={13} strokeWidth={2.2} />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          <p className={styles.itemMessage}>{item.message}</p>
+
+                          <div className={styles.itemFooter}>
+                            <span className={`${styles.itemTag} ${getTagColorClass(tagInfo.color)}`}>
+                              {tagInfo.text}
+                            </span>
+
+                            <span className={styles.itemAction}>
+                              <span>{getItemActionText(item)}</span>
+                              <ChevronRight size={13} strokeWidth={2.4} />
+                            </span>
+                          </div>
+                        </div>
+
+                        {!item.isRead && (
+                          <span className={styles.unreadDot} title="Unread notification" />
+                        )}
+                      </div>
+                    );
+                  })
                 )}
               </div>
 
               {/* Footer */}
-              <div className={styles.dropdownFooter}>
+              <div className={styles.footer}>
                 <button
                   type="button"
-                  className={styles.viewAllBtn}
+                  className={styles.openCenterBtn}
                   onClick={() => {
                     setIsDropdownOpen(false);
                     router.push("/seller/notifications");
                   }}
                 >
                   <span>Open Notifications Center</span>
-                  <ChevronRight size={14} />
+                  <ChevronRight size={14} strokeWidth={2.4} />
                 </button>
               </div>
             </div>
