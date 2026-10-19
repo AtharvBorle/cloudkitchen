@@ -291,6 +291,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const [isProfileHoverOpen, setIsProfileHoverOpen] = useState<boolean>(false);
   const profileTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const profileWrapperRef = useRef<HTMLDivElement>(null);
 
   const handleProfileMouseEnter = () => {
     if (profileTimeoutRef.current) {
@@ -313,6 +314,27 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
     setIsProfileHoverOpen(false);
   };
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (profileWrapperRef.current && !profileWrapperRef.current.contains(e.target as Node)) {
+        closeProfileMenu();
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        closeProfileMenu();
+      }
+    };
+    if (isProfileHoverOpen) {
+      document.addEventListener("mousedown", handleOutsideClick);
+      window.addEventListener("keydown", handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isProfileHoverOpen]);
 
   const shouldHideSearch = hideSearch !== undefined ? hideSearch : false;
   const shouldHideVegToggle = hideVegToggle !== undefined ? hideVegToggle : false;
@@ -385,24 +407,17 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
   };
 
-  const handleProfileClick = () => {
+  const handleProfileClick = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
     if (onProfileClick) {
       onProfileClick();
-    } else if (session?.user) {
-      const role = (session.user as any)?.role?.toUpperCase();
-      if (role === "SELLER") {
-        router.push("/seller/dashboard");
-      } else if (role === "ADMIN" || role === "SUPERADMIN") {
-        router.push("/dashboard/admin");
-      } else if (role === "DELIVERY") {
-        router.push("/dashboard/delivery");
-      } else {
-        router.push("/settings-desktop");
-      }
-    } else {
-      router.push("/login");
+      return;
     }
-    closeProfileMenu();
+    if (profileTimeoutRef.current) {
+      clearTimeout(profileTimeoutRef.current);
+      profileTimeoutRef.current = null;
+    }
+    setIsProfileHoverOpen((prev) => !prev);
   };
 
   const handleLocationClick = () => {
@@ -919,15 +934,16 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Customer Notifications Center Bell */}
             <CustomerNotificationBell />
 
-            {/* Profile Avatar with Hover Dropdown (Desktop Only) */}
+            {/* Profile Avatar with Popover */}
             <div
               className={styles.profileWrapper}
+              ref={profileWrapperRef}
               onMouseEnter={handleProfileMouseEnter}
               onMouseLeave={handleProfileMouseLeave}
             >
               <button
                 type="button"
-                className={styles.profileAvatar}
+                className={`${styles.profileAvatar} ${isProfileHoverOpen ? styles.profileAvatarActive : ""}`}
                 onClick={handleProfileClick}
                 aria-label={session?.user ? (session.user.name || "User Profile") : "Sign In"}
                 title={session?.user ? `${session.user.name || "User"} (${session.user.email || ""})` : "Sign In / Register"}
@@ -948,15 +964,23 @@ export const Navbar: React.FC<NavbarProps> = ({
                 )}
               </button>
 
-              {/* Profile Hover Dropdown Popover */}
+              {/* Profile Popover & Blurred Backdrop */}
               {isProfileHoverOpen && (
-                <div
-                  className={styles.profileDropdown}
-                  role="menu"
-                  aria-orientation="vertical"
-                  onMouseEnter={handleProfileMouseEnter}
-                  onMouseLeave={handleProfileMouseLeave}
-                >
+                <>
+                  <div
+                    className={styles.profileBackdrop}
+                    onClick={closeProfileMenu}
+                    aria-hidden="true"
+                  />
+                  <div
+                    className={styles.profileDropdown}
+                    role="menu"
+                    aria-orientation="vertical"
+                    onMouseEnter={handleProfileMouseEnter}
+                    onMouseLeave={handleProfileMouseLeave}
+                  >
+                    {/* Upward pointer arrow pointing directly to the avatar */}
+                    <div className={styles.profileDropdownArrow} aria-hidden="true" />
                   {!session?.user ? (
                     // ================= GUEST / UNAUTHENTICATED STATE =================
                     <div className={styles.profileGuestCard}>
@@ -1282,8 +1306,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                     })()
                   )}
                 </div>
-              )}
-            </div>
+              </>
+            )}
+          </div>
           </div>
         </div>
 

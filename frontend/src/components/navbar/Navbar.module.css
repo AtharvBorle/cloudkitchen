@@ -534,26 +534,67 @@
   transform: scale(1.04);
 }
 
-/* Profile Hover Dropdown Popover */
+.profileAvatarActive {
+  border-color: #ff6b00 !important;
+  box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.2) !important;
+  transform: scale(1.04);
+}
+
+/* ================= PROFILE BACKDROP ================= */
+.profileBackdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.25);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: 998;
+  animation: profileFadeIn 0.2s ease;
+}
+
+@keyframes profileFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ================= PROFILE DROPDOWN POPOVER ================= */
 .profileDropdown {
   position: absolute;
-  top: calc(100% + 10px);
+  top: calc(100% + 12px);
   right: 0;
-  width: 255px;
+  width: 260px;
   background-color: #ffffff;
-  border-radius: 18px;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.14), 0 4px 12px rgba(0, 0, 0, 0.05);
-  border: 1px solid #f1f5f9;
+  border-radius: 20px;
+  box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.18), 0 4px 16px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e2e8f0;
   padding: 14px 12px;
   display: flex;
   flex-direction: column;
-  z-index: 350;
+  z-index: 999;
   box-sizing: border-box;
-  animation: profilePopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: dropdownPop 0.24s cubic-bezier(0.16, 1, 0.3, 1);
   transform-origin: top right;
 }
 
-@keyframes profilePopIn {
+/* Upward pointer arrow pointing directly to the trigger avatar icon */
+.profileDropdownArrow {
+  position: absolute;
+  top: -7px;
+  right: 12.5px;
+  width: 13px;
+  height: 13px;
+  background-color: #ffffff;
+  border-top: 1px solid #e2e8f0;
+  border-left: 1px solid #e2e8f0;
+  transform: rotate(45deg);
+  z-index: 1002;
+  pointer-events: none;
+}
+
+@keyframes dropdownPop {
   0% {
     opacity: 0;
     transform: translateY(-8px) scale(0.96);
@@ -1645,6 +1686,41 @@
   .profileAvatar {
     width: 34px;
     height: 34px;
+  }
+}
+
+/* ================= RESPONSIVE MOBILE PROFILE POPOVER (<=640px) ================= */
+@media (max-width: 640px) {
+  .profileDropdown {
+    position: fixed;
+    top: 58px;
+    right: 8px;
+    left: auto;
+    bottom: auto;
+    width: calc(100vw - 16px);
+    max-width: 290px;
+    border-radius: 20px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.24), 0 4px 14px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e2e8f0;
+    animation: profilePopMobile 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+    transform-origin: top right;
+  }
+
+  @keyframes profilePopMobile {
+    from {
+      opacity: 0;
+      transform: translateY(-8px) scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .profileDropdownArrow {
+    right: 14px;
+    top: -7px;
+    display: block;
   }
 }
 
