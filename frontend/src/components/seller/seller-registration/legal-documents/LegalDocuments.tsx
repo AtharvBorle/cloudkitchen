@@ -595,15 +595,6 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
             >
               {formData.identityProofFile ? (
                 <>
-                  <button
-                    type="button"
-                    className={styles.cornerPreviewBtn}
-                    onClick={(e) => handlePreviewDocument("identityProofFile", e)}
-                    title="Preview uploaded Identity Proof"
-                  >
-                    <Eye size={14} />
-                    <span>Preview</span>
-                  </button>
                   <div className={styles.uploadedIconWrap}>
                     <CheckCircle2 size={24} className={styles.successIcon} />
                   </div>
@@ -696,15 +687,6 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
             >
               {formData.fssaiLicenseFile ? (
                 <>
-                  <button
-                    type="button"
-                    className={styles.cornerPreviewBtn}
-                    onClick={(e) => handlePreviewDocument("fssaiLicenseFile", e)}
-                    title="Preview uploaded FSSAI License"
-                  >
-                    <Eye size={14} />
-                    <span>Preview</span>
-                  </button>
                   <div className={styles.uploadedIconWrap}>
                     <CheckCircle2 size={24} className={styles.successIcon} />
                   </div>
@@ -797,15 +779,6 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
             >
               {formData.utilityBillFile ? (
                 <>
-                  <button
-                    type="button"
-                    className={styles.cornerPreviewBtn}
-                    onClick={(e) => handlePreviewDocument("utilityBillFile", e)}
-                    title="Preview uploaded Electricity Bill"
-                  >
-                    <Eye size={14} />
-                    <span>Preview</span>
-                  </button>
                   <div className={styles.uploadedIconWrap}>
                     <CheckCircle2 size={24} className={styles.successIcon} />
                   </div>
