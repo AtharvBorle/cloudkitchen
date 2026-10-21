@@ -65,7 +65,7 @@ export const SELLER_NAV_ITEMS: NavItem[] = [
   { id: "bookings", label: "Bookings", icon: CalendarCheck, href: "/seller/booking" },
   { id: "delivery", label: "Delivery", icon: Truck, href: "/seller/delivery" },
   { id: "reviews", label: "Reviews & Feedback", icon: Star, href: "/seller/reviews" },
-  { id: "subscription", label: "Subscription", icon: CreditCard, href: "/seller/subscription" },
+  // { id: "subscription", label: "Subscription", icon: CreditCard, href: "/seller/subscription" }, // Commented out meal subscriptions
   { id: "support", label: "Support Tickets", icon: Headphones, href: "/seller/support" },
   { id: "profile", label: "Profile", icon: UserCircle, href: "/seller/profile" },
   { id: "offers", label: "Offers & Coupons", icon: Percent, href: "/seller/offers" },
