@@ -12,6 +12,8 @@ import {
   AlertTriangle,
   X,
   RefreshCw,
+  Eye,
+  ExternalLink,
 } from "lucide-react";
 import styles from "./LegalDocuments.module.css";
 import { readFileAsDataUrl, compressImageFile, saveSellerDraft } from "@/lib/seller-registration-store";
@@ -90,6 +92,37 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
   const [fieldSizes, setFieldSizes] = useState<Record<string, string>>({});
   const [dragActiveField, setDragActiveField] = useState<string | null>(null);
   const [oversizeModal, setOversizeModal] = useState<OversizeModalState | null>(null);
+  const [previewModal, setPreviewModal] = useState<{
+    isOpen: boolean;
+    field: "identityProofFile" | "fssaiLicenseFile" | "utilityBillFile";
+    title: string;
+    fileName: string;
+    dataUrl?: string;
+    fileSize?: string;
+  } | null>(null);
+
+  const handlePreviewDocument = (
+    field: "identityProofFile" | "fssaiLicenseFile" | "utilityBillFile",
+    e?: React.MouseEvent
+  ) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    const fileName = formData[field] || "";
+    const dataUrlField = field.replace("File", "DataUrl") as "identityProofDataUrl" | "fssaiLicenseDataUrl" | "utilityBillDataUrl";
+    const dataUrl = formData[dataUrlField] || "";
+    const fileSize = fieldSizes[field] || "";
+
+    setPreviewModal({
+      isOpen: true,
+      field,
+      title: getFieldLabel(field),
+      fileName,
+      dataUrl,
+      fileSize,
+    });
+  };
 
   const identityInputRef = useRef<HTMLInputElement>(null);
   const fssaiInputRef = useRef<HTMLInputElement>(null);
@@ -381,14 +414,25 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
             </div>
             <div className={styles.docActionSlot}>
               {formData.identityProofFile ? (
-                <button
-                  type="button"
-                  className={styles.removeFileBtn}
-                  onClick={(e) => handleRemoveFile("identityProofFile", e)}
-                  title="Remove file"
-                >
-                  <X size={15} />
-                </button>
+                <div className={styles.mobileActionGroup}>
+                  <button
+                    type="button"
+                    className={styles.mobilePreviewBtn}
+                    onClick={(e) => handlePreviewDocument("identityProofFile", e)}
+                    title="Preview uploaded Identity Proof"
+                  >
+                    <Eye size={14} />
+                    <span>View</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.removeFileBtn}
+                    onClick={(e) => handleRemoveFile("identityProofFile", e)}
+                    title="Remove file"
+                  >
+                    <X size={15} />
+                  </button>
+                </div>
               ) : (
                 <div className={styles.mobileUploadBtn}>
                   <UploadCloud size={16} />
@@ -429,14 +473,25 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
             </div>
             <div className={styles.docActionSlot}>
               {formData.fssaiLicenseFile ? (
-                <button
-                  type="button"
-                  className={styles.removeFileBtn}
-                  onClick={(e) => handleRemoveFile("fssaiLicenseFile", e)}
-                  title="Remove file"
-                >
-                  <X size={15} />
-                </button>
+                <div className={styles.mobileActionGroup}>
+                  <button
+                    type="button"
+                    className={styles.mobilePreviewBtn}
+                    onClick={(e) => handlePreviewDocument("fssaiLicenseFile", e)}
+                    title="Preview uploaded FSSAI License"
+                  >
+                    <Eye size={14} />
+                    <span>View</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.removeFileBtn}
+                    onClick={(e) => handleRemoveFile("fssaiLicenseFile", e)}
+                    title="Remove file"
+                  >
+                    <X size={15} />
+                  </button>
+                </div>
               ) : (
                 <div className={styles.mobileUploadBtn}>
                   <UploadCloud size={16} />
@@ -477,14 +532,25 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
             </div>
             <div className={styles.docActionSlot}>
               {formData.utilityBillFile ? (
-                <button
-                  type="button"
-                  className={styles.removeFileBtn}
-                  onClick={(e) => handleRemoveFile("utilityBillFile", e)}
-                  title="Remove file"
-                >
-                  <X size={15} />
-                </button>
+                <div className={styles.mobileActionGroup}>
+                  <button
+                    type="button"
+                    className={styles.mobilePreviewBtn}
+                    onClick={(e) => handlePreviewDocument("utilityBillFile", e)}
+                    title="Preview uploaded Electricity Bill"
+                  >
+                    <Eye size={14} />
+                    <span>View</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.removeFileBtn}
+                    onClick={(e) => handleRemoveFile("utilityBillFile", e)}
+                    title="Remove file"
+                  >
+                    <X size={15} />
+                  </button>
+                </div>
               ) : (
                 <div className={styles.mobileUploadBtn}>
                   <UploadCloud size={16} />
@@ -529,6 +595,15 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
             >
               {formData.identityProofFile ? (
                 <>
+                  <button
+                    type="button"
+                    className={styles.cornerPreviewBtn}
+                    onClick={(e) => handlePreviewDocument("identityProofFile", e)}
+                    title="Preview uploaded Identity Proof"
+                  >
+                    <Eye size={14} />
+                    <span>Preview</span>
+                  </button>
                   <div className={styles.uploadedIconWrap}>
                     <CheckCircle2 size={24} className={styles.successIcon} />
                   </div>
@@ -537,6 +612,15 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
                     <p className={styles.fileStatus}>Document verified and ready</p>
                   </div>
                   <div className={styles.dropzoneActions}>
+                    <button
+                      type="button"
+                      className={styles.actionPreviewBtn}
+                      onClick={(e) => handlePreviewDocument("identityProofFile", e)}
+                      title="Preview uploaded Identity Proof"
+                    >
+                      <Eye size={14} />
+                      <span>Preview</span>
+                    </button>
                     <button
                       type="button"
                       className={styles.reuploadBtn}
@@ -612,14 +696,32 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
             >
               {formData.fssaiLicenseFile ? (
                 <>
+                  <button
+                    type="button"
+                    className={styles.cornerPreviewBtn}
+                    onClick={(e) => handlePreviewDocument("fssaiLicenseFile", e)}
+                    title="Preview uploaded FSSAI License"
+                  >
+                    <Eye size={14} />
+                    <span>Preview</span>
+                  </button>
                   <div className={styles.uploadedIconWrap}>
                     <CheckCircle2 size={24} className={styles.successIcon} />
                   </div>
                   <div className={styles.fileInfoGroup}>
                     <p className={styles.fileName}>{formData.fssaiLicenseFile}</p>
-                    <p className={styles.fileStatus}>Document verified and ready</p>
+                    <p className={styles.fileStatus}>Document uploaded and ready</p>
                   </div>
                   <div className={styles.dropzoneActions}>
+                    <button
+                      type="button"
+                      className={styles.actionPreviewBtn}
+                      onClick={(e) => handlePreviewDocument("fssaiLicenseFile", e)}
+                      title="Preview uploaded FSSAI License"
+                    >
+                      <Eye size={14} />
+                      <span>Preview</span>
+                    </button>
                     <button
                       type="button"
                       className={styles.reuploadBtn}
@@ -695,6 +797,15 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
             >
               {formData.utilityBillFile ? (
                 <>
+                  <button
+                    type="button"
+                    className={styles.cornerPreviewBtn}
+                    onClick={(e) => handlePreviewDocument("utilityBillFile", e)}
+                    title="Preview uploaded Electricity Bill"
+                  >
+                    <Eye size={14} />
+                    <span>Preview</span>
+                  </button>
                   <div className={styles.uploadedIconWrap}>
                     <CheckCircle2 size={24} className={styles.successIcon} />
                   </div>
@@ -703,6 +814,15 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
                     <p className={styles.fileStatus}>Document verified and ready</p>
                   </div>
                   <div className={styles.dropzoneActions}>
+                    <button
+                      type="button"
+                      className={styles.actionPreviewBtn}
+                      onClick={(e) => handlePreviewDocument("utilityBillFile", e)}
+                      title="Preview uploaded Electricity Bill"
+                    >
+                      <Eye size={14} />
+                      <span>Preview</span>
+                    </button>
                     <button
                       type="button"
                       className={styles.reuploadBtn}
@@ -922,6 +1042,147 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
           </button>
         </div>
       </form>
+
+      {/* Document View / Preview Modal */}
+      {previewModal && previewModal.isOpen && (
+        <div
+          className={styles.modalOverlay}
+          onClick={() => setPreviewModal(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className={styles.previewModalCard}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.previewModalHeader}>
+              <div className={styles.previewModalHeaderLeft}>
+                <div className={styles.previewIconSquircle}>
+                  {previewModal.field === "fssaiLicenseFile" ? (
+                    <Shield size={20} className={styles.previewHeaderIcon} />
+                  ) : previewModal.field === "identityProofFile" ? (
+                    <FileText size={20} className={styles.previewHeaderIcon} />
+                  ) : (
+                    <Zap size={20} className={styles.previewHeaderIcon} />
+                  )}
+                </div>
+                <div className={styles.previewHeaderTextGroup}>
+                  <h3 className={styles.previewModalTitle}>{previewModal.title}</h3>
+                  <div className={styles.previewModalSubtitleRow}>
+                    <span className={styles.previewModalFileName} title={previewModal.fileName}>
+                      {previewModal.fileName}
+                    </span>
+                    {previewModal.fileSize && (
+                      <span className={styles.previewModalFileSize}>{previewModal.fileSize}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className={styles.previewModalHeaderActions}>
+                {previewModal.dataUrl && (
+                  <button
+                    type="button"
+                    className={styles.previewExternalBtn}
+                    onClick={() => {
+                      if (previewModal.dataUrl) {
+                        const isPdfDoc = Boolean(
+                          (previewModal.fileName && /\.pdf$/i.test(previewModal.fileName)) ||
+                          previewModal.dataUrl.startsWith("data:application/pdf")
+                        );
+                        const win = window.open();
+                        if (win) {
+                          if (isPdfDoc) {
+                            win.document.write(
+                              `<iframe src="${previewModal.dataUrl}" frameborder="0" style="border:0; top:0; left:0; bottom:0; right:0; width:100%; height:100%;" allowfullscreen></iframe>`
+                            );
+                          } else {
+                            win.document.write(
+                              `<html><body style="margin:0; background:#0f172a; display:flex; align-items:center; justify-content:center; min-height:100vh;"><img src="${previewModal.dataUrl}" style="max-width:100%; max-height:100vh; object-fit:contain;"/></body></html>`
+                            );
+                          }
+                          win.document.title = previewModal.fileName;
+                        }
+                      }
+                    }}
+                    title="Open full size in new tab"
+                  >
+                    <ExternalLink size={14} />
+                    <span>Full Screen</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className={styles.modalCloseBtn}
+                  onClick={() => setPreviewModal(null)}
+                  title="Close preview"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            <div className={styles.previewModalBody}>
+              <div className={styles.previewContentBox}>
+                {previewModal.dataUrl ? (
+                  Boolean(
+                    (previewModal.fileName && /\.pdf$/i.test(previewModal.fileName)) ||
+                    previewModal.dataUrl.startsWith("data:application/pdf")
+                  ) ? (
+                    <div className={styles.pdfContainer}>
+                      <iframe
+                        src={previewModal.dataUrl}
+                        title={previewModal.fileName}
+                        className={styles.pdfIframe}
+                      />
+                    </div>
+                  ) : (
+                    <div className={styles.imageContainer}>
+                      <img
+                        src={previewModal.dataUrl}
+                        alt={previewModal.fileName}
+                        className={styles.previewImg}
+                      />
+                    </div>
+                  )
+                ) : (
+                  <div className={styles.fallbackPreview}>
+                    <FileText size={48} className={styles.fallbackIcon} />
+                    <p className={styles.fallbackFileName}>{previewModal.fileName}</p>
+                    <p className={styles.fallbackHint}>
+                      Document ready for submission. Click below to replace with a new file if needed.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className={styles.previewModalFooter}>
+              <button
+                type="button"
+                className={styles.previewChangeBtn}
+                onClick={() => {
+                  const fieldToChange = previewModal.field;
+                  setPreviewModal(null);
+                  setTimeout(() => {
+                    getFieldRef(fieldToChange).current?.click();
+                  }, 60);
+                }}
+              >
+                <RefreshCw size={14} />
+                <span>Replace / Change File</span>
+              </button>
+              <button
+                type="button"
+                className={styles.previewCloseBtn}
+                onClick={() => setPreviewModal(null)}
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ========================================================= */}
       {/* OVERSIZE WARNING MODAL POPUP                              */}
