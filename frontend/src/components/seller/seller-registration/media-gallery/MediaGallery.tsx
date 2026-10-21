@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus, X, ArrowRight, ImageIcon, AlertTriangle } from "lucide-react";
+import { Plus, X, ArrowRight, ImageIcon, AlertTriangle, Camera } from "lucide-react";
 import styles from "./MediaGallery.module.css";
 import {
   compressImageFile,
@@ -9,6 +9,7 @@ import {
   getSellerDraft,
 } from "@/lib/seller-registration-store";
 import { useRoomModule } from "@/context/RoomModuleContext";
+import CameraCaptureModal from "@/app/components/CameraCaptureModal";
 
 export interface MediaGalleryData {
   kitchenPhotos: (string | null)[];
@@ -63,6 +64,7 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
   const [oversizeModal, setOversizeModal] = useState<OversizeModalState | null>(null);
   const [dragTarget, setDragTarget] = useState<string | null>(null);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [cameraSlot, setCameraSlot] = useState<{ category: "kitchen" | "cuisine"; index: number } | null>(null);
 
   const { isRoomEnabled } = useRoomModule();
   const sellerDraft = getSellerDraft();
@@ -100,6 +102,21 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
   const triggerUpload = (category: "kitchen" | "cuisine" | "room", index: number) => {
     const el = document.getElementById(`${category}-media-input-${index}`) as HTMLInputElement;
     if (el) el.click();
+  };
+
+  const handleSlotClick = (category: "kitchen" | "cuisine" | "room", index: number) => {
+    if (category === "kitchen" || category === "cuisine") {
+      setCameraSlot({ category, index });
+    } else {
+      triggerUpload(category, index);
+    }
+  };
+
+  const handleCameraCapture = async (file: File) => {
+    if (!cameraSlot) return;
+    const { category, index } = cameraSlot;
+    setCameraSlot(null);
+    await processFiles(category, index, [file]);
   };
 
   const processFiles = async (
@@ -323,7 +340,7 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
                       } ${
                         hasSubmitted && !isKitchenValid && !kitchenPhotos[idx] ? styles.mobileSlotError : ""
                       }`}
-                      onClick={() => triggerUpload("kitchen", idx)}
+                      onClick={() => handleSlotClick("kitchen", idx)}
                     >
                       {kitchenPhotos[idx] ? (
                         <>
@@ -343,8 +360,8 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
                         </>
                       ) : idx === 0 ? (
                         <div className={styles.uploadPrompt}>
-                          <Plus size={16} className={styles.orangePlus} />
-                          <span className={styles.uploadText}>Upload</span>
+                          <Camera size={16} className={styles.orangePlus} />
+                          <span className={styles.uploadText}>Add photo</span>
                         </div>
                       ) : (
                         <Plus size={16} className={styles.grayPlus} />
@@ -377,7 +394,7 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
                       className={`${styles.mobileSlot} ${
                         hasSubmitted && !isCuisineValid && !cuisinePhotos[idx] ? styles.mobileSlotError : ""
                       }`}
-                      onClick={() => triggerUpload("cuisine", idx)}
+                      onClick={() => handleSlotClick("cuisine", idx)}
                     >
                       {cuisinePhotos[idx] ? (
                         <>
@@ -486,7 +503,7 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
                       } ${
                         hasSubmitted && !isKitchenValid && !kitchenPhotos[idx] ? styles.desktopPhotoBoxError : ""
                       }`}
-                      onClick={() => triggerUpload("kitchen", idx)}
+                      onClick={() => handleSlotClick("kitchen", idx)}
                       onDragOver={(e) => handleDragOver(e, key)}
                       onDragLeave={handleDragLeave}
                       onDrop={(e) => handleDrop("kitchen", idx, e)}
@@ -509,7 +526,7 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
                         </>
                       ) : (
                         <>
-                          <ImageIcon className={styles.photoIcon} />
+                          <Camera className={styles.photoIcon} />
                           <p className={styles.photoText}>Add photo</p>
                         </>
                       )}
@@ -547,7 +564,7 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
                       } ${
                         hasSubmitted && !isCuisineValid && !cuisinePhotos[idx] ? styles.desktopPhotoBoxError : ""
                       }`}
-                      onClick={() => triggerUpload("cuisine", idx)}
+                      onClick={() => handleSlotClick("cuisine", idx)}
                       onDragOver={(e) => handleDragOver(e, key)}
                       onDragLeave={handleDragLeave}
                       onDrop={(e) => handleDrop("cuisine", idx, e)}
@@ -570,7 +587,7 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
                         </>
                       ) : (
                         <>
-                          <ImageIcon className={styles.photoIcon} />
+                          <Camera className={styles.photoIcon} />
                           <p className={styles.photoText}>Add photo</p>
                         </>
                       )}
@@ -728,6 +745,15 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Camera Capture Modal with Geolocation */}
+      {cameraSlot && (
+        <CameraCaptureModal
+          onCapture={handleCameraCapture}
+          onClose={() => setCameraSlot(null)}
+          skipWatermark={false}
+        />
       )}
     </div>
   );
