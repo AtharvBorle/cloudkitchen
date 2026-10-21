@@ -42,7 +42,7 @@ export const RESPONSIVE_SELLER_NAV_ITEMS: NavItemConfig[] = [
   { id: "bookings", label: "Bookings", icon: CalendarCheck, href: "/seller/booking" },
   { id: "delivery", label: "Delivery & Riders", icon: Truck, href: "/seller/delivery" },
   { id: "reviews", label: "Reviews & Feedback", icon: Star, href: "/seller/reviews" },
-  { id: "subscription", label: "Meal Subscriptions", icon: CreditCard, href: "/seller/subscription" },
+  // { id: "subscription", label: "Meal Subscriptions", icon: CreditCard, href: "/seller/subscription" }, // Commented out meal subscriptions
   { id: "support", label: "Support Tickets", icon: Headphones, href: "/seller/support" },
   { id: "profile", label: "Seller Profile", icon: UserCircle, href: "/seller/profile" },
   { id: "offers", label: "Offers & Coupons", icon: Percent, href: "/seller/offers" },
