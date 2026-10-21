@@ -1375,42 +1375,45 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
                                   order.cancelledBy === "USER" ||
                                   (Boolean(order.cancellationReason) && /cancelled by (customer|user|you)/i.test(order.cancellationReason || ""))
                                 );
-                                return (
-                                  <div>
-                                    <div
-                                      className={`${styles.statusBadge} ${getStatusBadgeClass(
-                                        order.status
-                                      )}`}
-                                      style={isUserCancelled ? { background: "#FEE2E2", color: "#991B1B", border: "1px solid #FECACA" } : undefined}
-                                      title={isUserCancelled ? `Cancelled by customer${order.cancellationReason ? `: ${order.cancellationReason}` : ""}` : undefined}
-                                    >
-                                      <span className={styles.statusDot} style={isUserCancelled ? { background: "#EF4444" } : undefined} />
-                                      <span className={styles.statusLabel}>{isUserCancelled ? "Cancelled by User" : order.status}</span>
-                                    </div>
-                                    {isUserCancelled && order.cancellationReason && (
+                                if (isUserCancelled) {
+                                  return (
+                                    <div className={styles.statusContainer}>
                                       <div
-                                        style={{
-                                          fontSize: "0.72rem",
-                                          color: "#DC2626",
-                                          marginTop: "2px",
-                                          maxWidth: "140px",
-                                          whiteSpace: "nowrap",
-                                          overflow: "hidden",
-                                          textOverflow: "ellipsis",
-                                        }}
-                                        title={order.cancellationReason}
+                                        className={styles.userCancelledBadge}
+                                        title={order.cancellationReason ? `Cancelled by customer: ${order.cancellationReason}` : "Cancelled by customer"}
                                       >
-                                        {order.cancellationReason}
+                                        <span className={styles.userCancelledDot} />
+                                        <span className={styles.statusLabel}>Cancelled by User</span>
                                       </div>
-                                    )}
+                                      {order.cancellationReason && (
+                                        <div
+                                          className={styles.userCancelledReason}
+                                          title={`Reason: ${order.cancellationReason}`}
+                                        >
+                                          {order.cancellationReason}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                }
+                                return (
+                                  <div
+                                    className={`${styles.statusBadge} ${getStatusBadgeClass(
+                                      order.status
+                                    )}`}
+                                  >
+                                    <span className={styles.statusDot} />
+                                    <span className={styles.statusLabel}>{order.status}</span>
                                   </div>
                                 );
                               })()
                             )}
                           </td>
                           <td className={styles.dateTimeCell}>
-                            <div className={styles.datePrimary}>{order.date}</div>
-                            <div className={styles.timeSecondary}>{order.time}</div>
+                            <div className={styles.dateTimeWrapper}>
+                              <div className={styles.datePrimary}>{order.date}</div>
+                              <div className={styles.timeSecondary}>{order.time}</div>
+                            </div>
                           </td>
                           <td style={{ textAlign: "right" }} onClick={(e) => e.stopPropagation()}>
                             <div className={styles.actionBtnGroup}>
