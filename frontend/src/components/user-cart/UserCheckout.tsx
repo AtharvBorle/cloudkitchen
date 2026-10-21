@@ -488,15 +488,8 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
         calculatedDisc = Number(matchingOffer.discountAmount || (matchingOffer.discountType === "FLAT" ? matchingOffer.discountValue : 0) || 0);
       }
 
-      if (calculatedDisc >= eligibleSub || calculatedDisc >= currentSubtotal) {
-        setAppliedCoupon(null);
-        setAppliedPromo(null);
-        setDiscountPercent(0);
-        showToast(
-          `Coupon "${matchingOffer.code}" cannot be applied as the discount (₹${calculatedDisc}) cannot reduce the payable amount to ₹0. Cart value must be greater than the discount amount.`
-        );
-        return;
-      }
+      // Cap discount at eligibleSub, allowing up to 100% discount
+      calculatedDisc = Math.min(calculatedDisc, eligibleSub);
     }
 
     setIsValidatingPromo(true);
@@ -919,15 +912,7 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
                                 showToast(offer.ineligibilityReason || `Coupon "${offer.code}" is not applicable to this order.`);
                                 return;
                               }
-                              if (exceedsSubtotal) {
-                                showToast(
-                                  isFlat
-                                    ? `Coupon "${offer.code}" cannot be applied as the discount (₹${flatAmt}) cannot reduce the payable amount to ₹0. Cart value must exceed ₹${flatAmt}.`
-                                    : `Coupon "${offer.code}" cannot be applied as the discount cannot reduce the payable amount to ₹0.`,
-                                  "error"
-                                );
-                                return;
-                              }
+                              // Allow 100% discount coupon application
                               handleApplyPromo(offer.code);
                             }
                           }}
@@ -988,15 +973,7 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
                                     showToast(offer.ineligibilityReason || `Coupon "${offer.code}" is not applicable to this order.`);
                                     return;
                                   }
-                                  if (exceedsSubtotal) {
-                                    showToast(
-                                      isFlat
-                                        ? `Coupon "${offer.code}" cannot be applied as the discount (₹${flatAmt}) cannot reduce the payable amount to ₹0. Cart value must exceed ₹${flatAmt}.`
-                                        : `Coupon "${offer.code}" cannot be applied as the discount cannot reduce the payable amount to ₹0.`,
-                                      "error"
-                                    );
-                                    return;
-                                  }
+                                  // Allow 100% discount coupon application
                                   handleApplyPromo(offer.code);
                                 }}
                                 disabled={isValidatingPromo || !isEligible}

@@ -94,6 +94,119 @@ export const createSubscriptionOrder = async (req: Request) => {
         priceAmount = Math.max(0, priceAmount - discount);
     }
 
+    // When 100% coupon is applied (amount is 0), bypass Razorpay and activate directly
+    if (priceAmount <= 0) {
+        const durationMonths = plan.durationMonths || 1;
+        const planCategory = plan.category || "BOTH";
+
+        const latestActiveSub = await db.subscription.findFirst({
+            where: {
+                sellerId: sellerProfile.id,
+                status: "ACTIVE",
+                validUntil: {
+                    gt: new Date()
+                },
+                plan: {
+                    category: {
+                        in: planCategory === "BOTH" ? ["FOOD", "PROPERTY", "BOTH"] : [planCategory, "BOTH"]
+                    }
+                }
+            },
+            orderBy: {
+                validUntil: "desc"
+            }
+        });
+
+        const baseDate = latestActiveSub ? new Date(latestActiveSub.validUntil) : new Date();
+        const validUntil = new Date(baseDate);
+        validUntil.setMonth(validUntil.getMonth() + durationMonths);
+
+        const shortFreeId = crypto.randomBytes(6).toString("hex");
+        const newSubscription = await (db as any).subscription.create({
+            data: {
+                sellerId: sellerProfile.id,
+                planId: planId,
+                status: "ACTIVE",
+                amount: 0,
+                validUntil: validUntil,
+                razorpayOrderId: `free_${shortFreeId}`,
+                razorpayPaymentId: `free_pay_${shortFreeId}`,
+                appliedCoupon: couponCode ? couponCode.toUpperCase() : null
+            }
+        });
+
+        // Update seller businessCategory and verification statuses if applicable
+        let targetCategory = sellerProfile.businessCategory;
+
+        if (planCategory === "BOTH") {
+            targetCategory = "BOTH";
+        } else if (planCategory === "FOOD" && sellerProfile.businessCategory === "PROPERTY") {
+            targetCategory = "BOTH";
+        } else if (planCategory === "PROPERTY" && sellerProfile.businessCategory === "FOOD") {
+            targetCategory = "BOTH";
+        }
+
+        const updateData: any = {};
+        if (targetCategory !== sellerProfile.businessCategory) {
+            updateData.businessCategory = targetCategory;
+        }
+
+        if (sellerProfile.verificationStatus === "APPROVED") {
+            if ((planCategory === "FOOD" || planCategory === "BOTH") && sellerProfile.foodVerificationStatus !== "APPROVED") {
+                updateData.foodVerificationStatus = "APPROVED";
+            }
+            if ((planCategory === "PROPERTY" || planCategory === "BOTH") && sellerProfile.propertyVerificationStatus !== "APPROVED") {
+                updateData.propertyVerificationStatus = "APPROVED";
+            }
+        }
+
+        if (Object.keys(updateData).length > 0) {
+            await db.sellerProfile.update({
+                where: { id: sellerProfile.id },
+                data: updateData
+            });
+        }
+
+        // If a coupon was used, safely increment its usage count
+        if (couponCode) {
+            try {
+                await db.subscriptionCoupon.update({
+                    where: { code: couponCode.toUpperCase() },
+                    data: { currentUsage: { increment: 1 } }
+                });
+            } catch (e) {
+                console.error("Failed to increment coupon usage:", e);
+            }
+        }
+
+        try {
+            if (session.user.email) {
+                sendSellerSubscriptionInvoiceEmail({
+                    sellerName: session.user.name,
+                    sellerEmail: session.user.email,
+                    businessName: sellerProfile.businessName || "Your Kitchen",
+                    planName: plan.name,
+                    planCategory: plan.category || "General",
+                    amountPaid: 0,
+                    invoiceNumber: `INV-${newSubscription.id.substring(0, 8).toUpperCase()}`,
+                    invoiceDate: new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+                    validUntil: validUntil.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+                    paymentId: "100% Coupon (Free)",
+                }).catch((err) => console.error("[EmailService] Failed to send subscription invoice email:", err));
+            }
+        } catch (e) {
+            console.error("Error dispatching subscription invoice email:", e);
+        }
+
+        return {
+            isFree: true,
+            orderId: `free_${shortFreeId}`,
+            amount: 0,
+            message: "100% discount applied! Subscription activated successfully.",
+            subscription: newSubscription
+        };
+    }
+
     const razorpay = new Razorpay({
         key_id: process.env.RAZORPAY_KEY_ID || "",
         key_secret: process.env.RAZORPAY_KEY_SECRET || "",
@@ -132,16 +245,29 @@ export const verifySubscriptionPayment = async (req: Request) => {
     const body = await req.json();
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, amountPaid } = body;
 
-    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-        throw new ApiError("Payment verification details are incomplete.", 400);
-    }
-
     const sellerProfile = await db.sellerProfile.findUnique({
         where: { userId: session.user.id }
     });
 
     if (!sellerProfile) {
         throw new ApiError("Seller profile could not be found.", 404);
+    }
+
+    // If order was a free order (100% coupon)
+    if (razorpay_order_id && razorpay_order_id.startsWith("free_")) {
+        const existingSub = await db.subscription.findFirst({
+            where: {
+                sellerId: sellerProfile.id,
+                razorpayOrderId: razorpay_order_id
+            }
+        });
+        if (existingSub) {
+            return { subscription: existingSub, message: "Subscription activated successfully." };
+        }
+    }
+
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+        throw new ApiError("Payment verification details are incomplete.", 400);
     }
 
     const secret = process.env.RAZORPAY_KEY_SECRET || "";

@@ -220,6 +220,17 @@ export default function ResponsiveSellerPayment() {
         return;
       }
 
+      // 100% coupon applied - free activation bypasses Razorpay gateway
+      if (orderData.isFree || orderData.amount === 0) {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("subscription-updated"));
+        }
+        alert("Subscription activated successfully!");
+        router.push("/seller/dashboard");
+        setIsProcessingPayment(false);
+        return;
+      }
+
       const loaded = await loadRazorpayScript();
       if (!loaded) {
         alert("Failed to initialize Razorpay");

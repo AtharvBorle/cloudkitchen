@@ -792,23 +792,12 @@ export const validateCouponForCart = async (req: Request) => {
         discountLabel = `${pct}% OFF`;
     } else {
         const flatAmt = coupon.discountAmount || 0;
-        if (flatAmt >= baseDiscountSubtotal || flatAmt >= numSubtotal) {
-            throw new ApiError(
-                `Coupon "${coupon.code}" cannot be applied as the discount (₹${flatAmt}) cannot reduce the payable amount to ₹0. Cart value must exceed ₹${flatAmt}.`,
-                400
-            );
-        }
         calculatedDiscount = flatAmt;
         discountLabel = `₹${flatAmt} OFF`;
     }
 
-    // Ensure coupon discount strictly prevents final payable amount from becoming ₹0
-    if (calculatedDiscount >= baseDiscountSubtotal || (numSubtotal - calculatedDiscount) <= 0) {
-        throw new ApiError(
-            `Coupon "${coupon.code}" cannot be applied as the discount (₹${calculatedDiscount}) cannot reduce the payable amount to ₹0. Cart value must be greater than the discount amount.`,
-            400
-        );
-    }
+    // Cap discount at subtotal, allowing up to 100% discount
+    calculatedDiscount = Math.min(calculatedDiscount, numSubtotal);
 
     return {
         id: coupon.id,
