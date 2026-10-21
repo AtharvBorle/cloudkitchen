@@ -101,10 +101,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ tracking
             throw new ApiError("Shop is currently inactive (No active subscription)", 404);
         }
 
-        if (!isFoodActive) {
+        if (!isFoodActive && !isApproved) {
             seller.foodItems = [];
         }
-        if (!isPropertyActive) {
+        if (!isPropertyActive && !isApproved) {
             seller.rooms = [];
         }
 

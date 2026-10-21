@@ -133,7 +133,9 @@ export const getPublicExploreData = unstable_cache(
             const resolvedLat = seller.latitude ?? defaultCoords?.lat ?? null;
             const resolvedLng = seller.longitude ?? defaultCoords?.lng ?? null;
 
-            activeSellersList.push({
+            const availableDishes = (seller.foodItems || []).filter((i: any) => i.isAvailable !== false);
+            if (availableDishes.length > 0) {
+                activeSellersList.push({
                 id: seller.id,
                 name: seller.businessName || seller.user.name,
                 trackingId: seller.trackingId,
@@ -155,6 +157,7 @@ export const getPublicExploreData = unstable_cache(
                 deliveryRadiusKm: seller.deliveryRadiusKm ?? 5.0,
                 servedPincodes: seller.servedPincodes.map(p => p.pincode),
             });
+            }
 
             return seller.foodItems.map(item => {
                 const itemRatingsList = item.itemRatings || [];

@@ -430,6 +430,38 @@ export function LocationProvider({ children }: LocationProviderProps) {
           isDefault: true,
         });
       } else {
+        // If user has no saved address in addressList, attempt to fetch user's profile location
+        try {
+          const defLocRes = await fetchApi("/api/user/location/default");
+          if (defLocRes.ok) {
+            const defLocData = await defLocRes.json();
+            const defLoc = defLocData?.data || defLocData;
+            if (defLoc && defLoc.pincode) {
+              const pinCoords = getPincodeCoordinates(defLoc.pincode);
+              const resolvedLat = (defLoc.latitude != null && !isNaN(Number(defLoc.latitude)))
+                ? Number(defLoc.latitude)
+                : (pinCoords?.lat ?? null);
+              const resolvedLng = (defLoc.longitude != null && !isNaN(Number(defLoc.longitude)))
+                ? Number(defLoc.longitude)
+                : (pinCoords?.lng ?? null);
+
+              setDefaultAddress({
+                id: defLoc.id || "default-user-location",
+                type: defLoc.type || "Current Location",
+                pincode: defLoc.pincode,
+                locality: defLoc.locality || pinCoords?.locality || `PIN ${defLoc.pincode}`,
+                city: defLoc.city || pinCoords?.city || "Pune",
+                street: defLoc.street || undefined,
+                latitude: resolvedLat,
+                longitude: resolvedLng,
+                isDefault: true,
+              });
+              setIsLoading(false);
+              return;
+            }
+          }
+        } catch {}
+
         // If user has no saved address, attempt GPS detection once
         setDefaultAddress(null);
         if (!hasAttemptedGpsRef.current && !shouldDisableLocation && !hasManuallySelected) {
