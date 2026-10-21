@@ -382,6 +382,7 @@ export const getSellerById = async (id: string) => {
                     openTime: true,
                     closeTime: true,
                     operationalHours: true,
+                    availableDays: true,
                     isAvailable: true,
                     stockQuantity: true
                 }

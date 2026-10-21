@@ -660,3 +660,189 @@
   transform: scale(0.98);
 }
 
+
+
+/* ==========================================================================
+   Responsive Weekly Timing & Operational Hours Calendar Styles
+   ========================================================================== */
+.timingSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 14px 14px;
+  box-sizing: border-box;
+  margin-top: 4px;
+}
+
+.timingHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.timingSectionTitle {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.timingSectionSubtitle {
+  font-size: 0.76rem;
+  color: #64748B;
+  margin: 0;
+}
+
+.copyTimingsBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  background-color: #FFF7ED;
+  color: #EA580C;
+  border: 1px solid #FFEDD5;
+  border-radius: 8px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.copyTimingsBtn:hover {
+  background-color: #FFEDD5;
+}
+
+.timingDaysList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.timingDayCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #F1F5F9;
+  background-color: #FAFAFA;
+}
+
+.timingDayCardOpen {
+  background-color: #FFFFFF;
+  border-color: #E2E8F0;
+}
+
+.timingDayCardClosed {
+  background-color: #F8FAFC;
+  opacity: 0.8;
+}
+
+.timingCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.timingDayLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.timingDayName {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.timingStatusBadge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+
+.statusOpen {
+  background-color: #ECFDF5;
+  color: #059669;
+  border: 1px solid #A7F3D0;
+}
+
+.statusClosed {
+  background-color: #F1F5F9;
+  color: #64748B;
+  border: 1px solid #E2E8F0;
+}
+
+.timingTimeRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.timePickerGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+
+.timePickerLabel {
+  font-size: 0.72rem;
+  color: #64748B;
+  font-weight: 500;
+}
+
+.timeSelect {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid #CBD5E1;
+  background-color: #FFFFFF;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #0F172A;
+  outline: none;
+  cursor: pointer;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.timeSelect:focus {
+  border-color: #F97316;
+}
+
+.timeSelect:disabled {
+  background-color: #F1F5F9;
+  color: #94A3B8;
+  cursor: not-allowed;
+}
+
+.timeSeparator {
+  color: #94A3B8;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding-top: 14px;
+}
+
+.closedMessage {
+  font-size: 0.78rem;
+  color: #64748B;
+  font-style: italic;
+  padding: 2px 0;
+}

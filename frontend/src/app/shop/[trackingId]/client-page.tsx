@@ -19,49 +19,10 @@ import {
   getPincodeCoordinates,
   formatDistance,
 } from "@/lib/geo-distance";
+import { isItemAvailableNow } from "@/lib/item-timing";
 
 const isCurrentlyOpen = (item: any) => {
-    const now = new Date();
-    const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    const currentDayStr = daysOfWeek[now.getDay()];
-
-    if (item.operationalHours) {
-        try {
-            const hours = typeof item.operationalHours === 'string'
-                ? JSON.parse(item.operationalHours)
-                : item.operationalHours;
-            const dayHours = hours[currentDayStr];
-            if (dayHours) {
-                if (!dayHours.isOpen) return false;
-                if (!dayHours.openTime || !dayHours.closeTime) return true;
-
-                const currentHours = now.getHours().toString().padStart(2, '0');
-                const currentMinutes = now.getMinutes().toString().padStart(2, '0');
-                const currentTimeStr = `${currentHours}:${currentMinutes}`;
-                const openTime = dayHours.openTime;
-                const closeTime = dayHours.closeTime;
-                if (openTime <= closeTime) {
-                    return currentTimeStr >= openTime && currentTimeStr <= closeTime;
-                } else {
-                    return currentTimeStr >= openTime || currentTimeStr <= closeTime;
-                }
-            }
-        } catch (e) {
-            console.error("Failed to parse operationalHours on client", e);
-        }
-    }
-
-    if (!item.openTime || !item.closeTime) return true;
-    const currentHours = now.getHours().toString().padStart(2, '0');
-    const currentMinutes = now.getMinutes().toString().padStart(2, '0');
-    const currentTimeStr = `${currentHours}:${currentMinutes}`;
-    const openTime = item.openTime;
-    const closeTime = item.closeTime;
-    if (openTime <= closeTime) {
-        return currentTimeStr >= openTime && currentTimeStr <= closeTime;
-    } else {
-        return currentTimeStr >= openTime || currentTimeStr <= closeTime;
-    }
+    return isItemAvailableNow(item).isAvailable;
 };
 
 export default function PublicShopClient({ trackingId }: { trackingId: string }) {
@@ -657,6 +618,13 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                     } catch {}
                                 }
 
+                                const timingStatus = isItemAvailableNow(item);
+                                const isTimingClosed = !timingStatus.isAvailable;
+                                const isStoreOffline = !seller.isOnline;
+                                const isOutOfStock = item.stockQuantity === 0;
+                                const isItemDisabled = item.isAvailable === false || isOutOfStock || isTimingClosed;
+                                const isGrey = isStoreOffline || isItemDisabled;
+
                                 const cartPayload = {
                                     id: item.id,
                                     foodItemId: item.id,
@@ -671,12 +639,11 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                     imageUrl: item.imageUrl,
                                     itemType: item.itemType,
                                     description: item.description,
+                                    operationalHours: item.operationalHours,
+                                    availableDays: item.availableDays,
+                                    openTime: item.openTime,
+                                    closeTime: item.closeTime,
                                 };
-
-                                const isStoreOffline = !seller.isOnline;
-                                const isOutOfStock = item.stockQuantity === 0;
-                                const isItemDisabled = item.isAvailable === false || isOutOfStock;
-                                const isGrey = isStoreOffline || isItemDisabled;
 
                                 return (
                                     <div style={{
@@ -729,7 +696,7 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                                             border: "1px solid rgba(255,255,255,0.2)",
                                                         }}
                                                     >
-                                                        {isStoreOffline ? "🔴 CLOSED" : isOutOfStock ? "🔴 OUT OF STOCK" : "🔴 UNAVAILABLE"}
+                                                        {isStoreOffline ? "🔴 KITCHEN CLOSED" : isOutOfStock ? "🔴 OUT OF STOCK" : isTimingClosed ? `🔴 ${timingStatus.reason || "CLOSED NOW"}` : "🔴 UNAVAILABLE"}
                                                     </span>
                                                 </div>
                                             )}
@@ -795,6 +762,22 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                                             </span>
                                                         ))}
                                                     </div>
+                                                </div>
+                                            )}
+
+                                            {isTimingClosed && (
+                                                <div style={{
+                                                    backgroundColor: '#FFF7ED',
+                                                    color: '#C2410C',
+                                                    padding: '6px 10px',
+                                                    borderRadius: '6px',
+                                                    fontSize: '0.75rem',
+                                                    fontWeight: 'bold',
+                                                    marginBottom: '12px',
+                                                    border: '1px solid #FFEDD5',
+                                                    textAlign: 'center'
+                                                }}>
+                                                    🕒 {timingStatus.reason}
                                                 </div>
                                             )}
 

@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { useRouter, usePathname } from "next/navigation";
 import { useState } from "react";
 import { AddonCustomizationModal } from "@/components/cart/AddonCustomizationModal";
+import { isItemAvailableNow } from "@/lib/item-timing";
 
 export function AddToCartButton({ item, fullWidth = true, disabled = false }: { item: any, fullWidth?: boolean, disabled?: boolean }) {
     const { addToCart, cartItems, decreaseQuantity, showToast } = useCart();
@@ -38,9 +39,16 @@ export function AddToCartButton({ item, fullWidth = true, disabled = false }: { 
     const rawStock = item.maxStock !== undefined ? item.maxStock : item.stockQuantity;
     const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
     const isAtMaxStock = stockLimit !== -1 && (cartItem ? cartItem.quantity >= stockLimit : false);
-    const isOutOfStock = stockLimit === 0 || item.stockQuantity === 0 || disabled;
+    const availability = isItemAvailableNow(item);
+    const isTimingUnavailable = !availability.isAvailable;
+    const isOutOfStock = stockLimit === 0 || item.stockQuantity === 0 || disabled || isTimingUnavailable;
 
     const handleAction = () => {
+        if (isTimingUnavailable) {
+            showToast(`"${item.name}" is currently outside ordering hours (${availability.reason || "Closed"}).`, "error");
+            return;
+        }
+
         // If dish has add-ons and is being newly added, open customization modal
         if (parsedAddons.length > 0 && !cartItem) {
             setIsCustomizing(true);
@@ -266,7 +274,7 @@ export function AddToCartButton({ item, fullWidth = true, disabled = false }: { 
                 disabled={isOutOfStock}
             >
                 {showSuccess ? <Check size={18} color="white" /> : <ShoppingCart size={18} />}
-                {isOutOfStock ? (stockLimit === 0 ? "Out of Stock" : "Unavailable") : showSuccess ? "Added to Cart" : (parsedAddons.length > 0 ? "Add Item" : "Add to Cart")}
+                {isOutOfStock ? (isTimingUnavailable ? "Closed" : stockLimit === 0 ? "Out of Stock" : "Unavailable") : showSuccess ? "Added to Cart" : (parsedAddons.length > 0 ? "Add Item" : "Add to Cart")}
             </button>
 
             {parsedAddons.length > 0 && (

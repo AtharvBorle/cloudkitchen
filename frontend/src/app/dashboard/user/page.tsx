@@ -1,3 +1,4 @@
+import { isItemAvailableNow } from "@/lib/item-timing";
 "use client";
 import { fetchApi } from "@/lib/fetch-api";
 
@@ -19,47 +20,7 @@ import {
 } from "@/lib/geo-distance";
 
 const isCurrentlyOpen = (item: any) => {
-    const now = new Date();
-    const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    const currentDayStr = daysOfWeek[now.getDay()];
-
-    if (item.operationalHours) {
-        try {
-            const hours = typeof item.operationalHours === 'string'
-                ? JSON.parse(item.operationalHours)
-                : item.operationalHours;
-            const dayHours = hours[currentDayStr];
-            if (dayHours) {
-                if (!dayHours.isOpen) return false;
-                if (!dayHours.openTime || !dayHours.closeTime) return true;
-
-                const currentHours = now.getHours().toString().padStart(2, '0');
-                const currentMinutes = now.getMinutes().toString().padStart(2, '0');
-                const currentTimeStr = `${currentHours}:${currentMinutes}`;
-                const openTime = dayHours.openTime;
-                const closeTime = dayHours.closeTime;
-                if (openTime <= closeTime) {
-                    return currentTimeStr >= openTime && currentTimeStr <= closeTime;
-                } else {
-                    return currentTimeStr >= openTime || currentTimeStr <= closeTime;
-                }
-            }
-        } catch (e) {
-            console.error("Failed to parse operationalHours on client", e);
-        }
-    }
-
-    if (!item.openTime || !item.closeTime) return true;
-    const currentHours = now.getHours().toString().padStart(2, '0');
-    const currentMinutes = now.getMinutes().toString().padStart(2, '0');
-    const currentTimeStr = `${currentHours}:${currentMinutes}`;
-    const openTime = item.openTime;
-    const closeTime = item.closeTime;
-    if (openTime <= closeTime) {
-        return currentTimeStr >= openTime && currentTimeStr <= closeTime;
-    } else {
-        return currentTimeStr >= openTime || currentTimeStr <= closeTime;
-    }
+    return isItemAvailableNow(item).isAvailable;
 };
 
 export default function UserDashboard() {

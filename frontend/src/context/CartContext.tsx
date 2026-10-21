@@ -71,6 +71,10 @@ export type CartItem = {
     category?: any;
     foodCategory?: any;
     categoryName?: string;
+    operationalHours?: string | null;
+    availableDays?: string | null;
+    openTime?: string | null;
+    closeTime?: string | null;
 };
 
 export type ToastType = "warning" | "error" | "info" | "success";
@@ -326,6 +330,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 price: finalUnitPrice,
                 selectedAddons: addons,
                 addons: availableAddons.length > 0 ? availableAddons : item.addons,
+                operationalHours: item.operationalHours,
+                availableDays: item.availableDays,
+                openTime: item.openTime,
+                closeTime: item.closeTime,
             };
 
             const existing = basePrev.find(i => i.id === finalCartId);

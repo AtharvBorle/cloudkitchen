@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ResponsiveMenuItems from "@/components/seller/seller-menu/responsive/ResponsiveMenuItems";
 import { fetchApi } from "@/lib/fetch-api";
+import { parseOperationalHours, serializeSchedules } from "@/lib/item-timing";
 
 function MenuItemContent() {
   const router = useRouter();
@@ -104,6 +105,14 @@ function MenuItemContent() {
         }
       }
 
+      if (data.schedules && Array.isArray(data.schedules)) {
+        const serialized = serializeSchedules(data.schedules);
+        formData.append("operationalHours", serialized.operationalHours);
+        formData.append("availableDays", serialized.availableDays);
+        formData.append("openTime", serialized.openTime);
+        formData.append("closeTime", serialized.closeTime);
+      }
+
       if (data.imageFile) {
         formData.append("image", data.imageFile);
       } else if (initialData?.imageUrl) {
@@ -167,9 +176,13 @@ function MenuItemContent() {
   })();
 
   const mappedType = parsedFoodTypes[0] || "Veg";
+  const initialSchedules = initialData?.operationalHours
+    ? parseOperationalHours(initialData.operationalHours)
+    : undefined;
 
   return (
     <ResponsiveMenuItems
+      initialSchedules={initialSchedules}
       key={initialData ? initialData.id : "new-item"}
       initialItemName={initialData?.name}
       initialPrice={initialData ? String(initialData.price) : undefined}

@@ -6,6 +6,7 @@ import Razorpay from "razorpay";
 import crypto from "crypto";
 import { emitOrderCreated, emitOrderCancelled, emitOrderUpdated } from "@/lib/realtime-events";
 import { calculateDistanceKm, getPincodeCoordinates, MAX_DELIVERY_RADIUS_KM } from "@/lib/geo-distance";
+import { isItemAvailableNow } from "@/lib/item-timing";
 import { cancelExpiredOrder, isOrderExpired, revertCouponUsageFloorZero } from "@/lib/order-expiry";
 import { enrichOrderWithEta } from "@/lib/order-eta";
 import { sendOrderPlacedNotification, sendOrderStatusNotification, sendRefundInitiatedEmail } from "@/lib/emailService";
@@ -228,6 +229,11 @@ export const initiateOrderPayment = async (req: Request) => {
 
             if (!foodItem.isAvailable) {
                 throw new ApiError(`"${name}" is currently unavailable. Please update your cart.`, 400);
+            }
+
+            const availability = isItemAvailableNow(foodItem);
+            if (!availability.isAvailable) {
+                throw new ApiError(`"${name}" is currently outside available ordering hours (${availability.reason}). Please update your cart.`, 400);
             }
 
             if (foodItem.stockQuantity !== -1 && foodItem.stockQuantity < quantity) {
@@ -679,6 +685,11 @@ export const createOrder = async (req: Request) => {
 
         if (!foodItem.isAvailable) {
             throw new ApiError(`"${name}" is currently unavailable. Please update your cart.`, 400);
+        }
+
+        const availability = isItemAvailableNow(foodItem);
+        if (!availability.isAvailable) {
+            throw new ApiError(`"${name}" is currently outside available ordering hours (${availability.reason}). Please update your cart.`, 400);
         }
 
         if (foodItem.stockQuantity !== -1) {
@@ -1321,6 +1332,25 @@ export const validateReorder = async (orderId: string) => {
                 inStock: false,
                 stockQuantity: 0,
                 reason: "This item is currently out of stock."
+            };
+            unavailableItems.push(unItem);
+            allItems.push(unItem);
+            continue;
+        }
+
+        const timingCheck = isItemAvailableNow(foodItem);
+        if (!timingCheck.isAvailable) {
+            const unItem = {
+                id: foodItem.id,
+                foodItemId: foodItem.id,
+                name: foodItem.name,
+                quantity: requestedQty,
+                price: foodItem.price !== undefined ? foodItem.price : (item.price || 0),
+                imageUrl: itemImage,
+                isAvailable: false,
+                inStock: foodItem.stockQuantity !== 0,
+                stockQuantity: foodItem.stockQuantity,
+                reason: `${foodItem.name} is outside ordering hours (${timingCheck.reason}).`
             };
             unavailableItems.push(unItem);
             allItems.push(unItem);
