@@ -444,6 +444,30 @@
   margin-left: 2px;
 }
 
+.optionalBadge {
+  font-size: 0.76rem;
+  font-weight: 500;
+  color: #64748b;
+  background-color: #f1f5f9;
+  padding: 1px 7px;
+  border-radius: 4px;
+  margin-left: 6px;
+  vertical-align: middle;
+  display: inline-block;
+}
+
+.docOptional {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #64748b;
+  background-color: #e2e8f0;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+  vertical-align: middle;
+  display: inline-block;
+}
+
 .labelRow {
   display: flex;
   align-items: center;

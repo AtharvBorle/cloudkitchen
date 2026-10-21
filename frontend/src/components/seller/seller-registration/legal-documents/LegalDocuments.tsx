@@ -411,7 +411,7 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
             <div className={styles.docContent}>
               <div className={styles.docTitleRow}>
                 <span className={styles.docName}>FSSAI License</span>
-                <span className={styles.docRequired}>*</span>
+                <span className={styles.docOptional}>(Optional)</span>
               </div>
               <p className={styles.docSub}>
                 {fieldErrors.fssaiLicenseFile ? (
@@ -423,7 +423,7 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
                     {formData.fssaiLicenseFile} ({fieldSizes.fssaiLicenseFile || "Uploaded"})
                   </span>
                 ) : (
-                  "Food safety registration certificate (Max 5MB)"
+                  "Food safety registration certificate (Optional, Max 5MB)"
                 )}
               </p>
             </div>
@@ -587,7 +587,7 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
           <div className={styles.fieldGroup}>
             <div className={styles.labelRow}>
               <label className={styles.label}>
-                FSSAI food license certificate <span className={styles.required}>*</span>
+                FSSAI food license certificate <span className={styles.optionalBadge}>(Optional)</span>
               </label>
               {fieldSizes.fssaiLicenseFile && (
                 <span className={styles.fileSizeBadge}>
@@ -652,7 +652,7 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
                       <span>Click to upload</span> or drag and drop
                     </p>
                     <p className={styles.secondaryText}>
-                      PDF, PNG, JPG up to 5MB
+                      PDF, PNG, JPG up to 5MB (Optional)
                     </p>
                   </div>
                 </>
