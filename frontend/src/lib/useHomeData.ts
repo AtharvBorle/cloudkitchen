@@ -842,29 +842,38 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
   const resolvedCandidate = resolveLocationCoordinates(rawCandidate || (hasUserExplicitlySelected ? localLocality : (defaultAddress?.locality || localLocality)));
   const activePincode = (resolvedCandidate?.pincode || rawCandidate || '').trim() || null;
 
-  const userLat = (hasUserExplicitlySelected && localLat !== null && !isNaN(localLat))
+  const userLat = (hasUserExplicitlySelected && localLat !== null && !isNaN(localLat) && localLat !== 0)
     ? localLat
-    : (defaultAddress?.latitude != null && !isNaN(Number(defaultAddress.latitude)))
+    : (defaultAddress?.latitude != null && !isNaN(Number(defaultAddress.latitude)) && Number(defaultAddress.latitude) !== 0)
     ? Number(defaultAddress.latitude)
-    : (localLat !== null && !isNaN(localLat) ? localLat : null);
-  const userLng = (hasUserExplicitlySelected && localLng !== null && !isNaN(localLng))
+    : (localLat !== null && !isNaN(localLat) && localLat !== 0 ? localLat : null);
+  const userLng = (hasUserExplicitlySelected && localLng !== null && !isNaN(localLng) && localLng !== 0)
     ? localLng
-    : (defaultAddress?.longitude != null && !isNaN(Number(defaultAddress.longitude)))
+    : (defaultAddress?.longitude != null && !isNaN(Number(defaultAddress.longitude)) && Number(defaultAddress.longitude) !== 0)
     ? Number(defaultAddress.longitude)
-    : (localLng !== null && !isNaN(localLng) ? localLng : null);
+    : (localLng !== null && !isNaN(localLng) && localLng !== 0 ? localLng : null);
 
-  const activeUserLat = userLat ?? resolvedCandidate?.lat ?? null;
-  const activeUserLng = userLng ?? resolvedCandidate?.lng ?? null;
+  const activeUserLat = userLat ?? (resolvedCandidate?.lat && resolvedCandidate.lat !== 0 ? resolvedCandidate.lat : null);
+  const activeUserLng = userLng ?? (resolvedCandidate?.lng && resolvedCandidate.lng !== 0 ? resolvedCandidate.lng : null);
   const hasUserCoords = activeUserLat !== null && activeUserLng !== null;
 
   // Compute enriched food items with accurate distances
   const enrichedFoodItems = useMemo(() => {
     return foodItems.map((item) => {
-      if (hasUserCoords && item.sellerLatitude != null && item.sellerLongitude != null) {
-        const dist = calculateDistanceKm(activeUserLat!, activeUserLng!, Number(item.sellerLatitude), Number(item.sellerLongitude));
+      const sLat = (item.sellerLatitude != null && !isNaN(Number(item.sellerLatitude)) && Number(item.sellerLatitude) !== 0)
+        ? Number(item.sellerLatitude)
+        : (item.sellerPincode ? getPincodeCoordinates(item.sellerPincode)?.lat : null) ?? (item.sellerLocality ? resolveLocationCoordinates(item.sellerLocality)?.lat : null) ?? null;
+      const sLng = (item.sellerLongitude != null && !isNaN(Number(item.sellerLongitude)) && Number(item.sellerLongitude) !== 0)
+        ? Number(item.sellerLongitude)
+        : (item.sellerPincode ? getPincodeCoordinates(item.sellerPincode)?.lng : null) ?? (item.sellerLocality ? resolveLocationCoordinates(item.sellerLocality)?.lng : null) ?? null;
+
+      if (hasUserCoords && sLat !== null && sLng !== null) {
+        const dist = calculateDistanceKm(activeUserLat!, activeUserLng!, sLat, sLng);
         const estTime = dist <= 1.5 ? "15-20 min" : dist <= 3.0 ? "20-30 min" : "30-40 min";
         return {
           ...item,
+          sellerLatitude: sLat,
+          sellerLongitude: sLng,
           distanceKm: dist,
           distanceText: formatDistance(dist),
           deliveryTime: estTime,
@@ -877,11 +886,20 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
   // Compute enriched kitchens with accurate distances
   const enrichedKitchens = useMemo(() => {
     return kitchens.map((k) => {
-      if (hasUserCoords && k.latitude != null && k.longitude != null) {
-        const dist = calculateDistanceKm(activeUserLat!, activeUserLng!, Number(k.latitude), Number(k.longitude));
+      const kLat = (k.latitude != null && !isNaN(Number(k.latitude)) && Number(k.latitude) !== 0)
+        ? Number(k.latitude)
+        : (k.pincode ? getPincodeCoordinates(k.pincode)?.lat : null) ?? (k.locality ? resolveLocationCoordinates(k.locality)?.lat : null) ?? null;
+      const kLng = (k.longitude != null && !isNaN(Number(k.longitude)) && Number(k.longitude) !== 0)
+        ? Number(k.longitude)
+        : (k.pincode ? getPincodeCoordinates(k.pincode)?.lng : null) ?? (k.locality ? resolveLocationCoordinates(k.locality)?.lng : null) ?? null;
+
+      if (hasUserCoords && kLat !== null && kLng !== null) {
+        const dist = calculateDistanceKm(activeUserLat!, activeUserLng!, kLat, kLng);
         const estTime = dist <= 1.5 ? "15-20 min" : dist <= 3.0 ? "20-30 min" : "30-40 min";
         return {
           ...k,
+          latitude: kLat,
+          longitude: kLng,
           distanceKm: dist,
           distanceText: formatDistance(dist),
           time: estTime,

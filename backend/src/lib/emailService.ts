@@ -1898,6 +1898,7 @@ export const sendMealSlotDeliveredNotification = async (
     });
   }
 };
+
 export const sendSubscriptionPauseNotification = async (
   subscription: any,
   isPaused: boolean,
@@ -1933,3 +1934,61 @@ export const sendSubscriptionPauseNotification = async (
     });
   }
 };
+
+// ==============================================================================
+// 9. 🔐 EMAIL VERIFICATION OTP (SELLER ONBOARDING & SIGNUP)
+// ==============================================================================
+
+export interface SendVerificationEmailOtpOptions {
+  email: string;
+  otp: string;
+  userName?: string;
+  purpose?: string;
+}
+
+export async function sendVerificationEmailOtp({
+  email,
+  otp,
+  userName = "Partner",
+  purpose = "seller_onboarding",
+}: SendVerificationEmailOtpOptions): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const isSeller = purpose.includes("seller");
+  const headline = isSeller ? "Partner Email Verification" : "Email Verification";
+
+  const content = `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1e293b; line-height: 1.6;">
+      <h2 style="color: #0f172a; font-size: 20px; font-weight: 700; margin-top: 0; margin-bottom: 12px;">
+        Verify Your Email Address
+      </h2>
+      <p style="font-size: 14px; margin-bottom: 20px; color: #475569;">
+        Hello <strong>${userName}</strong>,<br/>
+        Thank you for ${isSeller ? "registering your kitchen with" : "signing up for"} <strong>Neo Cloud Bites</strong>. Please enter the 6-digit verification code below to verify your email address:
+      </p>
+
+      <div style="background-color: #FFF9F4; border: 2px dashed #FF5500; border-radius: 12px; padding: 22px; text-align: center; margin: 24px 0;">
+        <span style="font-size: 34px; font-weight: 800; letter-spacing: 8px; color: #FF5500; display: inline-block;">
+          ${otp}
+        </span>
+        <div style="font-size: 12.5px; color: #64748B; margin-top: 8px; font-weight: 500;">
+          Valid for <strong>10 minutes</strong>. Do not share this code with anyone.
+        </div>
+      </div>
+
+      <p style="font-size: 13px; color: #64748B; margin-top: 24px; line-height: 1.5;">
+        If you didn't request this verification code, please ignore this email or contact support if you have concerns.
+      </p>
+    </div>
+  `;
+
+  const html = wrapHtmlEmail(headline, content, {
+    headerColor: "orange",
+    headerSubtitle: "Secure Verification Code",
+  });
+
+  return sendEmail({
+    to: email,
+    subject: `🔐 Your Neo Cloud Bites Verification Code: ${otp}`,
+    html,
+  });
+}
+

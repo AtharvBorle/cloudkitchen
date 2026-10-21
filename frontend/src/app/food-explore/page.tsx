@@ -331,7 +331,23 @@ function FoodExploreContent() {
     const sourceFoodItems = homeData.foodItems;
     if (!sourceKitchens || sourceKitchens.length === 0) return [];
 
-    let list = sourceKitchens;
+    let list = sourceKitchens.filter((k) => {
+      const kId = (k.id || "").toLowerCase().trim();
+      const kTracking = (k.trackingId || "").toLowerCase().trim();
+      const kName = (k.name || "").toLowerCase().trim();
+
+      const kDishes = sourceFoodItems.filter((f) => {
+        const fSellerId = (f.sellerId || "").toLowerCase().trim();
+        const fTracking = (f.sellerTrackingId || "").toLowerCase().trim();
+        const fSellerName = (f.sellerName || "").toLowerCase().trim();
+        return (
+          (kId && (fSellerId === kId || fTracking === kId)) ||
+          (kTracking && (fTracking === kTracking || fSellerId === kTracking)) ||
+          (kName && fSellerName && (kName === fSellerName || kName.includes(fSellerName) || fSellerName.includes(kName)))
+        );
+      });
+      return kDishes.length > 0;
+    });
 
     if (searchQuery.trim()) {
       list = list.filter((k) =>
@@ -1344,7 +1360,14 @@ function FoodExploreContent() {
                   <button
                     key={d.id}
                     type="button"
-                    onClick={() => setSelectedDiet(isSelected && d.id !== "all" ? "all" : (d.id as any))}
+                    onClick={() => {
+                      const nextDiet = isSelected && d.id !== "all" ? "all" : (d.id as any);
+                      setSelectedDiet(nextDiet);
+                      if (typeof window !== "undefined") {
+                        localStorage.setItem("cloudkitchen_diet_preference", nextDiet);
+                        window.dispatchEvent(new CustomEvent("cloudkitchen_diet_preference_changed", { detail: nextDiet }));
+                      }
+                    }}
                     className={`${filterStyles.dietPillBtn} ${isSelected ? filterStyles.dietPillBtnSelected : ""}`}
                   >
                     <span>{d.label}</span>
@@ -2523,10 +2546,19 @@ function FoodExploreContent() {
               >
                 {filteredKitchens.map((kitchen) => {
                   const isClosed = kitchen.isOnline === false;
+                  const shopParams = new URLSearchParams();
+                  if (selectedDiet && selectedDiet !== "all") {
+                    shopParams.set("dietary", selectedDiet);
+                  }
+                  if (selectedPrice && selectedPrice !== "all") {
+                    shopParams.set("price", selectedPrice);
+                  }
+                  const shopQuery = shopParams.toString() ? `?${shopParams.toString()}` : "";
+
                   return (
                     <Link
                       key={kitchen.id}
-                      href={`/shop/${kitchen.trackingId || kitchen.id}${selectedPrice && selectedPrice !== "all" ? `?price=${selectedPrice}` : ""}`}
+                      href={`/shop/${kitchen.trackingId || kitchen.id}${shopQuery}`}
                       style={{ textDecoration: "none", height: "100%", display: "flex", flexDirection: "column" }}
                     >
                       <div
@@ -2624,9 +2656,16 @@ function FoodExploreContent() {
                           </div>
 
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto", paddingTop: "10px", borderTop: "1px solid #F1F5F9" }}>
-                            <span style={{ fontSize: "0.82rem", color: "#94A3B8" }}>
-                              📍 {kitchen.locality || kitchen.city || "Pune"} {kitchen.distanceText ? `(${kitchen.distanceText})` : ""}
-                            </span>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                              <span style={{ fontSize: "0.82rem", color: "#64748B" }}>
+                                📍 {kitchen.locality || kitchen.city || "Pune"}
+                              </span>
+                              {kitchen.distanceText && (
+                                <span style={{ fontSize: "0.80rem", color: "#FF6B00", fontWeight: "700" }}>
+                                  • {kitchen.distanceText} away
+                                </span>
+                              )}
+                            </div>
                             <span style={{ fontSize: "0.85rem", color: "#FF6B00", fontWeight: "700" }}>
                               View Menu →
                             </span>

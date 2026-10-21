@@ -29,8 +29,12 @@ export const OTP_TTL_MS = 10 * 60 * 1000; // 10 minutes (matches DLT message)
 export const MASTER_OTP = "123456";
 
 function normalizeKey(identifier: string, purpose: string): string {
+  const trimmed = identifier.trim().toLowerCase();
+  if (trimmed.includes("@")) {
+    return `${purpose}:${trimmed}`;
+  }
   const digits = identifier.replace(/\D/g, "");
-  const cleanId = digits.length >= 10 ? digits.slice(-10) : identifier.trim().toLowerCase();
+  const cleanId = digits.length >= 10 ? digits.slice(-10) : trimmed;
   return `${purpose}:${cleanId}`;
 }
 

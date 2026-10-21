@@ -78,6 +78,8 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
         if (dietParam === "vegan") return "VEGAN";
         if (dietParam === "jain") return "JAIN";
         if (dietParam === "non-veg" || dietParam === "non_veg") return "NON_VEG";
+        if (dietParam === "veg" || dietParam === "pure_veg") return "VEG";
+        if (dietParam === "all") return "ALL";
         if (isVegOnlyRequested) return "VEG";
         if (typeof window !== "undefined") {
             try {
@@ -85,7 +87,8 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                 if (storedDiet === "vegan") return "VEGAN";
                 if (storedDiet === "jain") return "JAIN";
                 if (storedDiet === "non-veg" || storedDiet === "non_veg") return "NON_VEG";
-                if (storedDiet === "veg" || storedDiet === "pure-veg" || storedDiet === "pure_veg" || localStorage.getItem("cloudkitchen_veg_preference") === "true") {
+                if (storedDiet === "all") return "ALL";
+                if (storedDiet === "veg" || storedDiet === "pure-veg" || storedDiet === "pure_veg") {
                     return "VEG";
                 }
             } catch {}
@@ -94,15 +97,15 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
     });
     const [activeTab, setActiveTab] = useState<"menu" | "reviews">("menu");
 
-    const userLat = userAddress?.latitude != null && !isNaN(Number(userAddress.latitude)) ? Number(userAddress.latitude) : null;
-    const userLng = userAddress?.longitude != null && !isNaN(Number(userAddress.longitude)) ? Number(userAddress.longitude) : null;
+    const userLat = (userAddress?.latitude != null && !isNaN(Number(userAddress.latitude)) && Number(userAddress.latitude) !== 0) ? Number(userAddress.latitude) : null;
+    const userLng = (userAddress?.longitude != null && !isNaN(Number(userAddress.longitude)) && Number(userAddress.longitude) !== 0) ? Number(userAddress.longitude) : null;
     const userFallback = userAddress?.pincode ? getPincodeCoordinates(userAddress.pincode) : null;
     const finalUserLat = userLat ?? userFallback?.lat ?? null;
     const finalUserLng = userLng ?? userFallback?.lng ?? null;
 
-    const sellerCoords = (seller?.latitude && seller?.longitude) ? { lat: seller.latitude, lng: seller.longitude } : getPincodeCoordinates(seller?.user?.pincode);
-    const sellerLat = seller?.latitude ?? sellerCoords?.lat ?? null;
-    const sellerLng = seller?.longitude ?? sellerCoords?.lng ?? null;
+    const sellerCoords = (seller?.latitude && seller?.longitude && Number(seller.latitude) !== 0 && Number(seller.longitude) !== 0) ? { lat: Number(seller.latitude), lng: Number(seller.longitude) } : getPincodeCoordinates(seller?.user?.pincode || seller?.pincode);
+    const sellerLat = (seller?.latitude != null && !isNaN(Number(seller.latitude)) && Number(seller.latitude) !== 0) ? Number(seller.latitude) : (sellerCoords?.lat ?? null);
+    const sellerLng = (seller?.longitude != null && !isNaN(Number(seller.longitude)) && Number(seller.longitude) !== 0) ? Number(seller.longitude) : (sellerCoords?.lng ?? null);
 
     const shopDistanceKm = useMemo(() => {
         if (finalUserLat !== null && finalUserLng !== null && sellerLat !== null && sellerLng !== null) {
@@ -158,12 +161,21 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                         const itType = String(it.itemType || "").toUpperCase();
                         return itType.includes("NON_VEG") || it.isVeg === false;
                     });
+                    const hasVeg = (sData?.foodItems || []).some((it: any) => isDishMatchingDiet(it, "veg"));
                     const isPureVegSeller = rawFoodType === "PURE_VEG" || rawFoodType === "VEG" || rawFoodType === "VEG_ONLY" || (!hasNonVeg && (sData?.foodItems || []).length > 0);
+                    const isPureNonVegSeller = rawFoodType === "NON_VEG" || (!hasVeg && hasNonVeg);
+
                     if (dietParam === "vegan") {
                         setFoodFilter("VEGAN");
                     } else if (dietParam === "jain") {
                         setFoodFilter("JAIN");
                     } else if (dietParam === "non-veg" || dietParam === "non_veg") {
+                        setFoodFilter("NON_VEG");
+                    } else if (dietParam === "veg" || dietParam === "pure_veg") {
+                        setFoodFilter("VEG");
+                    } else if (dietParam === "all") {
+                        setFoodFilter("ALL");
+                    } else if (isPureNonVegSeller) {
                         setFoodFilter("NON_VEG");
                     } else if (isPureVegSeller || isVegOnlyRequested) {
                         setFoodFilter("VEG");

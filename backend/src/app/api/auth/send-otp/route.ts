@@ -54,7 +54,7 @@ export async function POST(req: Request) {
           { status: 403 }
         );
       }
-    } else if (purpose === "signup" || purpose === "register") {
+    } else if (purpose === "seller_onboarding" || purpose === "signup" || purpose === "register") {
       const existingUser = await db.user.findFirst({
         where: {
           OR: [
@@ -70,7 +70,7 @@ export async function POST(req: Request) {
         return NextResponse.json(
           {
             success: false,
-            message: "An account with this mobile number already exists. Please sign in.",
+            message: "An account with this mobile number already exists. Please sign in or use a different mobile number.",
           },
           { status: 409 }
         );

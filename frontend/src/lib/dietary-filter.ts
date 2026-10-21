@@ -336,73 +336,63 @@ export function isKitchenMatchingDiet(
     rawFoodType === "VEG_NON_VEG" ||
     rawFoodType === "VEG_AND_NON_VEG";
 
-  if (norm === "veg") {
-    // When user chooses "veg" from nav, show kitchens serving vegetarian food
-    // (includes pure-veg kitchens as well as kitchens serving both veg and non-veg)
-    if (isDeclaredPureVeg || isBothVegAndNonVeg) {
-      return true;
+  // When a food items catalogue is passed, kitchen MUST have at least 1 published dish
+  if (foodItems && Array.isArray(foodItems)) {
+    if (kitchenDishes.length === 0) {
+      return false; // Do not display kitchens that do not have any dishes added or published
     }
 
-    if (kitchenDishes.length > 0) {
+    if (norm === "non_veg") {
+      // Must have at least one non-veg dish matching the filter
+      return kitchenDishes.some((d) => isNonVegDish(d));
+    }
+
+    if (norm === "veg") {
       // Must have at least one vegetarian dish
-      const hasAnyVegDish = kitchenDishes.some((d) => isDishMatchingDiet(d, "veg"));
-      return hasAnyVegDish;
+      return kitchenDishes.some((d) => isDishMatchingDiet(d, "veg"));
     }
 
-    // If no dishes loaded, show unless explicitly declared purely non-veg
+    if (norm === "pure_veg") {
+      if (isDeclaredNonVeg || isBothVegAndNonVeg) return false;
+      const hasNonVeg = kitchenDishes.some((d) => isNonVegDish(d));
+      if (hasNonVeg) return false;
+      return kitchenDishes.some((d) => isDishMatchingDiet(d, "pure_veg"));
+    }
+
+    if (norm === "vegan") {
+      return kitchenDishes.some((d) => isDishMatchingDiet(d, "vegan"));
+    }
+
+    if (norm === "jain") {
+      return kitchenDishes.some((d) => isDishMatchingDiet(d, "jain"));
+    }
+
+    return true;
+  }
+
+  // Fallback matching when dishes list is not available to inspect
+  if (norm === "veg") {
+    if (isDeclaredPureVeg || isBothVegAndNonVeg) return true;
     return !isDeclaredNonVeg;
   }
 
   if (norm === "pure_veg") {
-    // 1. Explicitly Non-Veg or Hybrid BOTH kitchen is NOT 100% Pure Veg
-    if (isDeclaredNonVeg || isBothVegAndNonVeg) {
-      return false;
-    }
-
-    // 2. If the kitchen has dishes loaded
-    if (kitchenDishes.length > 0) {
-      // Must NOT have any non-veg dish
-      const hasAnyNonVegDish = kitchenDishes.some((d) => isNonVegDish(d));
-      if (hasAnyNonVegDish) {
-        return false;
-      }
-      // Must have at least one veg dish or all dishes are veg
-      const allDishesVeg = kitchenDishes.every((d) => isDishMatchingDiet(d, "pure_veg"));
-      return allDishesVeg;
-    }
-
-    // 3. If kitchen has no dishes loaded currently
-    // Must be declared Pure Veg in profile or name
+    if (isDeclaredNonVeg || isBothVegAndNonVeg) return false;
     if (isDeclaredPureVeg) {
       const hasNonVegKeywords = /\b(chicken|mutton|fish|meat|biryani|egg|eggs|non[\s-_]?veg|kebab|shawarma|seafood|prawns?)\b/i.test(kitchenText);
       return !hasNonVegKeywords;
     }
-
     return false;
   }
 
   if (norm === "non_veg") {
-    // If it is 100% Pure Veg with no non-veg dishes, exclude from non-veg filter
-    if (
-      (isDeclaredPureVeg || rawFoodType === "PURE_VEG" || rawFoodType === "VEG" || rawFoodType === "VEG_ONLY" || rawFoodType === "PUREVEG" || rawFoodType === "VEGAN" || rawFoodType === "JAIN") &&
-      !isBothVegAndNonVeg &&
-      kitchenDishes.length > 0 &&
-      kitchenDishes.every((d) => !isNonVegDish(d))
-    ) {
-      return false;
-    }
+    if (isDeclaredPureVeg && !isBothVegAndNonVeg) return false;
     if (isDeclaredNonVeg || isBothVegAndNonVeg) return true;
-    if (kitchenDishes.length > 0) {
-      return kitchenDishes.some((d) => isNonVegDish(d));
-    }
     const hasNonVegKeywords = /\b(chicken|mutton|fish|meat|biryani|egg|eggs|non[\s-_]?veg|kebab|shawarma|seafood|prawns?)\b/i.test(kitchenText);
     return hasNonVegKeywords;
   }
 
   if (norm === "vegan") {
-    if (kitchenDishes.length > 0) {
-      return kitchenDishes.some((d) => isDishMatchingDiet(d, "vegan"));
-    }
     return (
       rawFoodType === "VEGAN" ||
       rawFoodType.includes("VEGAN") ||
@@ -412,9 +402,6 @@ export function isKitchenMatchingDiet(
   }
 
   if (norm === "jain") {
-    if (kitchenDishes.length > 0) {
-      return kitchenDishes.some((d) => isDishMatchingDiet(d, "jain"));
-    }
     return (
       rawFoodType === "JAIN" ||
       rawFoodType === "SATVIK" ||
