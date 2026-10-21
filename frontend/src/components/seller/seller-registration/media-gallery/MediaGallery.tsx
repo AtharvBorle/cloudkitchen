@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus, X, ArrowRight, ImageIcon, AlertTriangle, Camera } from "lucide-react";
+import { Plus, X, ArrowRight, ImageIcon, AlertTriangle, Camera, Eye, RefreshCw } from "lucide-react";
 import styles from "./MediaGallery.module.css";
 import {
   compressImageFile,
@@ -65,6 +65,12 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
   const [dragTarget, setDragTarget] = useState<string | null>(null);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [cameraSlot, setCameraSlot] = useState<{ category: "kitchen" | "cuisine"; index: number } | null>(null);
+  const [previewModal, setPreviewModal] = useState<{
+    url: string;
+    title: string;
+    category: "kitchen" | "cuisine" | "room";
+    index: number;
+  } | null>(null);
 
   const { isRoomEnabled } = useRoomModule();
   const sellerDraft = getSellerDraft();
@@ -351,6 +357,23 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
                           />
                           <button
                             type="button"
+                            className={styles.viewBtn}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPreviewModal({
+                                url: kitchenPhotos[idx]!,
+                                title: `Kitchen Photo ${idx + 1}`,
+                                category: "kitchen",
+                                index: idx,
+                              });
+                            }}
+                            title="View photo"
+                          >
+                            <Eye size={11} />
+                            <span>View</span>
+                          </button>
+                          <button
+                            type="button"
                             className={styles.removeBtn}
                             onClick={(e) => removePhoto("kitchen", idx, e)}
                             title="Remove photo"
@@ -405,6 +428,23 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
                           />
                           <button
                             type="button"
+                            className={styles.viewBtn}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPreviewModal({
+                                url: cuisinePhotos[idx]!,
+                                title: `Cuisine Photo ${idx + 1}`,
+                                category: "cuisine",
+                                index: idx,
+                              });
+                            }}
+                            title="View photo"
+                          >
+                            <Eye size={11} />
+                            <span>View</span>
+                          </button>
+                          <button
+                            type="button"
                             className={styles.removeBtn}
                             onClick={(e) => removePhoto("cuisine", idx, e)}
                             title="Remove photo"
@@ -452,6 +492,23 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
                             alt={`Room photo ${idx + 1}`}
                             className={styles.previewImg}
                           />
+                          <button
+                            type="button"
+                            className={styles.viewBtn}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPreviewModal({
+                                url: roomPhotos[idx]!,
+                                title: `Room Photo ${idx + 1}`,
+                                category: "room",
+                                index: idx,
+                              });
+                            }}
+                            title="View photo"
+                          >
+                            <Eye size={11} />
+                            <span>View</span>
+                          </button>
                           <button
                             type="button"
                             className={styles.removeBtn}
@@ -517,6 +574,23 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
                           />
                           <button
                             type="button"
+                            className={styles.viewBtn}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPreviewModal({
+                                url: kitchenPhotos[idx]!,
+                                title: `Kitchen Photo ${idx + 1}`,
+                                category: "kitchen",
+                                index: idx,
+                              });
+                            }}
+                            title="View photo"
+                          >
+                            <Eye size={12} />
+                            <span>View</span>
+                          </button>
+                          <button
+                            type="button"
                             className={styles.removeBtn}
                             onClick={(e) => removePhoto("kitchen", idx, e)}
                             title="Remove photo"
@@ -578,6 +652,23 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
                           />
                           <button
                             type="button"
+                            className={styles.viewBtn}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPreviewModal({
+                                url: cuisinePhotos[idx]!,
+                                title: `Cuisine Photo ${idx + 1}`,
+                                category: "cuisine",
+                                index: idx,
+                              });
+                            }}
+                            title="View photo"
+                          >
+                            <Eye size={12} />
+                            <span>View</span>
+                          </button>
+                          <button
+                            type="button"
                             className={styles.removeBtn}
                             onClick={(e) => removePhoto("cuisine", idx, e)}
                             title="Remove photo"
@@ -637,6 +728,23 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
                             alt={`Room photo ${idx + 1}`}
                             className={styles.previewImg}
                           />
+                          <button
+                            type="button"
+                            className={styles.viewBtn}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPreviewModal({
+                                url: roomPhotos[idx]!,
+                                title: `Room Photo ${idx + 1}`,
+                                category: "room",
+                                index: idx,
+                              });
+                            }}
+                            title="View photo"
+                          >
+                            <Eye size={12} />
+                            <span>View</span>
+                          </button>
                           <button
                             type="button"
                             className={styles.removeBtn}
@@ -741,6 +849,72 @@ export const MediaGallery: React.FC<MediaGalleryProps> = ({
                 onClick={() => setOversizeModal(null)}
               >
                 Choose Another Photo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Full Photo Preview Modal */}
+      {previewModal && (
+        <div
+          className={styles.modalOverlay}
+          onClick={() => setPreviewModal(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className={styles.previewModalCard}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.previewModalHeader}>
+              <div className={styles.previewModalTitleWrap}>
+                <h3 className={styles.previewModalTitle}>{previewModal.title}</h3>
+                <span className={styles.previewModalBadge}>
+                  {previewModal.category === "kitchen"
+                    ? "Kitchen Verification"
+                    : previewModal.category === "cuisine"
+                    ? "Cuisine Photo"
+                    : "Room Photo"}
+                </span>
+              </div>
+              <button
+                type="button"
+                className={styles.modalCloseBtn}
+                onClick={() => setPreviewModal(null)}
+                title="Close preview"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className={styles.previewModalBody}>
+              <img
+                src={previewModal.url}
+                alt={previewModal.title}
+                className={styles.previewModalImg}
+              />
+            </div>
+
+            <div className={styles.previewModalFooter}>
+              <button
+                type="button"
+                className={styles.previewRetakeBtn}
+                onClick={() => {
+                  const { category, index } = previewModal;
+                  setPreviewModal(null);
+                  handleSlotClick(category, index);
+                }}
+              >
+                <Camera size={14} />
+                <span>Retake Photo</span>
+              </button>
+              <button
+                type="button"
+                className={styles.previewCloseBtn}
+                onClick={() => setPreviewModal(null)}
+              >
+                Close Preview
               </button>
             </div>
           </div>
