@@ -90,7 +90,7 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
       (activeDraft.identityProofDataUrl ? "Uploaded Identity Proof" : "Pending Upload"),
     fssaiLicense:
       activeDraft.fssaiLicenseFileName ||
-      (activeDraft.fssaiLicenseDataUrl ? "Uploaded FSSAI License" : "Optional / Pending"),
+      (activeDraft.fssaiLicenseDataUrl ? "Uploaded FSSAI License" : "Not Provided (Optional)"),
     electricityBill:
       activeDraft.utilityBillFileName ||
       (activeDraft.utilityBillDataUrl ? "Uploaded Electricity Bill" : "Pending Upload"),
@@ -352,7 +352,7 @@ export const ConfirmRegistration: React.FC<ConfirmRegistrationProps> = ({
                 <span className={styles.value}>{documents.identityProof}</span>
               </div>
               <div className={styles.row}>
-                <span className={styles.key}>FSSAI License</span>
+                <span className={styles.key}>FSSAI License (Optional)</span>
                 <span className={styles.value}>{documents.fssaiLicense}</span>
               </div>
               <div className={styles.row}>
