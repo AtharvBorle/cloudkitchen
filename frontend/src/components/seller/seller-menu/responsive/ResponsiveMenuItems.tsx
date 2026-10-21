@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Camera, ChevronDown, Trash2, Plus, Bell } from "lucide-react";
+import { ChevronLeft, Camera, ChevronDown, Trash2, Plus, Bell, Eye, RefreshCw, X, Utensils } from "lucide-react";
 import styles from "./ResponsiveMenuItems.module.css";
 
 export interface ResponsiveVariantItem {
@@ -127,6 +127,7 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
   const [schedules, setSchedules] = useState<ResponsiveDaySchedule[]>(initialSchedules);
   const [imagePreview, setImagePreview] = useState<string | null>(initialImageUrl || null);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   const handleBackClick = () => {
     if (onBack) {
@@ -333,7 +334,22 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
                   alt="Item Preview"
                   className={styles.previewImage}
                 />
-                <span className={styles.changePhotoText}>Change photo</span>
+                <div className={styles.previewActionsRow}>
+                  <button
+                    type="button"
+                    className={styles.actionPreviewBtn}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsPreviewOpen(true);
+                    }}
+                    title="Preview dish photo"
+                  >
+                    <Eye size={14} />
+                    <span>Preview</span>
+                  </button>
+                  <span className={styles.changePhotoText}>Change photo</span>
+                </div>
               </div>
             ) : (
               <>
@@ -609,6 +625,74 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
           </button>
         </form>
       </div>
+      {/* Document-style Dish Image Preview Modal */}
+      {isPreviewOpen && imagePreview && (
+        <div
+          className={styles.previewModalOverlay}
+          onClick={() => setIsPreviewOpen(false)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className={styles.previewModalCard}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.previewModalHeader}>
+              <div className={styles.previewModalHeaderLeft}>
+                <div className={styles.previewIconSquircle}>
+                  <Utensils size={18} className={styles.previewHeaderIcon} />
+                </div>
+                <div className={styles.previewHeaderTextGroup}>
+                  <h3 className={styles.previewModalTitle}>
+                    {itemName ? `${itemName} - Photo Preview` : "Dish Image Preview"}
+                  </h3>
+                </div>
+              </div>
+              <button
+                type="button"
+                className={styles.modalCloseBtn}
+                onClick={() => setIsPreviewOpen(false)}
+                title="Close preview"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className={styles.previewModalBody}>
+              <div className={styles.imageContainer}>
+                <img
+                  src={imagePreview}
+                  alt={itemName || "Dish Photo"}
+                  className={styles.previewModalImg}
+                />
+              </div>
+            </div>
+
+            <div className={styles.previewModalFooter}>
+              <button
+                type="button"
+                className={styles.previewChangeBtn}
+                onClick={() => {
+                  setIsPreviewOpen(false);
+                  setTimeout(() => {
+                    fileInputRef.current?.click();
+                  }, 60);
+                }}
+              >
+                <RefreshCw size={14} />
+                <span>Change Photo</span>
+              </button>
+              <button
+                type="button"
+                className={styles.previewCloseBtn}
+                onClick={() => setIsPreviewOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
