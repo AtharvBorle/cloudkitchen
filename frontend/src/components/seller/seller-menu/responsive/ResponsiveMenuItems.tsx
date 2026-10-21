@@ -2,7 +2,13 @@
 
 import React, { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Camera, ChevronDown, Trash2, Plus, Bell } from "lucide-react";
+import { ChevronLeft, Camera, ChevronDown, Trash2, Plus, Bell, Clock, Copy } from "lucide-react";
+import {
+  TIME_SLOTS_12H,
+  getValidEndTimes,
+  ensureValidEndTime,
+  timeToMinutes
+} from "@/lib/item-timing";
 import styles from "./ResponsiveMenuItems.module.css";
 
 export interface ResponsiveVariantItem {
@@ -164,13 +170,35 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
     );
   };
 
-  const handleTimeChange = (
-    dayName: string,
-    field: "openTime" | "closeTime",
-    val: string
-  ) => {
+  const handleOpenTimeChange = (dayName: string, newOpenTime: string) => {
     setSchedules((prev) =>
-      prev.map((s) => (s.day === dayName ? { ...s, [field]: val } : s))
+      prev.map((s) => {
+        if (s.day !== dayName) return s;
+        const validClose = ensureValidEndTime(newOpenTime, s.closeTime);
+        return {
+          ...s,
+          openTime: newOpenTime,
+          closeTime: validClose,
+        };
+      })
+    );
+  };
+
+  const handleCloseTimeChange = (dayName: string, newCloseTime: string) => {
+    setSchedules((prev) =>
+      prev.map((s) => (s.day === dayName ? { ...s, closeTime: newCloseTime } : s))
+    );
+  };
+
+  const handleCopyMondayTimings = () => {
+    const monday = schedules.find((s) => s.day === "Monday") || schedules[0];
+    if (!monday) return;
+    setSchedules((prev) =>
+      prev.map((s) => ({
+        ...s,
+        openTime: monday.openTime,
+        closeTime: monday.closeTime,
+      }))
     );
   };
 
@@ -242,6 +270,22 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
     if (!imageFile && !initialImageUrl && !imagePreview) {
       alert("Dish photo is mandatory. Please upload a photo.");
       return;
+    }
+
+    if (!schedules.some((s) => s.isOpen)) {
+      alert("Please mark at least one day as open/available in the weekly schedule.");
+      return;
+    }
+
+    for (const s of schedules) {
+      if (s.isOpen) {
+        const oMin = timeToMinutes(s.openTime) ?? 0;
+        const cMin = timeToMinutes(s.closeTime) ?? 0;
+        if (cMin <= oMin) {
+          alert(`${s.day}: Close time (${s.closeTime}) must be after open time (${s.openTime}).`);
+          return;
+        }
+      }
     }
 
     const parsedStock =
@@ -600,6 +644,102 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
                 <Plus size={16} strokeWidth={2.4} />
                 <span>Add Add-on</span>
               </button>
+            </div>
+          </div>
+
+          {/* 8. Weekly Availability & Timings Calendar */}
+          <div className={styles.timingSection}>
+            <div className={styles.timingHeaderRow}>
+              <div>
+                <h3 className={styles.timingSectionTitle}>
+                  <Clock size={16} color="#F97316" />
+                  Weekly Availability & Hours
+                </h3>
+                <p className={styles.timingSectionSubtitle}>
+                  Dish is only available to users during configured times.
+                </p>
+              </div>
+              <button
+                type="button"
+                className={styles.copyTimingsBtn}
+                onClick={handleCopyMondayTimings}
+                title="Copy Monday timings to all days"
+              >
+                <Copy size={12} />
+                <span>Copy Mon</span>
+              </button>
+            </div>
+
+            <div className={styles.timingDaysList}>
+              {schedules.map((schedule) => {
+                const validEndTimes = getValidEndTimes(schedule.openTime);
+
+                return (
+                  <div
+                    key={schedule.day}
+                    className={`${styles.timingDayCard} ${
+                      schedule.isOpen ? styles.timingDayCardOpen : styles.timingDayCardClosed
+                    }`}
+                  >
+                    <div className={styles.timingCardTop}>
+                      <div className={styles.timingDayLeft}>
+                        <input
+                          type="checkbox"
+                          checked={schedule.isOpen}
+                          onChange={() => handleToggleDay(schedule.day)}
+                          style={{ width: "16px", height: "16px", accentColor: "#F97316", cursor: "pointer" }}
+                        />
+                        <span className={styles.timingDayName}>{schedule.day}</span>
+                      </div>
+                      <span
+                        className={`${styles.timingStatusBadge} ${
+                          schedule.isOpen ? styles.statusOpen : styles.statusClosed
+                        }`}
+                      >
+                        {schedule.isOpen ? "Open" : "Closed"}
+                      </span>
+                    </div>
+
+                    {schedule.isOpen ? (
+                      <div className={styles.timingTimeRow}>
+                        <div className={styles.timePickerGroup}>
+                          <span className={styles.timePickerLabel}>From</span>
+                          <select
+                            className={styles.timeSelect}
+                            value={schedule.openTime}
+                            onChange={(e) => handleOpenTimeChange(schedule.day, e.target.value)}
+                          >
+                            {TIME_SLOTS_12H.filter((t) => t !== "11:59 PM").map((slot) => (
+                              <option key={slot} value={slot}>
+                                {slot}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <span className={styles.timeSeparator}>–</span>
+
+                        <div className={styles.timePickerGroup}>
+                          <span className={styles.timePickerLabel}>To</span>
+                          <select
+                            className={styles.timeSelect}
+                            value={schedule.closeTime}
+                            onChange={(e) => handleCloseTimeChange(schedule.day, e.target.value)}
+                          >
+                            {validEndTimes.map((slot) => (
+                              <option key={slot} value={slot}>
+                                {slot}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    ) : (
+                      <span className={styles.closedMessage}>Closed for orders on this day</span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 

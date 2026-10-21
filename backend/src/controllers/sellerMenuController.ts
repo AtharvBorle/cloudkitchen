@@ -377,6 +377,7 @@ export const updateMenuItem = async (req: Request, id: string) => {
         const openTime = formData.get("openTime") as string | null;
         const closeTime = formData.get("closeTime") as string | null;
         const operationalHours = formData.get("operationalHours") as string | null;
+        const availableDays = formData.get("availableDays") as string | null;
         const itemType = formData.get("itemType") as string | null;
         const rawAddons = (formData.get("addons") as string | null) || (formData.get("variants") as string | null);
         const isAvailable = formData.get("isAvailable") as string | null;
@@ -395,6 +396,7 @@ export const updateMenuItem = async (req: Request, id: string) => {
         if (openTime !== null) dataToUpdate.openTime = openTime;
         if (closeTime !== null) dataToUpdate.closeTime = closeTime;
         if (operationalHours !== null) dataToUpdate.operationalHours = operationalHours;
+        if (availableDays !== null) dataToUpdate.availableDays = availableDays;
         if (itemType !== null) {
             dataToUpdate.itemType = normalizeFoodItemType(itemType);
         }
@@ -457,6 +459,7 @@ export const updateMenuItem = async (req: Request, id: string) => {
         if (body.openTime !== undefined) dataToUpdate.openTime = body.openTime;
         if (body.closeTime !== undefined) dataToUpdate.closeTime = body.closeTime;
         if (body.operationalHours !== undefined) dataToUpdate.operationalHours = body.operationalHours;
+        if (body.availableDays !== undefined) dataToUpdate.availableDays = body.availableDays;
         if (body.itemType !== undefined) {
             dataToUpdate.itemType = normalizeFoodItemType(body.itemType);
         }

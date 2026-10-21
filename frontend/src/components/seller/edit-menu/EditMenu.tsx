@@ -3,7 +3,17 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, ChevronDown, Plus, Trash2, CloudUpload, Check } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Plus, Trash2, CloudUpload, Check, Clock, Copy } from 'lucide-react';
+import {
+  DaySchedule,
+  DEFAULT_ITEM_SCHEDULE,
+  TIME_SLOTS_12H,
+  getValidEndTimes,
+  ensureValidEndTime,
+  parseOperationalHours,
+  serializeSchedules,
+  timeToMinutes
+} from '@/lib/item-timing';
 import ConsoleSidebar from '../sidebar/Sidebar';
 import Topbar from '../nav/Topbar';
 import { fetchApi } from '@/lib/fetch-api';
@@ -23,12 +33,7 @@ export interface AddonItem {
   price: string;
 }
 
-export interface DaySchedule {
-  day: string;
-  openTime: string;
-  closeTime: string;
-  isOpen: boolean;
-}
+// DaySchedule imported from @/lib/item-timing
 
 export interface EditMenuProps {
   ownerName?: string;
@@ -82,6 +87,9 @@ function EditMenuInner({
 
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [existingImageUrl, setExistingImageUrl] = useState<string>('');
+  const [schedules, setSchedules] = useState<DaySchedule[]>(() =>
+    DEFAULT_ITEM_SCHEDULE.map((s) => ({ ...s }))
+  );
 
   useEffect(() => {
     async function loadItem() {
@@ -110,6 +118,22 @@ function EditMenuInner({
               setDescription(found.description || '');
               if (found.imageUrl) setExistingImageUrl(found.imageUrl);
               setStockQty(found.stockQuantity !== null && found.stockQuantity !== undefined && found.stockQuantity >= 0 ? String(found.stockQuantity) : '');
+              if (found.operationalHours) {
+                setSchedules(parseOperationalHours(found.operationalHours));
+              } else if (found.availableDays || found.openTime || found.closeTime) {
+                const daysStr = (found.availableDays || "Mon,Tue,Wed,Thu,Fri,Sat,Sun").toLowerCase();
+                const defOpen = found.openTime || "09:00 AM";
+                const defClose = found.closeTime || "10:00 PM";
+                setSchedules(DEFAULT_ITEM_SCHEDULE.map(d => ({
+                  day: d.day,
+                  isOpen: daysStr.includes(d.day.substring(0, 3).toLowerCase()) || daysStr.includes(d.day.toLowerCase()),
+                  openTime: defOpen,
+                  closeTime: defClose
+                })));
+              } else {
+                setSchedules(DEFAULT_ITEM_SCHEDULE.map(s => ({ ...s })));
+              }
+
               if (found.itemType) {
                 const parts = String(found.itemType).split(',').map((s: string) => s.trim().toUpperCase());
                 if (parts.includes('NON_VEG') || parts.includes('NON-VEG') || parts.includes('NON VEG')) {
@@ -207,10 +231,49 @@ function EditMenuInner({
     setStockQty('');
     setVariants([]);
     setImageFile(null);
+    setSchedules(DEFAULT_ITEM_SCHEDULE.map((s) => ({ ...s })));
     setShowSuccessModal(false);
     if (itemId) {
       router.push('/seller/edit-menu');
     }
+  };
+
+  const handleToggleDay = (dayName: string) => {
+    setSchedules((prev) =>
+      prev.map((s) => (s.day === dayName ? { ...s, isOpen: !s.isOpen } : s))
+    );
+  };
+
+  const handleOpenTimeChange = (dayName: string, newOpenTime: string) => {
+    setSchedules((prev) =>
+      prev.map((s) => {
+        if (s.day !== dayName) return s;
+        const validatedClose = ensureValidEndTime(newOpenTime, s.closeTime);
+        return {
+          ...s,
+          openTime: newOpenTime,
+          closeTime: validatedClose,
+        };
+      })
+    );
+  };
+
+  const handleCloseTimeChange = (dayName: string, newCloseTime: string) => {
+    setSchedules((prev) =>
+      prev.map((s) => (s.day === dayName ? { ...s, closeTime: newCloseTime } : s))
+    );
+  };
+
+  const handleCopyMondayTimings = () => {
+    const mondaySchedule = schedules.find((s) => s.day === 'Monday') || schedules[0];
+    if (!mondaySchedule) return;
+    setSchedules((prev) =>
+      prev.map((s) => ({
+        ...s,
+        openTime: mondaySchedule.openTime,
+        closeTime: mondaySchedule.closeTime,
+      }))
+    );
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -306,6 +369,12 @@ function EditMenuInner({
         }));
       formData.append('addons', JSON.stringify(validVariants));
       formData.append('variants', JSON.stringify(validVariants));
+
+      const serializedSchedules = serializeSchedules(schedules);
+      formData.append('operationalHours', serializedSchedules.operationalHours);
+      formData.append('availableDays', serializedSchedules.availableDays);
+      formData.append('openTime', serializedSchedules.openTime);
+      formData.append('closeTime', serializedSchedules.closeTime);
 
       let matchedCatId = categoriesList[0]?.id || '';
       const matched = categoriesList.find((c) => c.name.toLowerCase() === category.toLowerCase());
