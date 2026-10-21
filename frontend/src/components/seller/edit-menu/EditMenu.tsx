@@ -760,6 +760,104 @@ function EditMenuInner({
               </button>
             </div>
 
+            {/* Weekly Availability & Operational Hours */}
+            <div className={styles.timingSection}>
+              <div className={styles.timingHeaderRow}>
+                <div className={styles.timingHeaderLeft}>
+                  <h3 className={styles.timingSectionTitle}>
+                    <Clock size={18} color="#F97316" />
+                    Weekly Availability & Timings
+                  </h3>
+                  <p className={styles.timingSectionSubtitle}>
+                    Dish is visible and orderable only during active days and hours (12-hour schedule).
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className={styles.copyTimingsBtn}
+                  onClick={handleCopyMondayTimings}
+                  title="Copy Monday's open & close times to all 7 days"
+                >
+                  <Copy size={13} />
+                  <span>Copy Mon to all</span>
+                </button>
+              </div>
+
+              <div className={styles.timingDaysList}>
+                {schedules.map((schedule) => {
+                  const validEndTimes = getValidEndTimes(schedule.openTime);
+
+                  return (
+                    <div
+                      key={schedule.day}
+                      className={`${styles.timingDayRow} ${
+                        schedule.isOpen ? styles.timingDayRowOpen : styles.timingDayRowClosed
+                      }`}
+                    >
+                      <div className={styles.timingDayLeft}>
+                        <label className={styles.timingCheckboxWrapper}>
+                          <input
+                            type="checkbox"
+                            checked={schedule.isOpen}
+                            onChange={() => handleToggleDay(schedule.day)}
+                            style={{ width: '16px', height: '16px', accentColor: '#F97316', cursor: 'pointer' }}
+                          />
+                        </label>
+                        <span className={styles.timingDayName}>{schedule.day}</span>
+                        <span
+                          className={`${styles.timingStatusBadge} ${
+                            schedule.isOpen ? styles.statusOpen : styles.statusClosed
+                          }`}
+                        >
+                          {schedule.isOpen ? 'Open' : 'Closed'}
+                        </span>
+                      </div>
+
+                      <div className={styles.timingDayControls}>
+                        {schedule.isOpen ? (
+                          <>
+                            <div className={styles.timePickerGroup}>
+                              <span className={styles.timePickerLabel}>From</span>
+                              <select
+                                className={styles.timeSelect}
+                                value={schedule.openTime}
+                                onChange={(e) => handleOpenTimeChange(schedule.day, e.target.value)}
+                              >
+                                {TIME_SLOTS_12H.filter((t) => t !== '11:59 PM').map((timeSlot) => (
+                                  <option key={timeSlot} value={timeSlot}>
+                                    {timeSlot}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <span className={styles.timeSeparator}>–</span>
+
+                            <div className={styles.timePickerGroup}>
+                              <span className={styles.timePickerLabel}>To</span>
+                              <select
+                                className={styles.timeSelect}
+                                value={schedule.closeTime}
+                                onChange={(e) => handleCloseTimeChange(schedule.day, e.target.value)}
+                              >
+                                {validEndTimes.map((timeSlot) => (
+                                  <option key={timeSlot} value={timeSlot}>
+                                    {timeSlot}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </>
+                        ) : (
+                          <span className={styles.closedMessage}>Closed for ordering on this day</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Dish Image Representation */}
             <div className={styles.subSection}>
               <label className={styles.subSectionTitle}>
