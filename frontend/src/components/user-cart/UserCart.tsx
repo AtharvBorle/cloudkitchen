@@ -1378,28 +1378,7 @@ export const UserCart: React.FC<UserCartProps> = ({
         ? (matchingOffer.maxDiscountAmount ? Math.min(Math.round((eligibleSub * pct) / 100), Number(matchingOffer.maxDiscountAmount)) : Math.round((eligibleSub * pct) / 100))
         : flatAmt;
 
-      if (calculatedDisc >= eligibleSub || calculatedDisc >= currentSubtotal || (currentSubtotal - calculatedDisc) <= 0) {
-        isSuppressingAutoApplyRef.current = true;
-        setAppliedCoupon(null);
-        setAppliedPromo(null);
-        setDiscountPercent(0);
-        const reason = isPct
-          ? `Coupon "${matchingOffer.code}" cannot be applied as the discount (${pct}%) reduces the payable amount to ₹0.`
-          : `Coupon "${matchingOffer.code}" cannot be applied as the discount (₹${flatAmt}) cannot reduce the payable amount to ₹0. Cart value must exceed ₹${flatAmt}.`;
-        showToast(reason, "error", 4000);
-        setTimeout(() => {
-          isSuppressingAutoApplyRef.current = false;
-          if (previousCoupon && previousPromo && previousCoupon.code?.toUpperCase() !== targetCode) {
-            setAppliedCoupon(previousCoupon);
-            setAppliedPromo(previousPromo);
-            setPromoCode(previousPromo);
-            setDiscountPercent(previousPercent);
-          } else {
-            setPromoCode("");
-          }
-        }, 3000);
-        return;
-      }
+      // Validation allowing up to 100% discount
     }
 
     setIsValidatingPromo(true);
@@ -2347,16 +2326,7 @@ export const UserCart: React.FC<UserCartProps> = ({
                                 className={`${styles.offerCard} ${isCurrentApplied ? styles.offerCardApplied : ""}`}
                                 onClick={() => {
                                   if (!isCurrentApplied) {
-                                    if (exceedsSubtotal) {
-                                      showToast(
-                                        isFlat
-                                          ? `Coupon "${offer.code}" cannot be applied as the discount (₹${flatAmt}) cannot reduce the payable amount to ₹0. Cart value must exceed ₹${flatAmt}.`
-                                          : `Coupon "${offer.code}" cannot be applied as the discount cannot reduce the payable amount to ₹0.`,
-                                        "error",
-                                        4000
-                                      );
-                                      return;
-                                    }
+                                    // Allow 100% discount coupon application
                                     handleApplyPromo(offer.code);
                                     setIsCouponDropdownOpen(false);
                                   }

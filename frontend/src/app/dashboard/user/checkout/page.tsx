@@ -1417,6 +1417,7 @@ function CheckoutContent() {
                             <h3 style={{ fontSize: "1.2rem", fontWeight: "bold", marginBottom: "15px" }}>Payment Method</h3>
                             <div style={{ display: "flex", gap: "15px", flexWrap: "wrap", flexDirection: "column" }}>
 
+                                {/* Pay Online (Razorpay) - Commented out per user request
                                 <label style={{ flex: '1 1 auto', border: paymentMethod === 'ONLINE' ? '2px solid var(--primary)' : '1px solid #EAEAEA', borderRadius: '8px', padding: '15px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}>
                                     <input type="radio" value="ONLINE" checked={paymentMethod === 'ONLINE'} onChange={() => setPaymentMethod('ONLINE')} style={{ display: 'none' }} />
                                     <Zap size={24} color={paymentMethod === 'ONLINE' ? 'var(--primary)' : 'var(--text-muted)'} />
@@ -1425,6 +1426,7 @@ function CheckoutContent() {
                                         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Credit Card, UPI, Net Banking</div>
                                     </div>
                                 </label>
+                                */}
 
                                 <label style={{ flex: '1 1 auto', border: paymentMethod === 'COD' ? '2px solid var(--primary)' : '1px solid #EAEAEA', borderRadius: '8px', padding: '15px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}>
                                     <input type="radio" value="COD" checked={paymentMethod === 'COD'} onChange={() => setPaymentMethod('COD')} style={{ display: 'none' }} />

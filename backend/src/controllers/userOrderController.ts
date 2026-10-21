@@ -628,16 +628,7 @@ export const createOrder = async (req: Request) => {
             }
         }
 
-        if (!isPercentage && flatAmt > 0) {
-            if (flatAmt >= eligibleSubtotal || flatAmt >= baseTotal) {
-                throw new ApiError(
-                    `Coupon "${validatedCoupon.code}" cannot be applied as the discount (₹${flatAmt}) cannot reduce the payable amount to ₹0. Cart value must exceed ₹${flatAmt}.`,
-                    400
-                );
-            }
-        }
-
-        // Comprehensive check: Coupon discount cannot reduce final payable amount to ₹0
+        // Calculate effective coupon discount and cap at baseTotal (allowing up to 100% discount)
         let effectiveCouponDiscount = 0;
         if (isPercentage) {
             const pct = Number(validatedCoupon.discountPercentage || 0);
@@ -649,12 +640,7 @@ export const createOrder = async (req: Request) => {
             effectiveCouponDiscount = flatAmt;
         }
 
-        if (effectiveCouponDiscount >= baseTotal || (baseTotal - effectiveCouponDiscount) <= 0) {
-            throw new ApiError(
-                `Coupon "${validatedCoupon.code}" cannot be applied as the discount (₹${effectiveCouponDiscount}) cannot reduce the payable amount to ₹0. Cart value must be greater than the discount amount.`,
-                400
-            );
-        }
+        effectiveCouponDiscount = Math.min(effectiveCouponDiscount, baseTotal);
     }
     // --- End Coupon Validation Logic ---
 

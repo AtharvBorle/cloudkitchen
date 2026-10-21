@@ -562,7 +562,7 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
   };
 
   // Payment Method Selection ('UPI' | 'COD')
-  const [paymentMethod, setPaymentMethod] = useState<"UPI" | "COD">("UPI");
+  const [paymentMethod, setPaymentMethod] = useState<"UPI" | "COD">("COD");
 
   // Navbar Controls
   const [isVegOnly, setIsVegOnly] = useState<boolean>(true);
@@ -1430,16 +1430,8 @@ const loadRazorpayScript = (): Promise<boolean> => {
         calculatedDisc = Number(matchingOffer.discountAmount || (matchingOffer.discountType === "FLAT" ? matchingOffer.discountValue : 0) || 0);
       }
 
-      if (calculatedDisc >= eligibleSub || calculatedDisc >= subtotal) {
-        setIsPromoApplied(false);
-        setDiscountPercent(0);
-        setAppliedCoupon(null);
-        showToast(
-          `Coupon "${matchingOffer.code}" cannot be applied as the discount (₹${calculatedDisc}) cannot reduce the payable amount to ₹0. Cart value must be greater than the discount amount.`,
-          "error"
-        );
-        return;
-      }
+      // Cap discount at eligible subtotal, allowing 100% discount
+      calculatedDisc = Math.min(calculatedDisc, eligibleSub);
     }
 
     setUserDismissedPromo(false);
@@ -2901,7 +2893,8 @@ const loadRazorpayScript = (): Promise<boolean> => {
                 </div>
 
                 <div className={styles.paymentMethodsStack}>
-                  {/* Option 1: UPI / Online Payment */}
+                  {/* Option 1: UPI / Online Payment (Commented out per user request) */}
+                  {/*
                   <div
                     className={`${styles.paymentOptionCard} ${
                       paymentMethod === "UPI" ? styles.paymentOptionActive : ""
@@ -2928,6 +2921,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
                       </span>
                     </div>
                   </div>
+                  */}
 
                   {/* Option 2: Cash on Delivery */}
                   <div

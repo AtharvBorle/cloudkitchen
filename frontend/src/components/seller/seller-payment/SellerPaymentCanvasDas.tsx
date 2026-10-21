@@ -262,6 +262,17 @@ export default function SellerPaymentCanvasDas() {
         return;
       }
 
+      // 100% coupon applied - free activation bypasses Razorpay gateway
+      if (orderData.isFree || orderData.amount === 0) {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("subscription-updated"));
+        }
+        setShowSuccessModal(true);
+        await loadData();
+        setIsProcessingPayment(false);
+        return;
+      }
+
       const finalAmount = orderData.amount;
 
       // 2. Load Razorpay SDK
