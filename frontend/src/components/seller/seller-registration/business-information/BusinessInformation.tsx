@@ -545,7 +545,20 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
           </div>
         </div>
 
-        {/* 5. Address */}
+        {/* 5. Pin Location on Map */}
+        <div className={styles.fieldGroup}>
+          <label className={styles.label}>
+            Pin Location on Map <span className={styles.required}>*</span>
+          </label>
+          <SellerMapPicker
+            latitude={formData.locationCoordinates?.lat || null}
+            longitude={formData.locationCoordinates?.lng || null}
+            isPinned={formData.isLocationPinned}
+            onChange={handleLocationChange}
+          />
+        </div>
+
+        {/* 6. Address */}
         <div className={styles.fieldGroup}>
           <label className={styles.label} htmlFor="address">
             Address <span className={styles.required}>*</span>
@@ -559,19 +572,6 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
             onChange={handleChange}
             placeholder="12, 1st Floor, Cloud Hub, HSR Layout, Sector 6, Bangalore - 560102"
             className={styles.textarea}
-          />
-        </div>
-
-        {/* 6. Pin Location on Map */}
-        <div className={styles.fieldGroup}>
-          <label className={styles.label}>
-            Pin Location on Map <span className={styles.required}>*</span>
-          </label>
-          <SellerMapPicker
-            latitude={formData.locationCoordinates?.lat || null}
-            longitude={formData.locationCoordinates?.lng || null}
-            isPinned={formData.isLocationPinned}
-            onChange={handleLocationChange}
           />
         </div>
 
