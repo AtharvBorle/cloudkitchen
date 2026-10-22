@@ -174,12 +174,15 @@ function computeLiveArrivingIn(
   const remMin = 20 + delay - elapsedMinutes;
   const remMax = 25 + delay - elapsedMinutes;
 
+  if (remMax < 1) {
+    return "Delayed";
+  }
+
   if (remMin >= 1) {
     return `${remMin}-${remMax} mins`;
   }
 
-  const singleRem = Math.max(1, remMax);
-  return `${singleRem} ${singleRem === 1 ? "min" : "mins"}`;
+  return `${remMax} ${remMax === 1 ? "min" : "mins"}`;
 }
 
 function parseOrderFromDb(o: any): OrderItemData {
@@ -1669,17 +1672,28 @@ export default function MyOrdersView() {
                             >
                               {order.statusDisplay}
                             </span>
-                            <div className={styles.arrivingBox}>
-                              <span className={styles.arrivingLabel}>Arriving in</span>
-                              <span className={styles.arrivingTime}>
-                                {computeLiveArrivingIn(
-                                  order.rawStatus,
-                                  order.deliveryTimerStartedAt,
-                                  order.deliveryDelayMinutes,
-                                  nowMs
-                                )}
-                              </span>
-                            </div>
+                            {(() => {
+                              const liveEta = computeLiveArrivingIn(
+                                order.rawStatus,
+                                order.deliveryTimerStartedAt,
+                                order.deliveryDelayMinutes,
+                                nowMs
+                              );
+                              const isDelayed = liveEta === "Delayed";
+
+                              return (
+                                <div className={styles.arrivingBox}>
+                                  {isDelayed ? (
+                                    <span className={styles.delayedWord}>Delayed</span>
+                                  ) : (
+                                    <>
+                                      <span className={styles.arrivingLabel}>Arriving in</span>
+                                      <span className={styles.arrivingTime}>{liveEta}</span>
+                                    </>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </div>
                         </div>
 
@@ -2391,6 +2405,13 @@ export default function MyOrdersView() {
                             : "The kitchen partner was unable to confirm this order. Any online payment will be refunded.")
                         : selectedOrder.rawStatus === "PENDING" || selectedOrder.rawStatus === "PLACED"
                         ? "The seller will review and accept your order shortly"
+                        : computeLiveArrivingIn(
+                            selectedOrder.rawStatus,
+                            selectedOrder.deliveryTimerStartedAt,
+                            selectedOrder.deliveryDelayMinutes,
+                            nowMs
+                          ) === "Delayed"
+                        ? "Order delivery is currently delayed"
                         : `Expected arrival in ${computeLiveArrivingIn(
                             selectedOrder.rawStatus,
                             selectedOrder.deliveryTimerStartedAt,
