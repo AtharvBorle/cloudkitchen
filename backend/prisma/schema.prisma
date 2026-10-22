@@ -49,6 +49,7 @@ model SellerProfile {
   kitchenImages              String           @default("[]")
   cuisineImages              String           @default("[]")
   bannerImageUrl             String?
+  cardImageUrl               String?
   adhaarUrl                  String
   fssaiUrl                   String?
   verificationStatus         String           @default("PENDING")
@@ -142,6 +143,7 @@ model FoodItem {
   itemType          String           @default("VEG")
   variants          String?          @default("[]")
   addons            String?          @default("[]")
+  images            String?          @default("[]")
   foodCategoryId    String?
   foodSubCategoryId String?
   category          Category?        @relation(fields: [categoryId], references: [id])

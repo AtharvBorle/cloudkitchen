@@ -245,9 +245,9 @@ export const updateSellerProfile = async (req: Request) => {
         const bytes = await cardImageFile.arrayBuffer();
         const buffer = Buffer.from(bytes);
         const uploadedCardUrl = await uploadImage(buffer, cardImageFile.type, cardImageFile.name, "sellers");
-        profileUpdateData.kitchenImages = JSON.stringify([uploadedCardUrl]);
+        profileUpdateData.cardImageUrl = uploadedCardUrl;
     } else if (removeCardImage) {
-        profileUpdateData.kitchenImages = "[]";
+        profileUpdateData.cardImageUrl = "";
     }
 
     if (bannerImageFile && bannerImageFile.size > 0) {

@@ -151,7 +151,7 @@ export const getPublicExploreData = unstable_cache(
                 averageRating: avgRating,
                 reviewsCount,
                 totalReviews: reviewsCount,
-                imageUrl: parsedKitchenImages[0] || seller.bannerImageUrl || "/images/places/place-pizza.png",
+                imageUrl: seller.cardImageUrl || "/images/places/place-pizza.png",
                 isOnline: seller.isOnline,
                 foodType: seller.foodType,
                 deliveryRadiusKm: seller.deliveryRadiusKm ?? 5.0,

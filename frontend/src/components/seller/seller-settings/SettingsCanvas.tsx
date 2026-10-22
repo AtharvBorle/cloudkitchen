@@ -376,8 +376,8 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
   const [isUploadingCard, setIsUploadingCard] = useState<boolean>(false);
 
   useEffect(() => {
-    if (seller.cardImageUrl && !cardFile) {
-      setCardPreview(seller.cardImageUrl);
+    if (!cardFile) {
+      setCardPreview(seller.cardImageUrl || "");
     }
   }, [seller.cardImageUrl, cardFile]);
 
@@ -429,18 +429,10 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
 
       const json = await res.json();
       const profileData = json.data?.profile || json.profile;
-      let rawKImages: string[] = [];
-      if (profileData?.kitchenImages) {
-        try {
-          rawKImages = typeof profileData.kitchenImages === "string" ? JSON.parse(profileData.kitchenImages) : profileData.kitchenImages;
-        } catch {
-          rawKImages = [];
-        }
-      }
-      const updatedCardUrl = (Array.isArray(rawKImages) && rawKImages[0]) || profileData?.bannerImageUrl || cardPreview;
+      const updatedCardUrl = profileData?.cardImageUrl || cardPreview;
       setCardPreview(updatedCardUrl);
       setCardFile(null);
-      updateCachedProfile({ cardImageUrl: updatedCardUrl, kitchenImages: rawKImages.length > 0 ? rawKImages : [updatedCardUrl] });
+      updateCachedProfile({ cardImageUrl: updatedCardUrl });
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("seller-status-updated", { detail: { cardImageUrl: updatedCardUrl } }));
       }
@@ -456,7 +448,7 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
   const handleResetCard = async () => {
     setCardFile(null);
     setCardPreview("");
-    updateCachedProfile({ cardImageUrl: "", kitchenImages: [] });
+    updateCachedProfile({ cardImageUrl: "" });
     try {
       const data = new FormData();
       data.append("removeCardImage", "true");
@@ -481,8 +473,8 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
   const [isUploadingBanner, setIsUploadingBanner] = useState<boolean>(false);
 
   useEffect(() => {
-    if (seller.bannerImageUrl && !bannerFile) {
-      setBannerPreview(seller.bannerImageUrl);
+    if (!bannerFile) {
+      setBannerPreview(seller.bannerImageUrl || "");
     }
   }, [seller.bannerImageUrl, bannerFile]);
 
@@ -891,16 +883,8 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
 
       const resJson = await res.json().catch(() => ({}));
       const profileData = resJson.data?.profile || resJson.profile;
-      let rawKImages: string[] = [];
-      if (profileData?.kitchenImages) {
-        try {
-          rawKImages = typeof profileData.kitchenImages === "string" ? JSON.parse(profileData.kitchenImages) : profileData.kitchenImages;
-        } catch {
-          rawKImages = [];
-        }
-      }
-      const updatedCardUrl = (Array.isArray(rawKImages) && rawKImages[0]) || profileData?.bannerImageUrl || cardPreview;
-      const updatedBannerUrl = profileData?.bannerImageUrl || bannerPreview;
+      const updatedCardUrl = profileData?.cardImageUrl ?? (cardFile ? cardPreview : (seller.cardImageUrl || ""));
+      const updatedBannerUrl = profileData?.bannerImageUrl ?? (bannerFile ? bannerPreview : (seller.bannerImageUrl || ""));
 
       if (cardFile) {
         setCardFile(null);
@@ -923,7 +907,6 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
         isLocationPinned: Boolean(formData.latitude && formData.longitude),
         cardImageUrl: updatedCardUrl,
         bannerImageUrl: updatedBannerUrl,
-        kitchenImages: rawKImages.length > 0 ? rawKImages : undefined,
         avatarInitials: computeInitials(formData.businessName),
       });
       if (typeof window !== "undefined") {
