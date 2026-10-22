@@ -304,6 +304,9 @@ export const SellerMapPicker: React.FC<SellerMapPickerProps> = ({
         } catch (e) {}
         leafletMapRef.current = null;
       }
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+      }
       if (mapContainerRef.current) {
         delete (mapContainerRef.current as any)._leaflet_id;
       }
@@ -374,19 +377,52 @@ export const SellerMapPicker: React.FC<SellerMapPickerProps> = ({
     );
   };
 
-  // Places Search Input - manual search on Search button or Enter key (no continuous API calls while typing)
+  // Live Places Search Input - typing immediately shows matching suggestions
   const handleQueryChange = (text: string) => {
     setSearchQuery(text);
     if (searchError) setSearchError(null);
-    if (!text.trim()) {
+
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+
+    const trimmed = text.trim();
+    if (trimmed.length < 2) {
       setSearchResults([]);
       setShowResultsDropdown(false);
+      return;
     }
+
+    searchDebounceRef.current = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const centerLat = currentCoords.lat || 18.5204;
+        const centerLng = currentCoords.lng || 73.8567;
+        const suggestions = await fetchPlaceSuggestions(trimmed, { lat: centerLat, lng: centerLng });
+
+        if (isMountedRef.current) {
+          setSearchResults(suggestions);
+          setShowResultsDropdown(suggestions.length > 0);
+          if (suggestions.length === 0) {
+            setSearchError(`No locations found matching "${trimmed}".`);
+          }
+        }
+      } catch (err) {
+        console.warn("SellerMapPicker places search error:", err);
+      } finally {
+        if (isMountedRef.current) {
+          setIsSearching(false);
+        }
+      }
+    }, 250);
   };
 
-  // Handle Enter Search
+  // Handle Enter Search or Manual Search Button
   const handleSearchLocation = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
     const query = searchQuery.trim();
     if (!query) return;
 
