@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, ChevronDown, Plus, Trash2, CloudUpload, Check, Eye, RefreshCw, X, ExternalLink, Utensils } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Plus, Trash2, CloudUpload, Check, Eye, RefreshCw, X, ExternalLink, Utensils, User, Users } from 'lucide-react';
 import ConsoleSidebar from '../sidebar/Sidebar';
 import Topbar from '../nav/Topbar';
 import { fetchApi } from '@/lib/fetch-api';
@@ -756,24 +756,17 @@ function EditMenuInner({
               />
             </div>
 
-            {/* Field: Serves (Portion Size: 1, 2, 3, 4) */}
+            {/* Field: Serves (Portion Size: 1, 2, 3, 4 - Optional) */}
             <div className={styles.fieldGroup}>
               <label className={styles.fieldLabel}>
                 Serves (Portion Size) <span style={{ fontSize: "0.82rem", color: "#64748B", fontWeight: "normal" }}>(Optional)</span>
               </label>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(4, 1fr)",
-                  gap: "12px",
-                  width: "100%",
-                }}
-              >
+              <div className={styles.servesGrid}>
                 {[
-                  { value: 1, label: "Serves 1", icon: "👤" },
-                  { value: 2, label: "Serves 2", icon: "👥" },
-                  { value: 3, label: "Serves 3", icon: "👨‍👩‍👧" },
-                  { value: 4, label: "Serves 4", icon: "👨‍👩‍👧‍👦" },
+                  { value: 1, label: "Serves 1", icon: <User size={15} strokeWidth={2.4} /> },
+                  { value: 2, label: "Serves 2", icon: <Users size={15} strokeWidth={2.4} /> },
+                  { value: 3, label: "Serves 3", icon: <Users size={15} strokeWidth={2.4} /> },
+                  { value: 4, label: "Serves 4", icon: <Users size={15} strokeWidth={2.4} /> },
                 ].map((item) => {
                   const isSelected = selectedServes === item.value;
                   return (
@@ -781,30 +774,9 @@ function EditMenuInner({
                       key={item.value}
                       type="button"
                       onClick={() => setSelectedServes(selectedServes === item.value ? null : item.value)}
-                      style={{
-                        height: "44px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "8px",
-                        borderRadius: "10px",
-                        border: isSelected ? "none" : "1.5px solid #E2E8F0",
-                        backgroundColor: isSelected ? "#F97316" : "#FFFFFF",
-                        backgroundImage: isSelected
-                          ? "linear-gradient(135deg, #FF5500 0%, #F97316 100%)"
-                          : "none",
-                        color: isSelected ? "#FFFFFF" : "#334155",
-                        fontWeight: isSelected ? 700 : 500,
-                        fontSize: "0.88rem",
-                        cursor: "pointer",
-                        boxShadow: isSelected
-                          ? "0 3px 10px rgba(249, 115, 22, 0.28)"
-                          : "none",
-                        transition: "all 0.18s ease",
-                        outline: "none",
-                      }}
+                      className={`${styles.servesBtn} ${isSelected ? styles.servesBtnActive : ""}`}
                     >
-                      <span style={{ fontSize: "1rem" }}>{item.icon}</span>
+                      <span className={styles.servesIcon}>{item.icon}</span>
                       <span>{item.label}</span>
                     </button>
                   );

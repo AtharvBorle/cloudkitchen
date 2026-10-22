@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Camera, ChevronDown, Trash2, Plus, Bell, Eye, RefreshCw, X, Utensils } from "lucide-react";
+import { ChevronLeft, Camera, ChevronDown, Trash2, Plus, Bell, Eye, RefreshCw, X, Utensils, User, Users } from "lucide-react";
 import styles from "./ResponsiveMenuItems.module.css";
 
 export interface ResponsiveVariantItem {
@@ -810,24 +810,17 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
             />
           </div>
 
-          {/* Serves (Portion Size: 1, 2, 3, 4) */}
+          {/* Serves (Portion Size: 1, 2, 3, 4 - Optional) */}
           <div className={styles.formGroup}>
             <label className={styles.fieldLabel}>
               Serves (Portion Size) <span style={{ fontSize: "0.82rem", color: "#64748B", fontWeight: "normal" }}>(Optional)</span>
             </label>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(4, 1fr)",
-                gap: "8px",
-                width: "100%",
-              }}
-            >
+            <div className={styles.servesGrid}>
               {[
-                { value: 1, label: "1", icon: "👤" },
-                { value: 2, label: "2", icon: "👥" },
-                { value: 3, label: "3", icon: "👨‍👩‍👧" },
-                { value: 4, label: "4", icon: "👨‍👩‍👧‍👦" },
+                { value: 1, label: "Serves 1", icon: <User size={15} strokeWidth={2.4} /> },
+                { value: 2, label: "Serves 2", icon: <Users size={15} strokeWidth={2.4} /> },
+                { value: 3, label: "Serves 3", icon: <Users size={15} strokeWidth={2.4} /> },
+                { value: 4, label: "Serves 4", icon: <Users size={15} strokeWidth={2.4} /> },
               ].map((item) => {
                 const isSelected = selectedServes === item.value;
                 return (
@@ -835,31 +828,10 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
                     key={item.value}
                     type="button"
                     onClick={() => setSelectedServes(selectedServes === item.value ? null : item.value)}
-                    style={{
-                      height: "42px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "6px",
-                      borderRadius: "10px",
-                      border: isSelected ? "none" : "1.5px solid #E2E8F0",
-                      backgroundColor: isSelected ? "#F97316" : "#FFFFFF",
-                      backgroundImage: isSelected
-                        ? "linear-gradient(135deg, #FF5500 0%, #F97316 100%)"
-                        : "none",
-                      color: isSelected ? "#FFFFFF" : "#334155",
-                      fontWeight: isSelected ? 700 : 500,
-                      fontSize: "0.84rem",
-                      cursor: "pointer",
-                      boxShadow: isSelected
-                        ? "0 2px 8px rgba(249, 115, 22, 0.25)"
-                        : "none",
-                      transition: "all 0.18s ease",
-                      outline: "none",
-                    }}
+                    className={`${styles.servesBtn} ${isSelected ? styles.servesBtnActive : ""}`}
                   >
-                    <span>{item.icon}</span>
-                    <span>Serves {item.label}</span>
+                    <span className={styles.servesIcon}>{item.icon}</span>
+                    <span>{item.label}</span>
                   </button>
                 );
               })}
