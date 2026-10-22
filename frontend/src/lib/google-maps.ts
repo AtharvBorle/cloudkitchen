@@ -73,14 +73,16 @@ function setupAuthFailureHandler() {
 
   const prevHandler = (window as any).gm_authFailure;
   (window as any).gm_authFailure = () => {
+    googleMapsAuthFailed = true;
     console.warn(
-      "[Google Maps] Authentication warning or restriction detected. Maintaining Google Maps view with configured key."
+      "[Google Maps] Authentication failure or expired key detected. Switching to clean interactive map."
     );
     if (typeof prevHandler === "function") {
       try {
         prevHandler();
       } catch {}
     }
+    window.dispatchEvent(new CustomEvent("google-maps-auth-failure"));
   };
 }
 
@@ -230,6 +232,8 @@ export async function loadGoogleMapsScript(): Promise<boolean> {
 
       script.onerror = (e) => {
         console.warn("Google Maps JavaScript API script failed to load:", e);
+        googleMapsAuthFailed = true;
+        window.dispatchEvent(new CustomEvent("google-maps-auth-failure"));
         finishResolve(false);
       };
 

@@ -211,8 +211,12 @@ export function HouseMapPicker({
                     }
                     googleMarkerRef.current = marker;
 
-                    if (!skipInitialReverseGeocode && (latitude === null || longitude === null)) {
-                        handleReverseGeocode(defaultLat, defaultLng);
+                    if (latitude === null || longitude === null) {
+                        if (!skipInitialReverseGeocode) {
+                            handleReverseGeocode(defaultLat, defaultLng);
+                        } else {
+                            onChange(defaultLat, defaultLng);
+                        }
                     }
 
                     if (isMountedRef.current) {
@@ -263,10 +267,17 @@ export function HouseMapPicker({
                     });
                     leafletMapRef.current = map;
 
-                    L.tileLayer("https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", {
-                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-                        maxZoom: 19,
+                    L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                        subdomains: 'abcd',
+                        maxZoom: 20,
                     }).addTo(map);
+
+                    setTimeout(() => {
+                        try {
+                            map.invalidateSize();
+                        } catch {}
+                    }, 200);
 
                     const marker = L.marker([lat, lng], { draggable: true }).addTo(map);
                     leafletMarkerRef.current = marker;
@@ -282,8 +293,12 @@ export function HouseMapPicker({
                         handleReverseGeocode(clickLat, clickLng);
                     });
 
-                    if (!skipInitialReverseGeocode && (latitude === null || longitude === null)) {
-                        handleReverseGeocode(lat, lng);
+                    if (latitude === null || longitude === null) {
+                        if (!skipInitialReverseGeocode) {
+                            handleReverseGeocode(lat, lng);
+                        } else {
+                            onChange(lat, lng);
+                        }
                     }
 
                     if (isMountedRef.current) {
@@ -308,10 +323,27 @@ export function HouseMapPicker({
             }
         }
 
+        const handleAuthFailure = () => {
+            if (!isMountedRef.current || !mapContainerRef.current) return;
+            console.warn("[HouseMapPicker] Google Maps auth failure. Switching to clean map view.");
+            if (googleMapRef.current) {
+                googleMapRef.current = null;
+                googleMarkerRef.current = null;
+            }
+            if (mapContainerRef.current) {
+                mapContainerRef.current.innerHTML = "";
+            }
+            setMapEngine("leaflet");
+            initLeaflet(defaultLat, defaultLng);
+        };
+
+        window.addEventListener("google-maps-auth-failure", handleAuthFailure);
+
         setupMap();
 
         return () => {
             isMountedRef.current = false;
+            window.removeEventListener("google-maps-auth-failure", handleAuthFailure);
             if (leafletMapRef.current) {
                 try {
                     leafletMapRef.current.off();
