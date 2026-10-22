@@ -60,7 +60,7 @@ export const SellerMapPicker: React.FC<SellerMapPickerProps> = ({
   const leafletMarkerRef = useRef<any>(null);
   const isMountedRef = useRef<boolean>(true);
 
-  const [mapEngine, setMapEngine] = useState<"google" | "leaflet">("leaflet");
+  const [mapEngine, setMapEngine] = useState<"google" | "leaflet">("google");
   const [mapLoaded, setMapLoaded] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   const [isSearching, setIsSearching] = useState(false);

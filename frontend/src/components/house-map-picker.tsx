@@ -64,7 +64,7 @@ export function HouseMapPicker({
     const leafletMarkerRef = useRef<any>(null);
     const isMountedRef = useRef<boolean>(true);
 
-    const [mapEngine, setMapEngine] = useState<"google" | "leaflet">("leaflet");
+    const [mapEngine, setMapEngine] = useState<"google" | "leaflet">("google");
     const [mapLoaded, setMapLoaded] = useState(false);
 
     // Search state
@@ -308,27 +308,10 @@ export function HouseMapPicker({
             }
         }
 
-        const handleAuthFailure = () => {
-            if (!isMountedRef.current || !mapContainerRef.current) return;
-            console.warn("[HouseMapPicker] Google Maps auth failure. Switching to Leaflet immediately.");
-            if (googleMapRef.current) {
-                googleMapRef.current = null;
-                googleMarkerRef.current = null;
-            }
-            if (mapContainerRef.current) {
-                mapContainerRef.current.innerHTML = "";
-            }
-            setMapEngine("leaflet");
-            initLeaflet(defaultLat, defaultLng);
-        };
-
-        window.addEventListener("google-maps-auth-failure", handleAuthFailure);
-
         setupMap();
 
         return () => {
             isMountedRef.current = false;
-            window.removeEventListener("google-maps-auth-failure", handleAuthFailure);
             if (leafletMapRef.current) {
                 try {
                     leafletMapRef.current.off();

@@ -13,6 +13,7 @@ import { performLogout } from "@/lib/logout";
 import { Footer } from "@/components/explore-desktop/footer";
 import { useRoomModule } from "@/context/RoomModuleContext";
 import {
+    loadGoogleMapsScript,
     reverseGeocodeWithGoogle,
     geocodeWithGoogle,
     fetchPlacesAutocomplete,
@@ -107,8 +108,10 @@ function MapPicker({ onLocationSelected }: MapPickerProps) {
             setCoords({ lat, lng: lon });
             if (pin) setSelectedPincode(pin);
             if (mapRef.current && markerRef.current) {
-                const L = (window as any).L;
-                if (L) {
+                if (typeof mapRef.current.panTo === "function" && typeof markerRef.current.setPosition === "function") {
+                    mapRef.current.panTo({ lat, lng: lon });
+                    markerRef.current.setPosition({ lat, lng: lon });
+                } else if ((window as any).L && typeof mapRef.current.setView === "function") {
                     mapRef.current.setView([lat, lon], 16);
                     markerRef.current.setLatLng([lat, lon]);
                 }
@@ -120,89 +123,167 @@ function MapPicker({ onLocationSelected }: MapPickerProps) {
     };
 
     useEffect(() => {
-        const link = document.createElement("link");
-        link.rel = "stylesheet";
-        link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-        document.head.appendChild(link);
+        let isMounted = true;
+        let linkEl: HTMLLinkElement | null = null;
+        let scriptEl: HTMLScriptElement | null = null;
 
-        const script = document.createElement("script");
-        script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-        script.async = true;
-        document.body.appendChild(script);
-
-        const initMap = (lat: number, lng: number) => {
-            const L = (window as any).L;
-            if (!L || !mapContainerRef.current) return;
-
-            if (mapRef.current) {
-                try {
-                    mapRef.current.off();
-                    mapRef.current.remove();
-                } catch (e) {}
-                mapRef.current = null;
-            }
-
-            if ((mapContainerRef.current as any)._leaflet_id) {
-                delete (mapContainerRef.current as any)._leaflet_id;
-            }
+        const initGoogleMap = (lat: number, lng: number): boolean => {
+            if (!isMounted || !mapContainerRef.current) return false;
+            const google = (window as any).google;
+            if (!google?.maps?.Map) return false;
 
             try {
-                // Zoom level 16 for close house-level detail
-                const map = L.map(mapContainerRef.current).setView([lat, lng], 16);
+                const center = { lat, lng };
+                const map = new google.maps.Map(mapContainerRef.current, {
+                    center,
+                    zoom: 16,
+                    mapTypeControl: false,
+                    streetViewControl: false,
+                    fullscreenControl: false,
+                    zoomControl: true,
+                    gestureHandling: "greedy",
+                });
                 mapRef.current = map;
 
-                L.tileLayer("https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", {
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Tiles style by <a href="https://www.hotosm.org/">Humanitarian OSM Team</a> hosted by <a href="https://openstreetmap.fr/">OSM France</a>',
-                    subdomains: 'abc',
-                    maxZoom: 19,
-                }).addTo(map);
-
-                const marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+                const marker = new google.maps.Marker({
+                    position: center,
+                    map,
+                    draggable: true,
+                    title: "Delivery Location",
+                    animation: google.maps.Animation?.DROP,
+                });
                 markerRef.current = marker;
 
-                setCoords({ lat, lng });
-                handleGeocode(lat, lng);
+                setCoords(center);
+                handleGeocode(center.lat, center.lng);
 
-                marker.on("dragend", () => {
-                    const position = marker.getLatLng();
-                    setCoords({ lat: position.lat, lng: position.lng });
-                    handleGeocode(position.lat, position.lng);
+                marker.addListener("dragend", () => {
+                    const pos = marker.getPosition();
+                    if (pos) {
+                        const curLat = pos.lat();
+                        const curLng = pos.lng();
+                        setCoords({ lat: curLat, lng: curLng });
+                        handleGeocode(curLat, curLng);
+                    }
                 });
 
-                map.on("click", (e: any) => {
-                    const { lat: clickLat, lng: clickLng } = e.latlng;
-                    marker.setLatLng([clickLat, clickLng]);
-                    setCoords({ lat: clickLat, lng: clickLng });
-                    handleGeocode(clickLat, clickLng);
+                map.addListener("click", (e: any) => {
+                    if (e.latLng) {
+                        const curLat = e.latLng.lat();
+                        const curLng = e.latLng.lng();
+                        marker.setPosition(e.latLng);
+                        setCoords({ lat: curLat, lng: curLng });
+                        handleGeocode(curLat, curLng);
+                    }
                 });
+
+                return true;
             } catch (err) {
-                console.warn("Leaflet map initialization warning:", err);
+                console.warn("Google Maps init warning in Explore layout:", err);
+                return false;
             }
         };
 
-        script.onload = () => {
+        const initLeaflet = (lat: number, lng: number) => {
+            if (!isMounted || !mapContainerRef.current) return;
+
+            linkEl = document.createElement("link");
+            linkEl.rel = "stylesheet";
+            linkEl.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+            document.head.appendChild(linkEl);
+
+            scriptEl = document.createElement("script");
+            scriptEl.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+            scriptEl.async = true;
+            document.body.appendChild(scriptEl);
+
+            const runLeaflet = () => {
+                const L = (window as any).L;
+                if (!L || !mapContainerRef.current || !isMounted) return;
+
+                if (mapRef.current) {
+                    try {
+                        mapRef.current.off();
+                        mapRef.current.remove();
+                    } catch (e) {}
+                    mapRef.current = null;
+                }
+
+                if ((mapContainerRef.current as any)._leaflet_id) {
+                    delete (mapContainerRef.current as any)._leaflet_id;
+                }
+
+                try {
+                    const map = L.map(mapContainerRef.current).setView([lat, lng], 16);
+                    mapRef.current = map;
+
+                    L.tileLayer("https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", {
+                        attribution: '&copy; OpenStreetMap contributors',
+                        subdomains: 'abc',
+                        maxZoom: 19,
+                    }).addTo(map);
+
+                    const marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+                    markerRef.current = marker;
+
+                    setCoords({ lat, lng });
+                    handleGeocode(lat, lng);
+
+                    marker.on("dragend", () => {
+                        const position = marker.getLatLng();
+                        setCoords({ lat: position.lat, lng: position.lng });
+                        handleGeocode(position.lat, position.lng);
+                    });
+
+                    map.on("click", (e: any) => {
+                        const { lat: clickLat, lng: clickLng } = e.latlng;
+                        marker.setLatLng([clickLat, clickLng]);
+                        setCoords({ lat: clickLat, lng: clickLng });
+                        handleGeocode(clickLat, clickLng);
+                    });
+                } catch (err) {
+                    console.warn("Leaflet map initialization warning:", err);
+                }
+            };
+
+            scriptEl.onload = runLeaflet;
+        };
+
+        const setupMap = async () => {
+            const isGoogleLoaded = await loadGoogleMapsScript();
             getSafeCurrentPosition(
                 (position) => {
-                    initMap(position.coords.latitude, position.coords.longitude);
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    if (isGoogleLoaded && initGoogleMap(lat, lng)) {
+                        return;
+                    }
+                    initLeaflet(lat, lng);
                 },
                 () => {
-                    initMap(19.0760, 72.8777); // Mumbai fallback
+                    const lat = 18.5204;
+                    const lng = 73.8567; // Pune default
+                    if (isGoogleLoaded && initGoogleMap(lat, lng)) {
+                        return;
+                    }
+                    initLeaflet(lat, lng);
                 },
                 { enableHighAccuracy: true, timeout: 5000 }
             );
         };
 
+        setupMap();
+
         return () => {
+            isMounted = false;
             try {
-                if (link && link.parentNode) link.parentNode.removeChild(link);
-                else if (link && typeof link.remove === "function") link.remove();
-                if (script && script.parentNode) script.parentNode.removeChild(script);
-                else if (script && typeof script.remove === "function") script.remove();
+                if (linkEl && linkEl.parentNode) linkEl.parentNode.removeChild(linkEl);
+                if (scriptEl && scriptEl.parentNode) scriptEl.parentNode.removeChild(scriptEl);
             } catch (e) {}
             if (mapRef.current) {
                 try {
-                    mapRef.current.off();
-                    mapRef.current.remove();
+                    if (typeof mapRef.current.off === "function") mapRef.current.off();
+                    if (typeof mapRef.current.remove === "function") mapRef.current.remove();
                 } catch (e) {}
                 mapRef.current = null;
             }

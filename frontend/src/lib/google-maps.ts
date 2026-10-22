@@ -73,17 +73,14 @@ function setupAuthFailureHandler() {
 
   const prevHandler = (window as any).gm_authFailure;
   (window as any).gm_authFailure = () => {
-    googleMapsAuthFailed = true;
     console.warn(
-      "[Google Maps] Authentication failure: InvalidKeyMapError or API restrictions/billing issue detected. " +
-      "Falling back automatically to Leaflet & OpenStreetMap."
+      "[Google Maps] Authentication warning or restriction detected. Maintaining Google Maps view with configured key."
     );
     if (typeof prevHandler === "function") {
       try {
         prevHandler();
       } catch {}
     }
-    window.dispatchEvent(new CustomEvent("google-maps-auth-failure"));
   };
 }
 
@@ -233,8 +230,6 @@ export async function loadGoogleMapsScript(): Promise<boolean> {
 
       script.onerror = (e) => {
         console.warn("Google Maps JavaScript API script failed to load:", e);
-        googleMapsAuthFailed = true;
-        window.dispatchEvent(new CustomEvent("google-maps-auth-failure"));
         finishResolve(false);
       };
 
@@ -360,11 +355,11 @@ async function fetchPlaceSuggestionsClient(
         includedRegionCodes: ["in"],
       };
 
-      if ((window as any).google?.maps?.Circle && (window as any).google?.maps?.LatLng) {
-        req.locationBias = new (window as any).google.maps.Circle({
-          center: new (window as any).google.maps.LatLng(centerLat, centerLng),
+      if (centerLat && centerLng) {
+        req.locationBias = {
           radius: 50000,
-        });
+          center: { lat: centerLat, lng: centerLng },
+        };
       }
 
       const res = await placesLib.AutocompleteSuggestion.fetchAutocompleteSuggestions(req);
