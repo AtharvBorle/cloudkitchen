@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { generate6DigitOtp, setOtp, isMasterOtpEnabled, MASTER_OTP } from "@/lib/otpStore";
+import { generate6DigitOtp, setOtp, isMasterOtpEnabled, setMasterOtpDbOverride, MASTER_OTP } from "@/lib/otpStore";
 import { sendOtpSms } from "@/lib/smsService";
 
 export async function POST(req: Request) {
@@ -75,6 +75,18 @@ export async function POST(req: Request) {
           { status: 409 }
         );
       }
+    }
+
+    try {
+      const dbSetting = await db.systemSettings.findFirst({
+        where: { key: { in: ["ALLOW_MASTER_OTP", "MASTER_OTP", "ENABLE_MASTER_OTP"] } }
+      });
+      if (dbSetting) {
+        const val = (dbSetting.value || "").trim().replace(/^['"]|['"]$/g, "").toLowerCase();
+        setMasterOtpDbOverride(val === "true" || val === "1" || val === "yes");
+      }
+    } catch {
+      // fallback to env
     }
 
     const masterMode = isMasterOtpEnabled();

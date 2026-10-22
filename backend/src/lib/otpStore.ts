@@ -63,9 +63,31 @@ export function getStoredOtp(identifier: string, purpose: string = "login"): str
   return entry.otp;
 }
 
+let dbMasterOtpOverride: boolean | null = null;
+
+export function setMasterOtpDbOverride(enabled: boolean | null): void {
+  dbMasterOtpOverride = enabled;
+}
+
 export function isMasterOtpEnabled(): boolean {
-  const val = (process.env.ALLOW_MASTER_OTP || "").trim().toLowerCase();
-  return val === "true" || val === "1";
+  if (dbMasterOtpOverride !== null) {
+    return dbMasterOtpOverride;
+  }
+  const raw = (
+    process.env.ALLOW_MASTER_OTP ||
+    process.env.MASTER_OTP_ENABLED ||
+    process.env.ENABLE_MASTER_OTP ||
+    process.env.MASTER_OTP ||
+    ""
+  ).trim().replace(/^['"]|['"]$/g, "").toLowerCase();
+
+  return (
+    raw === "true" ||
+    raw === "1" ||
+    raw === "yes" ||
+    raw === "enabled" ||
+    raw === "on"
+  );
 }
 
 export function verifyOtp(identifier: string, inputOtp: string, purpose: string = "login"): boolean {
