@@ -509,6 +509,60 @@ export async function sendKitchenPermanentlyDeletedEmail({
   });
 }
 
+/**
+ * 1.6 Kitchen Deactivation Revoked / Restored Email
+ */
+export async function sendKitchenDeletionRevokedEmail({
+  sellerName,
+  sellerEmail,
+  businessName,
+}: {
+  sellerName?: string;
+  sellerEmail: string;
+  businessName: string;
+}) {
+  const displayName = sellerName || businessName || "Partner";
+
+  const content = `
+    <div style="text-align: center; margin-bottom: 24px;">
+      <span class="badge badge-delivered">Deletion Revoked</span>
+      <h2 style="font-size: 22px; font-weight: 800; color: #0F172A; margin: 12px 0 6px 0;">
+        Kitchen Deactivation Revoked: ${businessName}
+      </h2>
+      <p style="color: #64748B; font-size: 14px; margin: 0;">
+        Dear ${displayName}, your kitchen deletion request has been successfully cancelled.
+      </p>
+    </div>
+
+    <div class="alert-card alert-success">
+      <strong>✅ Kitchen Restored</strong><br>
+      Your kitchen profile for <strong>${businessName}</strong>, along with your active menu items and operations, has been fully reactivated and restored to normal standing.
+    </div>
+
+    <div class="info-card">
+      <p style="margin: 0; font-size: 13.5px; color: #334155; line-height: 1.5;">
+        Your kitchen profile and menu have been restored. You can now manage your kitchen, accept customer orders, and update your menu directly from your operations console.
+      </p>
+    </div>
+
+    <div style="text-align: center; margin-top: 24px;">
+      <a href="${APP_URL}/seller/dashboard" class="btn btn-green">Go to Seller Dashboard</a>
+    </div>
+  `;
+
+  const html = wrapHtmlEmail(`Kitchen Deactivation Revoked - ${businessName}`, content, {
+    headerColor: "green",
+    headerSubtitle: "Kitchen Account Notice",
+  });
+
+  return sendEmail({
+    to: sellerEmail,
+    subject: `✅ Kitchen Deactivation Revoked: ${businessName} - Neo Cloud Bites`,
+    html,
+    bccAdmin: true,
+  });
+}
+
 // ==============================================================================
 // 2. 💳 SELLER SUBSCRIPTION EMAILS
 // ==============================================================================
@@ -1509,6 +1563,52 @@ export async function sendUserAccountPermanentlyDeletedEmail({
   return sendEmail({
     to: userEmail,
     subject: `Confirmation: Account Permanently Deleted - Neo Cloud Bites`,
+    html,
+    bccAdmin: true,
+  });
+}
+
+/**
+ * 5.2b User Account Deletion Revoked / Restored Email
+ */
+export async function sendUserAccountRestoredEmail({
+  userName,
+  userEmail,
+}: {
+  userName?: string;
+  userEmail: string;
+}) {
+  const displayName = userName || "Valued Customer";
+
+  const content = `
+    <div style="text-align: center; margin-bottom: 24px;">
+      <span class="badge badge-delivered">Account Restored</span>
+      <h2 style="font-size: 22px; font-weight: 800; color: #0F172A; margin: 12px 0 6px 0;">
+        Welcome Back, ${displayName}!
+      </h2>
+      <p style="color: #64748B; font-size: 14px; margin: 0;">
+        Your account deletion request has been successfully cancelled.
+      </p>
+    </div>
+
+    <div class="alert-card alert-success">
+      <strong>✅ Account Reactivated</strong><br>
+      Your Neo Cloud Bites customer account, saved delivery addresses, and past order history have been fully restored.
+    </div>
+
+    <div style="text-align: center; margin-top: 24px;">
+      <a href="${APP_URL}/explore-desktop" class="btn">Explore Foods &amp; Restaurants</a>
+    </div>
+  `;
+
+  const html = wrapHtmlEmail("Account Restored - Neo Cloud Bites", content, {
+    headerColor: "green",
+    headerSubtitle: "Account Notice",
+  });
+
+  return sendEmail({
+    to: userEmail,
+    subject: "✅ Account Deletion Revoked - Neo Cloud Bites",
     html,
     bccAdmin: true,
   });

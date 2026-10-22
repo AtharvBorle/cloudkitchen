@@ -4,8 +4,10 @@ import crypto from "crypto";
 import {
     sendKitchenSoftDeletedEmail,
     sendKitchenPermanentlyDeletedEmail,
+    sendKitchenDeletionRevokedEmail,
     sendUserAccountSoftDeletedEmail,
     sendUserAccountPermanentlyDeletedEmail,
+    sendUserAccountRestoredEmail,
 } from "@/lib/emailService";
 
 export interface AccountDeletionConfig {
@@ -169,31 +171,57 @@ export async function restoreAccountIfWithinGracePeriod(user: { id: string; dele
     }
 
     // Cancel deletion and reactivate
+    let fullUser: any = null;
+    let restoredSellerProfile: any = null;
+
     await db.$transaction(async (tx) => {
-        await tx.user.update({
+        fullUser = await tx.user.update({
             where: { id: user.id },
             data: {
                 deletedAt: null,
                 isActive: true
+            },
+            include: {
+                sellerProfile: true
             }
         });
 
         // Also restore seller profile deletedAt if exists
-        const sellerProfile = await tx.sellerProfile.findUnique({
-            where: { userId: user.id }
-        });
-
-        if (sellerProfile && sellerProfile.deletedAt) {
-            await tx.sellerProfile.update({
+        if (fullUser?.sellerProfile && fullUser.sellerProfile.deletedAt) {
+            restoredSellerProfile = await tx.sellerProfile.update({
                 where: { userId: user.id },
                 data: {
                     deletedAt: null
                 }
             });
+        } else if (fullUser?.sellerProfile) {
+            restoredSellerProfile = fullUser.sellerProfile;
         }
     });
 
     console.log(`[Account Deletion] Soft-deleted account ${user.id} has been restored upon successful login.`);
+
+    // Dispatch Deactivation Revocation / Restored Email
+    try {
+        if (fullUser && fullUser.email) {
+            if (fullUser.role === "SELLER") {
+                const businessName = restoredSellerProfile?.businessName || fullUser.sellerProfile?.businessName || "Your Kitchen";
+                sendKitchenDeletionRevokedEmail({
+                    sellerName: fullUser.name || undefined,
+                    sellerEmail: fullUser.email,
+                    businessName,
+                }).catch((err) => console.error("[EmailService] Failed to send kitchen deletion revocation email:", err));
+            } else {
+                sendUserAccountRestoredEmail({
+                    userName: fullUser.name || "Customer",
+                    userEmail: fullUser.email,
+                }).catch((err) => console.error("[EmailService] Failed to send user account restored email:", err));
+            }
+        }
+    } catch (e) {
+        console.error("[EmailService] Error dispatching deletion revocation notification:", e);
+    }
+
     return true;
 }
 
