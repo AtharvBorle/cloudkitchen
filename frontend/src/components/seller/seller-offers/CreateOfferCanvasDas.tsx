@@ -1062,7 +1062,7 @@ const [menuItems, setMenuItems] = useState<any[]>([]);
                 </div>
               </div>
 
-              {/* Form Footer Ready State & Mobile Actions */}
+              {/* Form Footer Ready State & Bottom Publish Action */}
               <div className={styles.formFooterContainer}>
                 <div className={styles.formFooter}>
                   <ShieldCheck size={18} className={styles.successIcon} />
@@ -1073,10 +1073,10 @@ const [menuItems, setMenuItems] = useState<any[]>([]);
                   </span>
                 </div>
 
-                <div className={styles.mobileFormActions}>
+                <div className={styles.formFooterActions}>
                   <button
                     type="button"
-                    className={styles.mobilePublishBtn}
+                    className={styles.bottomPublishBtn}
                     disabled={submitting}
                     onClick={() => handlePublish()}
                   >
