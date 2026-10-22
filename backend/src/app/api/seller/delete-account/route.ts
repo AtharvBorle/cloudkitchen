@@ -66,17 +66,24 @@ export async function POST(req: NextRequest) {
             return errorResponse("This seller account has already been permanently deleted.", 400);
         }
 
-        // Optional password confirmation
+        // Mandatory password verification to verify ownership
+        let password = "";
         try {
             const body = await req.json();
-            if (body && body.password) {
-                const isPasswordValid = await bcrypt.compare(body.password, user.passwordHash);
-                if (!isPasswordValid) {
-                    return errorResponse("Incorrect password. Please verify your password to confirm deletion.", 400);
-                }
-            }
+            password = typeof body?.password === "string" ? body.password.trim() : "";
         } catch {
-            // Confirmation via UI prompt is acceptable
+            password = "";
+        }
+
+        if (!password) {
+            return errorResponse("Password is required to verify ownership and confirm kitchen deletion.", 400);
+        }
+
+        if (user.passwordHash) {
+            const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+            if (!isPasswordValid) {
+                return errorResponse("Incorrect password. Please verify your password to confirm deletion.", 400);
+            }
         }
 
         const result = await softDeleteAccount(user.id);

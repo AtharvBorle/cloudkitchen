@@ -860,30 +860,6 @@ export default function RiderSettlements({
                 >
                   Record Settlement
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActualCashReceived("");
-                    setDiscrepancyNotes("");
-                    setIsDiscrepancyModalOpen(true);
-                  }}
-                  style={{
-                    width: "100%",
-                    height: "38px",
-                    backgroundColor: "#FFF5F5",
-                    color: "#DC2626",
-                    border: "1px solid #FECACA",
-                    borderRadius: "8px",
-                    fontSize: "13px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    transition: "all 0.18s ease",
-                    fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-                  }}
-                  className="report-discrepancy-btn"
-                >
-                  Report Discrepancy
-                </button>
               </div>
             </div>
           </div>

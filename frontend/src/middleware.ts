@@ -105,10 +105,6 @@ export async function middleware(request: NextRequest) {
     pathname === "/privacy" ||
     pathname === "/about" ||
     pathname === "/contact" ||
-    pathname === "/track" ||
-    pathname.startsWith("/track/") ||
-    pathname === "/order-confirmation" ||
-    pathname.startsWith("/order-confirmation/") ||
     pathname.startsWith("/auth/forgot-password") ||
     pathname.startsWith("/auth/forget-password");
 
@@ -262,8 +258,10 @@ export async function middleware(request: NextRequest) {
       pathname !== "/user/cart" &&
       pathname !== "/user/user-cart") ||
     pathname === "/my-orders" ||
+    pathname === "/track-order" ||
     pathname === "/orders-desktop" ||
     pathname === "/order-history-desktop" ||
+    pathname === "/order-confirmation" ||
     pathname === "/my-subscription" ||
     pathname === "/my-subscriptions" ||
     pathname === "/my-subscriptions-desktop" ||
@@ -282,14 +280,6 @@ export async function middleware(request: NextRequest) {
   // 7. UNAUTHENTICATED ACCESS — redirect to login
   // ──────────────────────────────────────────
   if (!isAuthenticated) {
-    // If accessing /my-orders with an orderId query param, redirect guest seamlessly to /track
-    if (pathname === "/my-orders" && request.nextUrl.searchParams.has("orderId")) {
-      const orderId = request.nextUrl.searchParams.get("orderId");
-      return NextResponse.redirect(
-        new URL(`/track?orderId=${encodeURIComponent(orderId || "")}`, request.url)
-      );
-    }
-
     const hasTokenParam = Boolean(request.nextUrl.searchParams.get("token"));
     if (isSellerRoute && hasTokenParam) {
       return NextResponse.next();

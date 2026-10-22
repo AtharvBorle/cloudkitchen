@@ -239,7 +239,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     if (pathname.startsWith("/explore/furniture")) {
       return "Furniture";
     }
-    if (pathname.startsWith("/orders-desktop") || pathname.startsWith("/order-history") || pathname.startsWith("/dashboard/user/orders")) {
+    if (pathname.startsWith("/orders-desktop") || pathname.startsWith("/order-history") || pathname.startsWith("/dashboard/user/orders") || pathname.startsWith("/track-order") || pathname.startsWith("/my-orders") || pathname.startsWith("/orders")) {
       return "Orders";
     }
     if (
@@ -454,6 +454,9 @@ export const Navbar: React.FC<NavbarProps> = ({
       pathname.startsWith("/orders-desktop") ||
       pathname.startsWith("/order-history") ||
       pathname.startsWith("/dashboard/user/orders") ||
+      pathname.startsWith("/track-order") ||
+      pathname.startsWith("/my-orders") ||
+      pathname.startsWith("/orders") ||
       currentActiveItem === "Orders"
     ) {
       return {
@@ -589,7 +592,8 @@ export const Navbar: React.FC<NavbarProps> = ({
       if (
         pathname.startsWith("/orders-desktop") ||
         pathname.startsWith("/orders") ||
-        pathname.startsWith("/my-orders")
+        pathname.startsWith("/my-orders") ||
+        pathname.startsWith("/track-order")
       ) {
         const url = new URL(window.location.href);
         url.searchParams.delete("query");
