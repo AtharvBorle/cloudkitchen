@@ -611,14 +611,6 @@ function EditOfferForm({
                     <Trash2 size={15} />
                     <span>Delete</span>
                   </button>
-                  <button
-                    type="button"
-                    className={styles.publishBtn}
-                    disabled={submitting}
-                    onClick={() => handleUpdate(status === "Pending" ? "Pending" : "Active")}
-                  >
-                    {submitting ? "Saving..." : "Update Offer"}
-                  </button>
                 </div>
               </div>
             </div>

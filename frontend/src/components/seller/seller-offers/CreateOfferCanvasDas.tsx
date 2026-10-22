@@ -274,26 +274,13 @@ const [menuItems, setMenuItems] = useState<any[]>([]);
               <span>Back to Offers & Coupons</span>
             </Link>
 
-            {/* Header: Title, Subtitle, and Action Buttons */}
+            {/* Header: Title and Subtitle */}
             <div className={styles.headerRow}>
               <div className={styles.titleGroup}>
                 <h1 className={styles.mainTitle}>Create New Offer</h1>
                 <p className={styles.subTitle}>
                   Setup a new discount, coupon, or promotional rule for your store
                 </p>
-              </div>
-
-              <div className={styles.actionsGroup}>
-                <div className={styles.desktopActions}>
-                  <button
-                    type="button"
-                    className={styles.publishBtn}
-                    disabled={submitting}
-                    onClick={() => handlePublish()}
-                  >
-                    {submitting ? "Publishing..." : "Publish Offer"}
-                  </button>
-                </div>
               </div>
             </div>
 
