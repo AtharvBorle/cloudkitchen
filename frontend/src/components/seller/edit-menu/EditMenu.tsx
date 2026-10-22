@@ -81,23 +81,75 @@ function EditMenuInner({
   const [modalActionType, setModalActionType] = useState<'add' | 'edit'>('add');
   const [savedDishName, setSavedDishName] = useState('');
 
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [existingImageUrl, setExistingImageUrl] = useState<string>('');
+  // Dish Photos (up to 4 photos)
+  interface DishPhotoItem {
+    id: string;
+    url: string;
+    file?: File | null;
+    isExisting?: boolean;
+    name?: string;
+    sizeMB?: string;
+  }
+  const [photos, setPhotos] = useState<DishPhotoItem[]>([]);
+  const [previewPhotoIndex, setPreviewPhotoIndex] = useState<number>(0);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (imageFile) {
-      const url = URL.createObjectURL(imageFile);
-      setPreviewUrl(url);
-      return () => URL.revokeObjectURL(url);
-    } else if (existingImageUrl) {
-      setPreviewUrl(existingImageUrl);
-    } else {
-      setPreviewUrl('');
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    if (photos.length >= 4) {
+      alert("Maximum 4 photos allowed for food items. Please remove a photo first to upload a new one.");
+      e.target.value = "";
+      return;
     }
-  }, [imageFile, existingImageUrl]);
+
+    const availableSlots = 4 - photos.length;
+    const fileList = Array.from(files);
+    const filesToProcess = fileList.slice(0, availableSlots);
+    if (fileList.length > availableSlots) {
+      alert(`You can only upload up to 4 photos. Only the first ${availableSlots} selected photo(s) will be added.`);
+    }
+
+    const newPhotos: DishPhotoItem[] = [];
+    for (const file of filesToProcess) {
+      if (file.size > 5 * 1024 * 1024) {
+        const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+        alert(`Dish image "${file.name}" (${sizeMB} MB) exceeds the 5MB upload limit. Please upload images under 5MB.`);
+        continue;
+      }
+      newPhotos.push({
+        id: `new-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        url: URL.createObjectURL(file),
+        file,
+        isExisting: false,
+        name: file.name,
+        sizeMB: (file.size / (1024 * 1024)).toFixed(2),
+      });
+    }
+
+    if (newPhotos.length > 0) {
+      setPhotos((prev) => [...prev, ...newPhotos].slice(0, 4));
+    }
+    e.target.value = "";
+  };
+
+  const handleRemovePhoto = (id: string) => {
+    setPhotos((prev) => {
+      const target = prev.find((p) => p.id === id);
+      if (target && target.url.startsWith("blob:")) {
+        try {
+          URL.revokeObjectURL(target.url);
+        } catch {}
+      }
+      const updated = prev.filter((p) => p.id !== id);
+      if (previewPhotoIndex >= updated.length) {
+        setPreviewPhotoIndex(Math.max(0, updated.length - 1));
+      }
+      return updated;
+    });
+  };
 
   useEffect(() => {
     async function loadItem() {
@@ -136,7 +188,33 @@ function EditMenuInner({
                 setSelectedServes(null);
                 setDescription('');
               }
-              if (found.imageUrl) setExistingImageUrl(found.imageUrl);
+              const loadedPhotos: DishPhotoItem[] = [];
+              if (found.images) {
+                try {
+                  const parsed = typeof found.images === "string" ? JSON.parse(found.images) : found.images;
+                  if (Array.isArray(parsed) && parsed.length > 0) {
+                    parsed.slice(0, 4).forEach((u: string, idx: number) => {
+                      if (u && typeof u === "string") {
+                        loadedPhotos.push({
+                          id: `existing-${idx}-${u}`,
+                          url: u,
+                          isExisting: true,
+                          name: `Photo ${idx + 1}`
+                        });
+                      }
+                    });
+                  }
+                } catch {}
+              }
+              if (loadedPhotos.length === 0 && found.imageUrl) {
+                loadedPhotos.push({
+                  id: `existing-0-${found.imageUrl}`,
+                  url: found.imageUrl,
+                  isExisting: true,
+                  name: "Cover Photo"
+                });
+              }
+              setPhotos(loadedPhotos);
               setStockQty(found.stockQuantity !== null && found.stockQuantity !== undefined && found.stockQuantity >= 0 ? String(found.stockQuantity) : '');
               if (found.itemType) {
                 const parts = String(found.itemType).split(',').map((s: string) => s.trim().toUpperCase());
@@ -234,7 +312,7 @@ function EditMenuInner({
     setFoodTypeError(null);
     setStockQty('');
     setVariants([]);
-    setImageFile(null);
+    setPhotos([]);
     setShowSuccessModal(false);
     if (itemId) {
       router.push('/seller/edit-menu');
@@ -297,8 +375,8 @@ function EditMenuInner({
       return;
     }
 
-    if (!imageFile && !existingImageUrl) {
-      alert("Dish image is mandatory. Please upload an image.");
+    if (photos.length === 0) {
+      alert("Dish image is mandatory. Please upload at least one photo (up to 4 photos).");
       return;
     }
 
@@ -347,8 +425,27 @@ function EditMenuInner({
         formData.append('foodCategoryId', matchedCatId);
       }
 
-      if (imageFile) {
-        formData.append('image', imageFile);
+      // Append up to 4 photos
+      const existingUrls: string[] = [];
+      let firstFileAppended = false;
+
+      photos.forEach((p) => {
+        if (p.file) {
+          formData.append('images', p.file);
+          if (!firstFileAppended) {
+            formData.append('image', p.file);
+            firstFileAppended = true;
+          }
+        } else if (p.isExisting && p.url && !p.url.startsWith('blob:')) {
+          existingUrls.push(p.url);
+        }
+      });
+
+      if (existingUrls.length > 0) {
+        formData.append('existingImages', JSON.stringify(existingUrls));
+        if (!firstFileAppended) {
+          formData.append('imageUrl', existingUrls[0]);
+        }
       }
 
       let res;
@@ -780,25 +877,29 @@ function EditMenuInner({
               </button>
             </div>
 
-            {/* Dish Image Representation */}
+            {/* Dish Image Representation (Up to 4 Photos) */}
             <div className={styles.subSection}>
               <div className={styles.subSectionHeaderRow}>
                 <label className={styles.subSectionTitle}>
                   Dish Image representation <span className={styles.requiredStar}>*</span>
+                  <span style={{ fontSize: "0.82rem", color: "#64748B", fontWeight: 500, marginLeft: "8px" }}>
+                    ({photos.length}/4 photos)
+                  </span>
                 </label>
-                {(imageFile || existingImageUrl) && (
+                {photos.length > 0 && (
                   <button
                     type="button"
                     className={styles.headerPreviewBtn}
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
+                      setPreviewPhotoIndex(0);
                       setIsPreviewOpen(true);
                     }}
-                    title="Preview dish image"
+                    title="Preview dish images"
                   >
                     <Eye size={14} />
-                    <span>Preview</span>
+                    <span>Preview Photos</span>
                   </button>
                 )}
               </div>
@@ -807,105 +908,238 @@ function EditMenuInner({
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
+                multiple
                 className={styles.fileInputHidden}
-                onChange={(e) => {
-                  if (e.target.files && e.target.files[0]) {
-                    const file = e.target.files[0];
-                    if (file.size > 5 * 1024 * 1024) {
-                      const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
-                      alert(`Dish image "${file.name}" (${sizeMB} MB) exceeds the 5MB upload limit. Please upload an image under 5MB.`);
-                      e.target.value = "";
-                      return;
-                    }
-                    setImageFile(file);
-                  }
-                }}
+                onChange={handlePhotoUpload}
               />
 
-              {imageFile || existingImageUrl ? (
-                <div
-                  className={styles.uploadedDropzone}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <div className={styles.uploadedLeft}>
-                    {previewUrl && (
-                      <div className={styles.dishThumbnailWrap}>
-                        <img
-                          src={previewUrl}
-                          alt="Dish Preview"
-                          className={styles.dishThumbnail}
-                        />
-                      </div>
-                    )}
-                    <div className={styles.fileInfoGroup}>
-                      <p className={styles.fileName}>
-                        {imageFile ? imageFile.name : (itemName ? `${itemName} (Current Photo)` : "Current Dish Photo")}
-                      </p>
-                      <p className={styles.fileStatus}>
-                        {imageFile
-                          ? `${(imageFile.size / (1024 * 1024)).toFixed(2)} MB • Photo ready for menu`
-                          : "Live on menu • Click preview or change"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className={styles.dropzoneActions}>
-                    <button
-                      type="button"
-                      className={styles.actionPreviewBtn}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setIsPreviewOpen(true);
-                      }}
-                      title="Preview dish image"
-                    >
-                      <Eye size={14} />
-                      <span>Preview</span>
-                    </button>
-                    <button
-                      type="button"
-                      className={styles.reuploadBtn}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        fileInputRef.current?.click();
-                      }}
-                      title="Replace photo"
-                    >
-                      <RefreshCw size={14} />
-                      <span>Change</span>
-                    </button>
-                    <button
-                      type="button"
-                      className={styles.removeBtn}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setImageFile(null);
-                        setExistingImageUrl("");
-                        if (fileInputRef.current) fileInputRef.current.value = "";
-                      }}
-                      title="Remove image"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                </div>
-              ) : (
+              {photos.length === 0 ? (
                 <div
                   className={styles.uploadDropzone}
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <div className={styles.uploadContent}>
                     <div className={styles.cloudIconBadge}>
-                      <CloudUpload size={22} color="#F97316" strokeWidth={2.2} />
+                      <CloudUpload size={24} color="#F97316" strokeWidth={2.2} />
                     </div>
                     <span className={styles.uploadTitle}>Click to upload raw picture</span>
                     <span className={styles.uploadHint}>
-                      PNG, JPG, up to 5MB, recommended square scale ratio
+                      PNG, JPG, up to 5MB, recommended square scale ratio (up to 4 photos)
                     </span>
                   </div>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))",
+                      gap: "12px",
+                      width: "100%",
+                    }}
+                  >
+                    {photos.map((photo, idx) => (
+                      <div
+                        key={photo.id}
+                        style={{
+                          position: "relative",
+                          width: "100%",
+                          paddingTop: "100%",
+                          borderRadius: "12px",
+                          border: idx === 0 ? "2px solid #F97316" : "1.5px solid #E2E8F0",
+                          backgroundColor: "#F8FAFC",
+                          overflow: "hidden",
+                          boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
+                          transition: "all 0.2s ease",
+                        }}
+                      >
+                        <img
+                          src={photo.url}
+                          alt={photo.name || `Dish Photo ${idx + 1}`}
+                          style={{
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                          }}
+                        />
+
+                        {/* Primary / Cover Badge */}
+                        {idx === 0 ? (
+                          <div
+                            style={{
+                              position: "absolute",
+                              top: "6px",
+                              left: "6px",
+                              backgroundColor: "#FF5500",
+                              color: "#FFFFFF",
+                              fontSize: "10px",
+                              fontWeight: 700,
+                              padding: "2px 7px",
+                              borderRadius: "6px",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "3px",
+                              boxShadow: "0 2px 4px rgba(0,0,0,0.25)",
+                              zIndex: 2,
+                            }}
+                          >
+                            <span>★</span>
+                            <span>Cover</span>
+                          </div>
+                        ) : (
+                          <div
+                            style={{
+                              position: "absolute",
+                              top: "6px",
+                              left: "6px",
+                              backgroundColor: "rgba(15, 23, 42, 0.72)",
+                              backdropFilter: "blur(4px)",
+                              color: "#FFFFFF",
+                              fontSize: "10px",
+                              fontWeight: 600,
+                              padding: "2px 6px",
+                              borderRadius: "6px",
+                              zIndex: 2,
+                            }}
+                          >
+                            #{idx + 1}
+                          </div>
+                        )}
+
+                        {/* Action buttons (Preview & Remove) */}
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "6px",
+                            right: "6px",
+                            display: "flex",
+                            gap: "4px",
+                            zIndex: 3,
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setPreviewPhotoIndex(idx);
+                              setIsPreviewOpen(true);
+                            }}
+                            title="Preview image"
+                            style={{
+                              width: "24px",
+                              height: "24px",
+                              borderRadius: "6px",
+                              backgroundColor: "rgba(15, 23, 42, 0.75)",
+                              color: "#FFFFFF",
+                              border: "none",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              cursor: "pointer",
+                              padding: 0,
+                            }}
+                          >
+                            <Eye size={12} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleRemovePhoto(photo.id);
+                            }}
+                            title="Remove photo"
+                            style={{
+                              width: "24px",
+                              height: "24px",
+                              borderRadius: "6px",
+                              backgroundColor: "rgba(239, 68, 68, 0.88)",
+                              color: "#FFFFFF",
+                              border: "none",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              cursor: "pointer",
+                              padding: 0,
+                            }}
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Add More Photos Slot when less than 4 */}
+                    {photos.length < 4 && (
+                      <div
+                        onClick={() => fileInputRef.current?.click()}
+                        style={{
+                          position: "relative",
+                          width: "100%",
+                          paddingTop: "100%",
+                          borderRadius: "12px",
+                          border: "1.5px dashed #CBD5E1",
+                          backgroundColor: "#F8FAFC",
+                          cursor: "pointer",
+                          transition: "all 0.18s ease",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = "#F97316";
+                          e.currentTarget.style.backgroundColor = "#FFF7ED";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = "#CBD5E1";
+                          e.currentTarget.style.backgroundColor = "#F8FAFC";
+                        }}
+                      >
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            width: "100%",
+                            height: "100%",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "6px",
+                            padding: "8px",
+                            boxSizing: "border-box",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: "32px",
+                              height: "32px",
+                              borderRadius: "50%",
+                              backgroundColor: "#FFEDD5",
+                              color: "#F97316",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            <Plus size={18} strokeWidth={2.4} />
+                          </div>
+                          <span style={{ fontSize: "0.78rem", fontWeight: 600, color: "#334155" }}>
+                            Add Photo
+                          </span>
+                          <span style={{ fontSize: "0.68rem", color: "#94A3B8" }}>
+                            {photos.length}/4
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <p style={{ margin: "2px 0 0 0", fontSize: "0.74rem", color: "#64748B" }}>
+                    💡 You can upload up to 4 photos. The first photo (Cover) will be displayed as the main dish card thumbnail.
+                  </p>
                 </div>
               )}
             </div>
@@ -921,8 +1155,8 @@ function EditMenuInner({
             </div>
           </form>
 
-          {/* Document-style Dish Image Preview Modal */}
-          {isPreviewOpen && (previewUrl || existingImageUrl) && (
+          {/* Multi-Photo Dish Image Preview Modal */}
+          {isPreviewOpen && photos.length > 0 && photos[previewPhotoIndex] && (
             <div
               className={styles.previewModalOverlay}
               onClick={() => setIsPreviewOpen(false)}
@@ -940,15 +1174,15 @@ function EditMenuInner({
                     </div>
                     <div className={styles.previewHeaderTextGroup}>
                       <h3 className={styles.previewModalTitle}>
-                        {itemName ? `${itemName} - Dish Image Preview` : "Dish Image Preview"}
+                        {itemName ? `${itemName} - Photo ${previewPhotoIndex + 1} of ${photos.length}` : `Dish Photo ${previewPhotoIndex + 1} of ${photos.length}`}
                       </h3>
                       <div className={styles.previewModalSubtitleRow}>
-                        <span className={styles.previewModalFileName} title={imageFile ? imageFile.name : (itemName ? `${itemName} Photo` : "dish-photo.jpg")}>
-                          {imageFile ? imageFile.name : (itemName ? `${itemName} Photo` : "dish-photo.jpg")}
+                        <span className={styles.previewModalFileName}>
+                          {photos[previewPhotoIndex].name || `dish-photo-${previewPhotoIndex + 1}.jpg`}
                         </span>
-                        {imageFile && (
+                        {photos[previewPhotoIndex].sizeMB && (
                           <span className={styles.previewModalFileSize}>
-                            {(imageFile.size / (1024 * 1024)).toFixed(2)} MB
+                            {photos[previewPhotoIndex].sizeMB} MB
                           </span>
                         )}
                       </div>
@@ -963,7 +1197,7 @@ function EditMenuInner({
                         const win = window.open();
                         if (win) {
                           win.document.write(
-                            `<html><head><title>${itemName || "Dish Image"} Preview</title></head><body style="margin:0; background:#0f172a; display:flex; align-items:center; justify-content:center; min-height:100vh;"><img src="${previewUrl}" style="max-width:100%; max-height:100vh; object-fit:contain;"/></body></html>`
+                            `<html><head><title>${itemName || "Dish Image"} Preview</title></head><body style="margin:0; background:#0f172a; display:flex; align-items:center; justify-content:center; min-height:100vh;"><img src="${photos[previewPhotoIndex].url}" style="max-width:100%; max-height:100vh; object-fit:contain;"/></body></html>`
                           );
                         }
                       }}
@@ -986,30 +1220,52 @@ function EditMenuInner({
                 <div className={styles.previewModalBody}>
                   <div className={styles.imageContainer}>
                     <img
-                      src={previewUrl}
+                      src={photos[previewPhotoIndex].url}
                       alt={itemName || "Dish Photo"}
                       className={styles.previewImg}
                     />
                   </div>
+
+                  {/* Thumbnail Selector Strip if multiple photos */}
+                  {photos.length > 1 && (
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "8px",
+                        marginTop: "12px",
+                        justifyContent: "center",
+                      }}
+                    >
+                      {photos.map((p, pIdx) => (
+                        <div
+                          key={p.id}
+                          onClick={() => setPreviewPhotoIndex(pIdx)}
+                          style={{
+                            width: "48px",
+                            height: "48px",
+                            borderRadius: "8px",
+                            border: pIdx === previewPhotoIndex ? "2px solid #F97316" : "1.5px solid #CBD5E1",
+                            overflow: "hidden",
+                            cursor: "pointer",
+                            opacity: pIdx === previewPhotoIndex ? 1 : 0.6,
+                            transition: "all 0.15s ease",
+                          }}
+                        >
+                          <img
+                            src={p.url}
+                            alt=""
+                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className={styles.previewModalFooter}>
                   <button
                     type="button"
-                    className={styles.previewChangeBtn}
-                    onClick={() => {
-                      setIsPreviewOpen(false);
-                      setTimeout(() => {
-                        fileInputRef.current?.click();
-                      }, 60);
-                    }}
-                  >
-                    <RefreshCw size={14} />
-                    <span>Replace / Change Photo</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.previewCloseBtn}
+                    className={styles.modalCloseFooterBtn}
                     onClick={() => setIsPreviewOpen(false)}
                   >
                     Close Preview

@@ -131,6 +131,7 @@ model FoodItem {
   description       String
   price             Float
   imageUrl          String?
+  images            String           @default("[]")
   availableDays     String           @default("Mon,Tue,Wed,Thu,Fri,Sat,Sun")
   isAvailable       Boolean          @default(true)
   stockQuantity     Int              @default(-1)

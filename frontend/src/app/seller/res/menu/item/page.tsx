@@ -107,8 +107,17 @@ function MenuItemContent() {
         }
       }
 
-      if (data.imageFile) {
+      if (data.imageFiles && data.imageFiles.length > 0) {
+        data.imageFiles.forEach((f: File) => formData.append("images", f));
+        formData.append("image", data.imageFiles[0]);
+      } else if (data.imageFile) {
+        formData.append("images", data.imageFile);
         formData.append("image", data.imageFile);
+      }
+
+      if (data.existingImages && data.existingImages.length > 0) {
+        formData.append("existingImages", JSON.stringify(data.existingImages));
+        formData.append("imageUrl", data.existingImages[0]);
       } else if (initialData?.imageUrl) {
         formData.append("imageUrl", initialData.imageUrl);
       }
@@ -186,6 +195,7 @@ function MenuItemContent() {
       initialIsInStock={initialData?.isAvailable}
       initialVariants={parsedVariants}
       initialImageUrl={initialData?.imageUrl}
+      initialImages={initialData?.images}
       onSave={handleSave}
     />
   );

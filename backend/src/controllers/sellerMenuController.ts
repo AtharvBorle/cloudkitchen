@@ -292,21 +292,48 @@ export const createMenuItem = async (req: Request) => {
         throw new ApiError("Category is required", 400);
     }
 
+    // Support up to 4 photos
+    const fileEntries = [
+        ...formData.getAll("images"),
+        ...formData.getAll("image")
+    ];
+
+    const existingImagesRaw = formData.get("existingImages") as string | null;
+    let existingImages: string[] = [];
+    if (existingImagesRaw) {
+        try {
+            const parsed = JSON.parse(existingImagesRaw);
+            if (Array.isArray(parsed)) existingImages = parsed.filter(u => typeof u === "string" && u.trim() && !u.startsWith("blob:"));
+        } catch {
+            if (typeof existingImagesRaw === "string" && existingImagesRaw.trim() && !existingImagesRaw.startsWith("blob:")) {
+                existingImages = [existingImagesRaw.trim()];
+            }
+        }
+    }
     const providedImgUrl = formData.get("imageUrl") as string | null;
-    if ((!imageFile || imageFile.size === 0) && (!providedImgUrl || !providedImgUrl.trim())) {
-        throw new ApiError("Dish image is mandatory. Please upload an image.", 400);
+    if (providedImgUrl && providedImgUrl.trim() && !providedImgUrl.startsWith("blob:") && !existingImages.includes(providedImgUrl.trim())) {
+        existingImages.push(providedImgUrl.trim());
     }
 
-    let imageUrl = providedImgUrl && providedImgUrl.trim() ? providedImgUrl.trim() : "";
-    if (imageFile && imageFile.size > 0) {
-        const bytes = await imageFile.arrayBuffer();
-        const buffer = Buffer.from(bytes);
-        imageUrl = await uploadImage(buffer, imageFile.type, imageFile.name, "menu");
+    const uploadedUrls: string[] = [];
+    for (const entry of fileEntries) {
+        if (entry instanceof File && entry.size > 0) {
+            const bytes = await entry.arrayBuffer();
+            const buffer = Buffer.from(bytes);
+            const uploadedUrl = await uploadImage(buffer, entry.type, entry.name, "menu");
+            if (uploadedUrl) {
+                uploadedUrls.push(uploadedUrl);
+            }
+        }
     }
 
-    if (!imageUrl) {
-        throw new ApiError("Dish image is mandatory. Please upload an image.", 400);
+    const allImages = [...existingImages, ...uploadedUrls].slice(0, 4);
+    if (allImages.length === 0) {
+        throw new ApiError("Dish image is mandatory. Please upload at least one image (up to 4 photos).", 400);
     }
+
+    const imageUrl = allImages[0];
+    const images = JSON.stringify(allImages);
 
     const foodItem = await db.foodItem.create({
         data: {
@@ -321,6 +348,7 @@ export const createMenuItem = async (req: Request) => {
             closeTime: closeTime || null,
             operationalHours: operationalHours || null,
             imageUrl,
+            images,
             itemType,
             variants: addonsStr,
             addons: addonsStr,
@@ -439,10 +467,45 @@ export const updateMenuItem = async (req: Request, id: string) => {
         if (foodCategoryId !== null) dataToUpdate.foodCategoryId = foodCategoryId || null;
         if (foodSubCategoryId !== null) dataToUpdate.foodSubCategoryId = foodSubCategoryId || null;
 
-        if (imageFile && imageFile.size > 0) {
-            const bytes = await imageFile.arrayBuffer();
-            const buffer = Buffer.from(bytes);
-            dataToUpdate.imageUrl = await uploadImage(buffer, imageFile.type, imageFile.name, "menu");
+        // Support up to 4 photos in update
+        const fileEntries = [
+            ...formData.getAll("images"),
+            ...formData.getAll("image")
+        ];
+        const existingImagesRaw = formData.get("existingImages") as string | null;
+        let existingImages: string[] = [];
+        if (existingImagesRaw !== null) {
+            try {
+                const parsed = JSON.parse(existingImagesRaw);
+                if (Array.isArray(parsed)) existingImages = parsed.filter(u => typeof u === "string" && u.trim() && !u.startsWith("blob:"));
+            } catch {
+                if (typeof existingImagesRaw === "string" && existingImagesRaw.trim() && !existingImagesRaw.startsWith("blob:")) {
+                    existingImages = [existingImagesRaw.trim()];
+                }
+            }
+        } else {
+            const providedImgUrl = formData.get("imageUrl") as string | null;
+            if (providedImgUrl && providedImgUrl.trim() && !providedImgUrl.startsWith("blob:")) {
+                existingImages = [providedImgUrl.trim()];
+            }
+        }
+
+        const uploadedUrls: string[] = [];
+        for (const entry of fileEntries) {
+            if (entry instanceof File && entry.size > 0) {
+                const bytes = await entry.arrayBuffer();
+                const buffer = Buffer.from(bytes);
+                const uploadedUrl = await uploadImage(buffer, entry.type, entry.name, "menu");
+                if (uploadedUrl) {
+                    uploadedUrls.push(uploadedUrl);
+                }
+            }
+        }
+
+        const combined = [...existingImages, ...uploadedUrls].slice(0, 4);
+        if (combined.length > 0) {
+            dataToUpdate.imageUrl = combined[0];
+            dataToUpdate.images = JSON.stringify(combined);
         }
     } else {
         const body = await req.json();

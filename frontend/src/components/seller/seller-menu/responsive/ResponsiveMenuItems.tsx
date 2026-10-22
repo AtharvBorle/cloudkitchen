@@ -33,6 +33,7 @@ export interface ResponsiveMenuItemsProps {
   initialVariants?: ResponsiveVariantItem[];
   initialSchedules?: ResponsiveDaySchedule[];
   initialImageUrl?: string;
+  initialImages?: string | string[];
   onBack?: () => void;
   onSave?: (data: {
     itemName: string;
@@ -48,6 +49,8 @@ export interface ResponsiveMenuItemsProps {
     variants: ResponsiveVariantItem[];
     schedules: ResponsiveDaySchedule[];
     imageFile?: File | null;
+    imageFiles?: File[];
+    existingImages?: string[];
   }) => void;
 }
 
@@ -77,6 +80,7 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
   initialVariants = DEFAULT_VARIANTS,
   initialSchedules = DEFAULT_SCHEDULES,
   initialImageUrl,
+  initialImages,
   onBack,
   onSave,
 }) => {
@@ -136,8 +140,33 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
   });
   const [variants, setVariants] = useState<ResponsiveVariantItem[]>(initialVariants);
   const [schedules, setSchedules] = useState<ResponsiveDaySchedule[]>(initialSchedules);
-  const [imagePreview, setImagePreview] = useState<string | null>(initialImageUrl || null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  interface ResponsiveDishPhoto {
+    id: string;
+    url: string;
+    file?: File | null;
+    isExisting?: boolean;
+    name?: string;
+  }
+  const [photos, setPhotos] = useState<ResponsiveDishPhoto[]>(() => {
+    const list: ResponsiveDishPhoto[] = [];
+    if (initialImages) {
+      try {
+        const parsed = typeof initialImages === "string" ? JSON.parse(initialImages) : initialImages;
+        if (Array.isArray(parsed)) {
+          parsed.slice(0, 4).forEach((u, i) => {
+            if (u && typeof u === "string") {
+              list.push({ id: `init-${i}`, url: u, isExisting: true, name: `Photo ${i + 1}` });
+            }
+          });
+        }
+      } catch {}
+    }
+    if (list.length === 0 && initialImageUrl) {
+      list.push({ id: "init-0", url: initialImageUrl, isExisting: true, name: "Cover Photo" });
+    }
+    return list;
+  });
+  const [previewPhotoIndex, setPreviewPhotoIndex] = useState<number>(0);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   const handleBackClick = () => {
@@ -151,19 +180,59 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
   };
 
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    if (photos.length >= 4) {
+      alert("Maximum 4 photos allowed for food items. Please remove a photo first to upload a new one.");
+      e.target.value = "";
+      return;
+    }
+
+    const availableSlots = 4 - photos.length;
+    const fileList = Array.from(files);
+    const filesToProcess = fileList.slice(0, availableSlots);
+    if (fileList.length > availableSlots) {
+      alert(`You can only upload up to 4 photos. Only the first ${availableSlots} photo(s) have been added.`);
+    }
+
+    const newPhotos: ResponsiveDishPhoto[] = [];
+    for (const file of filesToProcess) {
       if (file.size > 5 * 1024 * 1024) {
         const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
         alert(`Image "${file.name}" (${sizeMB} MB) exceeds the 5MB upload limit. Please select an image under 5MB.`);
-        e.target.value = "";
-        return;
+        continue;
       }
-      setImageFile(file);
-      const objectUrl = URL.createObjectURL(file);
-      setImagePreview(objectUrl);
+      newPhotos.push({
+        id: `new-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        url: URL.createObjectURL(file),
+        file,
+        isExisting: false,
+        name: file.name,
+      });
     }
+
+    if (newPhotos.length > 0) {
+      setPhotos((prev) => [...prev, ...newPhotos].slice(0, 4));
+    }
+    e.target.value = "";
+  };
+
+  const handleRemovePhoto = (id: string) => {
+    setPhotos((prev) => {
+      const target = prev.find((p) => p.id === id);
+      if (target && target.url.startsWith("blob:")) {
+        try {
+          URL.revokeObjectURL(target.url);
+        } catch {}
+      }
+      const updated = prev.filter((p) => p.id !== id);
+      if (previewPhotoIndex >= updated.length) {
+        setPreviewPhotoIndex(Math.max(0, updated.length - 1));
+      }
+      return updated;
+    });
   };
 
   const handleTriggerUpload = () => {
@@ -251,8 +320,8 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
       return;
     }
 
-    if (!imageFile && !initialImageUrl && !imagePreview) {
-      alert("Dish photo is mandatory. Please upload a photo.");
+    if (photos.length === 0) {
+      alert("Dish image is mandatory. Please upload at least one photo (up to 4 photos).");
       return;
     }
 
@@ -280,7 +349,9 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
       isInStock: initialIsInStock !== undefined ? initialIsInStock : cleanStock > 0,
       variants,
       schedules,
-      imageFile,
+      imageFile: photos.find(p => p.file)?.file || null,
+      imageFiles: photos.filter(p => p.file).map(p => p.file as File),
+      existingImages: photos.filter(p => p.isExisting && p.url && !p.url.startsWith("blob:")).map(p => p.url),
     };
 
     if (onSave) {
@@ -321,66 +392,236 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
 
         {/* Scrollable Form Content */}
         <form onSubmit={handleSubmit} className={styles.contentArea}>
-          {/* 1. Upload Photo Banner */}
-          <div
-            className={styles.uploadDropzone}
-            onClick={handleTriggerUpload}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                handleTriggerUpload();
-              }
-            }}
-            aria-label="Upload Item Photo"
-          >
+          {/* 1. Upload Photo Banner (Up to 4 Photos) */}
+          <div style={{ marginBottom: "16px" }}>
             <input
               ref={fileInputRef}
               type="file"
               accept="image/png, image/jpeg, image/jpg"
+              multiple
               className={styles.fileInputHidden}
-              onChange={handleImageChange}
+              onChange={handlePhotoUpload}
             />
 
-            {imagePreview ? (
-              <div className={styles.previewContainer}>
-                <img
-                  src={imagePreview}
-                  alt="Item Preview"
-                  className={styles.previewImage}
-                />
-                <div className={styles.previewActionsRow}>
-                  <button
-                    type="button"
-                    className={styles.actionPreviewBtn}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setIsPreviewOpen(true);
-                    }}
-                    title="Preview dish photo"
-                  >
-                    <Eye size={14} />
-                    <span>Preview</span>
-                  </button>
-                  <span className={styles.changePhotoText}>Change photo</span>
-                </div>
-              </div>
-            ) : (
-              <>
+            {photos.length === 0 ? (
+              <div
+                className={styles.uploadDropzone}
+                onClick={handleTriggerUpload}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    handleTriggerUpload();
+                  }
+                }}
+                aria-label="Upload Item Photo"
+              >
                 <div className={styles.cameraCircle}>
                   <Camera size={22} strokeWidth={2.2} />
                 </div>
                 <span className={styles.uploadTitle}>
-                  Upload photo <span style={{ color: "#EF4444" }}>*</span>
+                  Upload photos <span style={{ color: "#EF4444" }}>*</span>
                 </span>
                 <span className={styles.uploadSubtitle}>
-                  Supports JPG, PNG up to 5MB
+                  Supports JPG, PNG up to 5MB (Max 4 photos)
                 </span>
-              </>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))",
+                    gap: "10px",
+                    width: "100%",
+                  }}
+                >
+                  {photos.map((photo, idx) => (
+                    <div
+                      key={photo.id}
+                      style={{
+                        position: "relative",
+                        width: "100%",
+                        paddingTop: "100%",
+                        borderRadius: "10px",
+                        border: idx === 0 ? "2px solid #F97316" : "1.5px solid #E2E8F0",
+                        backgroundColor: "#F8FAFC",
+                        overflow: "hidden",
+                        boxShadow: "0 2px 5px rgba(0,0,0,0.06)",
+                      }}
+                    >
+                      <img
+                        src={photo.url}
+                        alt=""
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                        }}
+                      />
+
+                      {/* Primary / Cover Badge */}
+                      {idx === 0 ? (
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "5px",
+                            left: "5px",
+                            backgroundColor: "#FF5500",
+                            color: "#FFFFFF",
+                            fontSize: "9px",
+                            fontWeight: 700,
+                            padding: "2px 5px",
+                            borderRadius: "5px",
+                            zIndex: 2,
+                          }}
+                        >
+                          ★ Cover
+                        </div>
+                      ) : (
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "5px",
+                            left: "5px",
+                            backgroundColor: "rgba(15, 23, 42, 0.72)",
+                            backdropFilter: "blur(4px)",
+                            color: "#FFFFFF",
+                            fontSize: "9px",
+                            fontWeight: 600,
+                            padding: "2px 5px",
+                            borderRadius: "5px",
+                            zIndex: 2,
+                          }}
+                        >
+                          #{idx + 1}
+                        </div>
+                      )}
+
+                      {/* Action buttons */}
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "5px",
+                          right: "5px",
+                          display: "flex",
+                          gap: "3px",
+                          zIndex: 3,
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setPreviewPhotoIndex(idx);
+                            setIsPreviewOpen(true);
+                          }}
+                          style={{
+                            width: "22px",
+                            height: "22px",
+                            borderRadius: "5px",
+                            backgroundColor: "rgba(15, 23, 42, 0.75)",
+                            color: "#FFFFFF",
+                            border: "none",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: "pointer",
+                            padding: 0,
+                          }}
+                        >
+                          <Eye size={11} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleRemovePhoto(photo.id);
+                          }}
+                          style={{
+                            width: "22px",
+                            height: "22px",
+                            borderRadius: "5px",
+                            backgroundColor: "rgba(239, 68, 68, 0.88)",
+                            color: "#FFFFFF",
+                            border: "none",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: "pointer",
+                            padding: 0,
+                          }}
+                        >
+                          <X size={11} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Add more button */}
+                  {photos.length < 4 && (
+                    <div
+                      onClick={handleTriggerUpload}
+                      style={{
+                        position: "relative",
+                        width: "100%",
+                        paddingTop: "100%",
+                        borderRadius: "10px",
+                        border: "1.5px dashed #CBD5E1",
+                        backgroundColor: "#F8FAFC",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          width: "100%",
+                          height: "100%",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "4px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: "28px",
+                            height: "28px",
+                            borderRadius: "50%",
+                            backgroundColor: "#FFEDD5",
+                            color: "#F97316",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <Plus size={16} strokeWidth={2.4} />
+                        </div>
+                        <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "#334155" }}>
+                          Add Photo
+                        </span>
+                        <span style={{ fontSize: "0.65rem", color: "#94A3B8" }}>
+                          {photos.length}/4
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <p style={{ margin: 0, fontSize: "0.72rem", color: "#64748B" }}>
+                  💡 Upload up to 4 food photos. First photo is used as the cover.
+                </p>
+              </div>
             )}
           </div>
-
           {/* 2. Item name */}
           <div className={styles.formGroup}>
             <label className={styles.fieldLabel} htmlFor="itemNameInput">
@@ -696,8 +937,8 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
           </button>
         </form>
       </div>
-      {/* Document-style Dish Image Preview Modal */}
-      {isPreviewOpen && imagePreview && (
+      {/* Multi-Photo Dish Image Preview Modal */}
+      {isPreviewOpen && photos.length > 0 && photos[previewPhotoIndex] && (
         <div
           className={styles.previewModalOverlay}
           onClick={() => setIsPreviewOpen(false)}
@@ -715,7 +956,7 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
                 </div>
                 <div className={styles.previewHeaderTextGroup}>
                   <h3 className={styles.previewModalTitle}>
-                    {itemName ? `${itemName} - Photo Preview` : "Dish Image Preview"}
+                    {itemName ? `${itemName} (${previewPhotoIndex + 1}/${photos.length})` : `Photo ${previewPhotoIndex + 1}/${photos.length}`}
                   </h3>
                 </div>
               </div>
@@ -732,33 +973,53 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
             <div className={styles.previewModalBody}>
               <div className={styles.imageContainer}>
                 <img
-                  src={imagePreview}
+                  src={photos[previewPhotoIndex].url}
                   alt={itemName || "Dish Photo"}
                   className={styles.previewModalImg}
                 />
               </div>
+
+              {photos.length > 1 && (
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "6px",
+                    marginTop: "10px",
+                    justifyContent: "center",
+                  }}
+                >
+                  {photos.map((p, pIdx) => (
+                    <div
+                      key={p.id}
+                      onClick={() => setPreviewPhotoIndex(pIdx)}
+                      style={{
+                        width: "42px",
+                        height: "42px",
+                        borderRadius: "6px",
+                        border: pIdx === previewPhotoIndex ? "2px solid #F97316" : "1.5px solid #CBD5E1",
+                        overflow: "hidden",
+                        cursor: "pointer",
+                        opacity: pIdx === previewPhotoIndex ? 1 : 0.6,
+                      }}
+                    >
+                      <img
+                        src={p.url}
+                        alt=""
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className={styles.previewModalFooter}>
               <button
                 type="button"
-                className={styles.previewChangeBtn}
-                onClick={() => {
-                  setIsPreviewOpen(false);
-                  setTimeout(() => {
-                    fileInputRef.current?.click();
-                  }, 60);
-                }}
-              >
-                <RefreshCw size={14} />
-                <span>Change Photo</span>
-              </button>
-              <button
-                type="button"
-                className={styles.previewCloseBtn}
+                className={styles.modalCloseFooterBtn}
                 onClick={() => setIsPreviewOpen(false)}
               >
-                Close
+                Close Preview
               </button>
             </div>
           </div>
