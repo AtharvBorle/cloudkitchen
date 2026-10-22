@@ -1,7 +1,7 @@
 #!/bin/bash
 # ==============================================================================
-# 🧹 Neo Cloud Bites - Database Cleaning Script
-# Cleans the database: Only Superadmin and Application Manager accounts remain
+# 🧹 Neo Cloud Bites - Complete Database Cleaning Script
+# Cleans the database: ONLY Superadmin remains. All other tables wiped clean.
 # ==============================================================================
 
 set -e
@@ -11,8 +11,8 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PROJECT_ROOT"
 
 echo "========================================================"
-echo "🧹 Neo Cloud Bites - Database Cleaning Tool"
-echo "   Policy: Only Superadmin and Application Manager remain"
+echo "🧹 Neo Cloud Bites - Complete Database Cleaning Tool"
+echo "   Policy: ONLY Superadmin remains (All other tables wiped)"
 echo "========================================================"
 
 # Check backend/.env exists
