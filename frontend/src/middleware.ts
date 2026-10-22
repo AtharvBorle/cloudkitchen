@@ -258,6 +258,7 @@ export async function middleware(request: NextRequest) {
       pathname !== "/user/cart" &&
       pathname !== "/user/user-cart") ||
     pathname === "/my-orders" ||
+    pathname === "/track-order" ||
     pathname === "/orders-desktop" ||
     pathname === "/order-history-desktop" ||
     pathname === "/order-confirmation" ||

@@ -17,9 +17,9 @@ const SMTP_FROM = process.env.SMTP_FROM || `"Neo Cloud Bites" <${SMTP_USER}>`;
 const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || "johnwick380900@gmail.com";
 const APP_URL =
   process.env.FRONTEND_URL ||
-  (process.env.NEXTAUTH_URL && !process.env.NEXTAUTH_URL.includes("localhost")
-    ? process.env.NEXTAUTH_URL
-    : "https://dev.neocloudbites.com");
+  process.env.NEXT_PUBLIC_APP_URL ||
+  process.env.NEXTAUTH_URL ||
+  "https://dev.neocloudbites.com";
 
 let transporter: nodemailer.Transporter | null = null;
 
@@ -1163,7 +1163,7 @@ export async function sendOrderPlacedNotification(order: any, customer?: any, se
     </table>
 
     <div style="text-align: center; margin-top: 28px;">
-      <a href="${APP_URL}/my-orders?orderId=${orderId}" class="btn">Track Order Live</a>
+      <a href="${APP_URL}/orders-desktop?orderId=${orderId}&action=track" class="btn">Track Order Live</a>
     </div>
   `;
 
@@ -1222,7 +1222,7 @@ export async function sendOrderDeliveredEmail({
     </div>
 
     <div style="text-align: center; margin-top: 24px;">
-      <a href="${APP_URL}/my-orders?orderId=${orderId}" class="btn btn-green">Rate & Review Food</a>
+      <a href="${APP_URL}/orders-desktop?orderId=${orderId}" class="btn btn-green">Rate & Review Food</a>
     </div>
   `;
 
@@ -1381,7 +1381,7 @@ export async function sendOrderStatusNotification(
     </div>
 
     <div style="text-align: center; margin-top: 24px;">
-      <a href="${APP_URL}/my-orders?orderId=${orderId}" class="btn">View Order Details</a>
+      <a href="${APP_URL}/orders-desktop?orderId=${orderId}" class="btn">View Order Details</a>
     </div>
   `;
 
@@ -1729,7 +1729,7 @@ export async function sendRefundInitiatedEmail({
     </div>
 
     <div style="text-align: center; margin-top: 24px;">
-      <a href="${APP_URL}/my-orders?orderId=${orderId}" class="btn">View Order in My Orders</a>
+      <a href="${APP_URL}/orders-desktop?orderId=${orderId}" class="btn">View Order in My Orders</a>
     </div>
   `;
 
@@ -1812,7 +1812,7 @@ export async function sendRefundCompletedEmail({
     </div>
 
     <div style="text-align: center; margin-top: 24px;">
-      <a href="${APP_URL}/my-orders" class="btn btn-green">View My Orders</a>
+      <a href="${APP_URL}/orders-desktop" class="btn btn-green">View My Orders</a>
     </div>
   `;
 
