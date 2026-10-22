@@ -131,14 +131,15 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
     }
   }, [orders]);
 
-  // Section toggle: Regular Orders vs Subscribers Meal (persisted across refresh via URL & sessionStorage)
+  // Section toggle: Regular Orders vs Subscribers Meal (Commented out: forced to "orders" while subscribers meal disabled)
+  /*
   const sectionParam = searchParams?.get("section")?.toLowerCase();
   const initialSection: "orders" | "subscribers" =
     sectionParam === "subscribers" || sectionParam === "subscriber-meal"
       ? "subscribers"
       : "orders";
-
-  const [activeSection, setActiveSection] = useState<"orders" | "subscribers">(initialSection);
+  */
+  const [activeSection, setActiveSection] = useState<"orders" | "subscribers">("orders");
   const [subscribers, setSubscribers] = useState<MealSubscriber[]>([]);
   const [loadingSubs, setLoadingSubs] = useState(false);
   const [otpModalDelivery, setOtpModalDelivery] = useState<MealSlotDeliveryRecord | null>(null);
@@ -154,6 +155,7 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
   useEffect(() => {
     if (typeof window === "undefined") return;
 
+    /* Commented out while subscribers meal is disabled
     const currentSectionParam = searchParams?.get("section")?.toLowerCase();
     const currentSubTabParam = searchParams?.get("subTab")?.toLowerCase();
 
@@ -182,6 +184,7 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
         setSubscribersTab(savedTab as "today" | "paused" | "all");
       }
     }
+    */
   }, [searchParams]);
 
   // Update dynamic document title based on current active section
@@ -624,7 +627,7 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
             </Link>
           </div>
 
-          <h1 className={styles.pageTitle}>{activeSection === "subscribers" ? "Subscribers Meal" : "Orders"}</h1>
+          <h1 className={styles.pageTitle}>Orders</h1>
 
           <button
             type="button"
@@ -644,7 +647,7 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
           </button>
         </header>
 
-        {/* Section Switcher: Food Orders vs Subscribers Meal */}
+        {/* Section Switcher: Food Orders vs Subscribers Meal (Commented out: uncomment when meal subscriptions re-enabled)
         <div className={styles.sectionSwitchContainer}>
           <button
             type="button"
@@ -663,8 +666,10 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
             <span>Subscribers Meal</span>
           </button>
         </div>
+        */}
 
-        {activeSection === "orders" ? (
+        {/* Main Orders Content */}
+        {activeSection === "orders" && (
           <>
             {/* Status Filter Tabs (Horizontal scrolling capsule pills) */}
             <div className={styles.filterTabsWrapper} role="tablist" aria-label="Order Status Filters">
@@ -900,7 +905,10 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
           )}
         </main>
       </>
-    ) : (
+    )}
+
+    {/* Mobile Subscribers Meal Section (Commented out: uncomment when meal subscriptions re-enabled) */}
+    {false && (
       <main className={styles.contentArea} style={{ paddingBottom: "32px" }}>
         {/* Metric Cards Grid */}
         <div className={styles.subMetricsGridMobile}>

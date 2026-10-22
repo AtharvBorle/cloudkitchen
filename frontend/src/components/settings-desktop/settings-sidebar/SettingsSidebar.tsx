@@ -189,6 +189,7 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
                 <ChevronRight size={16} className={styles.chevronIcon} />
               </button>
 
+              {/* Commented out: My Subscriptions tab (uncomment when meal subscriptions re-enabled)
               <button
                 type="button"
                 className={`${styles.navItem} ${
@@ -202,6 +203,7 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
                 </div>
                 <ChevronRight size={16} className={styles.chevronIcon} />
               </button>
+              */}
 
               <button
                 type="button"
