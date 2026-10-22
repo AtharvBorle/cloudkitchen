@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { ChevronDown, ArrowRight, X, Check, Plus, Search, Loader2 } from "lucide-react";
 import styles from "./BusinessInformation.module.css";
 import { SellerMapPicker, AddressDetails } from "./SellerMapPicker";
@@ -271,31 +271,34 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
     });
   };
 
-  const handleLocationChange = (
-    lat: number,
-    lng: number,
-    formattedAddress?: string,
-    details?: AddressDetails
-  ) => {
-    setFormData((prev) => {
-      const next = {
-        ...prev,
-        isLocationPinned: true,
-        locationCoordinates: { lat, lng },
-        address: formattedAddress ? formattedAddress : prev.address,
-        city: details?.city || prev.city || "Pune",
-        pincode: details?.pincode || prev.pincode || "411038",
-      };
-      saveSellerDraft({
-        locationCoordinates: { lat, lng },
-        isLocationPinned: true,
-        address: next.address,
-        city: next.city,
-        pincode: next.pincode,
+  const handleLocationChange = useCallback(
+    (
+      lat: number,
+      lng: number,
+      formattedAddress?: string,
+      details?: AddressDetails
+    ) => {
+      setFormData((prev) => {
+        const next = {
+          ...prev,
+          isLocationPinned: true,
+          locationCoordinates: { lat, lng },
+          address: formattedAddress ? formattedAddress : prev.address,
+          city: details?.city || prev.city || "Pune",
+          pincode: details?.pincode || prev.pincode || "411038",
+        };
+        saveSellerDraft({
+          locationCoordinates: { lat, lng },
+          isLocationPinned: true,
+          address: next.address,
+          city: next.city,
+          pincode: next.pincode,
+        });
+        return next;
       });
-      return next;
-    });
-  };
+    },
+    []
+  );
 
   const selectedCount = useMemo(() => {
     return formData.categories.filter((catName) =>
