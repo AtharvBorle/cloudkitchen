@@ -1,10 +1,23 @@
 import { NextResponse } from "next/server";
-import { verifyOtp, consumeOtp, isMasterOtpEnabled } from "@/lib/otpStore";
+import { db } from "@/lib/db";
+import { verifyOtp, consumeOtp, isMasterOtpEnabled, setMasterOtpDbOverride } from "@/lib/otpStore";
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { phone, email, otp, purpose = "signup" } = body;
+
+    try {
+      const dbSetting = await db.systemSettings.findFirst({
+        where: { key: { in: ["ALLOW_MASTER_OTP", "MASTER_OTP", "ENABLE_MASTER_OTP"] } }
+      });
+      if (dbSetting) {
+        const val = (dbSetting.value || "").trim().replace(/^['"]|['"]$/g, "").toLowerCase();
+        setMasterOtpDbOverride(val === "true" || val === "1" || val === "yes");
+      }
+    } catch {
+      // fallback to env
+    }
 
     const trimmedOtp = String(otp || "").trim();
     if (!trimmedOtp || trimmedOtp.length !== 6) {

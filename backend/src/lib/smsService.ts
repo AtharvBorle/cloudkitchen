@@ -6,6 +6,8 @@
  * Safe & non-blocking fallback if credentials are not configured.
  */
 
+import { isMasterOtpEnabled } from "@/lib/otpStore";
+
 const SMS_GATEWAY_URL =
   process.env.SMS_GATEWAY_URL ||
   process.env.SMS_API_URL ||
@@ -72,10 +74,9 @@ export async function sendOtpSms(mobileNumber: string, otp: string): Promise<Sen
       return { success: false, error: "Invalid mobile number. Must be 10 digits." };
     }
 
-    // When ALLOW_MASTER_OTP is enabled, stop sending any actual SMS to mobile numbers!
-    const allowMaster = (process.env.ALLOW_MASTER_OTP || "").trim().toLowerCase();
-    if (allowMaster === "true" || allowMaster === "1") {
-      console.log(`[SmsService] 🛑 ALLOW_MASTER_OTP is true. Suppressing SMS delivery to ${cleanNumber}. Use master OTP 123456.`);
+    // When Master OTP is enabled, stop sending any actual SMS to mobile numbers!
+    if (isMasterOtpEnabled()) {
+      console.log(`[SmsService] 🛑 Master OTP mode active (ALLOW_MASTER_OTP=true). Suppressing SMS delivery to ${cleanNumber}. Use master OTP 123456.`);
       return {
         success: true,
         status: "SKIPPED_MASTER_OTP",
