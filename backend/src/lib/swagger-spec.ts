@@ -311,6 +311,68 @@ export const swaggerSpec = {
           }
         }
       }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Unauthorized - Authentication token missing or invalid",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "UnauthorizedError": {
+        "description": "Unauthorized - Authentication token missing or invalid",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Forbidden - Insufficient permissions or role required",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Not Found - The requested resource does not exist",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "Bad Request - Validation failed or required parameter missing",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "InternalServerError": {
+        "description": "Internal Server Error - Unexpected server exception",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      }
     }
   },
   "paths": {
@@ -4326,7 +4388,8 @@ export const swaggerSpec = {
         "tags": [
           "Seller-Rooms"
         ],
-        "summary": "Partial Update Room Listing (PATCH)",
+        "summary": "Partial Update Room Listing / Toggle Availability (PATCH)",
+        "description": "Instantly toggle room listing availability (`isAvailable: false` or `isAvailable: true`), update pricing, description, capacity, or amenities.",
         "security": [
           {
             "BearerAuth": []
@@ -4337,14 +4400,47 @@ export const swaggerSpec = {
           "content": {
             "application/json": {
               "schema": {
-                "type": "object"
+                "type": "object",
+                "required": [
+                  "roomId"
+                ],
+                "properties": {
+                  "roomId": {
+                    "type": "string",
+                    "example": "cly1234567890"
+                  },
+                  "isAvailable": {
+                    "type": "boolean",
+                    "description": "Toggle room rental availability ON (true) or OFF (false)",
+                    "example": false
+                  },
+                  "title": {
+                    "type": "string",
+                    "example": "Cozy 1BHK Studio Room"
+                  },
+                  "price": {
+                    "type": "number",
+                    "example": 7500
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "capacity": {
+                    "type": "number",
+                    "example": 2
+                  },
+                  "floor": {
+                    "type": "string",
+                    "example": "2nd Floor"
+                  }
+                }
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Room updated",
+            "description": "Room updated successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -4352,6 +4448,15 @@ export const swaggerSpec = {
                 }
               }
             }
+          },
+          "400": {
+            "$ref": "#/components/schemas/ErrorResponse"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
           }
         }
       }
@@ -4470,7 +4575,8 @@ export const swaggerSpec = {
         "tags": [
           "Seller-Rooms"
         ],
-        "summary": "Partial Update Room by ID (PATCH)",
+        "summary": "Partial Update Room by ID / Toggle Availability (PATCH)",
+        "description": "Partially update room listing attributes or toggle rental availability (`isAvailable: boolean`) by room ID.",
         "security": [
           {
             "BearerAuth": []
@@ -4483,7 +4589,8 @@ export const swaggerSpec = {
             "required": true,
             "schema": {
               "type": "string"
-            }
+            },
+            "description": "Unique Room ID"
           }
         ],
         "requestBody": {
@@ -4491,14 +4598,33 @@ export const swaggerSpec = {
           "content": {
             "application/json": {
               "schema": {
-                "type": "object"
+                "type": "object",
+                "properties": {
+                  "isAvailable": {
+                    "type": "boolean",
+                    "description": "Toggle room rental availability ON (true) or OFF (false)",
+                    "example": true
+                  },
+                  "title": {
+                    "type": "string",
+                    "example": "Deluxe Master Bedroom"
+                  },
+                  "price": {
+                    "type": "number",
+                    "example": 9000
+                  },
+                  "capacity": {
+                    "type": "number",
+                    "example": 2
+                  }
+                }
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Room updated",
+            "description": "Room updated successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -4506,6 +4632,15 @@ export const swaggerSpec = {
                 }
               }
             }
+          },
+          "400": {
+            "$ref": "#/components/schemas/ErrorResponse"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
           }
         }
       }
@@ -8200,21 +8335,93 @@ export const swaggerSpec = {
           "Admin-Superadmin"
         ],
         "summary": "Get Global System Settings",
+        "description": "Retrieves global platform system settings (support contacts, maintenance mode, ENABLE_ROOM_MODULE, ENABLE_CHATBOT, auto-assignment). Optionally filter by a single `key` query parameter.",
         "security": [
           {
             "BearerAuth": []
           }
         ],
+        "parameters": [
+          {
+            "name": "key",
+            "in": "query",
+            "required": false,
+            "description": "Optional single setting key to retrieve (e.g., ENABLE_ROOM_MODULE, ENABLE_CHATBOT, MAINTENANCE_MODE, SUBSCRIPTION_PRICE)",
+            "schema": {
+              "type": "string",
+              "example": "ENABLE_ROOM_MODULE"
+            }
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Platform settings",
+            "description": "Platform settings or single key value",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/StandardResponse"
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "settings": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "key": {
+                                "type": "string"
+                              },
+                              "value": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        },
+                        "settingsMap": {
+                          "type": "object",
+                          "properties": {
+                            "SUPPORT_EMAIL": {
+                              "type": "string"
+                            },
+                            "SUPPORT_PHONE": {
+                              "type": "string"
+                            },
+                            "MAINTENANCE_MODE": {
+                              "type": "string"
+                            },
+                            "AUTO_ASSIGN_DELIVERY": {
+                              "type": "string"
+                            },
+                            "ENABLE_ROOM_MODULE": {
+                              "type": "string",
+                              "example": "true"
+                            },
+                            "ENABLE_CHATBOT": {
+                              "type": "string",
+                              "example": "true"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
                 }
               }
             }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
           }
         }
       },
@@ -8222,7 +8429,8 @@ export const swaggerSpec = {
         "tags": [
           "Admin-Superadmin"
         ],
-        "summary": "Update Global System Settings",
+        "summary": "Update Global System Settings (Toggle Room / Chatbot / Flags)",
+        "description": "Update one or multiple global platform settings. Can be used to toggle ENABLE_ROOM_MODULE (\"true\" | \"false\"), ENABLE_CHATBOT, MAINTENANCE_MODE, or batch update via `settings: { ENABLE_ROOM_MODULE: \"true\" }`.",
         "security": [
           {
             "BearerAuth": []
@@ -8233,14 +8441,34 @@ export const swaggerSpec = {
           "content": {
             "application/json": {
               "schema": {
-                "type": "object"
+                "type": "object",
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "description": "Setting key to update (e.g. ENABLE_ROOM_MODULE, ENABLE_CHATBOT, MAINTENANCE_MODE, AUTO_ASSIGN_DELIVERY)",
+                    "example": "ENABLE_ROOM_MODULE"
+                  },
+                  "value": {
+                    "type": "string",
+                    "description": "Setting value (string representation: \"true\", \"false\", or custom value)",
+                    "example": "true"
+                  },
+                  "settings": {
+                    "type": "object",
+                    "description": "Batch update key-value pairs (alternative to single key/value)",
+                    "example": {
+                      "ENABLE_ROOM_MODULE": "true",
+                      "ENABLE_CHATBOT": "true"
+                    }
+                  }
+                }
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Settings updated",
+            "description": "Settings updated successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -8248,6 +8476,15 @@ export const swaggerSpec = {
                 }
               }
             }
+          },
+          "400": {
+            "$ref": "#/components/schemas/ErrorResponse"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
           }
         }
       }
@@ -11289,8 +11526,8 @@ export const swaggerSpec = {
         "tags": [
           "Public-Discovery"
         ],
-        "summary": "Get Public System Settings",
-        "description": "Retrieves public application configurations such as app brand, default city, operational settings, and features.",
+        "summary": "Get Public System Settings (Room Module & Chatbot Status)",
+        "description": "Retrieves public platform configurations, including whether the Room Rental Module is enabled (`isRoomEnabled`) and whether the Customer AI Chatbot is active (`isChatbotEnabled`).",
         "responses": {
           "200": {
             "description": "Public system settings",
@@ -11304,7 +11541,29 @@ export const swaggerSpec = {
                       "example": true
                     },
                     "data": {
-                      "type": "object"
+                      "type": "object",
+                      "properties": {
+                        "isRoomEnabled": {
+                          "type": "boolean",
+                          "description": "Flag indicating whether Room Rental & Booking functionality is enabled platform-wide",
+                          "example": true
+                        },
+                        "ENABLE_ROOM_MODULE": {
+                          "type": "string",
+                          "description": "String representation of room module status (\"true\" | \"false\")",
+                          "example": "true"
+                        },
+                        "isChatbotEnabled": {
+                          "type": "boolean",
+                          "description": "Flag indicating whether the customer support chatbot widget is enabled",
+                          "example": true
+                        },
+                        "ENABLE_CHATBOT": {
+                          "type": "string",
+                          "description": "String representation of chatbot status (\"true\" | \"false\")",
+                          "example": "true"
+                        }
+                      }
                     }
                   }
                 }
@@ -13536,6 +13795,684 @@ export const swaggerSpec = {
           }
         }
       }
+    },
+    "/api/superadmin/room-toggle": {
+      "get": {
+        "tags": [
+          "Admin-Superadmin",
+          "Seller-Rooms"
+        ],
+        "summary": "Get Room Module Functionality Status",
+        "description": "Returns whether the platform-wide Room Rental and Booking module is currently enabled (ENABLE_ROOM_MODULE: \"true\") or disabled (\"false\").",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current room module status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "isRoomEnabled": {
+                          "type": "boolean",
+                          "example": true
+                        },
+                        "key": {
+                          "type": "string",
+                          "example": "ENABLE_ROOM_MODULE"
+                        },
+                        "value": {
+                          "type": "string",
+                          "example": "true"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Room module status retrieved successfully"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Admin-Superadmin",
+          "Seller-Rooms"
+        ],
+        "summary": "Toggle Room Module Functionality ON/OFF (PATCH)",
+        "description": "Toggles or explicitly sets the platform-wide Room Rental & Booking functionality ON or OFF. If `isRoomEnabled` or `enabled` boolean is supplied, updates setting to that value. If empty body `{}` is supplied, automatically inverts the current state.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "isRoomEnabled": {
+                    "type": "boolean",
+                    "description": "Explicitly set room module ON (true) or OFF (false)",
+                    "example": true
+                  },
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "Alternative boolean alias for isRoomEnabled",
+                    "example": true
+                  },
+                  "value": {
+                    "type": "string",
+                    "description": "String value: \"true\" or \"false\"",
+                    "example": "true"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Room module status updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "isRoomEnabled": {
+                          "type": "boolean",
+                          "example": true
+                        },
+                        "key": {
+                          "type": "string",
+                          "example": "ENABLE_ROOM_MODULE"
+                        },
+                        "value": {
+                          "type": "string",
+                          "example": "true"
+                        }
+                      }
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Room functionality enabled successfully"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Admin-Superadmin",
+          "Seller-Rooms"
+        ],
+        "summary": "Toggle Room Module Functionality ON/OFF (PUT)",
+        "description": "Alias for PATCH /api/superadmin/room-toggle.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "isRoomEnabled": {
+                    "type": "boolean",
+                    "example": true
+                  },
+                  "enabled": {
+                    "type": "boolean",
+                    "example": true
+                  },
+                  "value": {
+                    "type": "string",
+                    "example": "true"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Room module status updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Admin-Superadmin",
+          "Seller-Rooms"
+        ],
+        "summary": "Toggle Room Module Functionality ON/OFF (POST)",
+        "description": "Alias for PATCH /api/superadmin/room-toggle.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "isRoomEnabled": {
+                    "type": "boolean",
+                    "example": true
+                  },
+                  "enabled": {
+                    "type": "boolean",
+                    "example": true
+                  },
+                  "value": {
+                    "type": "string",
+                    "example": "true"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Room module status updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/api/auth/send-email-otp": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Send Email OTP Verification Code",
+        "description": "Dispatches a 6-digit OTP code to the provided email address via SMTP for onboarding or verification. If `ALLOW_MASTER_OTP=true`, returns bypass code `123456` immediately without sending real email.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "merchant@example.com"
+                  },
+                  "purpose": {
+                    "type": "string",
+                    "enum": [
+                      "seller_onboarding",
+                      "signup",
+                      "register",
+                      "forgot_password"
+                    ],
+                    "default": "seller_onboarding",
+                    "example": "seller_onboarding"
+                  },
+                  "name": {
+                    "type": "string",
+                    "example": "Atharv"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP sent successfully or master OTP ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Verification code has been sent to merchant@example.com. Valid for 10 minutes."
+                    },
+                    "email": {
+                      "type": "string",
+                      "example": "merchant@example.com"
+                    },
+                    "deliveryStatus": {
+                      "type": "string",
+                      "example": "DELIVERED"
+                    },
+                    "masterOtpActive": {
+                      "type": "boolean",
+                      "example": false
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid email address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Account with email already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to send verification email",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/send-otp": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Send Mobile SMS OTP Verification Code",
+        "description": "Sends a 6-digit SMS verification OTP to a 10-digit Indian mobile number via Way2Smart SMS gateway. Validates account existence for login or uniqueness for registration/onboarding. If `ALLOW_MASTER_OTP=true`, returns bypass code `123456` immediately without sending real SMS.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "phone"
+                ],
+                "properties": {
+                  "phone": {
+                    "type": "string",
+                    "description": "10-digit Indian mobile number",
+                    "example": "9876543210"
+                  },
+                  "purpose": {
+                    "type": "string",
+                    "enum": [
+                      "login",
+                      "seller_onboarding",
+                      "signup",
+                      "register"
+                    ],
+                    "default": "login",
+                    "example": "login"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "SMS OTP sent successfully or master OTP ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Verification code sent successfully to +91 9876543210."
+                    },
+                    "phone": {
+                      "type": "string",
+                      "example": "9876543210"
+                    },
+                    "deliveryStatus": {
+                      "type": "string",
+                      "example": "DELIVERED"
+                    },
+                    "masterOtpActive": {
+                      "type": "boolean",
+                      "example": false
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid mobile number format",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Account deleted or inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No registered customer found with this number",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Account already exists with this mobile number",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "SMS delivery failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/verify-otp": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Verify 6-Digit OTP Code",
+        "description": "Verifies the 6-digit OTP code submitted for an email address or mobile phone number. If master OTP mode is active, accepts `123456`. Consumes the OTP on success.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "otp"
+                ],
+                "properties": {
+                  "otp": {
+                    "type": "string",
+                    "description": "6-digit OTP code",
+                    "example": "123456"
+                  },
+                  "phone": {
+                    "type": "string",
+                    "description": "10-digit mobile number (if verifying phone)",
+                    "example": "9876543210"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "Email address (if verifying email)",
+                    "example": "merchant@example.com"
+                  },
+                  "purpose": {
+                    "type": "string",
+                    "example": "seller_onboarding"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP verified successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "verified": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Mobile number verified successfully."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or expired OTP code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal verification error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cron/notifications": {
+      "get": {
+        "tags": [
+          "Customer-Meal-Subscriptions",
+          "Customer-Notifications"
+        ],
+        "summary": "Execute Subscription Notifications Cron (GET)",
+        "description": "Scans upcoming meal subscriptions, renewal deadlines, delivery reminders, and expiring plans to trigger in-app notifications and alerts. Protected by CRON_SECRET authorization header or `?secret=` query parameter.",
+        "parameters": [
+          {
+            "name": "secret",
+            "in": "query",
+            "required": false,
+            "description": "CRON_SECRET authorization key",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notification checks executed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Notification checks completed successfully."
+                    },
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Customer-Meal-Subscriptions",
+          "Customer-Notifications"
+        ],
+        "summary": "Trigger Subscription Notifications Cron (POST)",
+        "description": "POST alias for executing automated subscription notification checks.",
+        "parameters": [
+          {
+            "name": "secret",
+            "in": "query",
+            "required": false,
+            "description": "CRON_SECRET authorization key",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notification checks executed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
     }
   }
 };
+
+
