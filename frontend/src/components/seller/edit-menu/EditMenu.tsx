@@ -63,7 +63,7 @@ function EditMenuInner({
   const [price, setPrice] = useState('');
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
-  const [selectedServes, setSelectedServes] = useState<number>(1);
+  const [selectedServes, setSelectedServes] = useState<number | null>(null);
 
   // Food type dropdown & multi-select
   const [isFoodTypeDropdownOpen, setIsFoodTypeDropdownOpen] = useState(false);
@@ -126,12 +126,14 @@ function EditMenuInner({
               if (found.description) {
                 const match = found.description.match(/^\(Serves\s*([1-4])\)\s*([\s\S]*)$/i) || found.description.match(/^\[Serves:\s*([1-4])\]\s*([\s\S]*)$/i);
                 if (match) {
-                  setSelectedServes(Number(match[1]) || 1);
+                  setSelectedServes(Number(match[1]) || null);
                   setDescription(match[2] || '');
                 } else {
+                  setSelectedServes(null);
                   setDescription(found.description || '');
                 }
               } else {
+                setSelectedServes(null);
                 setDescription('');
               }
               if (found.imageUrl) setExistingImageUrl(found.imageUrl);
@@ -306,9 +308,11 @@ function EditMenuInner({
       formData.append('name', itemName);
       formData.append('price', price);
       const cleanDesc = description.replace(/^\(Serves\s*[1-4]\)\s*/i, '').replace(/^\[Serves:\s*[1-4]\]\s*/i, '').trim();
-      const finalDescription = `(Serves ${selectedServes}) ${cleanDesc}`;
+      const finalDescription = selectedServes ? `(Serves ${selectedServes}) ${cleanDesc}` : cleanDesc;
       formData.append('description', finalDescription);
-      formData.append('serves', String(selectedServes));
+      if (selectedServes) {
+        formData.append('serves', String(selectedServes));
+      }
 
       let itemTypeVal = 'VEG';
       if (selectedFoodTypes.includes('Non Veg') || selectedFoodTypes.includes('Non-Veg')) {
@@ -658,7 +662,7 @@ function EditMenuInner({
             {/* Field: Serves (Portion Size: 1, 2, 3, 4) */}
             <div className={styles.fieldGroup}>
               <label className={styles.fieldLabel}>
-                Serves (Portion Size) <span className={styles.requiredStar}>*</span>
+                Serves (Portion Size) <span style={{ fontSize: "0.82rem", color: "#64748B", fontWeight: "normal" }}>(Optional)</span>
               </label>
               <div
                 style={{
@@ -679,7 +683,7 @@ function EditMenuInner({
                     <button
                       key={item.value}
                       type="button"
-                      onClick={() => setSelectedServes(item.value)}
+                      onClick={() => setSelectedServes(selectedServes === item.value ? null : item.value)}
                       style={{
                         height: "44px",
                         display: "flex",

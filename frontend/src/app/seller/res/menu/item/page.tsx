@@ -42,6 +42,9 @@ function MenuItemContent() {
       formData.append("name", data.itemName);
       formData.append("price", data.price);
       formData.append("description", data.description || "");
+      if (data.serves) {
+        formData.append("serves", String(data.serves));
+      }
 
       let itemType = "VEG";
       const types = data.selectedFoodTypes || (data.type ? [data.type] : ["Veg"]);

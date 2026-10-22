@@ -42,6 +42,7 @@ export interface ResponsiveMenuItemsProps {
     type: string;
     selectedFoodTypes?: string[];
     description: string;
+    serves?: number | null;
     stockQty: number | string;
     isInStock: boolean;
     variants: ResponsiveVariantItem[];
@@ -122,12 +123,12 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
       }
     });
   };
-  const [selectedServes, setSelectedServes] = useState<number>(() => {
+  const [selectedServes, setSelectedServes] = useState<number | null>(() => {
     if (initialDescription) {
       const match = initialDescription.match(/^\(Serves\s*([1-4])\)/i) || initialDescription.match(/^\[Serves:\s*([1-4])\]/i);
-      if (match) return Number(match[1]) || 1;
+      if (match) return Number(match[1]) || null;
     }
-    return 1;
+    return null;
   });
   const [description, setDescription] = useState(() => {
     if (!initialDescription) return "";
@@ -270,7 +271,10 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
       subCategory,
       type,
       selectedFoodTypes,
-      description: `(Serves ${selectedServes}) ${description.replace(/^\(Serves\s*[1-4]\)\s*/i, '').replace(/^\[Serves:\s*[1-4]\]\s*/i, '').trim()}`,
+      description: (() => {
+        const clean = description.replace(/^\(Serves\s*[1-4]\)\s*/i, '').replace(/^\[Serves:\s*[1-4]\]\s*/i, '').trim();
+        return selectedServes ? `(Serves ${selectedServes}) ${clean}` : clean;
+      })(),
       serves: selectedServes,
       stockQty: cleanStock,
       isInStock: initialIsInStock !== undefined ? initialIsInStock : cleanStock > 0,
@@ -568,7 +572,7 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
           {/* Serves (Portion Size: 1, 2, 3, 4) */}
           <div className={styles.formGroup}>
             <label className={styles.fieldLabel}>
-              Serves (Portion Size) <span style={{ color: "#EF4444" }}>*</span>
+              Serves (Portion Size) <span style={{ fontSize: "0.82rem", color: "#64748B", fontWeight: "normal" }}>(Optional)</span>
             </label>
             <div
               style={{
@@ -589,7 +593,7 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
                   <button
                     key={item.value}
                     type="button"
-                    onClick={() => setSelectedServes(item.value)}
+                    onClick={() => setSelectedServes(selectedServes === item.value ? null : item.value)}
                     style={{
                       height: "42px",
                       display: "flex",
