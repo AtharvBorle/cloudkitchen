@@ -78,13 +78,7 @@ export default function HeroSection({
 
   const [searchQuery, setSearchQuery] = useState(currentSearchQuery || "");
   const [selectedLocation, setSelectedLocation] = useState("Select Location");
-  const [activeTag, setActiveTag] = useState(() => {
-    if (!currentSearchQuery) return "";
-    const match = QUICK_TAGS.find(
-      (t) => t.label.toLowerCase() === currentSearchQuery.toLowerCase() || t.id.toLowerCase() === currentSearchQuery.toLowerCase()
-    );
-    return match ? match.id : "";
-  });
+
   const [isLocationOpen, setIsLocationOpen] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
@@ -102,14 +96,6 @@ export default function HeroSection({
   useEffect(() => {
     if (currentSearchQuery !== undefined) {
       setSearchQuery(currentSearchQuery);
-      if (!currentSearchQuery) {
-        setActiveTag("");
-      } else {
-        const match = QUICK_TAGS.find(
-          (t) => t.label.toLowerCase() === currentSearchQuery.toLowerCase() || t.id.toLowerCase() === currentSearchQuery.toLowerCase()
-        );
-        setActiveTag(match ? match.id : "");
-      }
     }
   }, [currentSearchQuery]);
 
@@ -264,17 +250,7 @@ export default function HeroSection({
     executeSearch(searchQuery);
   };
 
-  const handleTagClick = (tag: typeof QUICK_TAGS[0]) => {
-    if (activeTag === tag.id && searchQuery.toLowerCase() === tag.label.toLowerCase()) {
-      setActiveTag("");
-      setSearchQuery("");
-      executeSearch("");
-      return;
-    }
-    setActiveTag(tag.id);
-    setSearchQuery(tag.label);
-    executeSearch(tag.label);
-  };
+
 
   // GPS Current Location Detection
   const handleDetectGPSLocation = () => {
@@ -507,7 +483,6 @@ export default function HeroSection({
                   type="button"
                   onClick={() => {
                     setSearchQuery("");
-                    setActiveTag("");
                     executeSearch("");
                   }}
                   style={{
@@ -912,48 +887,7 @@ export default function HeroSection({
           )}
         </div>
 
-        {/* Quick Filter Tags / Chips */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            flexWrap: "wrap",
-            marginTop: "2px",
-          }}
-          className="hero-tags-wrapper"
-        >
-          {QUICK_TAGS.map((tag) => {
-            const isSelected = activeTag === tag.id;
-            return (
-              <button
-                key={tag.id}
-                type="button"
-                onClick={() => handleTagClick(tag)}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: "6px 14px",
-                  borderRadius: "9999px",
-                  fontSize: "13px",
-                  fontWeight: isSelected ? "600" : "500",
-                  cursor: "pointer",
-                  transition: "all 0.2s ease",
-                  backgroundColor: isSelected ? "#FFF3EB" : "#FFFFFF",
-                  border: isSelected ? "1px solid #FFD8C2" : "1px solid #E2E8F0",
-                  color: isSelected ? "#FF6B00" : "#475569",
-                  boxShadow: "0 2px 6px rgba(0, 0, 0, 0.03)",
-                  fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
-                }}
-                className="hero-tag-btn"
-              >
-                <span style={{ fontSize: "14px" }}>{tag.emoji}</span>
-                <span>{tag.label}</span>
-              </button>
-            );
-          })}
-        </div>
+
       </div>
 
       {/* HeroRight Graphic Column */}
@@ -1114,12 +1048,7 @@ export default function HeroSection({
         .hero-search-submit-btn:hover {
           background-color: #E65F00 !important;
         }
-        .hero-tag-btn:hover {
-          border-color: #FFD8C2 !important;
-          color: #FF6B00 !important;
-          background-color: #FFF8F3 !important;
-          transform: translateY(-1px);
-        }
+
         @media (max-width: 1024px) {
           .hero-section-container {
             flex-direction: column !important;
@@ -1139,9 +1068,7 @@ export default function HeroSection({
             font-size: 34px !important;
             line-height: 1.2 !important;
           }
-          .hero-tags-wrapper {
-            justify-content: center;
-          }
+
           .hero-right-column {
             width: 100% !important;
             max-width: 320px !important;
