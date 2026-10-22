@@ -63,6 +63,7 @@ function EditMenuInner({
   const [price, setPrice] = useState('');
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
+  const [selectedServes, setSelectedServes] = useState<number>(1);
 
   // Food type dropdown & multi-select
   const [isFoodTypeDropdownOpen, setIsFoodTypeDropdownOpen] = useState(false);
@@ -122,7 +123,17 @@ function EditMenuInner({
               setItemName(found.name || '');
               setPrice(found.price !== null && found.price !== undefined ? String(found.price) : '');
               if (found.foodCategory?.name) setCategory(found.foodCategory.name);
-              setDescription(found.description || '');
+              if (found.description) {
+                const match = found.description.match(/^\(Serves\s*([1-4])\)\s*([\s\S]*)$/i) || found.description.match(/^\[Serves:\s*([1-4])\]\s*([\s\S]*)$/i);
+                if (match) {
+                  setSelectedServes(Number(match[1]) || 1);
+                  setDescription(match[2] || '');
+                } else {
+                  setDescription(found.description || '');
+                }
+              } else {
+                setDescription('');
+              }
               if (found.imageUrl) setExistingImageUrl(found.imageUrl);
               setStockQty(found.stockQuantity !== null && found.stockQuantity !== undefined && found.stockQuantity >= 0 ? String(found.stockQuantity) : '');
               if (found.itemType) {
@@ -294,7 +305,10 @@ function EditMenuInner({
       const formData = new FormData();
       formData.append('name', itemName);
       formData.append('price', price);
-      formData.append('description', description || '');
+      const cleanDesc = description.replace(/^\(Serves\s*[1-4]\)\s*/i, '').replace(/^\[Serves:\s*[1-4]\]\s*/i, '').trim();
+      const finalDescription = `(Serves ${selectedServes}) ${cleanDesc}`;
+      formData.append('description', finalDescription);
+      formData.append('serves', String(selectedServes));
 
       let itemTypeVal = 'VEG';
       if (selectedFoodTypes.includes('Non Veg') || selectedFoodTypes.includes('Non-Veg')) {
@@ -639,6 +653,62 @@ function EditMenuInner({
                 placeholder="Dish description..."
                 required
               />
+            </div>
+
+            {/* Field: Serves (Portion Size: 1, 2, 3, 4) */}
+            <div className={styles.fieldGroup}>
+              <label className={styles.fieldLabel}>
+                Serves (Portion Size) <span className={styles.requiredStar}>*</span>
+              </label>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(4, 1fr)",
+                  gap: "12px",
+                  width: "100%",
+                }}
+              >
+                {[
+                  { value: 1, label: "Serves 1", icon: "👤" },
+                  { value: 2, label: "Serves 2", icon: "👥" },
+                  { value: 3, label: "Serves 3", icon: "👨‍👩‍👧" },
+                  { value: 4, label: "Serves 4", icon: "👨‍👩‍👧‍👦" },
+                ].map((item) => {
+                  const isSelected = selectedServes === item.value;
+                  return (
+                    <button
+                      key={item.value}
+                      type="button"
+                      onClick={() => setSelectedServes(item.value)}
+                      style={{
+                        height: "44px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "8px",
+                        borderRadius: "10px",
+                        border: isSelected ? "none" : "1.5px solid #E2E8F0",
+                        backgroundColor: isSelected ? "#F97316" : "#FFFFFF",
+                        backgroundImage: isSelected
+                          ? "linear-gradient(135deg, #FF5500 0%, #F97316 100%)"
+                          : "none",
+                        color: isSelected ? "#FFFFFF" : "#334155",
+                        fontWeight: isSelected ? 700 : 500,
+                        fontSize: "0.88rem",
+                        cursor: "pointer",
+                        boxShadow: isSelected
+                          ? "0 3px 10px rgba(249, 115, 22, 0.28)"
+                          : "none",
+                        transition: "all 0.18s ease",
+                        outline: "none",
+                      }}
+                    >
+                      <span style={{ fontSize: "1rem" }}>{item.icon}</span>
+                      <span>{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Dish Add-Ons Section */}

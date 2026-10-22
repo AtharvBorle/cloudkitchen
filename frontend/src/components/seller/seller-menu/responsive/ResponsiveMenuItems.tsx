@@ -122,7 +122,17 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
       }
     });
   };
-  const [description, setDescription] = useState(initialDescription);
+  const [selectedServes, setSelectedServes] = useState<number>(() => {
+    if (initialDescription) {
+      const match = initialDescription.match(/^\(Serves\s*([1-4])\)/i) || initialDescription.match(/^\[Serves:\s*([1-4])\]/i);
+      if (match) return Number(match[1]) || 1;
+    }
+    return 1;
+  });
+  const [description, setDescription] = useState(() => {
+    if (!initialDescription) return "";
+    return initialDescription.replace(/^\(Serves\s*[1-4]\)\s*/i, '').replace(/^\[Serves:\s*[1-4]\]\s*/i, '').trim();
+  });
   const [variants, setVariants] = useState<ResponsiveVariantItem[]>(initialVariants);
   const [schedules, setSchedules] = useState<ResponsiveDaySchedule[]>(initialSchedules);
   const [imagePreview, setImagePreview] = useState<string | null>(initialImageUrl || null);
@@ -260,7 +270,8 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
       subCategory,
       type,
       selectedFoodTypes,
-      description,
+      description: `(Serves ${selectedServes}) ${description.replace(/^\(Serves\s*[1-4]\)\s*/i, '').replace(/^\[Serves:\s*[1-4]\]\s*/i, '').trim()}`,
+      serves: selectedServes,
       stockQty: cleanStock,
       isInStock: initialIsInStock !== undefined ? initialIsInStock : cleanStock > 0,
       variants,
@@ -552,6 +563,62 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
               placeholder="Rich and creamy tomato-based curry with succulent chicken tandoori pieces cooked in butter and aromatic spices."
               required
             />
+          </div>
+
+          {/* Serves (Portion Size: 1, 2, 3, 4) */}
+          <div className={styles.formGroup}>
+            <label className={styles.fieldLabel}>
+              Serves (Portion Size) <span style={{ color: "#EF4444" }}>*</span>
+            </label>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(4, 1fr)",
+                gap: "8px",
+                width: "100%",
+              }}
+            >
+              {[
+                { value: 1, label: "1", icon: "👤" },
+                { value: 2, label: "2", icon: "👥" },
+                { value: 3, label: "3", icon: "👨‍👩‍👧" },
+                { value: 4, label: "4", icon: "👨‍👩‍👧‍👦" },
+              ].map((item) => {
+                const isSelected = selectedServes === item.value;
+                return (
+                  <button
+                    key={item.value}
+                    type="button"
+                    onClick={() => setSelectedServes(item.value)}
+                    style={{
+                      height: "42px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "6px",
+                      borderRadius: "10px",
+                      border: isSelected ? "none" : "1.5px solid #E2E8F0",
+                      backgroundColor: isSelected ? "#F97316" : "#FFFFFF",
+                      backgroundImage: isSelected
+                        ? "linear-gradient(135deg, #FF5500 0%, #F97316 100%)"
+                        : "none",
+                      color: isSelected ? "#FFFFFF" : "#334155",
+                      fontWeight: isSelected ? 700 : 500,
+                      fontSize: "0.84rem",
+                      cursor: "pointer",
+                      boxShadow: isSelected
+                        ? "0 2px 8px rgba(249, 115, 22, 0.25)"
+                        : "none",
+                      transition: "all 0.18s ease",
+                      outline: "none",
+                    }}
+                  >
+                    <span>{item.icon}</span>
+                    <span>Serves {item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* 7. Dish Add-Ons */}
