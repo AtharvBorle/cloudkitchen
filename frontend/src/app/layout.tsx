@@ -26,6 +26,9 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: 'Cloud Kitchen & Homely Food with Room Booking',
   description: 'Premium platform for homemade food and local room bookings.',
+  other: {
+    google: 'notranslate',
+  },
 };
 
 export default function RootLayout({
@@ -34,7 +37,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={poppins.variable} suppressHydrationWarning>
+    <html lang="en" translate="no" className={`notranslate ${poppins.variable}`} suppressHydrationWarning>
       <body className={`${inter.className} ${poppins.className}`} suppressHydrationWarning>
         <Providers>
           <RoomModuleProvider>

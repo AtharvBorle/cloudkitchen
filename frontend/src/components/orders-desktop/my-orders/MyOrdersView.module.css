@@ -392,6 +392,12 @@
   align-items: flex-end;
 }
 
+.arrivingTimeGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
 .arrivingLabel {
   font-size: 0.72rem;
   color: #64748b;

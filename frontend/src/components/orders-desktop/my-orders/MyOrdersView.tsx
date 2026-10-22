@@ -1686,10 +1686,10 @@ export default function MyOrdersView() {
                                   {isDelayed ? (
                                     <span className={styles.delayedWord}>Delayed</span>
                                   ) : (
-                                    <>
+                                    <div className={styles.arrivingTimeGroup}>
                                       <span className={styles.arrivingLabel}>Arriving in</span>
                                       <span className={styles.arrivingTime}>{liveEta}</span>
-                                    </>
+                                    </div>
                                   )}
                                 </div>
                               );

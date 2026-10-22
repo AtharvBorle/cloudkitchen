@@ -1,5 +1,39 @@
 "use client";
 
+// Defensive DOM mutation safety guard against Next.js 15/16 + Webpack HMR or extensions throwing removeChild errors
+if (typeof window !== "undefined") {
+  const originalRemoveChild = Node.prototype.removeChild;
+  Node.prototype.removeChild = function <T extends Node>(child: T): T {
+    if (!child) return child;
+    if (child.parentNode !== this) {
+      if (child.parentNode) {
+        return child.parentNode.removeChild(child) as T;
+      }
+      return child;
+    }
+    return originalRemoveChild.call(this, child) as T;
+  };
+
+  const originalInsertBefore = Node.prototype.insertBefore;
+  Node.prototype.insertBefore = function <T extends Node>(newNode: T, referenceNode: Node | null): T {
+    if (referenceNode && referenceNode.parentNode !== this) {
+      return originalInsertBefore.call(this, newNode, null) as T;
+    }
+    return originalInsertBefore.call(this, newNode, referenceNode) as T;
+  };
+
+  window.addEventListener("error", (event) => {
+    if (
+      event.message?.includes("removeChild") ||
+      event.message?.includes("insertBefore") ||
+      event.message?.includes("Cannot read properties of null (reading 'removeChild')")
+    ) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  });
+}
+
 import { SessionProvider, useSession } from "next-auth/react";
 import { ReactNode, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
