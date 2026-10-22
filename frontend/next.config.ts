@@ -29,6 +29,10 @@ const nextConfig: NextConfig = {
         source: "/api/:path*",
         destination: `${backendUrl.replace(/\/$/, "")}/api/:path*`,
       },
+      {
+        source: "/uploads/:path*",
+        destination: `${backendUrl.replace(/\/$/, "")}/uploads/:path*`,
+      },
     ];
   },
   async redirects() {
