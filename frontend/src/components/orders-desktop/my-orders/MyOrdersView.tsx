@@ -143,15 +143,14 @@ function getOrderStepIndex(rawStatus: string, partner?: any): number {
       return 0; // Placed & Waiting for seller confirmation
     case "ACCEPTED":
     case "CONFIRMED":
-      return 1;
     case "PREPARING":
-      // Stop at Preparing (1) until rider is assigned; once rider is assigned, advance past Picked Up to On the way (3)
-      return partner ? 3 : 1;
+      return 1;
     case "PICKED_UP":
     case "OUT_FOR_DELIVERY":
-      return 3; // On the way active (halfway green line pushed towards Delivered)
+      return 2; // On the way
     case "DELIVERED":
-      return 4; // Delivered done
+    case "COMPLETED":
+      return 3; // Delivered done
     default:
       return 0;
   }
@@ -239,10 +238,8 @@ function parseOrderFromDb(o: any): OrderItemData {
     } else if (rawStatus === "ACCEPTED" || rawStatus === "CONFIRMED") {
       statusDisplay = "Order Confirmed";
     } else if (rawStatus === "PREPARING") {
-      statusDisplay = partner ? "On the way" : "Preparing Food";
-    } else if (rawStatus === "PICKED_UP") {
-      statusDisplay = "On the way";
-    } else if (rawStatus === "OUT_FOR_DELIVERY") {
+      statusDisplay = "Preparing Food";
+    } else if (rawStatus === "PICKED_UP" || rawStatus === "OUT_FOR_DELIVERY") {
       statusDisplay = "On the way";
     }
   }
@@ -1735,7 +1732,7 @@ export default function MyOrdersView() {
                           )}
                         </div>
 
-                        {/* 5-Stage Dynamic Status Tracker */}
+                        {/* 4-Stage Dynamic Status Tracker */}
                         <div className={styles.stepperContainer}>
                           <div className={styles.stepperRow}>
                             {/* 1. Placed / Confirmed */}
@@ -1760,10 +1757,8 @@ export default function MyOrdersView() {
                             <div className={styles.trackerStep}>
                               <div
                                 className={
-                                  currentStep > 1
+                                  currentStep >= 1
                                     ? styles.stepCircleFilledDone
-                                    : currentStep === 1
-                                    ? styles.stepCircleActiveNav
                                     : styles.stepCirclePendingHome
                                 }
                               >
@@ -1771,10 +1766,8 @@ export default function MyOrdersView() {
                               </div>
                               <span
                                 className={
-                                  currentStep > 1
+                                  currentStep >= 1
                                     ? styles.stepTextDone
-                                    : currentStep === 1
-                                    ? styles.stepTextActiveNav
                                     : styles.stepTextPending
                                 }
                               >
@@ -1784,39 +1777,11 @@ export default function MyOrdersView() {
 
                             <div className={currentStep >= 2 ? styles.stepperLineDone : styles.stepperLinePending} />
 
-                            {/* 3. Picked Up */}
+                            {/* 3. On the way */}
                             <div className={styles.trackerStep}>
                               <div
                                 className={
-                                  currentStep >= 3
-                                    ? styles.stepCircleFilledDone
-                                    : currentStep === 2
-                                    ? styles.stepCircleActiveNav
-                                    : styles.stepCirclePendingHome
-                                }
-                              >
-                                <Truck size={14} strokeWidth={2.4} />
-                              </div>
-                              <span
-                                className={
-                                  currentStep >= 3
-                                    ? styles.stepTextDone
-                                    : currentStep === 2
-                                    ? styles.stepTextActiveNav
-                                    : styles.stepTextPending
-                                }
-                              >
-                                Picked Up
-                              </span>
-                            </div>
-
-                            <div className={currentStep >= 3 ? styles.stepperLineDone : styles.stepperLinePending} />
-
-                            {/* 4. On the way */}
-                            <div className={styles.trackerStep}>
-                              <div
-                                className={
-                                  currentStep >= 3
+                                  currentStep >= 2
                                     ? styles.stepCircleFilledDone
                                     : styles.stepCirclePendingHome
                                 }
@@ -1825,7 +1790,7 @@ export default function MyOrdersView() {
                               </div>
                               <span
                                 className={
-                                  currentStep >= 3
+                                  currentStep >= 2
                                     ? styles.stepTextDone
                                     : styles.stepTextPending
                                 }
@@ -1834,20 +1799,20 @@ export default function MyOrdersView() {
                               </span>
                             </div>
 
-                            <div className={currentStep >= 4 ? styles.stepperLineDone : currentStep === 3 ? styles.stepperLineHalf : styles.stepperLinePending} />
+                            <div className={currentStep >= 3 ? styles.stepperLineDone : currentStep === 2 ? styles.stepperLineHalf : styles.stepperLinePending} />
 
-                            {/* 5. Delivered */}
+                            {/* 4. Delivered */}
                             <div className={styles.trackerStep}>
                               <div
                                 className={
-                                  currentStep >= 4
+                                  currentStep >= 3
                                     ? styles.stepCircleFilledDone
                                     : styles.stepCirclePendingHome
                                 }
                               >
                                 <Home size={15} strokeWidth={2} />
                               </div>
-                              <span className={currentStep >= 4 ? styles.stepTextDone : styles.stepTextPending}>
+                              <span className={currentStep >= 3 ? styles.stepTextDone : styles.stepTextPending}>
                                 Delivered
                               </span>
                             </div>
