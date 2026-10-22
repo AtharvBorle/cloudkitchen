@@ -186,6 +186,28 @@ export async function loadGoogleMapsScript(): Promise<boolean> {
         return;
       }
 
+      // Pre-flight check: if the API key is explicitly expired, avoid loading broken JS SDK
+      try {
+        const verifyRes = await fetch(
+          `https://maps.googleapis.com/maps/api/geocode/json?latlng=18.5204,73.8567&key=${encodeURIComponent(config.apiKey)}`
+        );
+        if (verifyRes.ok) {
+          const verifyJson = await verifyRes.json();
+          if (
+            verifyJson.status === "REQUEST_DENIED" &&
+            typeof verifyJson.error_message === "string" &&
+            verifyJson.error_message.toLowerCase().includes("expired")
+          ) {
+            console.warn("[Google Maps] Configured API key is expired. Rendering official Google Maps tiles directly.");
+            googleMapsAuthFailed = true;
+            resolve(false);
+            return;
+          }
+        }
+      } catch (checkErr) {
+        // Network offline or timeout - continue
+      }
+
       if (typeof (window as any).google?.maps?.Map === "function") {
         resolve(true);
         return;

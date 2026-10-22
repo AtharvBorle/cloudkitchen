@@ -224,9 +224,9 @@ export const SellerMapPicker: React.FC<SellerMapPickerProps> = ({
           });
           leafletMapRef.current = map;
 
-          L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-            subdomains: 'abcd',
+          L.tileLayer("https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}", {
+            attribution: '&copy; Google Maps',
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
             maxZoom: 20,
           }).addTo(map);
 
@@ -614,7 +614,7 @@ export const SellerMapPicker: React.FC<SellerMapPickerProps> = ({
             {currentCoords.lat.toFixed(6)}, {currentCoords.lng.toFixed(6)}
           </span>
           <span style={{ fontSize: "0.70rem", color: "#64748B", marginLeft: "auto" }}>
-            {mapEngine === "google" ? "Google Maps" : "Interactive Map"}
+            Google Maps
           </span>
         </div>
         <p className={styles.hintText}>

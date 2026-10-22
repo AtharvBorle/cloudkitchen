@@ -217,9 +217,9 @@ function MapPicker({ onLocationSelected }: MapPickerProps) {
                     const map = L.map(mapContainerRef.current).setView([lat, lng], 16);
                     mapRef.current = map;
 
-                    L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                        subdomains: 'abcd',
+                    L.tileLayer("https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}", {
+                        attribution: '&copy; Google Maps',
+                        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
                         maxZoom: 20,
                     }).addTo(map);
 
