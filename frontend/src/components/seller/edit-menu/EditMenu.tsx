@@ -730,6 +730,34 @@ function EditMenuInner({
               />
             </div>
 
+            {/* Field: Serves (Portion Size: 1, 2, 3, 4 - Optional) */}
+            <div className={styles.fieldGroup}>
+              <label className={styles.fieldLabel}>
+                Serves (Portion Size) <span style={{ fontSize: "0.82rem", color: "#64748B", fontWeight: "normal" }}>(Optional)</span>
+              </label>
+              <div className={styles.servesGrid}>
+                {[
+                  { value: 1, label: "Serves 1", icon: <User size={15} strokeWidth={2.4} /> },
+                  { value: 2, label: "Serves 2", icon: <Users size={15} strokeWidth={2.4} /> },
+                  { value: 3, label: "Serves 3", icon: <Users size={15} strokeWidth={2.4} /> },
+                  { value: 4, label: "Serves 4", icon: <Users size={15} strokeWidth={2.4} /> },
+                ].map((item) => {
+                  const isSelected = selectedServes === item.value;
+                  return (
+                    <button
+                      key={item.value}
+                      type="button"
+                      onClick={() => setSelectedServes(selectedServes === item.value ? null : item.value)}
+                      className={`${styles.servesBtn} ${isSelected ? styles.servesBtnActive : ""}`}
+                    >
+                      <span className={styles.servesIcon}>{item.icon}</span>
+                      <span>{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Dish Add-Ons Section */}
             <div className={styles.subSection}>
               <label className={styles.subSectionTitle}>

@@ -220,11 +220,13 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
       href: "/explore-desktop",
       icon: <Utensils className={styles.subnavIcon} size={15} />,
     },
+    /* Commented out: Mess/Tiffin (uncomment when meal subscriptions re-enabled)
     {
       label: "Mess/Tiffin",
       href: "/my-subscriptions-desktop?tab=plans",
       icon: <ChefHat className={styles.subnavIcon} size={15} />,
     },
+    */
   ];
 
   const settingsSubOptions = session?.user
@@ -234,11 +236,13 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
           href: "/settings-desktop",
           icon: <Settings className={styles.subnavIcon} size={15} />,
         },
+        /* Commented out: My Subscriptions (uncomment when meal subscriptions re-enabled)
         {
           label: "My Subscriptions",
           href: "/my-subscriptions-desktop",
           icon: <Calendar className={styles.subnavIcon} size={15} />,
         },
+        */
         {
           label: "Delivery Addresses",
           href: "/delivery-addresses-desktop",

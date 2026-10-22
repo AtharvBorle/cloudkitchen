@@ -1248,6 +1248,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                                   <span>My Orders</span>
                                 </Link>
 
+                                {/* Commented out: My Subscriptions & Explore Meal Plans (uncomment when meal subscriptions re-enabled)
                                 <Link
                                   href="/my-subscriptions-desktop"
                                   className={styles.profileNavItem}
@@ -1267,6 +1268,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                                   <Utensils size={16} className={styles.profileNavIcon} />
                                   <span>Explore Meal Plans</span>
                                 </Link>
+                                */}
 
                                 <Link
                                   href="/delivery-addresses-desktop"

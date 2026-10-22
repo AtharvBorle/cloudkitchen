@@ -281,14 +281,15 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
   const partnerRole = initialPartnerRole || seller.partnerRole;
   const avatarInitials = initialAvatarInitials || seller.avatarInitials;
 
-  // Section toggle: Regular Food Orders vs Subscribers Meal (persisted across refresh via URL & sessionStorage)
+  // Section toggle: Regular Food Orders vs Subscribers Meal (Commented out: forced to "orders" while subscribers meal disabled)
+  /*
   const sectionParam = searchParams?.get("section")?.toLowerCase();
   const initialSection: "orders" | "subscribers" =
     sectionParam === "subscribers" || sectionParam === "subscriber-meal"
       ? "subscribers"
       : "orders";
-
-  const [activeSection, setActiveSection] = useState<"orders" | "subscribers">(initialSection);
+  */
+  const [activeSection, setActiveSection] = useState<"orders" | "subscribers">("orders");
 
   // Subscribers State
   const [subscribers, setSubscribers] = useState<MealSubscriber[]>([]);
@@ -309,6 +310,7 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
   useEffect(() => {
     if (typeof window === "undefined") return;
 
+    /* Commented out while subscribers meal is disabled
     const currentSectionParam = searchParams?.get("section")?.toLowerCase();
     const currentSubTabParam = searchParams?.get("subTab")?.toLowerCase();
 
@@ -337,6 +339,7 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
         setSubscribersTab(savedTab as "today" | "paused" | "all");
       }
     }
+    */
   }, [searchParams]);
 
   // Update dynamic document title based on current active section
@@ -1152,17 +1155,13 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
           {/* Header Title & Subtitle + Top Section Switcher */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
             <div className={styles.headerGroup}>
-              <h1 className={styles.title}>
-                {activeSection === "orders" ? "Food & Service Orders" : "Subscribers Meal Delivery"}
-              </h1>
+              <h1 className={styles.title}>Food & Service Orders</h1>
               <p className={styles.subtitle}>
-                {activeSection === "orders"
-                  ? "Manage active incoming, preparation, and delivery cycles in real-time."
-                  : "Dispatch daily meal deliveries for active subscribers and monitor paused customer accounts."}
+                Manage active incoming, preparation, and delivery cycles in real-time.
               </p>
             </div>
 
-            {/* Top Switcher: Regular Food Orders vs Subscribers Meal */}
+            {/* Top Switcher: Regular Food Orders vs Subscribers Meal (Commented out: uncomment when meal subscriptions re-enabled)
             <div className={styles.sectionSwitchContainer}>
               <button
                 type="button"
@@ -1181,9 +1180,11 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
                 <span>Subscribers Meal ({mealsToDeliverTodayCount} Today)</span>
               </button>
             </div>
+            */}
           </div>
 
-          {activeSection === "orders" ? (
+          {/* Main Orders Content */}
+          {activeSection === "orders" && (
             <>
               {/* Control Bar: Status Filter Tabs + Right Filter/Sort Buttons */}
               <div className={styles.controlBar}>
@@ -1502,10 +1503,12 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
             )}
           </div>
         </>
-      ) : (
-        /* =========================================================================
-           SUBSCRIBERS MEAL SECTION
-           ========================================================================= */
+      )}
+
+      {/* =========================================================================
+         SUBSCRIBERS MEAL SECTION (Commented out: uncomment when meal subscriptions re-enabled)
+         ========================================================================= */}
+      {false && (
         <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
           {/* Metric Cards Grid */}
           <div className={styles.subMetricsGrid}>
