@@ -21,9 +21,11 @@ export async function GET(req: NextRequest) {
     let session = await getAuthSession();
     let user = session?.user;
 
+    const { searchParams } = new URL(req.url);
+    const queryOrderId = (searchParams.get("orderId") || "").trim();
+
     // Mobile fallback: allow query param token if EventSource cannot pass Authorization header
     if (!user) {
-      const { searchParams } = new URL(req.url);
       const queryToken = searchParams.get("token") || searchParams.get("accessToken");
       if (queryToken) {
         try {
@@ -42,8 +44,25 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    if (!user) {
-      return new Response(JSON.stringify({ success: false, message: "Please log in first to connect to the order stream.", error: "Please log in first to connect to the order stream." }), {
+    // Guest fallback: allow public order stream if valid orderId is provided
+    let guestOrderId: string | null = null;
+    if (!user && queryOrderId) {
+      const orderExists = await db.order.findFirst({
+        where: {
+          OR: [
+            { id: queryOrderId },
+            { id: { equals: queryOrderId, mode: "insensitive" } },
+          ],
+        },
+        select: { id: true },
+      });
+      if (orderExists) {
+        guestOrderId = orderExists.id;
+      }
+    }
+
+    if (!user && !guestOrderId) {
+      return new Response(JSON.stringify({ success: false, message: "Please log in first or provide a valid order ID to connect to the order stream.", error: "Please log in first to connect to the order stream." }), {
         status: 401,
         headers: {
           "Content-Type": "application/json",
@@ -51,7 +70,7 @@ export async function GET(req: NextRequest) {
         },
       });
     }
-    if (user.role !== "USER") {
+    if (user && user.role !== "USER") {
       return new Response(JSON.stringify({ success: false, message: "Access denied. User account required.", error: "Access denied. User account required." }), {
         status: 403,
         headers: {
@@ -61,8 +80,9 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const userId = user.id;
-    const userChannel = `user:${userId}`;
+    const userId = user?.id || null;
+    const userChannel = userId ? `user:${userId}` : null;
+    const orderChannel = (guestOrderId || queryOrderId) ? `order:${guestOrderId || queryOrderId}` : null;
 
     let cleanup = () => {};
 
@@ -85,6 +105,7 @@ export async function GET(req: NextRequest) {
           `event: connected\ndata: ${JSON.stringify({
             connected: true,
             userId,
+            orderId: guestOrderId || queryOrderId || null,
             message: "Real-time user order stream established",
             timestamp: new Date().toISOString(),
           })}\n\n`
@@ -95,7 +116,12 @@ export async function GET(req: NextRequest) {
           safeEnqueue(`event: order\ndata: ${JSON.stringify(payload)}\n\n`);
         };
 
-        realtimeEmitter.on(userChannel, handleOrderEvent);
+        if (userChannel) {
+          realtimeEmitter.on(userChannel, handleOrderEvent);
+        }
+        if (orderChannel) {
+          realtimeEmitter.on(orderChannel, handleOrderEvent);
+        }
 
         // 3. Keepalive every 4s to prevent proxy/idle timeouts
         const heartbeat = setInterval(() => {
@@ -106,7 +132,12 @@ export async function GET(req: NextRequest) {
           if (isClosed) return;
           isClosed = true;
           clearInterval(heartbeat);
-          realtimeEmitter.off(userChannel, handleOrderEvent);
+          if (userChannel) {
+            realtimeEmitter.off(userChannel, handleOrderEvent);
+          }
+          if (orderChannel) {
+            realtimeEmitter.off(orderChannel, handleOrderEvent);
+          }
           try {
             controller.close();
           } catch {}
