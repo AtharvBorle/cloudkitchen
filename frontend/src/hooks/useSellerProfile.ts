@@ -303,7 +303,7 @@ export function useSellerProfile() {
               rawKitchenImages = [];
             }
           }
-          const rawCardImageUrl = (Array.isArray(rawKitchenImages) && rawKitchenImages[0]) || rawBannerImageUrl || "";
+          const rawCardImageUrl = profile?.cardImageUrl || "";
 
           cachedProfile = {
             id: profile?.id || user?.sellerProfile?.id || user?.id || "",

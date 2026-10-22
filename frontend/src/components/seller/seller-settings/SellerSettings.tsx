@@ -92,12 +92,7 @@ export const SellerSettings: React.FC<SellerSettingsProps> = ({
   }, [seller.deliveryRadiusKm, initialSettings?.deliveryRadiusKm]);
 
   // Card Grid Photo state (for Explore, User Dashboard & Best Places cards)
-  const initialCardImg =
-    seller.cardImageUrl ||
-    (Array.isArray(seller.kitchenImages) && seller.kitchenImages[0]) ||
-    seller.bannerImageUrl ||
-    (seller.profile as any)?.bannerImageUrl ||
-    "";
+  const initialCardImg = seller.cardImageUrl || "";
   const [cardPreview, setCardPreview] = useState<string>(initialCardImg);
   const [cardFile, setCardFile] = useState<File | null>(null);
   const [isUploadingCard, setIsUploadingCard] = useState<boolean>(false);
@@ -116,19 +111,14 @@ export const SellerSettings: React.FC<SellerSettingsProps> = ({
   }, [seller.isOnline]);
 
   React.useEffect(() => {
-    const liveCardImg =
-      seller.cardImageUrl ||
-      (Array.isArray(seller.kitchenImages) && seller.kitchenImages[0]) ||
-      seller.bannerImageUrl ||
-      "";
-    if (liveCardImg && !cardFile) {
-      setCardPreview(liveCardImg);
+    if (!cardFile) {
+      setCardPreview(seller.cardImageUrl || "");
     }
-  }, [seller.cardImageUrl, seller.kitchenImages, seller.bannerImageUrl, cardFile]);
+  }, [seller.cardImageUrl, cardFile]);
 
   React.useEffect(() => {
-    if (seller.bannerImageUrl && !bannerFile) {
-      setBannerPreview(seller.bannerImageUrl);
+    if (!bannerFile) {
+      setBannerPreview(seller.bannerImageUrl || "");
     }
   }, [seller.bannerImageUrl, bannerFile]);
 
@@ -164,18 +154,10 @@ export const SellerSettings: React.FC<SellerSettingsProps> = ({
 
       const json = await res.json();
       const profileData = json.data?.profile || json.profile;
-      let rawKImages: string[] = [];
-      if (profileData?.kitchenImages) {
-        try {
-          rawKImages = typeof profileData.kitchenImages === "string" ? JSON.parse(profileData.kitchenImages) : profileData.kitchenImages;
-        } catch {
-          rawKImages = [];
-        }
-      }
-      const updatedCardUrl = (Array.isArray(rawKImages) && rawKImages[0]) || profileData?.bannerImageUrl || cardPreview;
+      const updatedCardUrl = profileData?.cardImageUrl || cardPreview;
       setCardPreview(updatedCardUrl);
       setCardFile(null);
-      updateCachedProfile({ cardImageUrl: updatedCardUrl, kitchenImages: rawKImages.length > 0 ? rawKImages : [updatedCardUrl] });
+      updateCachedProfile({ cardImageUrl: updatedCardUrl });
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("seller-status-updated", { detail: { cardImageUrl: updatedCardUrl } }));
       }
@@ -193,7 +175,7 @@ export const SellerSettings: React.FC<SellerSettingsProps> = ({
   const handleResetCard = async () => {
     setCardFile(null);
     setCardPreview("");
-    updateCachedProfile({ cardImageUrl: "", kitchenImages: [] });
+    updateCachedProfile({ cardImageUrl: "" });
     try {
       const data = new FormData();
       data.append("removeCardImage", "true");
