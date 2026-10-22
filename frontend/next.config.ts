@@ -34,6 +34,11 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
+        source: "/track-order",
+        destination: "/orders-desktop",
+        permanent: false,
+      },
+      {
         source: "/business-information",
         destination: "/seller/business-information",
         permanent: true,

@@ -405,6 +405,21 @@
   line-height: 1.1;
 }
 
+.delayedWord {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #d97706;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
 .chevronBtn {
   color: #94a3b8;
   display: flex;
@@ -1545,6 +1560,11 @@
     font-size: 0.95rem;
   }
 
+  .delayedWord {
+    font-size: 0.76rem;
+    padding: 3px 9px;
+  }
+
   .cardBodyRow {
     gap: 12px;
   }
@@ -1697,6 +1717,11 @@
 
   .arrivingTime {
     font-size: 0.88rem;
+  }
+
+  .delayedWord {
+    font-size: 0.70rem;
+    padding: 2.5px 8px;
   }
 
   .cardBodyRow {

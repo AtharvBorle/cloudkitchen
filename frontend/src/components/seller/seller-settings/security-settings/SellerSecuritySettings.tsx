@@ -512,13 +512,17 @@ export const SellerDeleteAccountCard: React.FC<{ className?: string }> = ({ clas
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   const handleConfirmDelete = async () => {
+    if (!deletePassword || !deletePassword.trim()) {
+      setDeleteError("Password is required to verify ownership and confirm deletion.");
+      return;
+    }
     setDeleteLoading(true);
     setDeleteError(null);
     try {
       const res = await fetchApi("/api/seller/delete-account", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: deletePassword || undefined })
+        body: JSON.stringify({ password: deletePassword.trim() })
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
@@ -706,18 +710,27 @@ export const SellerDeleteAccountCard: React.FC<{ className?: string }> = ({ clas
 
             <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
               <label style={{ fontSize: "0.76rem", fontWeight: 700, color: "#475569" }}>
-                CONFIRM PASSWORD (OPTIONAL)
+                CONFIRM PASSWORD <span style={{ color: "#DC2626" }}>*</span>
               </label>
               <input
                 type="password"
+                required
                 value={deletePassword}
-                onChange={(e) => setDeletePassword(e.target.value)}
+                onChange={(e) => {
+                  setDeletePassword(e.target.value);
+                  if (deleteError) setDeleteError(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !deleteLoading && deletePassword.trim()) {
+                    handleConfirmDelete();
+                  }
+                }}
                 placeholder="Enter password to verify ownership"
                 style={{
                   width: "100%",
                   padding: "10px 12px",
                   borderRadius: "8px",
-                  border: "1.5px solid #CBD5E1",
+                  border: deleteError ? "1.5px solid #EF4444" : "1.5px solid #CBD5E1",
                   fontSize: "0.88rem",
                   outline: "none",
                   boxSizing: "border-box",
@@ -746,20 +759,21 @@ export const SellerDeleteAccountCard: React.FC<{ className?: string }> = ({ clas
               <button
                 type="button"
                 onClick={handleConfirmDelete}
-                disabled={deleteLoading}
+                disabled={deleteLoading || !deletePassword.trim()}
                 style={{
                   padding: "9px 18px",
-                  backgroundColor: "#DC2626",
+                  backgroundColor: !deletePassword.trim() ? "#F87171" : "#DC2626",
                   color: "#FFFFFF",
                   border: "none",
                   borderRadius: "8px",
                   fontSize: "0.85rem",
                   fontWeight: 600,
-                  cursor: deleteLoading ? "not-allowed" : "pointer",
+                  cursor: deleteLoading || !deletePassword.trim() ? "not-allowed" : "pointer",
                   display: "inline-flex",
                   alignItems: "center",
                   gap: "6px",
-                  opacity: deleteLoading ? 0.7 : 1,
+                  opacity: deleteLoading || !deletePassword.trim() ? 0.65 : 1,
+                  transition: "all 0.18s ease",
                 }}
               >
                 {deleteLoading && <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} />}

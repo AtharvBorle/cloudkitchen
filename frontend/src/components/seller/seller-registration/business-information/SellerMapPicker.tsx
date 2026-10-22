@@ -87,13 +87,18 @@ export const SellerMapPicker: React.FC<SellerMapPickerProps> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const onChangeRef = useRef(onChange);
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
   const handleReverseGeocode = useCallback(
     async (lat: number, lng: number) => {
       try {
         const details = await reverseGeocodeCoords(lat, lng);
         if (isMountedRef.current) {
           setCurrentCoords({ lat, lng });
-          onChange(lat, lng, details.formattedAddress || "", {
+          onChangeRef.current(lat, lng, details.formattedAddress || "", {
             pincode: details.pincode || "",
             street: details.street || "",
             landmark: details.landmark || "",
@@ -105,11 +110,11 @@ export const SellerMapPicker: React.FC<SellerMapPickerProps> = ({
       } catch (err) {
         console.warn("Reverse geocoding warning in SellerMapPicker:", err);
         if (isMountedRef.current) {
-          onChange(lat, lng);
+          onChangeRef.current(lat, lng);
         }
       }
     },
-    [onChange]
+    []
   );
 
   useEffect(() => {
@@ -167,9 +172,7 @@ export const SellerMapPicker: React.FC<SellerMapPickerProps> = ({
             }
           });
 
-          if (!latitude || !longitude) {
-            handleReverseGeocode(initialLat, initialLng);
-          }
+// Initial position set without automatic API call
 
           if (isMountedRef.current) {
             setMapLoaded(true);
@@ -238,9 +241,7 @@ export const SellerMapPicker: React.FC<SellerMapPickerProps> = ({
             handleReverseGeocode(clickLat, clickLng);
           });
 
-          if (!latitude || !longitude) {
-            handleReverseGeocode(lat, lng);
-          }
+// Initial position set without automatic API call
 
           if (isMountedRef.current) {
             setMapLoaded(true);
@@ -296,7 +297,7 @@ export const SellerMapPicker: React.FC<SellerMapPickerProps> = ({
         delete (mapContainerRef.current as any)._leaflet_id;
       }
     };
-  }, [handleReverseGeocode, latitude, longitude]);
+  }, []);
 
   // Update marker position if external coordinates change
   useEffect(() => {
@@ -362,44 +363,14 @@ export const SellerMapPicker: React.FC<SellerMapPickerProps> = ({
     );
   };
 
-  // Live Places Search Input
+  // Places Search Input - manual search on Search button or Enter key (no continuous API calls while typing)
   const handleQueryChange = (text: string) => {
     setSearchQuery(text);
     if (searchError) setSearchError(null);
-
-    if (searchDebounceRef.current) {
-      clearTimeout(searchDebounceRef.current);
-    }
-
-    const trimmed = text.trim();
-    if (trimmed.length < 2) {
+    if (!text.trim()) {
       setSearchResults([]);
       setShowResultsDropdown(false);
-      return;
     }
-
-    searchDebounceRef.current = setTimeout(async () => {
-      setIsSearching(true);
-      try {
-        const centerLat = currentCoords.lat || 18.5204;
-        const centerLng = currentCoords.lng || 73.8567;
-        const suggestions = await fetchPlaceSuggestions(trimmed, { lat: centerLat, lng: centerLng });
-
-        if (isMountedRef.current) {
-          setSearchResults(suggestions);
-          setShowResultsDropdown(suggestions.length > 0);
-          if (suggestions.length === 0) {
-            setSearchError(`No locations found matching "${trimmed}".`);
-          }
-        }
-      } catch (err) {
-        console.warn("SellerMapPicker places search error:", err);
-      } finally {
-        if (isMountedRef.current) {
-          setIsSearching(false);
-        }
-      }
-    }, 260);
   };
 
   // Handle Enter Search

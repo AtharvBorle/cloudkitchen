@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Camera, ChevronDown, Trash2, Plus, Bell, Clock, Copy, Eye, RefreshCw, X, Utensils } from "lucide-react";
+import { ChevronLeft, Camera, ChevronDown, Trash2, Plus, Bell, Clock, Copy, Eye, RefreshCw, X, Utensils, User, Users } from 'lucide-react';
 import {
   TIME_SLOTS_12H,
   getValidEndTimes,
@@ -48,6 +48,7 @@ export interface ResponsiveMenuItemsProps {
     type: string;
     selectedFoodTypes?: string[];
     description: string;
+    serves?: number | null;
     stockQty: number | string;
     isInStock: boolean;
     variants: ResponsiveVariantItem[];
@@ -128,7 +129,17 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
       }
     });
   };
-  const [description, setDescription] = useState(initialDescription);
+  const [selectedServes, setSelectedServes] = useState<number | null>(() => {
+    if (initialDescription) {
+      const match = initialDescription.match(/^\(Serves\s*([1-4])\)/i) || initialDescription.match(/^\[Serves:\s*([1-4])\]/i);
+      if (match) return Number(match[1]) || null;
+    }
+    return null;
+  });
+  const [description, setDescription] = useState(() => {
+    if (!initialDescription) return "";
+    return initialDescription.replace(/^\(Serves\s*[1-4]\)\s*/i, '').replace(/^\[Serves:\s*[1-4]\]\s*/i, '').trim();
+  });
   const [variants, setVariants] = useState<ResponsiveVariantItem[]>(initialVariants);
   const [schedules, setSchedules] = useState<ResponsiveDaySchedule[]>(initialSchedules);
   const [imagePreview, setImagePreview] = useState<string | null>(initialImageUrl || null);

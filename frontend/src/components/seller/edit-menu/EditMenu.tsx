@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, ChevronDown, Plus, Trash2, CloudUpload, Check, Clock, Copy, Eye, RefreshCw, X, ExternalLink, Utensils } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Plus, Trash2, CloudUpload, Check, Clock, Copy, Eye, RefreshCw, X, ExternalLink, Utensils, User, Users } from 'lucide-react';
 import {
   DaySchedule,
   DEFAULT_ITEM_SCHEDULE,
@@ -68,6 +68,7 @@ function EditMenuInner({
   const [price, setPrice] = useState('');
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
+  const [selectedServes, setSelectedServes] = useState<number | null>(null);
 
   // Food type dropdown & multi-select
   const [isFoodTypeDropdownOpen, setIsFoodTypeDropdownOpen] = useState(false);
@@ -130,7 +131,19 @@ function EditMenuInner({
               setItemName(found.name || '');
               setPrice(found.price !== null && found.price !== undefined ? String(found.price) : '');
               if (found.foodCategory?.name) setCategory(found.foodCategory.name);
-              setDescription(found.description || '');
+              if (found.description) {
+                const match = found.description.match(/^\(Serves\s*([1-4])\)\s*([\s\S]*)$/i) || found.description.match(/^\[Serves:\s*([1-4])\]\s*([\s\S]*)$/i);
+                if (match) {
+                  setSelectedServes(Number(match[1]) || null);
+                  setDescription(match[2] || '');
+                } else {
+                  setSelectedServes(null);
+                  setDescription(found.description || '');
+                }
+              } else {
+                setSelectedServes(null);
+                setDescription('');
+              }
               if (found.imageUrl) setExistingImageUrl(found.imageUrl);
               setStockQty(found.stockQuantity !== null && found.stockQuantity !== undefined && found.stockQuantity >= 0 ? String(found.stockQuantity) : '');
               if (found.operationalHours) {
@@ -359,7 +372,12 @@ function EditMenuInner({
       const formData = new FormData();
       formData.append('name', itemName);
       formData.append('price', price);
-      formData.append('description', description || '');
+      const cleanDesc = description.replace(/^\(Serves\s*[1-4]\)\s*/i, '').replace(/^\[Serves:\s*[1-4]\]\s*/i, '').trim();
+      const finalDescription = selectedServes ? `(Serves ${selectedServes}) ${cleanDesc}` : cleanDesc;
+      formData.append('description', finalDescription);
+      if (selectedServes) {
+        formData.append('serves', String(selectedServes));
+      }
 
       let itemTypeVal = 'VEG';
       if (selectedFoodTypes.includes('Non Veg') || selectedFoodTypes.includes('Non-Veg')) {

@@ -15,6 +15,7 @@ const SMTP_USER = process.env.SMTP_USER || "johnwick380900@gmail.com";
 const SMTP_PASS = process.env.SMTP_PASS || process.env.GMAIL_APP_PASSWORD || process.env.EMAIL_PASSWORD || "";
 const SMTP_FROM = process.env.SMTP_FROM || `"Neo Cloud Bites" <${SMTP_USER}>`;
 const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || "johnwick380900@gmail.com";
+
 /**
  * Resolves the public frontend / tracking URL.
  * Top priority is given to TRACKING_DOMAIN or FRONTEND_URL.
@@ -1838,7 +1839,7 @@ export async function sendRefundCompletedEmail({
     </div>
 
     <div style="text-align: center; margin-top: 24px;">
-      <a href="${APP_URL}/my-orders" class="btn btn-green">View My Orders</a>
+      <a href="${APP_URL}/orders-desktop" class="btn btn-green">View My Orders</a>
     </div>
   `;
 
