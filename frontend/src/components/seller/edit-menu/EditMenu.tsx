@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, ChevronDown, Plus, Trash2, CloudUpload, Check, Clock, Copy } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Plus, Trash2, CloudUpload, Check, Clock, Copy, Eye, RefreshCw, X, ExternalLink, Utensils } from 'lucide-react';
 import {
   DaySchedule,
   DEFAULT_ITEM_SCHEDULE,
@@ -87,6 +87,21 @@ function EditMenuInner({
 
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [existingImageUrl, setExistingImageUrl] = useState<string>('');
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string>('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (imageFile) {
+      const url = URL.createObjectURL(imageFile);
+      setPreviewUrl(url);
+      return () => URL.revokeObjectURL(url);
+    } else if (existingImageUrl) {
+      setPreviewUrl(existingImageUrl);
+    } else {
+      setPreviewUrl('');
+    }
+  }, [imageFile, existingImageUrl]);
   const [schedules, setSchedules] = useState<DaySchedule[]>(() =>
     DEFAULT_ITEM_SCHEDULE.map((s) => ({ ...s }))
   );
@@ -231,6 +246,8 @@ function EditMenuInner({
     setStockQty('');
     setVariants([]);
     setImageFile(null);
+    setPreviewUrl('');
+    setIsPreviewOpen(false);
     setSchedules(DEFAULT_ITEM_SCHEDULE.map((s) => ({ ...s })));
     setShowSuccessModal(false);
     if (itemId) {
@@ -860,41 +877,124 @@ function EditMenuInner({
 
             {/* Dish Image Representation */}
             <div className={styles.subSection}>
-              <label className={styles.subSectionTitle}>
-                Dish Image representation <span className={styles.requiredStar}>*</span>
-              </label>
-              <label className={styles.uploadDropzone}>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className={styles.fileInputHidden}
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      const file = e.target.files[0];
-                      if (file.size > 5 * 1024 * 1024) {
-                        const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
-                        alert(`Dish image "${file.name}" (${sizeMB} MB) exceeds the 5MB upload limit. Please upload an image under 5MB.`);
-                        e.target.value = "";
-                        return;
-                      }
-                      setImageFile(file);
+              <div className={styles.subSectionHeaderRow}>
+                <label className={styles.subSectionTitle}>
+                  Dish Image representation <span className={styles.requiredStar}>*</span>
+                </label>
+                {(imageFile || existingImageUrl) && (
+                  <button
+                    type="button"
+                    className={styles.headerPreviewBtn}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsPreviewOpen(true);
+                    }}
+                    title="Preview dish image"
+                  >
+                    <Eye size={14} />
+                    <span>Preview</span>
+                  </button>
+                )}
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className={styles.fileInputHidden}
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    const file = e.target.files[0];
+                    if (file.size > 5 * 1024 * 1024) {
+                      const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                      alert(`Dish image "${file.name}" (${sizeMB} MB) exceeds the 5MB upload limit. Please upload an image under 5MB.`);
+                      e.target.value = "";
+                      return;
                     }
-                  }}
-                />
-                <div className={styles.uploadContent}>
-                  <div className={styles.cloudIconBadge}>
-                    <CloudUpload size={22} color="#F97316" strokeWidth={2.2} />
+                    setImageFile(file);
+                  }
+                }}
+              />
+
+              {imageFile || existingImageUrl ? (
+                <div
+                  className={styles.uploadedDropzone}
+                  onClick={() => setIsPreviewOpen(true)}
+                  title="Click to preview image"
+                >
+                  <div className={styles.uploadedLeft}>
+                    <div className={styles.dishThumbnailWrap}>
+                      <img
+                        src={previewUrl || existingImageUrl}
+                        alt="Dish Thumbnail"
+                        className={styles.dishThumbnail}
+                      />
+                    </div>
+                    <div className={styles.fileInfoGroup}>
+                      <p className={styles.fileName}>
+                        {imageFile ? imageFile.name : (itemName ? `${itemName} - Photo` : "dish-photo.jpg")}
+                      </p>
+                      <p className={styles.fileStatus}>
+                        {imageFile
+                          ? `Ready to upload (${(imageFile.size / (1024 * 1024)).toFixed(2)} MB)`
+                          : "Current menu photo (Active)"}
+                      </p>
+                    </div>
                   </div>
-                  <span className={styles.uploadTitle}>Click to upload raw picture</span>
-                  <span className={styles.uploadHint}>
-                    {imageFile
-                      ? `Selected: ${imageFile.name}`
-                      : existingImageUrl
-                      ? 'Current image attached (click to replace)'
-                      : 'PNG, JPG, up to 5MB, recommended square scale ratio'}
-                  </span>
+
+                  <div className={styles.dropzoneActions} onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      className={styles.actionPreviewBtn}
+                      onClick={() => setIsPreviewOpen(true)}
+                      title="Preview dish image"
+                    >
+                      <Eye size={13} />
+                      <span>Preview</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.reuploadBtn}
+                      onClick={() => fileInputRef.current?.click()}
+                      title="Change dish photo"
+                    >
+                      <RefreshCw size={13} />
+                      <span>Change</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.removeBtn}
+                      onClick={() => {
+                        setImageFile(null);
+                        setExistingImageUrl("");
+                        setPreviewUrl("");
+                        if (fileInputRef.current) fileInputRef.current.value = "";
+                      }}
+                      title="Remove image"
+                    >
+                      <X size={15} />
+                    </button>
+                  </div>
                 </div>
-              </label>
+              ) : (
+                <div
+                  className={styles.uploadDropzone}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <div className={styles.uploadContent}>
+                    <div className={styles.cloudIconBadge}>
+                      <CloudUpload size={22} color="#F97316" strokeWidth={2.2} />
+                    </div>
+                    <span className={styles.uploadMainText}>
+                      <span className={styles.browseLink}>Click to upload</span> or drag and drop
+                    </span>
+                    <span className={styles.uploadHint}>
+                      PNG, JPG, up to 5MB, recommended square scale ratio
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Bottom Actions Row */}
@@ -907,6 +1007,104 @@ function EditMenuInner({
               </button>
             </div>
           </form>
+
+          {/* Document-style Dish Image Preview Modal */}
+          {isPreviewOpen && (previewUrl || existingImageUrl) && (
+            <div
+              className={styles.previewModalOverlay}
+              onClick={() => setIsPreviewOpen(false)}
+              role="dialog"
+              aria-modal="true"
+            >
+              <div
+                className={styles.previewModalCard}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className={styles.previewModalHeader}>
+                  <div className={styles.previewModalHeaderLeft}>
+                    <div className={styles.previewIconSquircle}>
+                      <Utensils size={20} className={styles.previewHeaderIcon} />
+                    </div>
+                    <div className={styles.previewHeaderTextGroup}>
+                      <h3 className={styles.previewModalTitle}>
+                        {itemName ? `${itemName} - Dish Image Preview` : "Dish Image Preview"}
+                      </h3>
+                      <div className={styles.previewModalSubtitleRow}>
+                        <span className={styles.previewModalFileName} title={imageFile ? imageFile.name : (itemName ? `${itemName} Photo` : "dish-photo.jpg")}>
+                          {imageFile ? imageFile.name : (itemName ? `${itemName} Photo` : "dish-photo.jpg")}
+                        </span>
+                        {imageFile && (
+                          <span className={styles.previewModalFileSize}>
+                            {(imageFile.size / (1024 * 1024)).toFixed(2)} MB
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className={styles.previewModalHeaderActions}>
+                    <button
+                      type="button"
+                      className={styles.previewExternalBtn}
+                      onClick={() => {
+                        const win = window.open();
+                        if (win) {
+                          win.document.write(
+                            `<html><head><title>${itemName || "Dish Image"} Preview</title></head><body style="margin:0; background:#0f172a; display:flex; align-items:center; justify-content:center; min-height:100vh;"><img src="${previewUrl}" style="max-width:100%; max-height:100vh; object-fit:contain;"/></body></html>`
+                          );
+                        }
+                      }}
+                      title="Open full size in new tab"
+                    >
+                      <ExternalLink size={14} />
+                      <span>Full Screen</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.modalCloseBtn}
+                      onClick={() => setIsPreviewOpen(false)}
+                      title="Close preview"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className={styles.previewModalBody}>
+                  <div className={styles.imageContainer}>
+                    <img
+                      src={previewUrl}
+                      alt={itemName || "Dish Photo"}
+                      className={styles.previewImg}
+                    />
+                  </div>
+                </div>
+
+                <div className={styles.previewModalFooter}>
+                  <button
+                    type="button"
+                    className={styles.previewChangeBtn}
+                    onClick={() => {
+                      setIsPreviewOpen(false);
+                      setTimeout(() => {
+                        fileInputRef.current?.click();
+                      }, 60);
+                    }}
+                  >
+                    <RefreshCw size={14} />
+                    <span>Replace / Change Photo</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.previewCloseBtn}
+                    onClick={() => setIsPreviewOpen(false)}
+                  >
+                    Close Preview
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Themed Confirmation Modal Popup */}
           {showSuccessModal && (

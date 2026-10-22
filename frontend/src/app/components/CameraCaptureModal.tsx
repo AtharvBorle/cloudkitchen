@@ -21,7 +21,7 @@ export default function CameraCaptureModal({ onCapture, onClose, skipWatermark =
     const fallbackIPLocation = async () => {
         try {
             setLocationText("Locating via IP...");
-            const res = await fetch("https://ipapi.co/json/", { signal: AbortSignal.timeout(5000) });
+            const res = await fetch("https://ipapi.co/json/", { signal: AbortSignal.timeout(6000) });
             if (res.ok) {
                 const data = await res.json();
                 if (data.latitude && data.longitude) {
@@ -32,14 +32,28 @@ export default function CameraCaptureModal({ onCapture, onClose, skipWatermark =
                 }
             }
         } catch (e) {
-            console.error("IP geolocation fallback failed:", e);
+            // Fallback to secondary IP service if ipapi is rate-limited or unavailable
+            try {
+                const res2 = await fetch("https://ipwho.is/", { signal: AbortSignal.timeout(6000) });
+                if (res2.ok) {
+                    const data2 = await res2.json();
+                    if (data2.latitude && data2.longitude) {
+                        const lat = Number(data2.latitude).toFixed(6);
+                        const lng = Number(data2.longitude).toFixed(6);
+                        setLocationText(`LAT: ${lat}, LNG: ${lng} (approx)`);
+                        return;
+                    }
+                }
+            } catch (e2) {
+                console.warn("IP geolocation fallback unavailable:", e2 instanceof Error ? e2.message : e2);
+            }
         }
         setLocationText("Location: Unavailable");
     };
 
     const triggerGPSRetrieval = () => {
         setLocationText("Locating GPS...");
-        if (navigator.geolocation) {
+        if (typeof window !== "undefined" && navigator.geolocation) {
             const retrieveLocation = (highAccuracy: boolean) => {
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
@@ -48,22 +62,30 @@ export default function CameraCaptureModal({ onCapture, onClose, skipWatermark =
                         setLocationText(`LAT: ${lat}, LNG: ${lng}`);
                     },
                     (error) => {
-                        console.error(`Error getting geolocation (highAccuracy=${highAccuracy}):`, error);
+                        // If user denied permission, stop immediately and update UI without logging console error
+                        if (error.code === error.PERMISSION_DENIED) {
+                            setLocationText("Location: Permission Denied");
+                            console.warn("Geolocation permission was denied by the user.");
+                            return;
+                        }
+
+                        // On laptops/desktops without dedicated GPS, highAccuracy commonly times out or is unsupported
                         if (highAccuracy) {
-                            // Fallback to low accuracy
+                            console.warn(
+                                `Geolocation high accuracy unavailable (${error.message || "Code " + error.code}). Falling back to standard geolocation...`
+                            );
                             retrieveLocation(false);
                         } else {
-                            if (error.code === error.PERMISSION_DENIED) {
-                                setLocationText("Location: Permission Denied");
-                            } else {
-                                // Timeout or unavailable — try IP-based fallback
-                                fallbackIPLocation();
-                            }
+                            // Standard accuracy also timed out or unavailable — try IP-based fallback
+                            console.warn(
+                                `Standard geolocation unavailable (${error.message || "Code " + error.code}). Falling back to IP-based location...`
+                            );
+                            fallbackIPLocation();
                         }
                     },
-                    highAccuracy 
-                        ? { enableHighAccuracy: true, timeout: 3000, maximumAge: 60000 }
-                        : { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 }
+                    highAccuracy
+                        ? { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+                        : { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
                 );
             };
             retrieveLocation(true);
