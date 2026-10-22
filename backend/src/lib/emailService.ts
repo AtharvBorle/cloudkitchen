@@ -16,11 +16,37 @@ const SMTP_PASS = process.env.SMTP_PASS || process.env.GMAIL_APP_PASSWORD || pro
 const SMTP_FROM = process.env.SMTP_FROM || `"Neo Cloud Bites" <${SMTP_USER}>`;
 const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || "johnwick380900@gmail.com";
 
-const APP_URL =
-  process.env.FRONTEND_URL ||
-  process.env.NEXT_PUBLIC_APP_URL ||
-  process.env.NEXTAUTH_URL ||
-  "https://dev.neocloudbites.com";
+/**
+ * Resolves the public frontend / tracking URL.
+ * Top priority is given to TRACKING_DOMAIN or FRONTEND_URL.
+ * Strips trailing slashes, handles raw domains without http/https protocol,
+ * and ignores backend API domains (e.g. dev.api.neocloudbites.com).
+ */
+export function getAppUrl(): string {
+  const raw = (
+    process.env.TRACKING_DOMAIN ||
+    process.env.FRONTEND_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.APP_URL ||
+    ""
+  ).trim();
+
+  if (raw) {
+    const cleaned = raw.replace(/\/+$/, "");
+    return /^https?:\/\//i.test(cleaned) ? cleaned : `https://${cleaned}`;
+  }
+
+  // NextAuth URL fallback ONLY if it does not point to the backend API domain
+  const nextAuth = (process.env.NEXTAUTH_URL || "").trim().replace(/\/+$/, "");
+  if (nextAuth && !nextAuth.includes("api.") && !nextAuth.includes("localhost")) {
+    return /^https?:\/\//i.test(nextAuth) ? nextAuth : `https://${nextAuth}`;
+  }
+
+  // Default to frontend domain
+  return "https://dev.neocloudbites.com";
+}
+
+const APP_URL = getAppUrl();
 
 let transporter: nodemailer.Transporter | null = null;
 
@@ -1164,7 +1190,7 @@ export async function sendOrderPlacedNotification(order: any, customer?: any, se
     </table>
 
     <div style="text-align: center; margin-top: 28px;">
-      <a href="${APP_URL}/orders-desktop?orderId=${orderId}&action=track" class="btn">Track Order Live</a>
+      <a href="${getAppUrl()}/track?orderId=${orderId}" class="btn">Track Order Live</a>
     </div>
   `;
 
@@ -1223,7 +1249,7 @@ export async function sendOrderDeliveredEmail({
     </div>
 
     <div style="text-align: center; margin-top: 24px;">
-      <a href="${APP_URL}/orders-desktop?orderId=${orderId}" class="btn btn-green">Rate & Review Food</a>
+      <a href="${getAppUrl()}/track?orderId=${orderId}" class="btn btn-green">Rate & Review Food</a>
     </div>
   `;
 
@@ -1382,7 +1408,7 @@ export async function sendOrderStatusNotification(
     </div>
 
     <div style="text-align: center; margin-top: 24px;">
-      <a href="${APP_URL}/orders-desktop?orderId=${orderId}" class="btn">View Order Details</a>
+      <a href="${getAppUrl()}/track?orderId=${orderId}" class="btn">Track Order Live</a>
     </div>
   `;
 
@@ -1730,7 +1756,7 @@ export async function sendRefundInitiatedEmail({
     </div>
 
     <div style="text-align: center; margin-top: 24px;">
-      <a href="${APP_URL}/orders-desktop?orderId=${orderId}" class="btn">View Order in My Orders</a>
+      <a href="${getAppUrl()}/track?orderId=${orderId}" class="btn">View Order Details</a>
     </div>
   `;
 
