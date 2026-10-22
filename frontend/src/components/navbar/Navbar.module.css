@@ -517,8 +517,8 @@
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
-  border: 1.5px solid #d1d5db;
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+  border: 1.5px solid #fed7aa;
   display: flex;
   align-items: center;
   justify-content: center;
