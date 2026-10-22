@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, useParams } from "next/navigation";
 import {
   CheckCircle2,
   Copy,
@@ -93,10 +93,16 @@ const STATIC_CONFETTI = Array.from({ length: 36 }).map((_, i) => {
   };
 });
 
-export default function OrderConfirmation() {
+export interface OrderConfirmationProps {
+  orderIdProp?: string;
+}
+
+export default function OrderConfirmation({ orderIdProp }: OrderConfirmationProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const queryOrderId = searchParams.get("orderId");
+  const params = useParams();
+  const paramId = typeof params?.id === "string" ? params.id : undefined;
+  const effectiveOrderId = orderIdProp || searchParams.get("orderId") || paramId || "";
 
   const [orderData, setOrderData] = useState<ConfirmedOrderData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -213,7 +219,7 @@ export default function OrderConfirmation() {
       }
     }
 
-    const orderIdToFetch = queryOrderId || (typeof window !== "undefined" ? (() => {
+    const orderIdToFetch = effectiveOrderId || (typeof window !== "undefined" ? (() => {
       try {
         const s = sessionStorage.getItem("latestConfirmedOrder");
         return s ? JSON.parse(s)?.orderId : null;
@@ -249,13 +255,15 @@ export default function OrderConfirmation() {
       isMounted = false;
       clearTimeout(timer);
     };
-  }, [queryOrderId]);
+  }, [effectiveOrderId]);
 
   // Real-time SSE stream replaces 4s auto-polling
   useRealtimeStream({
-    url: "/api/user/orders/stream",
+    url: effectiveOrderId
+      ? `/api/user/orders/stream?orderId=${encodeURIComponent(effectiveOrderId)}`
+      : "/api/user/orders/stream",
     onOrder: (payload) => {
-      const orderIdToFetch = queryOrderId || (typeof window !== "undefined" ? (() => {
+      const orderIdToFetch = effectiveOrderId || (typeof window !== "undefined" ? (() => {
         try {
           const s = sessionStorage.getItem("latestConfirmedOrder");
           return s ? JSON.parse(s)?.orderId : null;
@@ -298,22 +306,40 @@ export default function OrderConfirmation() {
                 : "We couldn't locate this order confirmation. You can view your active orders in My Orders."}
             </p>
             {!isLoading && (
-              <button
-                type="button"
-                onClick={() => router.push("/orders-desktop")}
-                style={{
-                  display: "inline-block",
-                  backgroundColor: "#FF5500",
-                  color: "#FFFFFF",
-                  padding: "10px 24px",
-                  borderRadius: "8px",
-                  fontWeight: 600,
-                  border: "none",
-                  cursor: "pointer",
-                }}
-              >
-                Go to My Orders
-              </button>
+              <div style={{ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  onClick={() => router.push("/")}
+                  style={{
+                    display: "inline-block",
+                    backgroundColor: "#FF5500",
+                    color: "#FFFFFF",
+                    padding: "10px 24px",
+                    borderRadius: "8px",
+                    fontWeight: 600,
+                    border: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  Return to Home
+                </button>
+                <button
+                  type="button"
+                  onClick={() => router.push("/order-history-desktop")}
+                  style={{
+                    display: "inline-block",
+                    backgroundColor: "#F1F5F9",
+                    color: "#0F172A",
+                    padding: "10px 24px",
+                    borderRadius: "8px",
+                    fontWeight: 600,
+                    border: "1px solid #CBD5E1",
+                    cursor: "pointer",
+                  }}
+                >
+                  My Orders
+                </button>
+              </div>
             )}
           </div>
         </main>

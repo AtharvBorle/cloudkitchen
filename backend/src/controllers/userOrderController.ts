@@ -1064,14 +1064,24 @@ export const verifyOrderPayment = async (req: Request) => {
     return { order: updatedOrder };
 };
 
-export const getOrderDetails = async (id: string) => {
+export const getOrderDetails = async (id: string, allowGuest: boolean = true) => {
     const session = await getAuthSession();
-    if (!session?.user) {
+    if (!session?.user && !allowGuest) {
         throw new ApiError("Please log in first to view order details.", 401);
     }
 
-    const order = await db.order.findUnique({
-        where: { id: id },
+    const cleanId = (id || "").trim();
+    if (!cleanId) {
+        throw new ApiError("Order ID is required", 400);
+    }
+
+    const order = await db.order.findFirst({
+        where: {
+            OR: [
+                { id: cleanId },
+                { id: { equals: cleanId, mode: 'insensitive' } }
+            ]
+        },
         include: {
             user: {
                 select: {
@@ -1120,13 +1130,15 @@ export const getOrderDetails = async (id: string) => {
         order.status = "CANCELLED";
     }
 
-    const isBuyer = order.userId === session.user.id;
-    const isSeller = order.seller.userId === session.user.id;
-    const isDeliveryBoy = order.deliveryPerson && order.deliveryPerson.userId === session.user.id;
-    const isAdmin = session.user.role === "ADMIN" || session.user.role === "SUPERADMIN" || session.user.role === "SUPPORT" || session.user.role === "AGENT";
+    if (session?.user) {
+        const isBuyer = order.userId === session.user.id;
+        const isSeller = order.seller?.userId === session.user.id;
+        const isDeliveryBoy = order.deliveryPerson && order.deliveryPerson.userId === session.user.id;
+        const isAdmin = session.user.role === "ADMIN" || session.user.role === "SUPERADMIN" || session.user.role === "SUPPORT" || session.user.role === "AGENT";
 
-    if (!isBuyer && !isSeller && !isDeliveryBoy && !isAdmin) {
-        throw new ApiError("Access denied. You do not have permission to view this order.", 403);
+        if (!isBuyer && !isSeller && !isDeliveryBoy && !isAdmin && !allowGuest) {
+            throw new ApiError("Access denied. You do not have permission to view this order.", 403);
+        }
     }
 
     let appliedCoupon = null;

@@ -7,7 +7,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         const id = (await params).id;
         if (!id) return errorResponse("Order ID is required", 400);
 
-        const order = await getOrderDetails(id);
+        const order = await getOrderDetails(id, true);
         return successResponse(order);
     } catch (error: any) {
         if (error instanceof ApiError) return errorResponse(error.message, error.statusCode);
