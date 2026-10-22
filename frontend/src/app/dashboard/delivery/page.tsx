@@ -2,7 +2,8 @@
 import { fetchApi } from "@/lib/fetch-api";
 import { useRealtimeStream } from "@/hooks/useRealtimeStream";
 import { useState, useEffect, useRef } from "react";
-import { Package, MapPin, Phone, CheckCircle, Clock, Check, X, ShieldCheck, Wallet, Download, Search, Filter, ArrowUpDown } from "lucide-react";
+import { Package, MapPin, Phone, CheckCircle, Clock, Check, X, ShieldCheck, Wallet, Download, Search, Filter, ArrowUpDown, QrCode, Copy } from "lucide-react";
+import { QRCodeCanvas } from "qrcode.react";
 import Script from "next/script";
 
 const loadRazorpayScript = (): Promise<boolean> => {
@@ -156,6 +157,8 @@ export default function DeliveryDashboard() {
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'ACTIVE' | 'HISTORY' | 'WALLET'>('ACTIVE');
     const [collectCashModalOrder, setCollectCashModalOrder] = useState<any>(null);
+    const [collectUpiModalOrder, setCollectUpiModalOrder] = useState<any>(null);
+    const [copiedUpi, setCopiedUpi] = useState<boolean>(false);
     const [profile, setProfile] = useState<any>(null);
     const [transactions, setTransactions] = useState<any[]>([]);
     const [loadingTx, setLoadingTx] = useState(false);
@@ -474,6 +477,28 @@ export default function DeliveryDashboard() {
         fetchTransactions();
     };
 
+    const handleUpiPaymentCollected = async (orderId: string) => {
+        try {
+            const res = await fetchApi(`/api/delivery/orders/${orderId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: "DELIVERED", paymentMethod: "UPI" })
+            });
+            if (res.ok) {
+                setCollectUpiModalOrder(null);
+                fetchOrders();
+                fetchProfile();
+                fetchTransactions();
+            } else {
+                const data = await res.json().catch(() => null);
+                alert(data?.message || "Failed to confirm UPI payment. Please try again.");
+            }
+        } catch (err) {
+            console.error("UPI payment collection error:", err);
+            alert("An error occurred while confirming UPI payment.");
+        }
+    };
+
     // Segregate orders
     const rawActiveOrders = orders.filter(o => o.status !== 'DELIVERED' && o.status !== 'CANCELLED');
     const rawHistoryOrders = orders.filter(o => o.status === 'DELIVERED' || o.status === 'CANCELLED');
@@ -690,16 +715,211 @@ export default function DeliveryDashboard() {
                             <p style={{ fontSize: '0.9rem', color: '#A0AEC0', marginTop: '5px' }}>Order #{collectCashModalOrder.id.slice(-6)}</p>
                         </div>
 
-                        <div style={{ backgroundColor: '#FFF5F5', padding: '15px', borderRadius: '8px', marginBottom: '30px', border: '1px solid #FED7D7' }}>
+                        <div style={{ backgroundColor: '#FFF5F5', padding: '15px', borderRadius: '8px', marginBottom: '18px', border: '1px solid #FED7D7' }}>
                             <p style={{ fontSize: '0.9rem', color: '#C53030', textAlign: 'center', fontWeight: '500' }}>
-                                Ensure you have received the exact amount in Cash or UPI before swiping. There is no undo.
+                                Ensure you have received the exact amount in Cash before swiping. There is no undo.
                             </p>
                         </div>
+
+                        <button
+                            type="button"
+                            onClick={() => {
+                                const curr = collectCashModalOrder;
+                                setCollectCashModalOrder(null);
+                                setCollectUpiModalOrder(curr);
+                            }}
+                            style={{
+                                width: '100%',
+                                backgroundColor: '#FAF5FF',
+                                color: '#6B46C1',
+                                border: '1.5px dashed #D6BCFA',
+                                padding: '10px 14px',
+                                borderRadius: '10px',
+                                fontWeight: '600',
+                                fontSize: '0.88rem',
+                                cursor: 'pointer',
+                                marginBottom: '24px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '8px',
+                                transition: 'all 0.2s',
+                            }}
+                        >
+                            <QrCode size={18} color="#6B46C1" /> Customer wants to pay via UPI QR?
+                        </button>
 
                         <SwipeAction onSwipeSuccess={() => handleCashCollected(collectCashModalOrder.id)} text="Swipe to confirm Payment & Deliver" />
                     </div>
                 </div>
             )}
+
+            {/* Collect Online via Seller UPI QR Modal */}
+            {collectUpiModalOrder && (() => {
+                const sellerUpiId = (collectUpiModalOrder.seller?.upiId || "").trim();
+                const kitchenName = collectUpiModalOrder.seller?.businessName || "Neo Cloud Kitchen";
+                const amount = Number(collectUpiModalOrder.totalAmount || 0);
+                const upiPaymentUri = sellerUpiId
+                    ? `upi://pay?pa=${encodeURIComponent(sellerUpiId)}&pn=${encodeURIComponent(kitchenName)}&am=${encodeURIComponent(amount.toFixed(2))}&cu=INR&tn=${encodeURIComponent(`Order #${collectUpiModalOrder.id.slice(-6)}`)}`
+                    : "";
+
+                return (
+                    <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
+                        <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '24px', width: '100%', maxWidth: '420px', maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}>
+                            {/* Modal Header */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <div style={{ backgroundColor: '#FAF5FF', padding: '8px', borderRadius: '8px', display: 'flex' }}>
+                                        <QrCode size={20} color="#6B46C1" />
+                                    </div>
+                                    <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', margin: 0, color: '#1A202C' }}>Pay Online (Seller UPI QR)</h2>
+                                </div>
+                                <button onClick={() => setCollectUpiModalOrder(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
+                                    <X size={22} color="#A0AEC0" />
+                                </button>
+                            </div>
+
+                            {/* Amount & Order Header */}
+                            <div style={{ textAlign: 'center', marginBottom: '18px', backgroundColor: '#F8FAFC', padding: '14px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                                <p style={{ color: '#64748B', fontSize: '0.82rem', margin: '0 0 4px 0', textTransform: 'uppercase', fontWeight: 600 }}>Amount to Collect via UPI</p>
+                                <h3 style={{ fontSize: '2.2rem', fontWeight: '900', color: '#6B46C1', margin: 0 }}>₹{amount.toFixed(2)}</h3>
+                                <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '6px', fontSize: '0.85rem', color: '#475569' }}>
+                                    <span><strong>Order:</strong> #{collectUpiModalOrder.id.slice(-6)}</span>
+                                    <span>•</span>
+                                    <span><strong>Kitchen:</strong> {kitchenName}</span>
+                                </div>
+                            </div>
+
+                            {sellerUpiId ? (
+                                <>
+                                    {/* QR Code Container */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '16px' }}>
+                                        <div style={{ backgroundColor: 'white', padding: '14px', borderRadius: '12px', border: '2px solid #E9D8FD', boxShadow: '0 4px 12px rgba(107, 70, 193, 0.08)' }}>
+                                            <QRCodeCanvas
+                                                value={upiPaymentUri}
+                                                size={190}
+                                                level="H"
+                                                includeMargin={false}
+                                            />
+                                        </div>
+
+                                        {/* Supported Payment Badges */}
+                                        <div style={{ display: 'flex', gap: '6px', marginTop: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                            <span style={{ fontSize: '0.72rem', backgroundColor: '#EBF8FF', color: '#2B6CB0', padding: '2px 8px', borderRadius: '10px', fontWeight: 600 }}>GPay</span>
+                                            <span style={{ fontSize: '0.72rem', backgroundColor: '#FAF5FF', color: '#6B46C1', padding: '2px 8px', borderRadius: '10px', fontWeight: 600 }}>PhonePe</span>
+                                            <span style={{ fontSize: '0.72rem', backgroundColor: '#E6FFFA', color: '#234E52', padding: '2px 8px', borderRadius: '10px', fontWeight: 600 }}>Paytm</span>
+                                            <span style={{ fontSize: '0.72rem', backgroundColor: '#EDF2F7', color: '#4A5568', padding: '2px 8px', borderRadius: '10px', fontWeight: 600 }}>BHIM / Any UPI</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Seller UPI ID Box with Copy */}
+                                    <div style={{ backgroundColor: '#F7FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '8px 12px', marginBottom: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: '8px' }}>
+                                            <span style={{ fontSize: '0.75rem', color: '#718096', display: 'block' }}>Seller UPI ID:</span>
+                                            <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#2D3748', fontFamily: 'monospace' }}>{sellerUpiId}</span>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (navigator?.clipboard) {
+                                                    navigator.clipboard.writeText(sellerUpiId);
+                                                    setCopiedUpi(true);
+                                                    setTimeout(() => setCopiedUpi(false), 2000);
+                                                }
+                                            }}
+                                            style={{
+                                                backgroundColor: copiedUpi ? '#38A169' : '#EDF2F7',
+                                                color: copiedUpi ? 'white' : '#4A5568',
+                                                border: 'none',
+                                                padding: '6px 10px',
+                                                borderRadius: '6px',
+                                                fontSize: '0.78rem',
+                                                fontWeight: 600,
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '4px',
+                                                transition: 'all 0.2s',
+                                                flexShrink: 0,
+                                            }}
+                                        >
+                                            {copiedUpi ? <Check size={14} /> : <Copy size={14} />}
+                                            {copiedUpi ? "Copied" : "Copy"}
+                                        </button>
+                                    </div>
+
+                                    {/* Instruction Alert */}
+                                    <div style={{ backgroundColor: '#FAF5FF', padding: '10px 14px', borderRadius: '8px', marginBottom: '18px', border: '1px solid #E9D8FD' }}>
+                                        <p style={{ fontSize: '0.82rem', color: '#553C9A', margin: 0, textAlign: 'center', fontWeight: '500' }}>
+                                            Ask customer to scan this QR code. Once payment is confirmed on phone, swipe below.
+                                        </p>
+                                    </div>
+
+                                    {/* Swipe to Confirm UPI Payment */}
+                                    <SwipeAction
+                                        onSwipeSuccess={() => handleUpiPaymentCollected(collectUpiModalOrder.id)}
+                                        text="Swipe to confirm UPI & Deliver"
+                                    />
+                                </>
+                            ) : (
+                                <div style={{ textAlign: 'center', padding: '15px 0' }}>
+                                    <div style={{ backgroundColor: '#FEFCBF', padding: '16px', borderRadius: '12px', border: '1px solid #F6E05E', marginBottom: '20px' }}>
+                                        <p style={{ fontSize: '0.92rem', color: '#744210', fontWeight: '700', margin: '0 0 6px 0' }}>
+                                            ⚠️ Seller UPI ID Not Configured
+                                        </p>
+                                        <p style={{ fontSize: '0.82rem', color: '#975A16', margin: 0, lineHeight: 1.5 }}>
+                                            <strong>{kitchenName}</strong> has not configured a UPI ID in their profile settings. Please collect Cash on Delivery from the customer instead.
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const curr = collectUpiModalOrder;
+                                            setCollectUpiModalOrder(null);
+                                            setCollectCashModalOrder(curr);
+                                        }}
+                                        style={{
+                                            backgroundColor: '#38A169',
+                                            color: 'white',
+                                            border: 'none',
+                                            padding: '12px 20px',
+                                            borderRadius: '10px',
+                                            fontWeight: 'bold',
+                                            cursor: 'pointer',
+                                            width: '100%',
+                                        }}
+                                    >
+                                        Collect Cash on Delivery
+                                    </button>
+                                </div>
+                            )}
+
+                            {sellerUpiId && (
+                                <div style={{ marginTop: '14px', textAlign: 'center' }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const curr = collectUpiModalOrder;
+                                            setCollectUpiModalOrder(null);
+                                            setCollectCashModalOrder(curr);
+                                        }}
+                                        style={{
+                                            background: 'none',
+                                            border: 'none',
+                                            color: '#718096',
+                                            fontSize: '0.82rem',
+                                            textDecoration: 'underline',
+                                            cursor: 'pointer',
+                                        }}
+                                    >
+                                        Customer wants to pay cash instead? Switch to Cash
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                );
+            })()}
 
             {loading ? (
                 <p>Loading your tasks...</p>
@@ -937,28 +1157,27 @@ export default function DeliveryDashboard() {
                                         </button>
                                     ) : order.status === 'OUT_FOR_DELIVERY' ? (
                                         <>
-                                            {/* If not paid and COD, show Collect Cash, opening modal */}
+                                            {/* If not paid and COD, show Collect Cash and Pay Online (UPI QR) */}
                                             {!order.isPaid && order.paymentMethod === 'COD' ? (
-                                                <button
-                                                    onClick={() => setCollectCashModalOrder(order)}
-                                                    style={{ backgroundColor: '#48BB78', color: 'white', border: 'none', padding: '12px 20px', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}
-                                                >
-                                                    Collect Cash & Deliver
-                                                </button>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+                                                    <button
+                                                        onClick={() => setCollectCashModalOrder(order)}
+                                                        style={{ backgroundColor: '#38A169', color: 'white', border: 'none', padding: '12px 18px', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                                                    >
+                                                        <Wallet size={16} /> Collect Cash & Deliver
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setCollectUpiModalOrder(order)}
+                                                        style={{ backgroundColor: '#6B46C1', color: 'white', border: 'none', padding: '12px 18px', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                                                    >
+                                                        <QrCode size={16} /> Pay Online (UPI QR)
+                                                    </button>
+                                                </div>
                                             ) : (
                                                 // If Paid (Online/QR), show straight swipe action without money modal
                                                 <div style={{ marginTop: '5px' }}>
                                                     <SwipeAction onSwipeSuccess={() => updateStatus(order.id, 'DELIVERED')} text="Swipe to Deliver" />
                                                 </div>
-                                            )}
-
-                                            {!order.isPaid && order.paymentMethod === 'COD' && (
-                                                <button
-                                                    onClick={() => handleCollectOnline(order.id)}
-                                                    style={{ backgroundColor: '#3182CE', color: 'white', border: 'none', padding: '12px 20px', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s', marginTop: '10px' }}
-                                                >
-                                                    Collect Online (Razorpay)
-                                                </button>
                                             )}
                                         </>
                                     ) : null}

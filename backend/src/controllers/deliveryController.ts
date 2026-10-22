@@ -48,7 +48,8 @@ export const getDeliveryOrders = async () => {
                     addressFlat: true,
                     addressLocality: true,
                     addressLandmark: true,
-                    trackingId: true
+                    trackingId: true,
+                    upiId: true
                 }
             }
         },
@@ -182,7 +183,7 @@ export const updateOrderStatus = async (req: Request, orderId: string) => {
     }
 
     const body = await req.json();
-    const { status, delayMinutes, addDelayMinutes } = body || {};
+    const { status, delayMinutes, addDelayMinutes, paymentMethod, paymentMode } = body || {};
 
     const order = await db.order.findFirst({
         where: { id: orderId, deliveryPersonId: deliveryProfile.id }
@@ -218,12 +219,14 @@ export const updateOrderStatus = async (req: Request, orderId: string) => {
         throw new ApiError("Invalid status transition for delivery.", 400);
     }
 
+    const targetPaymentMethod = paymentMethod || (paymentMode === "UPI" ? "UPI" : order.paymentMethod);
     const updatedOrder = await db.$transaction(async (tx) => {
         const uo = await tx.order.update({
             where: { id: orderId },
             data: {
                 status,
-                isPaid: status === "DELIVERED" && order.paymentMethod === "COD" ? true : order.isPaid
+                isPaid: status === "DELIVERED" ? true : order.isPaid,
+                paymentMethod: targetPaymentMethod,
             },
             include: {
                 user: {
@@ -238,7 +241,20 @@ export const updateOrderStatus = async (req: Request, orderId: string) => {
         });
 
         if (status === "DELIVERED" && order.status !== "DELIVERED") {
-            await handleCodOrderDelivered(tx, orderId);
+            if (targetPaymentMethod === "COD") {
+                await handleCodOrderDelivered(tx, orderId);
+            } else if (targetPaymentMethod === "UPI" && order.deliveryPersonId) {
+                await tx.deliveryTransaction.create({
+                    data: {
+                        deliveryPersonId: order.deliveryPersonId,
+                        type: "COD_COLLECTION",
+                        amount: 0,
+                        orderId: order.id,
+                        description: `Direct UPI payment received by Seller via QR for Order #${order.id.slice(0, 8)}`,
+                        status: "COMPLETED"
+                    }
+                });
+            }
         }
 
         return uo;
