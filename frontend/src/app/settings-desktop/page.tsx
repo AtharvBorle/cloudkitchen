@@ -6,7 +6,7 @@ import { Navbar } from "@/components/navbar";
 import { SettingsSidebar } from "@/components/settings-desktop/settings-sidebar";
 import { SettingsHeader } from "@/components/settings-desktop/settings-header";
 import { PersonalProfile } from "@/components/settings-desktop/personal-profile";
-import { ActiveSubscriptionsNotifications } from "@/components/settings-desktop/active-subscriptions-notifications";
+// import { ActiveSubscriptionsNotifications } from "@/components/settings-desktop/active-subscriptions-notifications";
 import { DeliveryAddresses } from "@/components/settings-desktop/delivery-addresses";
 import { GuestSettingsView } from "@/components/settings-desktop/guest-settings";
 import { PaymentMethods } from "@/components/settings-desktop/payment-methods";
@@ -40,8 +40,8 @@ export default function SettingsDesktopPage() {
                 {/* 3. Personal Profile Card */}
                 <PersonalProfile />
 
-                {/* 4. Active Subscriptions Overview */}
-                <ActiveSubscriptionsNotifications />
+                {/* 4. Active Subscriptions Overview (Disabled via comment - uncomment to re-enable in future) */}
+                {/* <ActiveSubscriptionsNotifications /> */}
 
                 {/* 5. Delivery Addresses Section */}
                 <DeliveryAddresses />
