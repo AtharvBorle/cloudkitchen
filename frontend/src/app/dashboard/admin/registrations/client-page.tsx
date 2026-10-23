@@ -31,6 +31,7 @@ import {
     SlidersHorizontal,
     CheckCircle2,
     Clock3,
+    Download,
 } from "lucide-react";
 
 export type ApplicationType = {
@@ -63,6 +64,17 @@ export type ApplicationType = {
     agentName?: string | null;
     isOnline?: boolean;
     isActive?: boolean;
+};
+
+export const isPdfUrl = (url: string | null | undefined): boolean => {
+    if (!url || typeof url !== "string") return false;
+    const clean = url.trim().toLowerCase();
+    return (
+        clean.startsWith("data:application/pdf") ||
+        clean.includes(".pdf") ||
+        clean.includes("application/pdf") ||
+        clean.endsWith(".pdf")
+    );
 };
 
 export const safeParseImages = (val: any): string[] => {
@@ -166,8 +178,9 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
         roomImages: false,
     });
 
-    // Image Modal State
+    // Image & Document Preview Modal State
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    const [selectedDocTitle, setSelectedDocTitle] = useState<string>("");
     const [zoomLevel, setZoomLevel] = useState(1);
     const [imageRotation, setImageRotation] = useState(0);
 
@@ -187,9 +200,10 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
         }
     };
 
-    const openImage = (e: React.MouseEvent, url: string) => {
+    const openImage = (e: React.MouseEvent, url: string, title?: string) => {
         e.preventDefault();
         setSelectedImage(url);
+        setSelectedDocTitle(title || "");
         setZoomLevel(1);
         setImageRotation(0);
     };
@@ -197,7 +211,10 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
     const handleZoomIn = () => setZoomLevel((prev) => Math.min(prev + 0.5, 3));
     const handleZoomOut = () => setZoomLevel((prev) => Math.max(prev - 0.5, 0.5));
     const handleRotate = () => setImageRotation((prev) => (prev + 90) % 360);
-    const closeImage = () => setSelectedImage(null);
+    const closeImage = () => {
+        setSelectedImage(null);
+        setSelectedDocTitle("");
+    };
 
     const handleAction = async (sellerId: string, action: "APPROVE" | "REJECT" | "REVISION") => {
         setProcessingId(sellerId);
@@ -1540,118 +1557,257 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                 );
             })()}
 
-            {/* Image Preview & Zoom Modal */}
-            {selectedImage && (
-                <div
-                    style={{
-                        position: "fixed",
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        backgroundColor: "rgba(15, 23, 42, 0.85)",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        zIndex: 2000,
-                        padding: "1.5rem",
-                    }}
-                    onClick={closeImage}
-                >
+            {/* Image & PDF Document Preview Modal */}
+            {selectedImage && (() => {
+                const isPdf = isPdfUrl(selectedImage);
+
+                return (
                     <div
                         style={{
-                            position: "relative",
-                            maxWidth: "90vw",
-                            maxHeight: "85vh",
+                            position: "fixed",
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            backgroundColor: "rgba(15, 23, 42, 0.88)",
+                            backdropFilter: "blur(4px)",
+                            WebkitBackdropFilter: "blur(4px)",
                             display: "flex",
                             flexDirection: "column",
                             alignItems: "center",
+                            justifyContent: "center",
+                            zIndex: 2000,
+                            padding: "1rem",
                         }}
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={closeImage}
                     >
-                        {/* Control Bar */}
                         <div
                             style={{
+                                position: "relative",
+                                width: isPdf ? "92vw" : "auto",
+                                maxWidth: isPdf ? "1100px" : "90vw",
+                                maxHeight: "92vh",
                                 display: "flex",
+                                flexDirection: "column",
                                 alignItems: "center",
-                                gap: "10px",
-                                backgroundColor: "#1E293B",
-                                padding: "8px 16px",
-                                borderRadius: "30px",
-                                marginBottom: "14px",
-                                boxShadow: "0 10px 25px rgba(0,0,0,0.3)",
                             }}
+                            onClick={(e) => e.stopPropagation()}
                         >
-                            <button
-                                type="button"
-                                onClick={handleZoomOut}
-                                title="Zoom Out"
-                                style={{ background: "none", border: "none", color: "#FFFFFF", cursor: "pointer", padding: "4px" }}
-                            >
-                                <ZoomOut size={18} />
-                            </button>
-                            <span style={{ color: "#94A3B8", fontSize: "0.85rem", fontWeight: 600 }}>
-                                {Math.round(zoomLevel * 100)}%
-                            </span>
-                            <button
-                                type="button"
-                                onClick={handleZoomIn}
-                                title="Zoom In"
-                                style={{ background: "none", border: "none", color: "#FFFFFF", cursor: "pointer", padding: "4px" }}
-                            >
-                                <ZoomIn size={18} />
-                            </button>
-                            <div style={{ width: "1px", height: "16px", backgroundColor: "#334155" }} />
-                            <button
-                                type="button"
-                                onClick={handleRotate}
-                                title="Rotate 90°"
-                                style={{ background: "none", border: "none", color: "#FFFFFF", cursor: "pointer", padding: "4px" }}
-                            >
-                                <RotateCw size={18} />
-                            </button>
-                            <div style={{ width: "1px", height: "16px", backgroundColor: "#334155" }} />
-                            <button
-                                type="button"
-                                onClick={closeImage}
-                                title="Close"
-                                style={{ background: "none", border: "none", color: "#EF4444", cursor: "pointer", padding: "4px" }}
-                            >
-                                <X size={18} />
-                            </button>
-                        </div>
-
-                        {/* Image Viewer Frame */}
-                        <div
-                            style={{
-                                overflow: "auto",
-                                maxWidth: "88vw",
-                                maxHeight: "75vh",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                backgroundColor: "#0F172A",
-                                borderRadius: "12px",
-                                padding: "10px",
-                            }}
-                        >
-                            <img
-                                src={selectedImage}
-                                alt="Document View"
+                            {/* Control Bar */}
+                            <div
                                 style={{
-                                    maxWidth: "100%",
-                                    maxHeight: "100%",
-                                    objectFit: "contain",
-                                    transform: `scale(${zoomLevel}) rotate(${imageRotation}deg)`,
-                                    transition: "transform 0.2s ease-out",
-                                    borderRadius: "8px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                    width: isPdf ? "100%" : "auto",
+                                    gap: "14px",
+                                    backgroundColor: "#1E293B",
+                                    padding: "8px 18px",
+                                    borderRadius: isPdf ? "12px 12px 0 0" : "30px",
+                                    marginBottom: isPdf ? 0 : "14px",
+                                    boxShadow: "0 10px 25px rgba(0,0,0,0.3)",
+                                    border: isPdf ? "1px solid #334155" : "none",
+                                    borderBottom: isPdf ? "none" : undefined,
+                                    boxSizing: "border-box",
                                 }}
-                            />
+                            >
+                                {isPdf ? (
+                                    <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
+                                        <div
+                                            style={{
+                                                backgroundColor: "#EF4444",
+                                                color: "#FFFFFF",
+                                                borderRadius: "6px",
+                                                padding: "3px 8px",
+                                                fontSize: "0.72rem",
+                                                fontWeight: 800,
+                                                letterSpacing: "0.5px",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: "4px",
+                                                flexShrink: 0,
+                                            }}
+                                        >
+                                            <FileText size={13} color="#FFFFFF" />
+                                            <span>PDF</span>
+                                        </div>
+                                        <span
+                                            style={{
+                                                color: "#F8FAFC",
+                                                fontSize: "0.92rem",
+                                                fontWeight: 600,
+                                                whiteSpace: "nowrap",
+                                                overflow: "hidden",
+                                                textOverflow: "ellipsis",
+                                            }}
+                                        >
+                                            {selectedDocTitle || "Official Document"}
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                        {selectedDocTitle && (
+                                            <span style={{ color: "#F8FAFC", fontSize: "0.85rem", fontWeight: 600, marginRight: "6px" }}>
+                                                {selectedDocTitle}
+                                            </span>
+                                        )}
+                                        <button
+                                            type="button"
+                                            onClick={handleZoomOut}
+                                            title="Zoom Out"
+                                            style={{ background: "none", border: "none", color: "#FFFFFF", cursor: "pointer", padding: "4px" }}
+                                        >
+                                            <ZoomOut size={18} />
+                                        </button>
+                                        <span style={{ color: "#94A3B8", fontSize: "0.85rem", fontWeight: 600 }}>
+                                            {Math.round(zoomLevel * 100)}%
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={handleZoomIn}
+                                            title="Zoom In"
+                                            style={{ background: "none", border: "none", color: "#FFFFFF", cursor: "pointer", padding: "4px" }}
+                                        >
+                                            <ZoomIn size={18} />
+                                        </button>
+                                        <div style={{ width: "1px", height: "16px", backgroundColor: "#334155" }} />
+                                        <button
+                                            type="button"
+                                            onClick={handleRotate}
+                                            title="Rotate 90°"
+                                            style={{ background: "none", border: "none", color: "#FFFFFF", cursor: "pointer", padding: "4px" }}
+                                        >
+                                            <RotateCw size={18} />
+                                        </button>
+                                    </div>
+                                )}
+
+                                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                    <a
+                                        href={selectedImage}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        title="Open full size in new tab"
+                                        style={{
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            gap: "6px",
+                                            backgroundColor: isPdf ? "#2563EB" : "#334155",
+                                            color: "#FFFFFF",
+                                            padding: "6px 14px",
+                                            borderRadius: "20px",
+                                            fontSize: "0.82rem",
+                                            fontWeight: 600,
+                                            textDecoration: "none",
+                                            cursor: "pointer",
+                                            transition: "background-color 0.15s ease",
+                                        }}
+                                    >
+                                        <ExternalLink size={13} />
+                                        <span>Full Screen</span>
+                                    </a>
+                                    {isPdf && (
+                                        <a
+                                            href={selectedImage}
+                                            download={selectedDocTitle ? `${selectedDocTitle.replace(/[^\w\d-_]+/g, "_")}.pdf` : "document.pdf"}
+                                            title="Download PDF document"
+                                            style={{
+                                                display: "inline-flex",
+                                                alignItems: "center",
+                                                gap: "6px",
+                                                backgroundColor: "#334155",
+                                                color: "#FFFFFF",
+                                                padding: "6px 14px",
+                                                borderRadius: "20px",
+                                                fontSize: "0.82rem",
+                                                fontWeight: 600,
+                                                textDecoration: "none",
+                                                cursor: "pointer",
+                                            }}
+                                        >
+                                            <Download size={13} />
+                                            <span>Download</span>
+                                        </a>
+                                    )}
+                                    <div style={{ width: "1px", height: "16px", backgroundColor: "#334155" }} />
+                                    <button
+                                        type="button"
+                                        onClick={closeImage}
+                                        title="Close"
+                                        style={{
+                                            background: "none",
+                                            border: "none",
+                                            color: "#EF4444",
+                                            cursor: "pointer",
+                                            padding: "4px",
+                                            display: "flex",
+                                            alignItems: "center",
+                                        }}
+                                    >
+                                        <X size={20} />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Viewer Content Frame */}
+                            {isPdf ? (
+                                <div
+                                    style={{
+                                        width: "100%",
+                                        height: "78vh",
+                                        backgroundColor: "#33383B",
+                                        borderRadius: "0 0 12px 12px",
+                                        overflow: "hidden",
+                                        border: "1px solid #334155",
+                                        boxShadow: "0 20px 40px rgba(0,0,0,0.4)",
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        position: "relative",
+                                    }}
+                                >
+                                    <iframe
+                                        src={selectedImage}
+                                        title={selectedDocTitle || "PDF Document Viewer"}
+                                        style={{
+                                            width: "100%",
+                                            height: "100%",
+                                            border: "none",
+                                            backgroundColor: "#525659",
+                                        }}
+                                    />
+                                </div>
+                            ) : (
+                                <div
+                                    style={{
+                                        overflow: "auto",
+                                        maxWidth: "88vw",
+                                        maxHeight: "75vh",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        backgroundColor: "#0F172A",
+                                        borderRadius: "12px",
+                                        padding: "10px",
+                                    }}
+                                >
+                                    <img
+                                        src={selectedImage}
+                                        alt={selectedDocTitle || "Document View"}
+                                        style={{
+                                            maxWidth: "100%",
+                                            maxHeight: "100%",
+                                            objectFit: "contain",
+                                            transform: `scale(${zoomLevel}) rotate(${imageRotation}deg)`,
+                                            transition: "transform 0.2s ease-out",
+                                            borderRadius: "8px",
+                                        }}
+                                    />
+                                </div>
+                            )}
                         </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
         </div>
     );
 }
@@ -1662,7 +1818,7 @@ interface ApplicationCardProps {
     processingId: string | null;
     handleAction: (sellerId: string, action: "APPROVE" | "REJECT" | "REVISION") => void;
     setRevisionAppId: (id: string) => void;
-    openImage: (e: React.MouseEvent, url: string) => void;
+    openImage: (e: React.MouseEvent, url: string, title?: string) => void;
     renderStatusBadge: (app: ApplicationType) => React.ReactNode;
     showActions?: boolean;
 }
@@ -2245,7 +2401,7 @@ function ApplicationCard({
                                     {kitchenImages.map((img, i) => (
                                         <div
                                             key={i}
-                                            onClick={(e) => openImage(e, img)}
+                                            onClick={(e) => openImage(e, img, `Kitchen Photo ${i + 1}`)}
                                             style={{
                                                 cursor: "pointer",
                                                 width: "70px",
@@ -2276,7 +2432,7 @@ function ApplicationCard({
                                     {cuisineImages.map((img, i) => (
                                         <div
                                             key={i}
-                                            onClick={(e) => openImage(e, img)}
+                                            onClick={(e) => openImage(e, img, `Cuisine Photo ${i + 1}`)}
                                             style={{
                                                 cursor: "pointer",
                                                 width: "70px",
@@ -2307,7 +2463,7 @@ function ApplicationCard({
                                     {roomImages.map((img, i) => (
                                         <div
                                             key={i}
-                                            onClick={(e) => openImage(e, img)}
+                                            onClick={(e) => openImage(e, img, `Room Photo ${i + 1}`)}
                                             style={{
                                                 cursor: "pointer",
                                                 width: "70px",

@@ -611,14 +611,6 @@ function EditOfferForm({
                     <Trash2 size={15} />
                     <span>Delete</span>
                   </button>
-                  <button
-                    type="button"
-                    className={styles.publishBtn}
-                    disabled={submitting}
-                    onClick={() => handleUpdate(status === "Pending" ? "Pending" : "Active")}
-                  >
-                    {submitting ? "Saving..." : "Update Offer"}
-                  </button>
                 </div>
               </div>
             </div>
@@ -1388,7 +1380,7 @@ function EditOfferForm({
                 </div>
               </div>
 
-              {/* Form Footer Ready State & Mobile Actions */}
+              {/* Form Footer Ready State & Bottom Update Action */}
               <div className={styles.formFooterContainer}>
                 <div className={styles.formFooter}>
                   <ShieldCheck size={18} className={styles.successIcon} />
@@ -1399,10 +1391,10 @@ function EditOfferForm({
                   </span>
                 </div>
 
-                <div className={styles.mobileFormActions}>
+                <div className={styles.formFooterActions}>
                   <button
                     type="button"
-                    className={styles.mobilePublishBtn}
+                    className={styles.bottomPublishBtn}
                     disabled={submitting}
                     onClick={() => handleUpdate(status === "Pending" ? "Pending" : "Active")}
                   >

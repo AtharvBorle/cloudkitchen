@@ -274,26 +274,13 @@ const [menuItems, setMenuItems] = useState<any[]>([]);
               <span>Back to Offers & Coupons</span>
             </Link>
 
-            {/* Header: Title, Subtitle, and Action Buttons */}
+            {/* Header: Title and Subtitle */}
             <div className={styles.headerRow}>
               <div className={styles.titleGroup}>
                 <h1 className={styles.mainTitle}>Create New Offer</h1>
                 <p className={styles.subTitle}>
                   Setup a new discount, coupon, or promotional rule for your store
                 </p>
-              </div>
-
-              <div className={styles.actionsGroup}>
-                <div className={styles.desktopActions}>
-                  <button
-                    type="button"
-                    className={styles.publishBtn}
-                    disabled={submitting}
-                    onClick={() => handlePublish()}
-                  >
-                    {submitting ? "Publishing..." : "Publish Offer"}
-                  </button>
-                </div>
               </div>
             </div>
 
@@ -1062,7 +1049,7 @@ const [menuItems, setMenuItems] = useState<any[]>([]);
                 </div>
               </div>
 
-              {/* Form Footer Ready State & Mobile Actions */}
+              {/* Form Footer Ready State & Bottom Publish Action */}
               <div className={styles.formFooterContainer}>
                 <div className={styles.formFooter}>
                   <ShieldCheck size={18} className={styles.successIcon} />
@@ -1073,10 +1060,10 @@ const [menuItems, setMenuItems] = useState<any[]>([]);
                   </span>
                 </div>
 
-                <div className={styles.mobileFormActions}>
+                <div className={styles.formFooterActions}>
                   <button
                     type="button"
-                    className={styles.mobilePublishBtn}
+                    className={styles.bottomPublishBtn}
                     disabled={submitting}
                     onClick={() => handlePublish()}
                   >
