@@ -356,7 +356,14 @@ export const ExploreMobileView: React.FC = () => {
     const foodCategories: typeof homeData.categories = [];
     for (const c of homeData.categories || []) {
       const lower = (c.name || "").toLowerCase().trim();
-      if (c.id === "rooms" || lower === "rooms") continue;
+      if (
+        c.id === "rooms" ||
+        lower === "rooms" ||
+        c.id === "food" ||
+        lower === "food" ||
+        c.id === "mess" ||
+        lower === "mess"
+      ) continue;
       if (!seen.has(lower)) {
         seen.add(lower);
         foodCategories.push(c);

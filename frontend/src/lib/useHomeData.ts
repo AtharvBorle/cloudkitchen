@@ -364,6 +364,8 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
 
         // 1. Process Categories (Deduplicated)
         const categoryMap = new Map<string, DynamicCategory>();
+        // Generic "Food" category commented out from category carousel
+        /*
         categoryMap.set("food", {
           id: "food",
           name: "Food",
@@ -371,6 +373,7 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           emoji: "🍔",
           route: "/food-explore",
         });
+        */
 
         const processCatEntry = (fc: any) => {
           if (!fc || !fc.name) return;
@@ -378,6 +381,13 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           const lower = rawName.toLowerCase();
           const cleanKey = lower.replace(/[\s\-_]+/g, "");
           if (!lower) return;
+
+          // Exclude generic "food" from category carousel
+          if (lower === "food") return;
+
+          // Exclude business category "mess" (mess is a kitchen business category, not a food category)
+          if (lower === "mess" || cleanKey === "mess") return;
+
           const displayName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
           const isMismatchedImg = fc.imageUrl && String(fc.imageUrl).includes("zwy6klrcbxepkcjr1big");
           const customFallback = getCustomCategoryIcon(cleanKey, rawName);
@@ -388,19 +398,6 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
               : fc.image && !isMismatchedImg
               ? String(fc.image).trim()
               : null;
-
-          // Special case: Food
-          if (lower === "food") {
-            const existingFood = categoryMap.get("food");
-            if (dynamicImage && existingFood) {
-              categoryMap.set("food", {
-                ...existingFood,
-                id: fc.id || existingFood.id,
-                image: dynamicImage,
-              });
-            }
-            return;
-          }
 
           // Ignore non-food room/property categories for shortcut keys
           if (
@@ -456,9 +453,11 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           categoriesRes.forEach(processCatEntry);
         }
 
-        // Ensure rooms or non-food categories are not included
+        // Ensure rooms, generic food, mess, or non-food categories are not included
         categoryMap.delete("rooms");
         categoryMap.delete("room");
+        categoryMap.delete("food");
+        categoryMap.delete("mess");
 
         const dbCategories: DynamicCategory[] = Array.from(categoryMap.values());
         setCategories(dbCategories);

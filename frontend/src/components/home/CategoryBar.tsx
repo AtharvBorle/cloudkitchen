@@ -21,7 +21,7 @@ interface CategoryBarProps {
 }
 
 export default function CategoryBar({
-  activeCategoryId = "food",
+  activeCategoryId = "",
   onSelectCategory,
   items,
 }: CategoryBarProps) {
@@ -31,12 +31,20 @@ export default function CategoryBar({
   const [canScrollLeft, setCanScrollLeft] = useState<boolean>(false);
   const [canScrollRight, setCanScrollRight] = useState<boolean>(true);
 
+  useEffect(() => {
+    setSelectedId(activeCategoryId);
+  }, [activeCategoryId]);
+
   const { isRoomEnabled } = useRoomModule();
 
   const displayCategories = (items || []).filter((cat) => {
     const idLower = (cat.id || "").toLowerCase().trim();
     const nameLower = (cat.name || "").toLowerCase().trim();
     return (
+      idLower !== "food" &&
+      nameLower !== "food" &&
+      idLower !== "mess" &&
+      nameLower !== "mess" &&
       idLower !== "rooms" &&
       idLower !== "room" &&
       nameLower !== "rooms" &&
