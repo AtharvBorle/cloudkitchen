@@ -22,6 +22,29 @@ export interface SmtpConfig {
   adminEmail: string;
 }
 
+export function parseFromAddress(rawFrom: string, fallbackEmail: string = "noreply@neocloudbites.com"): { name: string; address: string; formatted: string } {
+  let cleaned = (rawFrom || "").trim().replace(/^['"]|['"]$/g, "");
+  
+  // If user passed just "@neocloudbites.com", prepend "noreply"
+  if (cleaned.startsWith("@")) {
+    cleaned = `noreply${cleaned}`;
+  }
+
+  const match = cleaned.match(/^(?:"?([^"<]+)"?\s*)?<([^>]+)>$/);
+  if (match) {
+    const name = (match[1] || "Neo Cloud Bites").trim();
+    let address = match[2].trim();
+    if (address.startsWith("@")) address = `noreply${address}`;
+    return { name, address, formatted: `"${name}" <${address}>` };
+  }
+
+  if (cleaned.includes("@")) {
+    return { name: "Neo Cloud Bites", address: cleaned, formatted: `"Neo Cloud Bites" <${cleaned}>` };
+  }
+
+  return { name: "Neo Cloud Bites", address: fallbackEmail, formatted: `"Neo Cloud Bites" <${fallbackEmail}>` };
+}
+
 export function getSmtpConfig(): SmtpConfig {
   const host = (process.env.SMTP_HOST || "smtp.zeptomail.in").trim();
   const rawPort = (process.env.SMTP_PORT || "").trim();
@@ -32,24 +55,40 @@ export function getSmtpConfig(): SmtpConfig {
     ? (process.env.SMTP_SECURE === "true" || process.env.SMTP_SECURE === "1")
     : port === 465;
 
-  const user = (process.env.SMTP_USER || "mailapikey").trim();
+  let rawUser = (process.env.SMTP_USER || "emailapikey").trim().replace(/^['"]|['"]$/g, "");
+  // Auto-correct common ZeptoMail typo 'mailapikey' -> 'emailapikey'
+  if (rawUser.toLowerCase() === "mailapikey") {
+    rawUser = "emailapikey";
+  }
+  const user = rawUser;
+
   const pass = (
+    process.env.SMTP_PASSWORD ||
     process.env.SMTP_PASS ||
     process.env.ZEPTOMAIL_API_KEY ||
     process.env.GMAIL_APP_PASSWORD ||
     process.env.EMAIL_PASSWORD ||
     ""
-  ).trim();
+  ).trim().replace(/^['"]|['"]$/g, "");
 
-  // For ZeptoMail (where user is 'mailapikey' or 'emailapikey'), the From address MUST
-  // be a valid email on the verified domain (e.g. @neocloudbites.com).
-  const defaultSender = (
+  const senderEmail = (
+    process.env.SMTP_FROM_EMAIL ||
     process.env.SMTP_SENDER_EMAIL ||
     process.env.SENDER_EMAIL ||
     (user.includes("@") ? user : "noreply@neocloudbites.com")
+  ).trim().replace(/^['"]|['"]$/g, "");
+
+  const senderName = (
+    process.env.SMTP_FROM_NAME ||
+    process.env.SMTP_SENDER_NAME ||
+    "Neocloudbites"
+  ).trim().replace(/^['"]|['"]$/g, "");
+
+  const from = (
+    process.env.SMTP_FROM ||
+    `"${senderName}" <${senderEmail}>`
   ).trim();
 
-  const from = (process.env.SMTP_FROM || `"Neo Cloud Bites" <${defaultSender}>`).trim();
   const adminEmail = (process.env.ADMIN_NOTIFICATION_EMAIL || "admin@neocloudbites.com").trim();
 
   return { host, port, secure, user, pass, from, adminEmail };
@@ -159,8 +198,18 @@ export async function sendEmail({
       bccList.push(targetAdmin);
     }
 
+    const parsedFrom = parseFromAddress(config.from || SMTP_FROM);
+    const recipientArray = Array.isArray(to) ? to.filter(Boolean) : [to];
+
     const info = await client.sendMail({
-      from: config.from || SMTP_FROM,
+      from: {
+        name: parsedFrom.name,
+        address: parsedFrom.address,
+      },
+      envelope: {
+        from: parsedFrom.address,
+        to: recipientArray,
+      },
       to: recipients,
       bcc: bccList.length > 0 ? bccList.join(", ") : undefined,
       subject,
