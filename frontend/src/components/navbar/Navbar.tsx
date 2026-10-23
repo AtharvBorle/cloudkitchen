@@ -38,7 +38,7 @@ import { useRoomModule } from "@/context/RoomModuleContext";
 import { formatShortDeliveryLocation } from "@/lib/geo-distance";
 import styles from "./Navbar.module.css";
 import logoImg from "./logo-nav.png";
-import profilePic from "./Rectangle.jpg";
+import defaultAvatarPic from "./default-avatar.png";
 
 const FILTER_CUISINES = [
   { id: "biryani", label: "Biryani & Mughlai", count: 24 },
@@ -953,17 +953,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                 title={session?.user ? `${session.user.name || "User"} (${session.user.email || ""})` : "Sign In / Register"}
                 aria-expanded={isProfileHoverOpen}
               >
-                {session?.user?.name ? (
+                {session?.user ? (
                   <div className={styles.avatarInitial}>
-                    {session.user.name.trim().charAt(0).toUpperCase()}
+                    {(session.user.name?.trim() || session.user.email?.trim() || "U").charAt(0).toUpperCase()}
                   </div>
                 ) : (
                   <Image
-                    src={profilePic}
+                    src={defaultAvatarPic}
                     alt="Sign In"
                     width={38}
                     height={38}
-                    style={{ objectFit: "cover", width: "100%", height: "100%" }}
+                    className={styles.avatarImage}
+                    priority
                   />
                 )}
               </button>

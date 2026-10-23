@@ -60,7 +60,7 @@ export const SellerMapPicker: React.FC<SellerMapPickerProps> = ({
   const leafletMarkerRef = useRef<any>(null);
   const isMountedRef = useRef<boolean>(true);
 
-  const [mapEngine, setMapEngine] = useState<"google" | "leaflet">("leaflet");
+  const [mapEngine, setMapEngine] = useState<"google" | "leaflet">("google");
   const [mapLoaded, setMapLoaded] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
@@ -172,7 +172,9 @@ export const SellerMapPicker: React.FC<SellerMapPickerProps> = ({
             }
           });
 
-// Initial position set without automatic API call
+          if (!latitude || !longitude) {
+            onChangeRef.current(initialLat, initialLng);
+          }
 
           if (isMountedRef.current) {
             setMapLoaded(true);
@@ -222,10 +224,17 @@ export const SellerMapPicker: React.FC<SellerMapPickerProps> = ({
           });
           leafletMapRef.current = map;
 
-          L.tileLayer("https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-            maxZoom: 19,
+          L.tileLayer("https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}", {
+            attribution: '&copy; Google Maps',
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+            maxZoom: 20,
           }).addTo(map);
+
+          setTimeout(() => {
+            try {
+              map.invalidateSize();
+            } catch {}
+          }, 200);
 
           const marker = L.marker([lat, lng], { draggable: true }).addTo(map);
           leafletMarkerRef.current = marker;
@@ -241,7 +250,9 @@ export const SellerMapPicker: React.FC<SellerMapPickerProps> = ({
             handleReverseGeocode(clickLat, clickLng);
           });
 
-// Initial position set without automatic API call
+          if (!latitude || !longitude) {
+            onChangeRef.current(lat, lng);
+          }
 
           if (isMountedRef.current) {
             setMapLoaded(true);
@@ -292,6 +303,9 @@ export const SellerMapPicker: React.FC<SellerMapPickerProps> = ({
           leafletMapRef.current.remove();
         } catch (e) {}
         leafletMapRef.current = null;
+      }
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
       }
       if (mapContainerRef.current) {
         delete (mapContainerRef.current as any)._leaflet_id;
@@ -363,19 +377,52 @@ export const SellerMapPicker: React.FC<SellerMapPickerProps> = ({
     );
   };
 
-  // Places Search Input - manual search on Search button or Enter key (no continuous API calls while typing)
+  // Live Places Search Input - typing immediately shows matching suggestions
   const handleQueryChange = (text: string) => {
     setSearchQuery(text);
     if (searchError) setSearchError(null);
-    if (!text.trim()) {
+
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+
+    const trimmed = text.trim();
+    if (trimmed.length < 2) {
       setSearchResults([]);
       setShowResultsDropdown(false);
+      return;
     }
+
+    searchDebounceRef.current = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const centerLat = currentCoords.lat || 18.5204;
+        const centerLng = currentCoords.lng || 73.8567;
+        const suggestions = await fetchPlaceSuggestions(trimmed, { lat: centerLat, lng: centerLng });
+
+        if (isMountedRef.current) {
+          setSearchResults(suggestions);
+          setShowResultsDropdown(suggestions.length > 0);
+          if (suggestions.length === 0) {
+            setSearchError(`No locations found matching "${trimmed}".`);
+          }
+        }
+      } catch (err) {
+        console.warn("SellerMapPicker places search error:", err);
+      } finally {
+        if (isMountedRef.current) {
+          setIsSearching(false);
+        }
+      }
+    }, 250);
   };
 
-  // Handle Enter Search
+  // Handle Enter Search or Manual Search Button
   const handleSearchLocation = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
     const query = searchQuery.trim();
     if (!query) return;
 
@@ -603,7 +650,7 @@ export const SellerMapPicker: React.FC<SellerMapPickerProps> = ({
             {currentCoords.lat.toFixed(6)}, {currentCoords.lng.toFixed(6)}
           </span>
           <span style={{ fontSize: "0.70rem", color: "#64748B", marginLeft: "auto" }}>
-            {mapEngine === "google" ? "Google Maps" : "Interactive Map"}
+            Google Maps
           </span>
         </div>
         <p className={styles.hintText}>
