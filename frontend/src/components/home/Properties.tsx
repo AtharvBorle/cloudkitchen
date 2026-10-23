@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { Star, Check } from "lucide-react";
 import Link from "next/link";
@@ -208,91 +208,77 @@ export default function Properties({
   selectedDietary: controlledDietary,
   onDietaryChange,
 }: PropertiesProps) {
-  const [selectedCuisines, setSelectedCuisines] = useState<string[]>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const stored = sessionStorage.getItem("cloudkitchen_selected_cuisines") || localStorage.getItem("cloudkitchen_selected_cuisines");
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed)) return parsed;
-        }
-      } catch {}
-    }
-    return [];
-  });
-  const [internalSelectedDietary, setInternalSelectedDietary] = useState<string[]>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("cloudkitchen_diet_preference");
-        if (saved === "pure_veg" || saved === "pureveg") return ["pure_veg"];
-        if (saved === "veg") return ["veg"];
-        if (saved === "non-veg" || saved === "non_veg") return ["non-veg"];
-        if (saved === "vegan") return ["vegan"];
-        if (saved === "jain") return ["jain"];
-        if (saved === "all") return [];
-      } catch {}
-    }
-    return ["veg"];
-  });
-  const [maxPrice, setMaxPrice] = useState<number>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const params = new URLSearchParams(window.location.search);
-        const urlMax = params.get("maxPrice");
-        const urlPrice = params.get("price");
-        if (urlMax) {
-          const num = Number(urlMax);
-          if (!isNaN(num) && num > 0) return num;
-        }
-        if (urlPrice) {
-          if (urlPrice === "under-150") return 150;
-          if (urlPrice === "150-300" || urlPrice === "under-300") return 300;
-          if (urlPrice === "150-400") return 400;
-        }
+  const hasHydratedRef = useRef(false);
+  const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
+  const [internalSelectedDietary, setInternalSelectedDietary] = useState<string[]>(["veg"]);
+  const [maxPrice, setMaxPrice] = useState<number>(2500);
+  const [activePricePreset, setActivePricePreset] = useState<string>("all");
 
-        const stored = localStorage.getItem("cloudkitchen_price_filter") || sessionStorage.getItem("cloudkitchen_price_filter");
-        if (stored) {
-          const parsed = JSON.parse(stored);
+  // Restore client-persisted filters safely on mount to prevent SSR hydration mismatch
+  useEffect(() => {
+    try {
+      const storedCuisines = sessionStorage.getItem("cloudkitchen_selected_cuisines") || localStorage.getItem("cloudkitchen_selected_cuisines");
+      if (storedCuisines) {
+        const parsed = JSON.parse(storedCuisines);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setSelectedCuisines(parsed);
+        }
+      }
+
+      const savedDiet = localStorage.getItem("cloudkitchen_diet_preference");
+      if (savedDiet) {
+        if (savedDiet === "pure_veg" || savedDiet === "pureveg") setInternalSelectedDietary(["pure_veg"]);
+        else if (savedDiet === "veg") setInternalSelectedDietary(["veg"]);
+        else if (savedDiet === "non-veg" || savedDiet === "non_veg") setInternalSelectedDietary(["non-veg"]);
+        else if (savedDiet === "vegan") setInternalSelectedDietary(["vegan"]);
+        else if (savedDiet === "jain") setInternalSelectedDietary(["jain"]);
+        else if (savedDiet === "all") setInternalSelectedDietary([]);
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      const urlPrice = params.get("price");
+      const urlMax = params.get("maxPrice");
+      if (urlPrice) {
+        setActivePricePreset(urlPrice);
+        if (urlPrice === "under-150") setMaxPrice(150);
+        else if (urlPrice === "150-300" || urlPrice === "under-300") setMaxPrice(300);
+        else if (urlPrice === "150-400") setMaxPrice(400);
+      } else if (urlMax) {
+        const num = Number(urlMax);
+        if (!isNaN(num) && num > 0) {
+          setMaxPrice(num);
+          setActivePricePreset(num < 2500 ? "custom" : "all");
+        }
+      } else {
+        const storedPrice = localStorage.getItem("cloudkitchen_price_filter") || sessionStorage.getItem("cloudkitchen_price_filter");
+        if (storedPrice) {
+          const parsed = JSON.parse(storedPrice);
           if (parsed) {
+            let restoredMax = 2500;
             if (typeof parsed.maxPrice === "number" && parsed.maxPrice > 0) {
-              return parsed.maxPrice;
+              restoredMax = parsed.maxPrice;
+            } else if (parsed.preset === "under-150") {
+              restoredMax = 150;
+            } else if (parsed.preset === "150-300" || parsed.preset === "under-300") {
+              restoredMax = 300;
+            } else if (parsed.preset === "150-400") {
+              restoredMax = 400;
             }
-            if (parsed.preset === "under-150") return 150;
-            if (parsed.preset === "150-300" || parsed.preset === "under-300") return 300;
-            if (parsed.preset === "150-400") return 400;
+            setMaxPrice(restoredMax);
+            setActivePricePreset(parsed.preset || (restoredMax < 2500 ? "custom" : "all"));
           }
         }
-      } catch {}
+      }
+    } catch {} finally {
+      hasHydratedRef.current = true;
     }
-    return 2500;
-  });
-  const [activePricePreset, setActivePricePreset] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const params = new URLSearchParams(window.location.search);
-        const urlPrice = params.get("price");
-        const urlMax = params.get("maxPrice");
-        if (urlPrice) return urlPrice;
-        if (urlMax && Number(urlMax) < 2500) return "custom";
-
-        const stored = localStorage.getItem("cloudkitchen_price_filter") || sessionStorage.getItem("cloudkitchen_price_filter");
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (parsed) {
-            if (parsed.preset) return parsed.preset;
-            if (parsed.maxPrice && Number(parsed.maxPrice) < 2500) return "custom";
-          }
-        }
-      } catch {}
-    }
-    return "all";
-  });
+  }, []);
 
   const selectedDietary = controlledDietary !== undefined ? controlledDietary : internalSelectedDietary;
 
   // Persist selected cuisines across session and back-navigation
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || !hasHydratedRef.current) return;
     try {
       if (selectedCuisines.length > 0) {
         sessionStorage.setItem("cloudkitchen_selected_cuisines", JSON.stringify(selectedCuisines));
@@ -521,7 +507,7 @@ export default function Properties({
   };
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || !hasHydratedRef.current) return;
     try {
       if (activePricePreset !== "all" || maxPrice < 2500) {
         let min: number | undefined;
