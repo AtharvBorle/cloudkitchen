@@ -31,11 +31,11 @@ echo "⚙️  Active npm runtime:  $(npm -v 2>/dev/null || echo 'not found')"
 
 # ── 1. Pull Latest Changes from Git ──────────────────────────────────────
 echo ""
-echo "📥 [1/6] Fetching latest changes from Git (dev branch)..."
+echo "📥 [1/6] Fetching latest changes from Git..."
 if [ -d ".git" ]; then
-  CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "dev")
+  CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "atharv_dev")
   echo "   Current branch: $CURRENT_BRANCH"
-  git pull origin dev 2>/dev/null || git pull origin "$CURRENT_BRANCH" || echo "   Git pull completed or already up to date."
+  git pull origin "$CURRENT_BRANCH" || echo "   Git pull completed or already up to date."
 else
   echo "   ℹ️  No .git directory found at root; skipping git pull."
 fi
