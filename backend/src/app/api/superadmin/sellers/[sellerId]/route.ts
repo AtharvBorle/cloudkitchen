@@ -5,6 +5,7 @@ import {
     sendSellerApplicationApprovedEmail,
     sendSellerApplicationRejectedEmail,
     sendKitchenPermanentlyDeletedEmail,
+    APP_URL,
 } from "@/lib/emailService";
 
 export async function PUT(req: Request, { params }: { params: Promise<{ sellerId: string }> }) {
@@ -93,10 +94,17 @@ export async function PUT(req: Request, { params }: { params: Promise<{ sellerId
                         businessName: updatedSellerProfile.businessName,
                     }).catch(err => console.error("Error sending approved email:", err));
                 } else if (verificationStatus === "REJECTED" && existingUser.email) {
+                    const trackingId = updatedSellerProfile.trackingId || undefined;
+                    const trackingUrl = trackingId
+                        ? `${APP_URL}/seller/verification-status?trackingId=${encodeURIComponent(trackingId)}`
+                        : `${APP_URL}/seller/verification-status`;
                     sendSellerApplicationRejectedEmail({
                         sellerName: existingUser.name,
                         sellerEmail: existingUser.email,
                         businessName: updatedSellerProfile.businessName,
+                        trackingId: trackingId,
+                        status: "REJECTED",
+                        reapplyUrl: trackingUrl,
                         reason: body.rejectionReason || body.reason || "Documents could not be verified or requirements were not met. Please review and re-upload your verification details.",
                     }).catch(err => console.error("Error sending rejected email:", err));
                 }

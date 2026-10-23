@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { uploadImage } from "@/lib/upload";
-import { sendSellerApplicationApprovedEmail, sendSellerApplicationRejectedEmail } from "@/lib/emailService";
+import { sendSellerApplicationApprovedEmail, sendSellerApplicationRejectedEmail, APP_URL } from "@/lib/emailService";
 
 export const deleteSellerBanner = async (req: Request) => {
     const session = await getAuthSession();
@@ -329,10 +329,19 @@ export const updateSellerRegistrationStatus = async (req: Request) => {
                     businessName: updatedProfile.businessName,
                 }).catch((err) => console.error("[EmailService] Failed to send seller approval email:", err));
             } else if (status === "REJECTED" || status === "REVISION") {
+                const trackingId = updatedProfile.trackingId || undefined;
+                const trackingUrl = trackingId
+                    ? `${APP_URL}/seller/verification-status?trackingId=${encodeURIComponent(trackingId)}`
+                    : `${APP_URL}/seller/verification-status`;
                 sendSellerApplicationRejectedEmail({
                     sellerName: sellerUser.name,
                     sellerEmail: sellerUser.email,
                     businessName: updatedProfile.businessName,
+                    trackingId: trackingId,
+                    status: status,
+                    reapplyUrl: status === "REVISION"
+                        ? `${APP_URL}/seller/revision`
+                        : trackingUrl,
                     reason: verificationNote || "Incomplete documentation or clarification required on submitted kitchen license.",
                 }).catch((err) => console.error("[EmailService] Failed to send seller rejection email:", err));
             }

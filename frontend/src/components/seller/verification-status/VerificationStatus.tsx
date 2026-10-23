@@ -39,24 +39,41 @@ export const VerificationStatus: React.FC<VerificationStatusProps> = ({
   const [currentStatus, setCurrentStatus] = useState<string>(propStatus || "PENDING");
   const [currentNote, setCurrentNote] = useState<string | null>(propNote || null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [trackingLoading, setTrackingLoading] = useState(false);
+  const [publicBusinessName, setPublicBusinessName] = useState<string>("");
 
   const handleManualRefresh = async () => {
     setIsRefreshing(true);
     try {
-      const res = await fetchApi("/api/seller/profile");
-      if (res.ok) {
-        const data = await res.json();
-        const prof = data.data?.profile || data.profile;
-        const usr = data.data?.user || data.user;
-        if (prof) {
-          if (prof.trackingId) setEffectiveTrackingId(prof.trackingId);
-          if (prof.verificationStatus) setCurrentStatus(prof.verificationStatus);
-          if (prof.verificationNote !== undefined) setCurrentNote(prof.verificationNote);
-          updateCachedProfile({
-            user: usr,
-            profile: prof,
-            isOnline: prof.isOnline ?? true,
-          });
+      const targetTracking = (effectiveTrackingId || propTrackingId || "").trim();
+      if (seller.authStatus === "authenticated") {
+        const res = await fetchApi("/api/seller/profile");
+        if (res.ok) {
+          const data = await res.json();
+          const prof = data.data?.profile || data.profile;
+          const usr = data.data?.user || data.user;
+          if (prof) {
+            if (prof.trackingId) setEffectiveTrackingId(prof.trackingId);
+            if (prof.verificationStatus) setCurrentStatus(prof.verificationStatus);
+            if (prof.verificationNote !== undefined) setCurrentNote(prof.verificationNote);
+            updateCachedProfile({
+              user: usr,
+              profile: prof,
+              isOnline: prof.isOnline ?? true,
+            });
+          }
+        }
+      } else if (targetTracking) {
+        const res = await fetchApi(`/api/public/seller/tracking-status?trackingId=${encodeURIComponent(targetTracking)}`);
+        if (res.ok) {
+          const data = await res.json();
+          const info = data.data || data;
+          if (info) {
+            if (info.verificationStatus) setCurrentStatus(info.verificationStatus);
+            if (info.verificationNote !== undefined) setCurrentNote(info.verificationNote);
+            if (info.trackingId) setEffectiveTrackingId(info.trackingId);
+            if (info.businessName) setPublicBusinessName(info.businessName);
+          }
         }
       }
     } catch (e) {
@@ -91,6 +108,37 @@ export const VerificationStatus: React.FC<VerificationStatusProps> = ({
       setCurrentNote(seller.profile.verificationNote);
     }
   }, [seller.profile, propTrackingId, propStatus, propNote]);
+
+  // Fetch status directly by trackingId if not yet resolved from profile
+  useEffect(() => {
+    const targetTracking = (effectiveTrackingId || propTrackingId || "").trim();
+    if (!targetTracking) return;
+
+    let isMounted = true;
+    async function loadPublicTracking() {
+      try {
+        setTrackingLoading(true);
+        const res = await fetchApi(`/api/public/seller/tracking-status?trackingId=${encodeURIComponent(targetTracking)}`);
+        if (res.ok) {
+          const data = await res.json();
+          const info = data.data || data;
+          if (info && isMounted) {
+            if (info.verificationStatus) setCurrentStatus(info.verificationStatus);
+            if (info.verificationNote !== undefined) setCurrentNote(info.verificationNote);
+            if (info.trackingId) setEffectiveTrackingId(info.trackingId);
+            if (info.businessName) setPublicBusinessName(info.businessName);
+          }
+        }
+      } catch (err) {
+        console.warn("Public tracking status fetch error:", err);
+      } finally {
+        if (isMounted) setTrackingLoading(false);
+      }
+    }
+
+    loadPublicTracking();
+    return () => { isMounted = false; };
+  }, [effectiveTrackingId, propTrackingId]);
 
   // Fallback direct load if user is authenticated and profile state is still pending
   useEffect(() => {
@@ -136,7 +184,7 @@ export const VerificationStatus: React.FC<VerificationStatusProps> = ({
   }, [isApproved, seller.authStatus, router]);
 
   // Loading State
-  if (seller.authStatus === "loading" || (seller.isLoading && !propTrackingId)) {
+  if (seller.authStatus === "loading" || (seller.isLoading && !propTrackingId && !effectiveTrackingId) || (trackingLoading && !currentStatus)) {
     return (
       <div className={styles.container}>
         <div className={styles.loadingContainer}>
@@ -148,7 +196,7 @@ export const VerificationStatus: React.FC<VerificationStatusProps> = ({
   }
 
   // Unauthenticated State
-  if (seller.authStatus === "unauthenticated" && !propTrackingId) {
+  if (seller.authStatus === "unauthenticated" && !propTrackingId && !effectiveTrackingId) {
     return (
       <div className={styles.container}>
         <div className={styles.authRequiredCard}>
@@ -400,13 +448,22 @@ export const VerificationStatus: React.FC<VerificationStatusProps> = ({
             <Link href="/seller/support" className={styles.contactSupportBtn}>
               Contact Support
             </Link>
-            <button
-              type="button"
-              onClick={() => performLogout({ role: "SELLER" })}
-              className={styles.signOutBtn}
-            >
-              Sign Out
-            </button>
+            {seller.authStatus === "authenticated" ? (
+              <button
+                type="button"
+                onClick={() => performLogout({ role: "SELLER" })}
+                className={styles.signOutBtn}
+              >
+                Sign Out
+              </button>
+            ) : (
+              <Link
+                href={`/seller/login?callbackUrl=${encodeURIComponent(`/seller/verification-status${effectiveTrackingId ? `?trackingId=${effectiveTrackingId}` : ""}`)}`}
+                className={styles.signOutBtn}
+              >
+                Log In
+              </Link>
+            )}
           </div>
         </div>
       )}

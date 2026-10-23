@@ -81,6 +81,24 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // 1b. Aliases / direct redirections for seller tracking & reapplication
+  if (
+    pathname === "/seller/register" ||
+    pathname === "/seller/register/status" ||
+    pathname === "/seller/track" ||
+    pathname === "/seller/track-application"
+  ) {
+    const url = new URL("/seller/verification-status", request.url);
+    url.search = search;
+    return NextResponse.redirect(url);
+  }
+
+  if (pathname === "/seller/reapply") {
+    const url = new URL("/seller/revision", request.url);
+    url.search = search;
+    return NextResponse.redirect(url);
+  }
+
   // 2. Extract session token and decode role
   const sessionToken =
     request.cookies.get("next-auth.session-token")?.value ||
@@ -199,6 +217,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/seller/media-information") ||
     pathname.startsWith("/seller/verification") ||
     pathname.startsWith("/seller/verification-status") ||
+    pathname.startsWith("/seller/revision") ||
     pathname.startsWith("/seller/faq") ||
     pathname.startsWith("/seller/res/faq") ||
     pathname.startsWith("/seller/tc") ||

@@ -34,6 +34,31 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
+        source: "/seller/register/status",
+        destination: "/seller/verification-status",
+        permanent: false,
+      },
+      {
+        source: "/seller/register",
+        destination: "/seller/verification-status",
+        permanent: false,
+      },
+      {
+        source: "/seller/reapply",
+        destination: "/seller/revision",
+        permanent: false,
+      },
+      {
+        source: "/seller/track-application",
+        destination: "/seller/verification-status",
+        permanent: false,
+      },
+      {
+        source: "/seller/track",
+        destination: "/seller/verification-status",
+        permanent: false,
+      },
+      {
         source: "/track-order",
         destination: "/orders-desktop",
         permanent: false,

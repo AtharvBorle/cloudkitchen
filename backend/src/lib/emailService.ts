@@ -15,7 +15,7 @@ const SMTP_USER = process.env.SMTP_USER || "johnwick380900@gmail.com";
 const SMTP_PASS = process.env.SMTP_PASS || process.env.GMAIL_APP_PASSWORD || process.env.EMAIL_PASSWORD || "";
 const SMTP_FROM = process.env.SMTP_FROM || `"Neo Cloud Bites" <${SMTP_USER}>`;
 const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || "johnwick380900@gmail.com";
-const APP_URL =
+export const APP_URL =
   process.env.FRONTEND_URL ||
   process.env.NEXT_PUBLIC_APP_URL ||
   process.env.NEXTAUTH_URL ||
@@ -252,7 +252,7 @@ export async function sendSellerApplicationSubmittedEmail({
     </div>
 
     <div style="text-align: center; margin-top: 24px;">
-      <a href="${APP_URL}/seller/register/status?trackingId=${trackingId}" class="btn">Track Application Status</a>
+      <a href="${APP_URL}/seller/verification-status?trackingId=${encodeURIComponent(trackingId)}" class="btn">Track Application Status</a>
     </div>
   `;
 
@@ -275,6 +275,8 @@ export interface SellerApplicationRejectedOptions {
   businessName: string;
   reason?: string;
   reapplyUrl?: string;
+  trackingId?: string;
+  status?: string;
 }
 
 /**
@@ -286,19 +288,46 @@ export async function sendSellerApplicationRejectedEmail({
   businessName,
   reason,
   reapplyUrl,
+  trackingId,
+  status = "REJECTED",
 }: SellerApplicationRejectedOptions) {
   const displayName = sellerName || businessName || "Partner";
   const feedbackReason = reason || "Incomplete documentation or clarification required on submitted kitchen license.";
+  const isRevision = status === "REVISION";
+  const isRejected = !isRevision;
+
+  const trackingUrl = trackingId
+    ? `${APP_URL}/seller/verification-status?trackingId=${encodeURIComponent(trackingId)}`
+    : `${APP_URL}/seller/verification-status`;
+  const actionUrl = reapplyUrl || trackingUrl;
 
   const content = `
     <div style="text-align: center; margin-bottom: 24px;">
-      <span class="badge badge-cancelled">Action Required</span>
+      <span class="badge badge-cancelled">${isRejected ? "Application Declined" : "Action Required"}</span>
       <h2 style="font-size: 22px; font-weight: 800; color: #0F172A; margin: 12px 0 6px 0;">
-        Application Update Required for ${businessName}
+        ${isRejected ? `Application Status: Declined for ${businessName}` : `Application Update Required for ${businessName}`}
       </h2>
       <p style="color: #64748B; font-size: 14px; margin: 0;">
         Dear ${displayName}, thank you for your interest in partnering with Neo Cloud Bites.
       </p>
+    </div>
+
+    <div class="info-card">
+      <table style="margin-top: 0; width: 100%;">
+        ${trackingId ? `
+        <tr>
+          <td style="border: none; padding: 6px 0; color: #64748B;"><strong>Tracking ID:</strong></td>
+          <td style="border: none; padding: 6px 0; text-align: right; font-weight: 700; color: #0F172A;">${trackingId}</td>
+        </tr>` : ""}
+        <tr>
+          <td style="border: none; padding: 6px 0; color: #64748B;"><strong>Kitchen / Business:</strong></td>
+          <td style="border: none; padding: 6px 0; text-align: right; font-weight: 700; color: #0F172A;">${businessName}</td>
+        </tr>
+        <tr>
+          <td style="border: none; padding: 6px 0; color: #64748B;"><strong>Application State:</strong></td>
+          <td style="border: none; padding: 6px 0; text-align: right; font-weight: 700; color: ${isRejected ? "#DC2626" : "#EA580C"};">${isRejected ? "Declined / Rejected" : "Revision Required"}</td>
+        </tr>
+      </table>
     </div>
 
     <div class="alert-card alert-danger">
@@ -307,27 +336,47 @@ export async function sendSellerApplicationRejectedEmail({
     </div>
 
     <div class="info-card">
+      ${isRejected ? `
+      <h4 style="margin: 0 0 10px 0; color: #0F172A; font-size: 14px;">Application Status Details:</h4>
+      <p style="margin: 0; font-size: 13.5px; color: #334155; line-height: 1.6;">
+        Your partner onboarding registration could not be approved by the verification team at this time based on the review criteria above. You can view your full application history, reason, and timeline anytime using the tracking link below.
+      </p>
+      ` : `
       <h4 style="margin: 0 0 10px 0; color: #0F172A; font-size: 14px;">How to Reapply / Update Documents:</h4>
       <ol style="margin: 0; padding-left: 20px; font-size: 13.5px; color: #334155; line-height: 1.6;">
         <li>Click the button below to open your seller onboarding application.</li>
         <li>Review the feedback and re-upload clear copies of the requested documents (e.g. FSSAI license, Aadhaar, Bank passbook).</li>
         <li>Submit your updated profile for priority re-review.</li>
       </ol>
+      `}
     </div>
 
     <div style="text-align: center; margin-top: 24px;">
-      <a href="${reapplyUrl || `${APP_URL}/seller/register`}" class="btn btn-red">Reapply / Update Documents</a>
+      <a href="${actionUrl}" class="btn btn-red">${isRejected ? "Track Application Status" : "Reapply / Update Documents"}</a>
+    </div>
+
+    <div style="text-align: center; margin-top: 14px;">
+      <p style="font-size: 12.5px; color: #64748B; margin: 0;">
+        Direct application tracking link:<br>
+        <a href="${trackingUrl}" style="color: #EA580C; font-weight: 600; word-break: break-all;">${trackingUrl}</a>
+      </p>
     </div>
   `;
 
-  const html = wrapHtmlEmail(`Action Required: Application Revision - ${businessName}`, content, {
-    headerColor: "red",
-    headerSubtitle: "Partner Verification Notice",
-  });
+  const html = wrapHtmlEmail(
+    isRejected ? `Application Status: Declined - ${businessName}` : `Action Required: Application Revision - ${businessName}`,
+    content,
+    {
+      headerColor: "red",
+      headerSubtitle: "Partner Verification Notice",
+    }
+  );
 
   return sendEmail({
     to: sellerEmail,
-    subject: `⚠️ Action Required: Please Reapply / Update Documents for ${businessName} - Neo Cloud Bites`,
+    subject: isRejected
+      ? `❌ Partner Application Declined: ${businessName} (ID: ${trackingId || "Application"}) - Neo Cloud Bites`
+      : `⚠️ Action Required: Please Reapply / Update Documents for ${businessName} - Neo Cloud Bites`,
     html,
     bccAdmin: true,
   });
