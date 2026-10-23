@@ -73,16 +73,12 @@ export function setMasterOtpDbOverride(enabled: boolean | null): void {
 }
 
 export function isMasterOtpEnabled(): boolean {
-  // In production, block master OTP unless explicitly authorized by ALLOW_MASTER_OTP_IN_PRODUCTION
-  if (process.env.NODE_ENV === "production" && process.env.ALLOW_MASTER_OTP_IN_PRODUCTION !== "true") {
-    return false;
-  }
-
   if (dbMasterOtpOverride !== null) {
     return dbMasterOtpOverride;
   }
   const raw = (
     process.env.ALLOW_MASTER_OTP ||
+    process.env.ALLOW_MASTER_OTP_IN_PRODUCTION ||
     process.env.MASTER_OTP_ENABLED ||
     process.env.ENABLE_MASTER_OTP ||
     process.env.MASTER_OTP ||
