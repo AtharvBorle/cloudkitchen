@@ -22,6 +22,29 @@ export interface SmtpConfig {
   adminEmail: string;
 }
 
+export function parseFromAddress(rawFrom: string, fallbackEmail: string = "noreply@neocloudbites.com"): { name: string; address: string; formatted: string } {
+  let cleaned = (rawFrom || "").trim().replace(/^['"]|['"]$/g, "");
+  
+  // If user passed just "@neocloudbites.com", prepend "noreply"
+  if (cleaned.startsWith("@")) {
+    cleaned = `noreply${cleaned}`;
+  }
+
+  const match = cleaned.match(/^(?:"?([^"<]+)"?\s*)?<([^>]+)>$/);
+  if (match) {
+    const name = (match[1] || "Neo Cloud Bites").trim();
+    let address = match[2].trim();
+    if (address.startsWith("@")) address = `noreply${address}`;
+    return { name, address, formatted: `"${name}" <${address}>` };
+  }
+
+  if (cleaned.includes("@")) {
+    return { name: "Neo Cloud Bites", address: cleaned, formatted: `"Neo Cloud Bites" <${cleaned}>` };
+  }
+
+  return { name: "Neo Cloud Bites", address: fallbackEmail, formatted: `"Neo Cloud Bites" <${fallbackEmail}>` };
+}
+
 export function getSmtpConfig(): SmtpConfig {
   const host = (process.env.SMTP_HOST || "smtp.zeptomail.in").trim();
   const rawPort = (process.env.SMTP_PORT || "").trim();
@@ -165,8 +188,18 @@ export async function sendEmail({
       bccList.push(targetAdmin);
     }
 
+    const parsedFrom = parseFromAddress(config.from || SMTP_FROM);
+    const recipientArray = Array.isArray(to) ? to.filter(Boolean) : [to];
+
     const info = await client.sendMail({
-      from: config.from || SMTP_FROM,
+      from: {
+        name: parsedFrom.name,
+        address: parsedFrom.address,
+      },
+      envelope: {
+        from: parsedFrom.address,
+        to: recipientArray,
+      },
       to: recipients,
       bcc: bccList.length > 0 ? bccList.join(", ") : undefined,
       subject,

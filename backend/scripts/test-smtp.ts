@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import { getSmtpConfig } from "../src/lib/emailService";
+import { getSmtpConfig, parseFromAddress } from "../src/lib/emailService";
 import dotenv from "dotenv";
 import path from "path";
 
@@ -12,6 +12,7 @@ async function main() {
   console.log("=================================================\n");
 
   const config = getSmtpConfig();
+  const parsedFrom = parseFromAddress(config.from);
 
   console.log("Detected SMTP Configuration:");
   console.log(`  • Host:         ${config.host}`);
@@ -19,7 +20,9 @@ async function main() {
   console.log(`  • Secure (SSL): ${config.secure ? "true (SSL 465)" : "false (STARTTLS 587)"}`);
   console.log(`  • Username:     ${config.user}`);
   console.log(`  • Password:     ${config.pass ? `${config.pass.slice(0, 4)}... (length: ${config.pass.length})` : "❌ NOT SET"}`);
-  console.log(`  • From Address: ${config.from}`);
+  console.log(`  • Sender Name:  ${parsedFrom.name}`);
+  console.log(`  • Sender Email: ${parsedFrom.address}`);
+  console.log(`  • Envelope From:${parsedFrom.address}`);
   console.log(`  • Admin Email:  ${config.adminEmail}\n`);
 
   if (!config.pass) {
@@ -58,7 +61,7 @@ async function main() {
     console.log("\nCommon fixes for Zoho ZeptoMail:");
     console.log("1. Check that SMTP_HOST is 'smtp.zeptomail.in' (or 'smtp.zeptomail.com').");
     console.log("2. Check that SMTP_PORT is 587 (TLS) or 465 (SSL).");
-    console.log("3. Username is typically 'mailapikey' or 'emailapikey'.");
+    console.log("3. Username is strictly 'emailapikey'.");
     console.log("4. Ensure your password is the full ZeptoMail Send Mail Token (starts with PHt).");
     process.exit(1);
   }
@@ -68,7 +71,14 @@ async function main() {
     console.log(`📤 Sending test email to: ${targetEmail}...`);
     try {
       const info = await transporter.sendMail({
-        from: config.from,
+        from: {
+          name: parsedFrom.name,
+          address: parsedFrom.address,
+        },
+        envelope: {
+          from: parsedFrom.address,
+          to: [targetEmail],
+        },
         to: targetEmail,
         subject: "🎉 Neo Cloud Bites - Zoho ZeptoMail SMTP Test",
         html: `
@@ -78,7 +88,8 @@ async function main() {
             <hr style="border: 1px solid #e2e8f0; margin: 20px 0;" />
             <p style="font-size: 13px; color: #64748b;">
               Server: <code>${config.host}:${config.port}</code><br/>
-              Sender: <code>${config.from}</code><br/>
+              Sender: <code>${parsedFrom.formatted}</code><br/>
+              Envelope: <code>${parsedFrom.address}</code><br/>
               Timestamp: ${new Date().toISOString()}
             </p>
           </div>
@@ -93,7 +104,9 @@ async function main() {
       console.error("❌ Failed to send test email:");
       console.error("   Message:", sendErr.message);
       if (sendErr.response) console.error("   Server: ", sendErr.response);
-      console.log("\nNote: ZeptoMail requires your sender domain (@neocloudbites.com) to be verified in ZeptoMail.");
+      console.log("\nTroubleshooting '553 Sender is not allowed to relay emails':");
+      console.log("1. Check that the Sender Email (" + parsedFrom.address + ") matches the sender address in your ZeptoMail agent.");
+      console.log("2. Set SMTP_SENDER_EMAIL in backend/.env to the exact email address configured in your ZeptoMail console.");
     }
   } else {
     console.log("💡 Tip: You can test sending an actual email by passing an email address:");
