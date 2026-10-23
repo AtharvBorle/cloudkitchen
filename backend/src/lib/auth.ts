@@ -143,16 +143,46 @@ export const authConfig: NextAuthConfig = {
                 if (isPhoneIdentifier) {
                     const phoneDigits = cleanDigits.length > 10 ? cleanDigits.slice(-10) : cleanDigits;
                     console.log("Login attempt with phone:", phoneDigits, "with loginType:", loginType);
-                    user = await db.user.findFirst({
-                        where: {
-                            OR: [
-                                { phone: phoneDigits },
-                                { phone: `+91${phoneDigits}` },
-                                { phone: `+91 ${phoneDigits}` },
-                                { phone: { contains: phoneDigits } }
-                            ]
-                        }
-                    });
+                    
+                    // Prioritize role matching to avoid collisions if same phone exists with multiple roles
+                    if (loginType === "SELLER") {
+                        user = await db.user.findFirst({
+                            where: {
+                                OR: [
+                                    { phone: phoneDigits },
+                                    { phone: `+91${phoneDigits}` },
+                                    { phone: `+91 ${phoneDigits}` },
+                                    { phone: { contains: phoneDigits } }
+                                ],
+                                role: "SELLER"
+                            }
+                        });
+                    } else if (loginType === "USER") {
+                        user = await db.user.findFirst({
+                            where: {
+                                OR: [
+                                    { phone: phoneDigits },
+                                    { phone: `+91${phoneDigits}` },
+                                    { phone: `+91 ${phoneDigits}` },
+                                    { phone: { contains: phoneDigits } }
+                                ],
+                                role: "USER"
+                            }
+                        });
+                    }
+
+                    if (!user) {
+                        user = await db.user.findFirst({
+                            where: {
+                                OR: [
+                                    { phone: phoneDigits },
+                                    { phone: `+91${phoneDigits}` },
+                                    { phone: `+91 ${phoneDigits}` },
+                                    { phone: { contains: phoneDigits } }
+                                ]
+                            }
+                        });
+                    }
                 } else {
                     const email = rawIdentifier.toLowerCase();
                     console.log("Login attempt for email:", email, "with loginType:", loginType);
