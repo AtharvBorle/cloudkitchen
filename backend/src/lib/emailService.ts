@@ -32,14 +32,20 @@ export function getSmtpConfig(): SmtpConfig {
     ? (process.env.SMTP_SECURE === "true" || process.env.SMTP_SECURE === "1")
     : port === 465;
 
-  const user = (process.env.SMTP_USER || "mailapikey").trim();
+  let rawUser = (process.env.SMTP_USER || "emailapikey").trim().replace(/^['"]|['"]$/g, "");
+  // Auto-correct common ZeptoMail typo 'mailapikey' -> 'emailapikey'
+  if (rawUser.toLowerCase() === "mailapikey") {
+    rawUser = "emailapikey";
+  }
+  const user = rawUser;
+
   const pass = (
     process.env.SMTP_PASS ||
     process.env.ZEPTOMAIL_API_KEY ||
     process.env.GMAIL_APP_PASSWORD ||
     process.env.EMAIL_PASSWORD ||
     ""
-  ).trim();
+  ).trim().replace(/^['"]|['"]$/g, "");
 
   // For ZeptoMail (where user is 'mailapikey' or 'emailapikey'), the From address MUST
   // be a valid email on the verified domain (e.g. @neocloudbites.com).
