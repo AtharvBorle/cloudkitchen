@@ -11,12 +11,17 @@ export async function GET(req: Request) {
             return errorResponse("Tracking ID is required", 400);
         }
 
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(trackingId);
+        const orConditions: any[] = [
+            { trackingId: { equals: trackingId, mode: "insensitive" } },
+        ];
+        if (isUuid) {
+            orConditions.push({ id: trackingId });
+        }
+
         const seller = await db.sellerProfile.findFirst({
             where: {
-                OR: [
-                    { trackingId: { equals: trackingId, mode: "insensitive" } },
-                    { id: trackingId },
-                ],
+                OR: orConditions,
             },
             select: {
                 id: true,

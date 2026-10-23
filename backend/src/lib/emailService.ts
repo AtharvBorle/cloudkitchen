@@ -15,11 +15,12 @@ const SMTP_USER = process.env.SMTP_USER || "johnwick380900@gmail.com";
 const SMTP_PASS = process.env.SMTP_PASS || process.env.GMAIL_APP_PASSWORD || process.env.EMAIL_PASSWORD || "";
 const SMTP_FROM = process.env.SMTP_FROM || `"Neo Cloud Bites" <${SMTP_USER}>`;
 const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || "johnwick380900@gmail.com";
-export const APP_URL =
+export const APP_URL = (
   process.env.FRONTEND_URL ||
   process.env.NEXT_PUBLIC_APP_URL ||
   process.env.NEXTAUTH_URL ||
-  "https://dev.neocloudbites.com";
+  "https://dev.neocloudbites.com"
+).replace(/\/$/, "");
 
 let transporter: nodemailer.Transporter | null = null;
 
@@ -253,6 +254,13 @@ export async function sendSellerApplicationSubmittedEmail({
 
     <div style="text-align: center; margin-top: 24px;">
       <a href="${APP_URL}/seller/verification-status?trackingId=${encodeURIComponent(trackingId)}" class="btn">Track Application Status</a>
+    </div>
+
+    <div style="text-align: center; margin-top: 14px;">
+      <p style="font-size: 12.5px; color: #64748B; margin: 0;">
+        Direct application tracking link:<br>
+        <a href="${APP_URL}/seller/verification-status?trackingId=${encodeURIComponent(trackingId)}" style="color: #EA580C; font-weight: 600; word-break: break-all;">${APP_URL}/seller/verification-status?trackingId=${encodeURIComponent(trackingId)}</a>
+      </p>
     </div>
   `;
 

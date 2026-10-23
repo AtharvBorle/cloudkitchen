@@ -82,18 +82,21 @@ export async function middleware(request: NextRequest) {
   }
 
   // 1b. Aliases / direct redirections for seller tracking & reapplication
+  const normalizedPath = pathname.replace(/\/$/, "");
   if (
-    pathname === "/seller/register" ||
-    pathname === "/seller/register/status" ||
-    pathname === "/seller/track" ||
-    pathname === "/seller/track-application"
+    normalizedPath === "/seller/register" ||
+    normalizedPath === "/seller/register/status" ||
+    normalizedPath === "/seller/track" ||
+    normalizedPath === "/seller/track-application" ||
+    normalizedPath === "/seller/status" ||
+    normalizedPath === "/seller/registration/status"
   ) {
     const url = new URL("/seller/verification-status", request.url);
     url.search = search;
     return NextResponse.redirect(url);
   }
 
-  if (pathname === "/seller/reapply") {
+  if (normalizedPath === "/seller/reapply") {
     const url = new URL("/seller/revision", request.url);
     url.search = search;
     return NextResponse.redirect(url);
@@ -217,6 +220,9 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/seller/media-information") ||
     pathname.startsWith("/seller/verification") ||
     pathname.startsWith("/seller/verification-status") ||
+    pathname.startsWith("/seller/register") ||
+    pathname.startsWith("/seller/track") ||
+    pathname.startsWith("/seller/status") ||
     pathname.startsWith("/seller/revision") ||
     pathname.startsWith("/seller/faq") ||
     pathname.startsWith("/seller/res/faq") ||

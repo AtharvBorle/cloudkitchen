@@ -392,6 +392,11 @@ export const VerificationStatus: React.FC<VerificationStatusProps> = ({
           <h2 className={styles.trackingValue}>
             {effectiveTrackingId || (seller.isLoading ? "Loading..." : "Pending Verification")}
           </h2>
+          {(publicBusinessName || seller.profile?.businessName) && (
+            <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "#64748B", fontWeight: 500 }}>
+              {publicBusinessName || seller.profile?.businessName}
+            </p>
+          )}
         </div>
         <div className={styles.trackingRight}>
           <button

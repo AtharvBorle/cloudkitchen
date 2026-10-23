@@ -59,6 +59,16 @@ const nextConfig: NextConfig = {
         permanent: false,
       },
       {
+        source: "/seller/status",
+        destination: "/seller/verification-status",
+        permanent: false,
+      },
+      {
+        source: "/seller/registration/status",
+        destination: "/seller/verification-status",
+        permanent: false,
+      },
+      {
         source: "/track-order",
         destination: "/orders-desktop",
         permanent: false,
