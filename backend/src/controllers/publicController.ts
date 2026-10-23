@@ -70,6 +70,7 @@ export const getPublicExploreData = unstable_cache(
                     include: {
                         category: true,
                         foodCategory: true,
+                        foodSubCategory: true,
                         itemRatings: true
                     }
                 },
@@ -84,6 +85,11 @@ export const getPublicExploreData = unstable_cache(
         });
 
         let foodCategories = await db.foodCategory.findMany({
+            include: {
+                subCategories: {
+                    orderBy: { name: 'asc' }
+                }
+            },
             orderBy: { name: 'asc' }
         });
         foodCategories = foodCategories.filter(fc => 

@@ -245,28 +245,36 @@ export default function Home() {
       }));
   }, [homeData.categories]);
 
-  // Extract available cuisines from DB categories & items
+  // Extract available cuisines & categories from DB food categories and subcategories
   const availableCuisines = useMemo(() => {
     const set = new Set<string>();
-    homeData.categories.forEach((c) => {
-      const lower = (c.name || "").toLowerCase().trim();
-      if (
-        c.id !== "food" &&
-        lower !== "food" &&
-        c.id !== "mess" &&
-        lower !== "mess" &&
-        c.id !== "rooms" &&
-        c.name
-      ) {
-        set.add(c.name);
+
+    (homeData.foodCategories || []).forEach((fc) => {
+      const fcLower = (fc.name || "").toLowerCase().trim();
+      if (fc.name && fcLower !== "food" && fcLower !== "mess") {
+        set.add(fc.name);
+      }
+      (fc.subCategories || []).forEach((sc) => {
+        const scLower = (sc.name || "").toLowerCase().trim();
+        if (sc.name && scLower !== "food" && scLower !== "mess") {
+          set.add(sc.name);
+        }
+      });
+    });
+
+    (homeData.foodItems || []).forEach((f) => {
+      const catLower = (f.categoryName || "").toLowerCase().trim();
+      if (f.categoryName && catLower !== "food" && catLower !== "mess") {
+        set.add(f.categoryName);
+      }
+      const subLower = (f.subCategoryName || "").toLowerCase().trim();
+      if (f.subCategoryName && subLower !== "food" && subLower !== "mess") {
+        set.add(f.subCategoryName);
       }
     });
-    const sourceItems = homeData.foodItems;
-    sourceItems.forEach((f) => {
-      if (f.categoryName) set.add(f.categoryName);
-    });
-    return Array.from(set);
-  }, [homeData.categories, homeData.foodItems]);
+
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [homeData.foodCategories, homeData.foodItems]);
 
   // Compute dynamic filter counts from available kitchens & items
   const filterCounts = useMemo(() => {
@@ -849,6 +857,7 @@ export default function Home() {
             const dietVal = newFilters.dietary || "all";
             persistDietaryPreference(dietVal);
           }}
+          foodCategories={homeData.foodCategories}
           availableCuisines={availableCuisines}
           counts={filterCounts}
         />
