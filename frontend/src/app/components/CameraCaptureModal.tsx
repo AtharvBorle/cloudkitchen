@@ -109,17 +109,30 @@ export default function CameraCaptureModal({ onCapture, onClose, skipWatermark =
         let currentStream: MediaStream | null = null;
         const startCamera = async () => {
             try {
-                const mediaStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode }
-                });
+                let mediaStream;
+                try {
+                    mediaStream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode }
+                    });
+                } catch {
+                    // Fallback to generic video constraint if facingMode is not supported (e.g. laptop/desktop webcam)
+                    mediaStream = await navigator.mediaDevices.getUserMedia({
+                        video: true
+                    });
+                }
                 currentStream = mediaStream;
                 setStream(mediaStream);
                 if (videoRef.current) {
                     videoRef.current.srcObject = mediaStream;
                 }
-            } catch (err) {
+            } catch (err: any) {
                 console.error("Error accessing camera:", err);
-                alert("Could not access camera. Please ensure you have given camera permissions.");
+                const isPermissionDenied = err?.name === "NotAllowedError" || err?.name === "PermissionDeniedError";
+                if (isPermissionDenied) {
+                    alert("Camera permission was blocked. Please click the camera/lock icon in your browser address bar to allow camera access.");
+                } else {
+                    alert("Could not access camera. Please ensure camera permissions are granted and no other application is using it.");
+                }
             }
         };
 
