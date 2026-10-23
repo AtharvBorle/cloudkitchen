@@ -12,6 +12,7 @@ import {
   BestPlaces,
   DashboardBody,
   RecommendedForYou,
+  OutOfServiceLocation,
 } from "@/components/home";
 import type { ActiveHomeFilters } from "@/components/home/FilterRow";
 import PopupBannerDisplay from "@/components/PopupBannerDisplay";
@@ -245,28 +246,36 @@ export default function Home() {
       }));
   }, [homeData.categories]);
 
-  // Extract available cuisines from DB categories & items
+  // Extract available cuisines & categories from DB food categories and subcategories
   const availableCuisines = useMemo(() => {
     const set = new Set<string>();
-    homeData.categories.forEach((c) => {
-      const lower = (c.name || "").toLowerCase().trim();
-      if (
-        c.id !== "food" &&
-        lower !== "food" &&
-        c.id !== "mess" &&
-        lower !== "mess" &&
-        c.id !== "rooms" &&
-        c.name
-      ) {
-        set.add(c.name);
+
+    (homeData.foodCategories || []).forEach((fc) => {
+      const fcLower = (fc.name || "").toLowerCase().trim();
+      if (fc.name && fcLower !== "food" && fcLower !== "mess") {
+        set.add(fc.name);
+      }
+      (fc.subCategories || []).forEach((sc) => {
+        const scLower = (sc.name || "").toLowerCase().trim();
+        if (sc.name && scLower !== "food" && scLower !== "mess") {
+          set.add(sc.name);
+        }
+      });
+    });
+
+    (homeData.foodItems || []).forEach((f) => {
+      const catLower = (f.categoryName || "").toLowerCase().trim();
+      if (f.categoryName && catLower !== "food" && catLower !== "mess") {
+        set.add(f.categoryName);
+      }
+      const subLower = (f.subCategoryName || "").toLowerCase().trim();
+      if (f.subCategoryName && subLower !== "food" && subLower !== "mess") {
+        set.add(f.subCategoryName);
       }
     });
-    const sourceItems = homeData.foodItems;
-    sourceItems.forEach((f) => {
-      if (f.categoryName) set.add(f.categoryName);
-    });
-    return Array.from(set);
-  }, [homeData.categories, homeData.foodItems]);
+
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [homeData.foodCategories, homeData.foodItems]);
 
   // Compute dynamic filter counts from available kitchens & items
   const filterCounts = useMemo(() => {
@@ -708,6 +717,39 @@ export default function Home() {
     return undefined;
   }, [homeData.coupons]);
 
+  // Check if the user's active location is out of range of all registered kitchens
+  const isLocationOutOfService = useMemo(() => {
+    if (homeData.isLoading) return false;
+    if (!homeData.allKitchens || homeData.allKitchens.length === 0) return false;
+
+    // Direct deliverability check from useHomeData (calculates radius <= 5km or pincode match)
+    if (homeData.isDirectlyDeliverable === false) {
+      return true;
+    }
+
+    const hasExplicitLocation = Boolean(
+      homeData.activePincode ||
+      defaultAddress?.latitude ||
+      defaultAddress?.longitude ||
+      defaultAddress?.address ||
+      defaultAddress?.city
+    );
+
+    if (hasExplicitLocation && homeData.kitchens.length === 0 && !homeSearchQuery) {
+      return true;
+    }
+
+    return false;
+  }, [
+    homeData.isLoading,
+    homeData.allKitchens,
+    homeData.isDirectlyDeliverable,
+    homeData.activePincode,
+    homeData.kitchens.length,
+    defaultAddress,
+    homeSearchQuery,
+  ]);
+
   return (
     <div
       style={{
@@ -755,8 +797,12 @@ export default function Home() {
         }}
       />
 
-      {/* Main Canvas Container */}
-      <main
+      {isLocationOutOfService ? (
+        <OutOfServiceLocation onOpenLocationModal={openLocationModal} />
+      ) : (
+        <>
+          {/* Main Canvas Container */}
+          <main
         style={{
           width: "1440px",
           maxWidth: "100%",
@@ -849,6 +895,7 @@ export default function Home() {
             const dietVal = newFilters.dietary || "all";
             persistDietaryPreference(dietVal);
           }}
+          foodCategories={homeData.foodCategories}
           availableCuisines={availableCuisines}
           counts={filterCounts}
         />
@@ -995,8 +1042,10 @@ export default function Home() {
         )}
       </main>
 
-      {/* Footer */}
-      <Footer />
+          {/* Footer */}
+          <Footer />
+        </>
+      )}
 
       <style jsx>{`
         @media (max-width: 1024px) {

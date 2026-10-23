@@ -13,6 +13,7 @@ import {
   UtensilsCrossed,
   Leaf,
 } from "lucide-react";
+import type { HomeFoodCategory } from "@/lib/useHomeData";
 
 export interface ActiveHomeFilters {
   fastest?: boolean;
@@ -48,25 +49,17 @@ interface FilterRowProps {
   filters?: FilterOption[];
   activeFilterId?: string;
   onLegacyFilterClick?: (filterId: string) => void;
+  foodCategories?: HomeFoodCategory[];
   availableCuisines?: string[];
   counts?: FilterCounts;
 }
 
-const DEFAULT_CUISINES = [
-  "Italian",
-  "Indian / Mughlai",
-  "Bakery",
-  "Healthy / Bowls",
-  "Burgers & Fast Food",
-  "Biryani",
-  "Desserts",
-  "South Indian",
-  "Chinese",
-];
+const DEFAULT_CUISINES: string[] = [];
 
 export default function FilterRow({
   activeFilters = {},
   onFilterChange,
+  foodCategories = [],
   availableCuisines = DEFAULT_CUISINES,
   counts,
 }: FilterRowProps) {
@@ -109,7 +102,7 @@ export default function FilterRow({
       return;
     }
 
-    const menuWidth = activeType === "cuisines" ? 240 : 185;
+    const menuWidth = activeType === "cuisines" ? 280 : 185;
     const padding = 12;
     let left = rect.left;
     if (left + menuWidth > window.innerWidth - padding) {
@@ -595,8 +588,8 @@ export default function FilterRow({
             </span>
             <span>
               {isCuisinesActive
-                ? `Cuisines (${internalFilters.cuisines?.length})`
-                : "Cuisines"}
+                ? `Categories (${internalFilters.cuisines?.length})`
+                : (foodCategories && foodCategories.length > 0 ? "Categories" : "Cuisines")}
             </span>
             <span className={`filter-chevron ${openPopover === "cuisines" ? "is-open" : ""}`} style={{ display: "inline-flex", alignItems: "center" }}>
               <ChevronDown size={13} color={isCuisinesActive ? "#FF6B00" : "#94A3B8"} />
@@ -621,10 +614,10 @@ export default function FilterRow({
               boxShadow: "0 16px 36px rgba(0, 0, 0, 0.2), 0 4px 12px rgba(0, 0, 0, 0.08)",
               border: "1px solid #E2E8F0",
               zIndex: 99999,
-              minWidth: openPopover === "cuisines" ? "240px" : "185px",
+              minWidth: openPopover === "cuisines" ? "280px" : "185px",
               maxWidth: "calc(100vw - 24px)",
               boxSizing: "border-box",
-              maxHeight: "min(320px, calc(100vh - 120px))",
+              maxHeight: openPopover === "cuisines" ? "min(420px, calc(100vh - 120px))" : "min(320px, calc(100vh - 120px))",
               overflowY: "auto",
               display: "flex",
               flexDirection: "column",
@@ -750,52 +743,155 @@ export default function FilterRow({
               <>
                 <div
                   style={{
-                    fontSize: "11.5px",
+                    fontSize: "11px",
                     fontWeight: "700",
                     color: "#94A3B8",
-                    padding: "4px 8px",
+                    padding: "4px 8px 6px",
                     textTransform: "uppercase",
+                    letterSpacing: "0.5px",
                   }}
                 >
-                  Select Cuisines
+                  Categories & Subcategories
                 </div>
-                {displayCuisinesList.map((c) => {
-                  const isSelected = (internalFilters.cuisines || []).includes(c);
-                  const cCount = counts?.cuisineCounts ? counts.cuisineCounts[c] : undefined;
-                  return (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => handleToggleCuisine(c)}
-                      className={`filter-popover-item filter-popover-portal-item ${isSelected ? "is-selected" : ""}`}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        padding: "8px 10px",
-                        borderRadius: "8px",
-                        border: "none",
-                        backgroundColor: isSelected ? "#FFF3EB" : "transparent",
-                        color: isSelected ? "#FF6B00" : "#334155",
-                        fontWeight: isSelected ? "700" : "500",
-                        fontSize: "13.5px",
-                        cursor: "pointer",
-                        textAlign: "left",
-                        gap: "8px",
-                      }}
-                    >
-                      <span>{c}</span>
-                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                        {cCount !== undefined && (
-                          <span style={{ fontSize: "11px", fontWeight: "600", color: isSelected ? "#FF6B00" : "#94A3B8" }}>
-                            ({cCount})
-                          </span>
-                        )}
-                        {isSelected && <Check size={14} color="#FF6B00" />}
-                      </div>
-                    </button>
-                  );
-                })}
+                {foodCategories && foodCategories.length > 0 ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    {foodCategories.map((fc) => {
+                      const isCatSelected = (internalFilters.cuisines || []).includes(fc.name);
+                      const catCount = counts?.cuisineCounts ? counts.cuisineCounts[fc.name] : undefined;
+
+                      return (
+                        <div key={fc.id} style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                          {/* Parent Food Category */}
+                          <button
+                            type="button"
+                            onClick={() => handleToggleCuisine(fc.name)}
+                            className={`filter-popover-item filter-popover-portal-item ${isCatSelected ? "is-selected" : ""}`}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              padding: "7px 10px",
+                              borderRadius: "8px",
+                              border: "none",
+                              backgroundColor: isCatSelected ? "#FFF3EB" : "transparent",
+                              color: isCatSelected ? "#FF6B00" : "#0F172A",
+                              fontWeight: isCatSelected ? "700" : "600",
+                              fontSize: "13.5px",
+                              cursor: "pointer",
+                              textAlign: "left",
+                              gap: "8px",
+                            }}
+                          >
+                            <span>{fc.name}</span>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                              {catCount !== undefined && (
+                                <span style={{ fontSize: "11px", fontWeight: "600", color: isCatSelected ? "#FF6B00" : "#94A3B8" }}>
+                                  ({catCount})
+                                </span>
+                              )}
+                              {isCatSelected && <Check size={14} color="#FF6B00" />}
+                            </div>
+                          </button>
+
+                          {/* Nested Subcategories underneath */}
+                          {fc.subCategories && fc.subCategories.length > 0 && (
+                            <div
+                              style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                paddingLeft: "14px",
+                                marginLeft: "10px",
+                                borderLeft: "2px solid #F1F5F9",
+                                gap: "2px",
+                              }}
+                            >
+                              {fc.subCategories.map((sc) => {
+                                const isSubSelected = (internalFilters.cuisines || []).includes(sc.name);
+                                const subCount = counts?.cuisineCounts ? counts.cuisineCounts[sc.name] : undefined;
+
+                                return (
+                                  <button
+                                    key={sc.id}
+                                    type="button"
+                                    onClick={() => handleToggleCuisine(sc.name)}
+                                    className={`filter-popover-item filter-popover-portal-item ${isSubSelected ? "is-selected" : ""}`}
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "space-between",
+                                      padding: "5px 8px",
+                                      borderRadius: "6px",
+                                      border: "none",
+                                      backgroundColor: isSubSelected ? "#FFF3EB" : "transparent",
+                                      color: isSubSelected ? "#FF6B00" : "#475569",
+                                      fontWeight: isSubSelected ? "700" : "500",
+                                      fontSize: "12.5px",
+                                      cursor: "pointer",
+                                      textAlign: "left",
+                                      gap: "6px",
+                                    }}
+                                  >
+                                    <span>↳ {sc.name}</span>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                      {subCount !== undefined && (
+                                        <span style={{ fontSize: "10.5px", fontWeight: "600", color: isSubSelected ? "#FF6B00" : "#94A3B8" }}>
+                                          ({subCount})
+                                        </span>
+                                      )}
+                                      {isSubSelected && <Check size={13} color="#FF6B00" />}
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : displayCuisinesList.length > 0 ? (
+                  displayCuisinesList.map((c) => {
+                    const isSelected = (internalFilters.cuisines || []).includes(c);
+                    const cCount = counts?.cuisineCounts ? counts.cuisineCounts[c] : undefined;
+                    return (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => handleToggleCuisine(c)}
+                        className={`filter-popover-item filter-popover-portal-item ${isSelected ? "is-selected" : ""}`}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          padding: "8px 10px",
+                          borderRadius: "8px",
+                          border: "none",
+                          backgroundColor: isSelected ? "#FFF3EB" : "transparent",
+                          color: isSelected ? "#FF6B00" : "#334155",
+                          fontWeight: isSelected ? "700" : "500",
+                          fontSize: "13.5px",
+                          cursor: "pointer",
+                          textAlign: "left",
+                          gap: "8px",
+                        }}
+                      >
+                        <span>{c}</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          {cCount !== undefined && (
+                            <span style={{ fontSize: "11px", fontWeight: "600", color: isSelected ? "#FF6B00" : "#94A3B8" }}>
+                              ({cCount})
+                            </span>
+                          )}
+                          {isSelected && <Check size={14} color="#FF6B00" />}
+                        </div>
+                      </button>
+                    );
+                  })
+                ) : (
+                  <div style={{ fontSize: "12.5px", color: "#94A3B8", padding: "12px 8px", textAlign: "center" }}>
+                    No food categories found
+                  </div>
+                )}
               </>
             )}
           </div>,

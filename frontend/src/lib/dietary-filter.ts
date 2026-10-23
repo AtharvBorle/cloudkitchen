@@ -904,18 +904,21 @@ export function isDishMatchingCuisine(
   dish: {
     name?: string | null;
     categoryName?: string | null;
+    subCategoryName?: string | null;
     description?: string | null;
   }
 ): boolean {
   if (!cuisine || !cuisine.trim()) return true;
   const c = cuisine.trim().toLowerCase();
   const dishCat = (dish.categoryName || "").toLowerCase().trim();
+  const dishSubCat = ((dish as any).subCategoryName || "").toLowerCase().trim();
   const dishName = (dish.name || "").toLowerCase().trim();
   const dishDesc = (dish.description || "").toLowerCase().trim();
 
-  if (dishCat === c || dishCat.includes(c) || c.includes(dishCat)) return true;
-  if (dishName.includes(c)) return true;
-  if (dishDesc.includes(c)) return true;
+  if (dishCat && (dishCat === c || dishCat.includes(c) || c.includes(dishCat))) return true;
+  if (dishSubCat && (dishSubCat === c || dishSubCat.includes(c) || c.includes(dishSubCat))) return true;
+  if (dishName && dishName.includes(c)) return true;
+  if (dishDesc && dishDesc.includes(c)) return true;
   if (matchesDishCategory(c, dish)) return true;
   return false;
 }
@@ -980,10 +983,10 @@ export function isKitchenServingCuisine(
   }
 
   // 2. Fallback on kitchen category or kitchen name if no dishes loaded
-  const kCat = (kitchen.category || "").toLowerCase();
-  const kName = (kitchen.name || "").toLowerCase();
-  if (kCat.includes(c) || c.includes(kCat)) return true;
-  if (kName.includes(c)) return true;
+  const kCat = (kitchen.category || "").toLowerCase().trim();
+  const kName = (kitchen.name || "").toLowerCase().trim();
+  if (kCat && (kCat.includes(c) || c.includes(kCat))) return true;
+  if (kName && (kName.includes(c) || c.includes(kName))) return true;
   if (kitchen.category && matchesDishCategory(c, { name: kitchen.category, categoryName: kitchen.category })) return true;
 
   return false;

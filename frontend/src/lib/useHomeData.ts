@@ -10,6 +10,19 @@ import {
 } from './geo-distance';
 import { extractRoomPropertyLocation, cleanRoomAboutText } from './room-location-helper';
 
+export interface HomeFoodSubCategory {
+  id: string;
+  name: string;
+  imageUrl?: string | null;
+}
+
+export interface HomeFoodCategory {
+  id: string;
+  name: string;
+  imageUrl?: string | null;
+  subCategories: HomeFoodSubCategory[];
+}
+
 export interface DynamicCategory {
   id: string;
   name: string;
@@ -41,6 +54,7 @@ export interface DynamicFoodItem {
   distanceKm?: number;
   distanceText?: string;
   categoryName?: string;
+  subCategoryName?: string | null;
   stockQuantity?: number;
   maxStock?: number;
   rating?: number;
@@ -172,6 +186,7 @@ export interface HomeDataFilterOptions {
 
 export interface HomeDataState {
   categories: DynamicCategory[];
+  foodCategories: HomeFoodCategory[];
   foodItems: DynamicFoodItem[];
   rooms: DynamicRoom[];
   kitchens: DynamicKitchen[];
@@ -194,6 +209,7 @@ export interface HomeDataState {
 export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
   const { defaultAddress } = useLocation();
   const [categories, setCategories] = useState<DynamicCategory[]>([]);
+  const [foodCategories, setFoodCategories] = useState<HomeFoodCategory[]>([]);
   const [foodItems, setFoodItems] = useState<DynamicFoodItem[]>([]);
   const [rooms, setRooms] = useState<DynamicRoom[]>([]);
   const [kitchens, setKitchens] = useState<DynamicKitchen[]>([]);
@@ -441,8 +457,10 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           }
         };
 
-        if (exploreRes?.foodCategories && Array.isArray(exploreRes.foodCategories) && exploreRes.foodCategories.length > 0) {
-          exploreRes.foodCategories.forEach(processCatEntry);
+        const explorePayload = exploreRes?.data || exploreRes;
+
+        if (explorePayload?.foodCategories && Array.isArray(explorePayload.foodCategories) && explorePayload.foodCategories.length > 0) {
+          explorePayload.foodCategories.forEach(processCatEntry);
         }
         if (categoriesRes?.foodCategories && Array.isArray(categoriesRes.foodCategories) && categoriesRes.foodCategories.length > 0) {
           categoriesRes.foodCategories.forEach(processCatEntry);
@@ -452,6 +470,35 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
         } else if (Array.isArray(categoriesRes) && categoriesRes.length > 0) {
           categoriesRes.forEach(processCatEntry);
         }
+
+        // Process structured Food Categories & Subcategories from DB
+        const rawFcs = categoriesRes?.foodCategories || explorePayload?.foodCategories || [];
+        const processedFcs: HomeFoodCategory[] = [];
+        if (Array.isArray(rawFcs)) {
+          rawFcs.forEach((fc: any) => {
+            if (!fc || !fc.name) return;
+            const nameLower = fc.name.toLowerCase().trim();
+            if (nameLower === "food" || nameLower === "mess") return;
+
+            const subs: HomeFoodSubCategory[] = Array.isArray(fc.subCategories)
+              ? fc.subCategories
+                  .filter((s: any) => s && s.name && s.name.toLowerCase().trim() !== "mess" && s.name.toLowerCase().trim() !== "food")
+                  .map((s: any) => ({
+                    id: s.id,
+                    name: s.name.trim().charAt(0).toUpperCase() + s.name.trim().slice(1),
+                    imageUrl: s.imageUrl || null,
+                  }))
+              : [];
+
+            processedFcs.push({
+              id: fc.id,
+              name: fc.name.trim().charAt(0).toUpperCase() + fc.name.trim().slice(1),
+              imageUrl: fc.imageUrl || null,
+              subCategories: subs,
+            });
+          });
+        }
+        setFoodCategories(processedFcs);
 
         // Ensure rooms, generic food, mess, or non-food categories are not included
         categoryMap.delete("rooms");
@@ -465,8 +512,6 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
         // 2. Process Food Items & Kitchens
         const rawFoodItems: DynamicFoodItem[] = [];
         const kitchenMap = new Map<string, DynamicKitchen>();
-
-        const explorePayload = exploreRes?.data || exploreRes;
 
         if (explorePayload?.foodItems && Array.isArray(explorePayload.foodItems) && explorePayload.foodItems.length > 0) {
           explorePayload.foodItems.forEach((item: any) => {
@@ -501,6 +546,7 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
               sellerLongitude: resolvedLng,
               sellerIsLocationPinned: item.sellerIsLocationPinned ?? false,
               categoryName: item.foodCategory?.name || item.category?.name || 'Food',
+              subCategoryName: item.foodSubCategory?.name || item.subCategory?.name || null,
               rating: typeof item.rating === "number" ? item.rating : (typeof item.averageRating === "number" ? item.averageRating : (Array.isArray(item.itemRatings) && item.itemRatings.length > 0 ? item.itemRatings.reduce((sum: number, r: any) => sum + (Number(r?.rating) || 0), 0) / item.itemRatings.length : 0)),
               totalRatings: typeof item.totalRatings === "number" ? item.totalRatings : (Array.isArray(item.itemRatings) ? item.itemRatings.length : 0),
               reviewsCount: typeof item.reviewsCount === "number" ? item.reviewsCount : (typeof item.totalRatings === "number" ? item.totalRatings : 0),
@@ -1135,6 +1181,7 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
 
   return {
     categories,
+    foodCategories,
     foodItems: filteredFoodItems,
     rooms: enrichedRooms,
     kitchens: filteredKitchens,
