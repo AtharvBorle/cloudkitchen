@@ -8,13 +8,55 @@ import nodemailer from "nodemailer";
  * Safely falls back if credentials are not configured so APIs never fail.
  */
 
-const SMTP_HOST = process.env.SMTP_HOST || "smtp.gmail.com";
-const SMTP_PORT = parseInt(process.env.SMTP_PORT || "465", 10);
-const SMTP_SECURE = process.env.SMTP_SECURE !== "false"; // true for 465, false for 587
-const SMTP_USER = process.env.SMTP_USER || "";
-const SMTP_PASS = process.env.SMTP_PASS || process.env.GMAIL_APP_PASSWORD || process.env.EMAIL_PASSWORD || "";
-const SMTP_FROM = process.env.SMTP_FROM || (SMTP_USER ? `"Neo Cloud Bites" <${SMTP_USER}>` : `"Neo Cloud Bites" <notifications@neocloudbites.com>`);
-const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || process.env.SMTP_USER || "admin@neocloudbites.com";
+/**
+ * Resolves SMTP configuration dynamically from environment variables,
+ * with first-class support for Zoho ZeptoMail and standard SMTP servers.
+ */
+export interface SmtpConfig {
+  host: string;
+  port: number;
+  secure: boolean;
+  user: string;
+  pass: string;
+  from: string;
+  adminEmail: string;
+}
+
+export function getSmtpConfig(): SmtpConfig {
+  const host = (process.env.SMTP_HOST || "smtp.zeptomail.in").trim();
+  const rawPort = (process.env.SMTP_PORT || "").trim();
+  const port = parseInt(rawPort || (host.includes("zeptomail") ? "587" : "465"), 10);
+
+  // In nodemailer: secure=true is strictly for port 465 (SSL). Port 587 uses STARTTLS (secure=false).
+  const secure = process.env.SMTP_SECURE !== undefined
+    ? (process.env.SMTP_SECURE === "true" || process.env.SMTP_SECURE === "1")
+    : port === 465;
+
+  const user = (process.env.SMTP_USER || "mailapikey").trim();
+  const pass = (
+    process.env.SMTP_PASS ||
+    process.env.ZEPTOMAIL_API_KEY ||
+    process.env.GMAIL_APP_PASSWORD ||
+    process.env.EMAIL_PASSWORD ||
+    ""
+  ).trim();
+
+  // For ZeptoMail (where user is 'mailapikey' or 'emailapikey'), the From address MUST
+  // be a valid email on the verified domain (e.g. @neocloudbites.com).
+  const defaultSender = (
+    process.env.SMTP_SENDER_EMAIL ||
+    process.env.SENDER_EMAIL ||
+    (user.includes("@") ? user : "noreply@neocloudbites.com")
+  ).trim();
+
+  const from = (process.env.SMTP_FROM || `"Neo Cloud Bites" <${defaultSender}>`).trim();
+  const adminEmail = (process.env.ADMIN_NOTIFICATION_EMAIL || "admin@neocloudbites.com").trim();
+
+  return { host, port, secure, user, pass, from, adminEmail };
+}
+
+export const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || "admin@neocloudbites.com";
+export const SMTP_FROM = process.env.SMTP_FROM || `"Neo Cloud Bites" <noreply@neocloudbites.com>`;
 
 /**
  * Resolves the public frontend / tracking URL.
@@ -50,23 +92,27 @@ const APP_URL = getAppUrl();
 
 let transporter: ReturnType<typeof nodemailer.createTransport> | null = null;
 
-function getTransporter(): ReturnType<typeof nodemailer.createTransport> | null {
-  if (!SMTP_PASS || SMTP_PASS.trim() === "" || SMTP_PASS.includes("YOUR_")) {
+export function getTransporter(): ReturnType<typeof nodemailer.createTransport> | null {
+  const config = getSmtpConfig();
+  if (!config.pass || config.pass.trim() === "" || config.pass.includes("YOUR_")) {
     return null;
   }
 
   if (!transporter) {
     transporter = nodemailer.createTransport({
-      host: SMTP_HOST,
-      port: SMTP_PORT,
-      secure: SMTP_SECURE,
+      host: config.host,
+      port: config.port,
+      secure: config.secure,
       auth: {
-        user: SMTP_USER,
-        pass: SMTP_PASS.replace(/\s+/g, ""), // clean spaces from app password if present
+        user: config.user,
+        pass: config.pass.replace(/\s+/g, ""), // clean spaces if present
       },
       tls: {
         rejectUnauthorized: false,
       },
+      connectionTimeout: 15000,
+      greetingTimeout: 15000,
+      socketTimeout: 20000,
     });
   }
 
@@ -92,6 +138,7 @@ export async function sendEmail({
   bccAdmin = false,
 }: SendMailOptions): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
+    const config = getSmtpConfig();
     const client = getTransporter();
 
     if (!client) {
@@ -107,12 +154,13 @@ export async function sendEmail({
     }
 
     const bccList: string[] = [];
-    if (bccAdmin && ADMIN_EMAIL && !recipients.includes(ADMIN_EMAIL)) {
-      bccList.push(ADMIN_EMAIL);
+    const targetAdmin = config.adminEmail || ADMIN_EMAIL;
+    if (bccAdmin && targetAdmin && !recipients.includes(targetAdmin)) {
+      bccList.push(targetAdmin);
     }
 
     const info = await client.sendMail({
-      from: SMTP_FROM,
+      from: config.from || SMTP_FROM,
       to: recipients,
       bcc: bccList.length > 0 ? bccList.join(", ") : undefined,
       subject,
