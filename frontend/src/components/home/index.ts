@@ -9,3 +9,4 @@ export { default as BestPlaces } from "./BestPlaces";
 export { default as DashboardBody } from "./DashboardBody";
 export { default as RecommendedForYou } from "./RecommendedForYou";
 export { default as MobileBottomNav } from "./MobileBottomNav";
+export { default as OutOfServiceLocation } from "./OutOfServiceLocation";
