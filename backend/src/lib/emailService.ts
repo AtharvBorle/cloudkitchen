@@ -11,10 +11,10 @@ import nodemailer from "nodemailer";
 const SMTP_HOST = process.env.SMTP_HOST || "smtp.gmail.com";
 const SMTP_PORT = parseInt(process.env.SMTP_PORT || "465", 10);
 const SMTP_SECURE = process.env.SMTP_SECURE !== "false"; // true for 465, false for 587
-const SMTP_USER = process.env.SMTP_USER || "johnwick380900@gmail.com";
+const SMTP_USER = process.env.SMTP_USER || "";
 const SMTP_PASS = process.env.SMTP_PASS || process.env.GMAIL_APP_PASSWORD || process.env.EMAIL_PASSWORD || "";
-const SMTP_FROM = process.env.SMTP_FROM || `"Neo Cloud Bites" <${SMTP_USER}>`;
-const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || "johnwick380900@gmail.com";
+const SMTP_FROM = process.env.SMTP_FROM || (SMTP_USER ? `"Neo Cloud Bites" <${SMTP_USER}>` : `"Neo Cloud Bites" <notifications@neocloudbites.com>`);
+const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || process.env.SMTP_USER || "admin@neocloudbites.com";
 
 /**
  * Resolves the public frontend / tracking URL.
@@ -48,9 +48,9 @@ export function getAppUrl(): string {
 
 const APP_URL = getAppUrl();
 
-let transporter: nodemailer.Transporter | null = null;
+let transporter: ReturnType<typeof nodemailer.createTransport> | null = null;
 
-function getTransporter(): nodemailer.Transporter | null {
+function getTransporter(): ReturnType<typeof nodemailer.createTransport> | null {
   if (!SMTP_PASS || SMTP_PASS.trim() === "" || SMTP_PASS.includes("YOUR_")) {
     return null;
   }

@@ -431,7 +431,7 @@ export const loginUser = async (req: Request) => {
             throw new ApiError("Your account is inactive. Please contact the administrator.", 403);
         }
 
-        const secret = process.env.NEXTAUTH_SECRET || "fallback_secret_for_development_only";
+        const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "fallback_secret_for_development_only";
         const token = jwt.sign(
             {
                 id: user.id,
@@ -440,7 +440,7 @@ export const loginUser = async (req: Request) => {
                 name: user.name
             },
             secret,
-            { expiresIn: "30d" }
+            { algorithm: "HS256", expiresIn: "30d" }
         );
 
         return {
@@ -508,7 +508,7 @@ export const loginUser = async (req: Request) => {
     }
 
     // Use NEXTAUTH_SECRET as the JWT secret, or a fallback for dev
-    const secret = process.env.NEXTAUTH_SECRET || "fallback_secret_for_development_only";
+    const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "fallback_secret_for_development_only";
 
     // Create a robust JWT payload
     const token = jwt.sign(
@@ -519,7 +519,7 @@ export const loginUser = async (req: Request) => {
             name: user.name
         },
         secret,
-        { expiresIn: "30d" } // 30 day expiration for mobile convenience
+        { algorithm: "HS256", expiresIn: "30d" } // 30 day expiration for mobile convenience
     );
 
     return {

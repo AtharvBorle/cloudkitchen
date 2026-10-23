@@ -2,9 +2,16 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { generate6DigitOtp, setOtp, isMasterOtpEnabled, setMasterOtpDbOverride, MASTER_OTP } from "@/lib/otpStore";
 import { sendVerificationEmailOtp } from "@/lib/emailService";
+import { getClientIp, rateLimit, createRateLimitResponse } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
   try {
+    const clientIp = getClientIp(req);
+    const ipLimit = rateLimit(clientIp, { keyPrefix: "send_email_otp_ip", limit: 10, windowSeconds: 600 });
+    if (!ipLimit.allowed) {
+      return createRateLimitResponse(ipLimit);
+    }
+
     const body = await req.json();
     const { email, purpose = "seller_onboarding", name } = body;
 
@@ -15,6 +22,11 @@ export async function POST(req: Request) {
         { success: false, message: "Please provide a valid email address." },
         { status: 400 }
       );
+    }
+
+    const emailLimit = rateLimit(cleanEmail, { keyPrefix: "send_email_otp_target", limit: 5, windowSeconds: 600 });
+    if (!emailLimit.allowed) {
+      return createRateLimitResponse(emailLimit);
     }
 
     if (purpose === "seller_onboarding" || purpose === "signup" || purpose === "register") {

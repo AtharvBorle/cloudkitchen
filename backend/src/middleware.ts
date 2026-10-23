@@ -19,15 +19,14 @@ export function middleware(request: NextRequest) {
         "/api/search": "/api/public/search",
     };
 
-    // In production on dev.api.neocloudbites.com, Nginx reverse proxy handles all CORS headers.
-    // Setting them here in Next.js results in duplicate headers ("origin, origin") which browsers reject.
-    // In local development (without Nginx), Next.js provides the CORS headers.
+    // When behind an Nginx reverse proxy on neocloudbites.com that already injects CORS headers,
+    // setting them here in Next.js results in duplicate headers ("origin, origin") which browsers reject.
+    // In local development or standalone deployments (mobile dev, LAN IP, emulators), Next.js provides the CORS headers.
     const isBehindNginx =
-        process.env.NODE_ENV === "production" ||
-        request.headers.has("x-real-ip") ||
-        request.headers.has("x-forwarded-for") ||
-        Boolean(request.headers.get("host")?.includes("neocloudbites.com")) ||
-        Boolean(request.headers.get("x-forwarded-host")?.includes("neocloudbites.com"));
+        process.env.NGINX_HANDLES_CORS === "true" ||
+        ((Boolean(request.headers.get("host")?.includes("neocloudbites.com")) ||
+          Boolean(request.headers.get("x-forwarded-host")?.includes("neocloudbites.com"))) &&
+         (request.headers.has("x-real-ip") || request.headers.has("x-forwarded-for")));
 
     // Preflight OPTIONS requests - return 204 immediately
     if (request.method === "OPTIONS") {

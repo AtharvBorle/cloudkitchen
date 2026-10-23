@@ -2,14 +2,32 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
-function getCorsHeaders(contentType: string, contentLength: number) {
+const SAFE_MIME_TYPES: Record<string, string> = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
+    ".pdf": "application/pdf",
+    ".mp4": "video/mp4",
+    ".webm": "video/webm",
+};
+
+function getFileResponseHeaders(contentType: string, contentLength: number, filename: string) {
+    const isAttachment = !Object.values(SAFE_MIME_TYPES).includes(contentType);
+    const disposition = isAttachment ? `attachment; filename="${filename}"` : `inline; filename="${filename}"`;
+
     return {
         "Content-Type": contentType,
         "Content-Length": contentLength.toString(),
         "Cache-Control": "public, max-age=31536000, immutable",
+        "X-Content-Type-Options": "nosniff",
+        "Content-Security-Policy": "default-src 'none'; sandbox",
+        "X-Frame-Options": "SAMEORIGIN",
+        "Content-Disposition": disposition,
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
-        "Access-Control-Allow-Headers": "*",
+        "Access-Control-Allow-Headers": "Range, Content-Type",
     };
 }
 
@@ -19,7 +37,7 @@ export async function OPTIONS() {
         headers: {
             "Access-Control-Allow-Origin": "*",
             "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
-            "Access-Control-Allow-Headers": "*",
+            "Access-Control-Allow-Headers": "Range, Content-Type",
         },
     });
 }
@@ -34,14 +52,14 @@ export async function GET(
             return new NextResponse("File not found", { status: 404 });
         }
 
-        const uploadsDir = path.join(process.cwd(), "public", "uploads");
+        const uploadsDir = path.resolve(process.cwd(), "public", "uploads");
 
-        // Prevent path traversal
-        const safeRelativePath = path.normalize(path.join(...pathSegments)).replace(/^(\.\.[\/\\])+/, "");
-        const fullPath = path.join(uploadsDir, safeRelativePath);
+        // Canonical path resolution to strictly prevent directory traversal (e.g., ../, null bytes)
+        const safeSegments = pathSegments.map((s) => path.basename(s)).filter((s) => s && s !== "." && s !== "..");
+        const fullPath = path.resolve(uploadsDir, ...safeSegments);
 
         // Security check: ensure target path is strictly within uploadsDir
-        if (!fullPath.startsWith(uploadsDir)) {
+        if (!fullPath.startsWith(uploadsDir + path.sep)) {
             return new NextResponse("Access denied", { status: 403 });
         }
 
@@ -55,24 +73,12 @@ export async function GET(
         }
 
         const ext = path.extname(fullPath).toLowerCase();
-        const mimeTypes: Record<string, string> = {
-            ".jpg": "image/jpeg",
-            ".jpeg": "image/jpeg",
-            ".png": "image/png",
-            ".gif": "image/gif",
-            ".webp": "image/webp",
-            ".svg": "image/svg+xml",
-            ".pdf": "application/pdf",
-            ".mp4": "video/mp4",
-            ".webm": "video/webm",
-        };
-
-        const contentType = mimeTypes[ext] || "application/octet-stream";
+        const contentType = SAFE_MIME_TYPES[ext] || "application/octet-stream";
         const fileBuffer = await fs.promises.readFile(fullPath);
 
         return new NextResponse(fileBuffer, {
             status: 200,
-            headers: getCorsHeaders(contentType, stat.size),
+            headers: getFileResponseHeaders(contentType, stat.size, path.basename(fullPath)),
         });
     } catch (error) {
         console.error("Error serving uploaded file:", error);
