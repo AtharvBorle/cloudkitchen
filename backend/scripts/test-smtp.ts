@@ -26,9 +26,9 @@ async function main() {
   console.log(`  • Admin Email:  ${config.adminEmail}\n`);
 
   if (!config.pass) {
-    console.error("❌ Error: SMTP_PASS is missing in your .env file!");
+    console.error("❌ Error: SMTP_PASSWORD (or SMTP_PASS) is missing in your .env file!");
     console.log("Add your ZeptoMail Send Mail Token password to backend/.env:");
-    console.log('SMTP_PASS="PHt..."');
+    console.log('SMTP_PASSWORD="PHt..."');
     process.exit(1);
   }
 

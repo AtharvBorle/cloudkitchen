@@ -63,6 +63,7 @@ export function getSmtpConfig(): SmtpConfig {
   const user = rawUser;
 
   const pass = (
+    process.env.SMTP_PASSWORD ||
     process.env.SMTP_PASS ||
     process.env.ZEPTOMAIL_API_KEY ||
     process.env.GMAIL_APP_PASSWORD ||
@@ -70,15 +71,24 @@ export function getSmtpConfig(): SmtpConfig {
     ""
   ).trim().replace(/^['"]|['"]$/g, "");
 
-  // For ZeptoMail (where user is 'mailapikey' or 'emailapikey'), the From address MUST
-  // be a valid email on the verified domain (e.g. @neocloudbites.com).
-  const defaultSender = (
+  const senderEmail = (
+    process.env.SMTP_FROM_EMAIL ||
     process.env.SMTP_SENDER_EMAIL ||
     process.env.SENDER_EMAIL ||
     (user.includes("@") ? user : "noreply@neocloudbites.com")
+  ).trim().replace(/^['"]|['"]$/g, "");
+
+  const senderName = (
+    process.env.SMTP_FROM_NAME ||
+    process.env.SMTP_SENDER_NAME ||
+    "Neocloudbites"
+  ).trim().replace(/^['"]|['"]$/g, "");
+
+  const from = (
+    process.env.SMTP_FROM ||
+    `"${senderName}" <${senderEmail}>`
   ).trim();
 
-  const from = (process.env.SMTP_FROM || `"Neo Cloud Bites" <${defaultSender}>`).trim();
   const adminEmail = (process.env.ADMIN_NOTIFICATION_EMAIL || "admin@neocloudbites.com").trim();
 
   return { host, port, secure, user, pass, from, adminEmail };
