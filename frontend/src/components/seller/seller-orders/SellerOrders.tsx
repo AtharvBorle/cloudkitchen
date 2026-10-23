@@ -282,11 +282,15 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
   const avatarInitials = initialAvatarInitials || seller.avatarInitials;
 
   // Section toggle: Regular Food Orders vs Subscribers Meal (persisted across refresh via URL & sessionStorage)
+  // NOTE: Subscribers Meal option commented out per request - not needed currently
   const sectionParam = searchParams?.get("section")?.toLowerCase();
+  /*
   const initialSection: "orders" | "subscribers" =
     sectionParam === "subscribers" || sectionParam === "subscriber-meal"
       ? "subscribers"
       : "orders";
+  */
+  const initialSection: "orders" | "subscribers" = "orders";
 
   const [activeSection, setActiveSection] = useState<"orders" | "subscribers">(initialSection);
 
@@ -312,6 +316,8 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
     const currentSectionParam = searchParams?.get("section")?.toLowerCase();
     const currentSubTabParam = searchParams?.get("subTab")?.toLowerCase();
 
+    // Subscribers Meal option commented out per request - defaulting to regular orders
+    /*
     if (currentSectionParam === "subscribers" || currentSectionParam === "subscriber-meal") {
       setActiveSection("subscribers");
       sessionStorage.setItem("neo_seller_orders_active_section", "subscribers");
@@ -327,6 +333,8 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
         window.history.replaceState(null, "", url.toString());
       }
     }
+    */
+    setActiveSection("orders");
 
     if (currentSubTabParam === "today" || currentSubTabParam === "paused" || currentSubTabParam === "all") {
       setSubscribersTab(currentSubTabParam as "today" | "paused" | "all");
@@ -1172,6 +1180,7 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
                 <Bike size={16} />
                 <span>Food Orders ({orderList.length})</span>
               </button>
+              {/* NOTE: Subscribers Meal option commented out per request - not needed currently
               <button
                 type="button"
                 className={`${styles.sectionSwitchBtn} ${activeSection === "subscribers" ? styles.sectionSwitchBtnActive : ""}`}
@@ -1180,6 +1189,7 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
                 <Utensils size={16} />
                 <span>Subscribers Meal ({mealsToDeliverTodayCount} Today)</span>
               </button>
+              */}
             </div>
           </div>
 
