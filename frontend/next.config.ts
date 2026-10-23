@@ -199,6 +199,11 @@ const nextConfig: NextConfig = {
         permanent: true,
       },
       {
+        source: "/seller/register/status",
+        destination: "/seller/login",
+        permanent: false,
+      },
+      {
         source: "/seller/subscription/edit-plan",
         destination: "/seller/subscription/edit",
         permanent: true,

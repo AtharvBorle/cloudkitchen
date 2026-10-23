@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { 
     Mail, 
+    Phone,
     Lock, 
     KeyRound, 
     Eye, 
@@ -26,11 +27,15 @@ function ForgotPasswordForm() {
     const isSeller = searchParams.get("type") === "seller";
     const loginPath = isSeller ? "/seller/login" : "/login";
 
-    // Step state: 1 = Enter Email, 2 = Verify OTP & Set Password, 3 = Success
+    // Step state: 1 = Enter Identifier, 2 = Verify OTP & Set Password, 3 = Success
     const [step, setStep] = useState<1 | 2 | 3>(1);
+
+    // Channel selection: email or mobile
+    const [method, setMethod] = useState<"email" | "phone">("email");
 
     // Form inputs
     const [email, setEmail] = useState("");
+    const [phone, setPhone] = useState("");
     const [otp, setOtp] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
@@ -60,10 +65,27 @@ function ForgotPasswordForm() {
         setErrorMessage("");
         setSuccessMessage("");
 
-        const validation = validateEmail(email);
-        if (!validation.isValid) {
-            setErrorMessage(validation.error || "Please enter a valid email address.");
-            return;
+        let payload: any = {
+            method,
+            role: isSeller ? "SELLER" : "USER",
+        };
+
+        if (method === "email") {
+            const validation = validateEmail(email);
+            if (!validation.isValid) {
+                setErrorMessage(validation.error || "Please enter a valid email address.");
+                return;
+            }
+            payload.email = validation.normalizedEmail;
+            payload.identifier = validation.normalizedEmail;
+        } else {
+            const cleanDigits = phone.replace(/\D/g, "");
+            if (cleanDigits.length < 10) {
+                setErrorMessage("Please enter a valid 10-digit mobile number.");
+                return;
+            }
+            payload.phone = cleanDigits.slice(-10);
+            payload.identifier = cleanDigits.slice(-10);
         }
 
         setLoading(true);
@@ -71,20 +93,17 @@ function ForgotPasswordForm() {
             const res = await fetchApi("/api/auth/forgot-password", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    email: validation.normalizedEmail,
-                    role: isSeller ? "SELLER" : "USER",
-                }),
+                body: JSON.stringify(payload),
             });
 
             const data = await res.json();
 
             if (!res.ok) {
-                setErrorMessage(data?.message || "Failed to process request. Please verify your email.");
+                setErrorMessage(data?.message || `Failed to process request. Please check your ${method === "email" ? "email" : "mobile number"}.`);
                 return;
             }
 
-            setSuccessMessage(data?.message || "OTP sent successfully to your registered mobile number.");
+            setSuccessMessage(data?.message || (method === "email" ? "OTP sent to your registered email address." : "OTP sent to your registered mobile number."));
             setOtp("");
             setResendCooldown(30);
             setStep(2);
@@ -102,14 +121,24 @@ function ForgotPasswordForm() {
         setSuccessMessage("");
         setLoading(true);
 
+        const payload: any = {
+            method,
+            role: isSeller ? "SELLER" : "USER",
+        };
+
+        if (method === "email") {
+            payload.email = email.trim().toLowerCase();
+            payload.identifier = email.trim().toLowerCase();
+        } else {
+            payload.phone = phone.replace(/\D/g, "").slice(-10);
+            payload.identifier = phone.replace(/\D/g, "").slice(-10);
+        }
+
         try {
             const res = await fetchApi("/api/auth/forgot-password", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    email: email.trim().toLowerCase(),
-                    role: isSeller ? "SELLER" : "USER",
-                }),
+                body: JSON.stringify(payload),
             });
 
             const data = await res.json();
@@ -118,7 +147,7 @@ function ForgotPasswordForm() {
                 return;
             }
 
-            setSuccessMessage(data?.message || "New OTP sent to your registered mobile number.");
+            setSuccessMessage(data?.message || (method === "email" ? "New OTP sent to your registered email." : "New OTP sent to your registered mobile number."));
             setOtp("");
             setResendCooldown(30);
         } catch (err) {
@@ -135,7 +164,7 @@ function ForgotPasswordForm() {
         setSuccessMessage("");
 
         if (!otp.trim() || otp.trim().length !== 6) {
-            setErrorMessage("Please enter the complete 6-digit OTP code received on your mobile.");
+            setErrorMessage("Please enter the complete 6-digit OTP code received.");
             return;
         }
 
@@ -149,13 +178,18 @@ function ForgotPasswordForm() {
             return;
         }
 
+        const identifier = method === "email" ? email.trim().toLowerCase() : phone.replace(/\D/g, "").slice(-10);
+
         setLoading(true);
         try {
             const res = await fetchApi("/api/auth/reset-password", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    email: email.trim().toLowerCase(),
+                    identifier,
+                    email: method === "email" ? identifier : undefined,
+                    phone: method === "phone" ? identifier : undefined,
+                    method,
                     otp: otp.trim(),
                     newPassword: newPassword.trim(),
                     confirmPassword: confirmPassword.trim(),
@@ -299,45 +333,155 @@ function ForgotPasswordForm() {
                 {/* STEP 1: Request OTP Form */}
                 {step === 1 && (
                     <form onSubmit={handleSendOTP} style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
-                        <div>
-                            <label style={{
-                                display: "block",
-                                fontSize: "0.8rem",
-                                fontWeight: "700",
-                                color: "#334155",
-                                marginBottom: "6px"
-                            }}>
-                                {isSeller ? "Registered Owner Email" : "Registered Email"}
-                            </label>
-                            <div style={{
-                                display: "flex",
-                                alignItems: "center",
-                                border: "1.5px solid #CBD5E1",
-                                borderRadius: "12px",
-                                padding: "0 12px",
-                                backgroundColor: "#FFFFFF",
-                                transition: "border-color 0.2s"
-                            }}>
-                                <Mail size={18} color="#94A3B8" style={{ marginRight: "10px", flexShrink: 0 }} />
-                                <input
-                                    type="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    placeholder="your-email@domain.com"
-                                    required
-                                    autoFocus
-                                    style={{
-                                        width: "100%",
-                                        padding: "12px 0",
-                                        border: "none",
-                                        outline: "none",
-                                        fontSize: "0.92rem",
-                                        color: "#0F172A",
-                                        backgroundColor: "transparent"
-                                    }}
-                                />
-                            </div>
+                        {/* Channel selector: Email or Mobile */}
+                        <div style={{
+                            display: "flex",
+                            backgroundColor: "#F1F5F9",
+                            borderRadius: "12px",
+                            padding: "4px",
+                            gap: "4px"
+                        }}>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setMethod("email");
+                                    setErrorMessage("");
+                                    setSuccessMessage("");
+                                }}
+                                style={{
+                                    flex: 1,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: "8px",
+                                    padding: "9px 12px",
+                                    borderRadius: "9px",
+                                    border: "none",
+                                    backgroundColor: method === "email" ? "#FFFFFF" : "transparent",
+                                    color: method === "email" ? (isSeller ? "#EA580C" : "#EF4444") : "#64748B",
+                                    fontWeight: method === "email" ? 700 : 500,
+                                    fontSize: "0.85rem",
+                                    cursor: "pointer",
+                                    boxShadow: method === "email" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+                                    transition: "all 0.15s ease"
+                                }}
+                            >
+                                <Mail size={16} />
+                                <span>Reset via Email</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setMethod("phone");
+                                    setErrorMessage("");
+                                    setSuccessMessage("");
+                                }}
+                                style={{
+                                    flex: 1,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: "8px",
+                                    padding: "9px 12px",
+                                    borderRadius: "9px",
+                                    border: "none",
+                                    backgroundColor: method === "phone" ? "#FFFFFF" : "transparent",
+                                    color: method === "phone" ? (isSeller ? "#EA580C" : "#EF4444") : "#64748B",
+                                    fontWeight: method === "phone" ? 700 : 500,
+                                    fontSize: "0.85rem",
+                                    cursor: "pointer",
+                                    boxShadow: method === "phone" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+                                    transition: "all 0.15s ease"
+                                }}
+                            >
+                                <Phone size={16} />
+                                <span>Reset via Mobile</span>
+                            </button>
                         </div>
+
+                        {method === "email" ? (
+                            <div>
+                                <label style={{
+                                    display: "block",
+                                    fontSize: "0.8rem",
+                                    fontWeight: "700",
+                                    color: "#334155",
+                                    marginBottom: "6px"
+                                }}>
+                                    {isSeller ? "Registered Owner Email" : "Registered Email"}
+                                </label>
+                                <div style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    border: "1.5px solid #CBD5E1",
+                                    borderRadius: "12px",
+                                    padding: "0 12px",
+                                    backgroundColor: "#FFFFFF",
+                                    transition: "border-color 0.2s"
+                                }}>
+                                    <Mail size={18} color="#94A3B8" style={{ marginRight: "10px", flexShrink: 0 }} />
+                                    <input
+                                        type="email"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        placeholder="your-email@domain.com"
+                                        required
+                                        autoFocus
+                                        style={{
+                                            width: "100%",
+                                            padding: "12px 0",
+                                            border: "none",
+                                            outline: "none",
+                                            fontSize: "0.92rem",
+                                            color: "#0F172A",
+                                            backgroundColor: "transparent"
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        ) : (
+                            <div>
+                                <label style={{
+                                    display: "block",
+                                    fontSize: "0.8rem",
+                                    fontWeight: "700",
+                                    color: "#334155",
+                                    marginBottom: "6px"
+                                }}>
+                                    {isSeller ? "Registered Owner Mobile" : "Registered Mobile Number"}
+                                </label>
+                                <div style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    border: "1.5px solid #CBD5E1",
+                                    borderRadius: "12px",
+                                    padding: "0 12px",
+                                    backgroundColor: "#FFFFFF",
+                                    transition: "border-color 0.2s"
+                                }}>
+                                    <Phone size={18} color="#94A3B8" style={{ marginRight: "10px", flexShrink: 0 }} />
+                                    <span style={{ fontSize: "0.92rem", fontWeight: 600, color: "#64748B", marginRight: "6px" }}>+91</span>
+                                    <input
+                                        type="tel"
+                                        maxLength={10}
+                                        value={phone}
+                                        onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+                                        placeholder="10-digit mobile number"
+                                        required
+                                        autoFocus
+                                        style={{
+                                            width: "100%",
+                                            padding: "12px 0",
+                                            border: "none",
+                                            outline: "none",
+                                            fontSize: "0.92rem",
+                                            color: "#0F172A",
+                                            backgroundColor: "transparent"
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        )}
 
                         <button
                             type="submit"
@@ -378,7 +522,7 @@ function ForgotPasswordForm() {
                 {/* STEP 2: Verify OTP & Reset Password Form */}
                 {step === 2 && (
                     <form onSubmit={handleResetPassword} style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
-                        {/* Target email row */}
+                        {/* Target row */}
                         <div style={{
                             display: "flex",
                             alignItems: "center",
@@ -389,7 +533,7 @@ function ForgotPasswordForm() {
                             border: "1px solid #E2E8F0"
                         }}>
                             <span style={{ fontSize: "0.8rem", color: "#475569", fontWeight: "600" }}>
-                                📧 {email}
+                                {method === "email" ? `📧 ${email}` : `📱 +91 ${phone}`}
                             </span>
                             <button
                                 type="button"
@@ -412,7 +556,7 @@ function ForgotPasswordForm() {
                             </button>
                         </div>
 
-                        {/* Test OTP Hint Card */}
+                        {/* OTP Hint Card */}
                         <div style={{
                             backgroundColor: "#EFF6FF",
                             border: "1px solid #BFDBFE",
@@ -425,9 +569,11 @@ function ForgotPasswordForm() {
                             color: "#1E40AF",
                             fontWeight: "600"
                         }}>
-                            <span>📲 SMS Sent:</span>
+                            <span>{method === "email" ? "📧 Email Sent:" : "📲 SMS Sent:"}</span>
                             <span style={{ fontWeight: 500, color: "#1E3A8A" }}>
-                                6-digit OTP sent to your registered mobile (valid 10 mins)
+                                {method === "email" 
+                                    ? "6-digit OTP sent to your registered email (valid 10 mins)"
+                                    : "6-digit OTP sent to your registered mobile (valid 10 mins)"}
                             </span>
                         </div>
 

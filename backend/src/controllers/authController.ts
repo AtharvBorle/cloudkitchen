@@ -8,7 +8,7 @@ import { validateKitchenName } from "@/lib/kitchen-validation";
 import { isGracePeriodExpired, anonymizeUserAccount, restoreAccountIfWithinGracePeriod } from "@/lib/account-deletion";
 import { generate6DigitOtp, setOtp, verifyOtp, consumeOtp, isMasterOtpEnabled, MASTER_OTP } from "@/lib/otpStore";
 import { sendOtpSms } from "@/lib/smsService";
-import { sendSellerApplicationSubmittedEmail, sendPasswordChangedEmail } from "@/lib/emailService";
+import { sendSellerApplicationSubmittedEmail, sendPasswordChangedEmail, sendPasswordResetEmailOtp } from "@/lib/emailService";
 
 export const registerUser = async (req: Request) => {
     const contentType = req.headers.get('content-type') || "";
@@ -534,92 +534,157 @@ export const loginUser = async (req: Request) => {
 };
 
 export const forgotPasswordRequest = async (req: Request) => {
-    const { email, role, phone } = await req.json();
+    const { email, role, phone, identifier, method } = await req.json();
 
-    if (!email && !phone) {
-        throw new ApiError("Email or phone number is required.", 400);
+    const rawInput = (identifier || email || phone || "").trim();
+    if (!rawInput) {
+        throw new ApiError("Email or mobile number is required.", 400);
     }
 
-    let normalizedEmail = email ? email.toLowerCase().trim() : "";
-    let user = null;
+    const requestedRole = (role || "").toUpperCase();
+    const isEmailInput = rawInput.includes("@");
+    const chosenMethod = method ? String(method).toLowerCase() : (isEmailInput ? "email" : "phone");
 
-    if (normalizedEmail) {
-        const emailCheck = validateEmail(normalizedEmail);
+    let user = null;
+    let normalizedEmail = "";
+    let phoneDigits = "";
+
+    if (chosenMethod === "email" || isEmailInput) {
+        const emailCheck = validateEmail(rawInput);
         if (!emailCheck.isValid) {
             throw new ApiError(emailCheck.error || "Please enter a valid email address.", 400);
         }
         normalizedEmail = emailCheck.normalizedEmail;
 
-        user = await db.user.findUnique({
-            where: { email: normalizedEmail },
-            include: { sellerProfile: true }
-        });
-    } else if (phone) {
-        const rawDigits = String(phone).replace(/\D/g, "");
-        const phoneDigits = rawDigits.length > 10 ? rawDigits.slice(-10) : rawDigits;
         user = await db.user.findFirst({
-            where: { phone: phoneDigits },
+            where: {
+                email: normalizedEmail,
+                ...(requestedRole ? { role: requestedRole } : {})
+            },
             include: { sellerProfile: true }
         });
-    }
 
-    const requestedRole = (role || "").toUpperCase();
+        if (!user) {
+            user = await db.user.findUnique({
+                where: { email: normalizedEmail },
+                include: { sellerProfile: true }
+            });
+        }
+    } else {
+        const rawDigits = rawInput.replace(/\D/g, "");
+        if (rawDigits.length < 10) {
+            throw new ApiError("Please enter a valid 10-digit mobile number.", 400);
+        }
+        phoneDigits = rawDigits.length > 10 ? rawDigits.slice(-10) : rawDigits;
+
+        user = await db.user.findFirst({
+            where: {
+                OR: [
+                    { phone: phoneDigits },
+                    { phone: `+91${phoneDigits}` },
+                    { phone: `+91 ${phoneDigits}` },
+                    { phone: { contains: phoneDigits } }
+                ],
+                ...(requestedRole ? { role: requestedRole } : {})
+            },
+            include: { sellerProfile: true }
+        });
+
+        if (!user) {
+            user = await db.user.findFirst({
+                where: {
+                    OR: [
+                        { phone: phoneDigits },
+                        { phone: `+91${phoneDigits}` },
+                        { phone: `+91 ${phoneDigits}` },
+                        { phone: { contains: phoneDigits } }
+                    ]
+                },
+                include: { sellerProfile: true }
+            });
+        }
+    }
 
     // If account not found in database:
     if (!user) {
-        if (requestedRole === "SELLER") {
-            throw new ApiError("No seller found with this email ID", 404);
-        } else {
-            throw new ApiError("No user found with this email ID", 404);
-        }
+        const entity = requestedRole === "SELLER" ? "seller" : "user";
+        const medium = chosenMethod === "email" ? "this email ID" : "this mobile number";
+        throw new ApiError(`No ${entity} found with ${medium}`, 404);
     }
 
     // Role Verification & Strict Separation:
     if (requestedRole === "SELLER") {
         if (user.role !== "SELLER") {
-            throw new ApiError("No seller found with this email ID", 403);
+            throw new ApiError("This account is not registered as a Seller/Kitchen account.", 403);
         }
-    } else {
-        // Requested from User/Customer forgot password (role is "USER" or default)
+    } else if (requestedRole === "USER") {
         if (user.role !== "USER") {
-            throw new ApiError("No user found with this email ID", 403);
+            throw new ApiError("This account is registered as a partner/seller. Please use the appropriate portal.", 403);
         }
     }
 
     const masterMode = isMasterOtpEnabled();
     const generatedOtp = masterMode ? MASTER_OTP : generate6DigitOtp();
-    if (user.phone) {
-        const rawDigits = String(user.phone).replace(/\D/g, "");
-        const phoneDigits = rawDigits.length > 10 ? rawDigits.slice(-10) : rawDigits;
-        setOtp(phoneDigits, generatedOtp, "forgot_password");
+
+    if (chosenMethod === "email") {
+        if (!user.email) {
+            throw new ApiError("No email address is linked to this account. Please use mobile number.", 400);
+        }
+        const targetEmail = user.email.toLowerCase().trim();
+        setOtp(targetEmail, generatedOtp, "forgot_password");
+
         if (!masterMode) {
-            // Dispatch SMS via Way2Smart only when master mode is false
-            sendOtpSms(phoneDigits, generatedOtp).catch((smsErr) => {
+            sendPasswordResetEmailOtp({
+                email: user.email,
+                otp: generatedOtp,
+                userName: user.name || (requestedRole === "SELLER" ? "Kitchen Partner" : "Customer"),
+            }).catch((mailErr) => {
+                console.error("[EmailService] Failed to send forgot-password OTP email:", mailErr);
+            });
+        } else {
+            console.log(`[authController] Master OTP active. Suppressing reset email to ${user.email}.`);
+        }
+
+        return {
+            success: true,
+            method: "email",
+            message: `OTP sent successfully to your email (${user.email}). Valid for 10 minutes.`,
+            email: user.email,
+            phone: user.phone,
+        };
+    } else {
+        if (!user.phone) {
+            throw new ApiError("No mobile number is linked to this account. Please use email.", 400);
+        }
+        const cleanUserPhone = user.phone.replace(/\D/g, "").slice(-10);
+        setOtp(cleanUserPhone, generatedOtp, "forgot_password");
+
+        if (!masterMode) {
+            sendOtpSms(cleanUserPhone, generatedOtp).catch((smsErr) => {
                 console.error("[SmsService] Failed to send forgot-password OTP SMS:", smsErr);
             });
         } else {
-            console.log(`[authController] Master OTP mode active (ALLOW_MASTER_OTP=true). Suppressing SMS to ${phoneDigits}.`);
+            console.log(`[authController] Master OTP active. Suppressing reset SMS to ${cleanUserPhone}.`);
         }
-    }
-    if (user.email) {
-        setOtp(user.email, generatedOtp, "forgot_password");
-    }
 
-    const maskedPhone = user.phone ? ` to your registered mobile number ending in ${user.phone.slice(-4)}` : "";
+        const maskedPhone = cleanUserPhone.length >= 4 ? ` ending in ${cleanUserPhone.slice(-4)}` : "";
 
-    return {
-        success: true,
-        message: `OTP sent successfully${maskedPhone}. Valid for 10 minutes.`,
-        email: user.email,
-        phone: user.phone,
-    };
+        return {
+            success: true,
+            method: "phone",
+            message: `OTP sent successfully to your registered mobile number${maskedPhone}. Valid for 10 minutes.`,
+            email: user.email,
+            phone: user.phone,
+        };
+    }
 };
 
 export const resetPasswordWithOtp = async (req: Request) => {
-    const { email, otp, newPassword, confirmPassword, role } = await req.json();
+    const { email, phone, identifier, otp, newPassword, confirmPassword, role } = await req.json();
 
-    if (!email) {
-        throw new ApiError("Email is required.", 400);
+    const rawInput = (identifier || email || phone || "").trim();
+    if (!rawInput) {
+        throw new ApiError("Email or mobile number is required.", 400);
     }
 
     if (!otp) {
@@ -636,47 +701,81 @@ export const resetPasswordWithOtp = async (req: Request) => {
         throw new ApiError("Passwords do not match.", 400);
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
-    const user = await db.user.findUnique({
-        where: { email: normalizedEmail }
-    });
-
     const requestedRole = (role || "").toUpperCase();
 
-    if (!user) {
-        if (requestedRole === "SELLER") {
-            throw new ApiError("No seller found with this email ID", 404);
-        } else {
-            throw new ApiError("No user found with this email ID", 404);
+    let user = null;
+    const isEmailInput = rawInput.includes("@");
+
+    if (isEmailInput) {
+        const normalizedEmail = rawInput.toLowerCase();
+        user = await db.user.findFirst({
+            where: {
+                email: normalizedEmail,
+                ...(requestedRole ? { role: requestedRole } : {})
+            }
+        });
+        if (!user) {
+            user = await db.user.findUnique({ where: { email: normalizedEmail } });
         }
+    } else {
+        const rawDigits = rawInput.replace(/\D/g, "");
+        const phoneDigits = rawDigits.length > 10 ? rawDigits.slice(-10) : rawDigits;
+        user = await db.user.findFirst({
+            where: {
+                OR: [
+                    { phone: phoneDigits },
+                    { phone: `+91${phoneDigits}` },
+                    { phone: `+91 ${phoneDigits}` },
+                    { phone: { contains: phoneDigits } }
+                ],
+                ...(requestedRole ? { role: requestedRole } : {})
+            }
+        });
+        if (!user) {
+            user = await db.user.findFirst({
+                where: {
+                    OR: [
+                        { phone: phoneDigits },
+                        { phone: `+91${phoneDigits}` },
+                        { phone: `+91 ${phoneDigits}` },
+                        { phone: { contains: phoneDigits } }
+                    ]
+                }
+            });
+        }
+    }
+
+    if (!user) {
+        const entity = requestedRole === "SELLER" ? "seller" : "user";
+        throw new ApiError(`No ${entity} found with the provided credentials.`, 404);
     }
 
     if (requestedRole === "SELLER") {
         if (user.role !== "SELLER") {
-            throw new ApiError("No seller found with this email ID", 403);
+            throw new ApiError("This account is not a Seller account.", 403);
         }
-    } else {
+    } else if (requestedRole === "USER") {
         if (user.role !== "USER") {
-            throw new ApiError("No user found with this email ID", 403);
+            throw new ApiError("Access denied. Please reset password from the appropriate portal.", 403);
         }
     }
 
     // Verify OTP against otpStore (by phone or email)
     const cleanUserPhone = user.phone ? String(user.phone).replace(/\D/g, "").slice(-10) : "";
-    const isOtpValid = (user.email && verifyOtp(user.email, trimmedOtp, "forgot_password")) ||
+    const isOtpValid = (user.email && verifyOtp(user.email.toLowerCase().trim(), trimmedOtp, "forgot_password")) ||
                        (cleanUserPhone && verifyOtp(cleanUserPhone, trimmedOtp, "forgot_password"));
 
     if (!isOtpValid) {
-        throw new ApiError("Invalid or expired OTP. Please enter the valid 6-digit OTP received via SMS.", 400);
+        throw new ApiError("Invalid or expired OTP. Please verify the 6-digit OTP code and try again.", 400);
     }
 
-    if (user.email) consumeOtp(user.email, "forgot_password");
+    if (user.email) consumeOtp(user.email.toLowerCase().trim(), "forgot_password");
     if (cleanUserPhone) consumeOtp(cleanUserPhone, "forgot_password");
 
     const passwordHash = await bcrypt.hash(newPassword, 10);
 
     await db.user.update({
-        where: { email: normalizedEmail },
+        where: { id: user.id },
         data: { passwordHash }
     });
 

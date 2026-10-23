@@ -376,7 +376,7 @@ export async function sendSellerApplicationSubmittedEmail({
     </div>
 
     <div style="text-align: center; margin-top: 24px;">
-      <a href="${APP_URL}/seller/register/status?trackingId=${trackingId}" class="btn">Track Application Status</a>
+      <a href="${APP_URL}/seller/login" class="btn">Track Application Status</a>
     </div>
   `;
 
@@ -2115,4 +2115,57 @@ export async function sendVerificationEmailOtp({
     html,
   });
 }
+
+// ==============================================================================
+// 10. 🔐 PASSWORD RESET EMAIL OTP
+// ==============================================================================
+
+export interface SendPasswordResetEmailOtpOptions {
+  email: string;
+  otp: string;
+  userName?: string;
+}
+
+export async function sendPasswordResetEmailOtp({
+  email,
+  otp,
+  userName = "Valued Partner",
+}: SendPasswordResetEmailOtpOptions): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const content = `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1e293b; line-height: 1.6;">
+      <h2 style="color: #0f172a; font-size: 20px; font-weight: 700; margin-top: 0; margin-bottom: 12px;">
+        Password Reset Verification
+      </h2>
+      <p style="font-size: 14px; margin-bottom: 20px; color: #475569;">
+        Hello <strong>${userName}</strong>,<br/>
+        We received a request to reset your password for your <strong>Neo Cloud Bites</strong> account. Please use the 6-digit verification code below to reset your password:
+      </p>
+
+      <div style="background-color: #FFF9F4; border: 2px dashed #FF5500; border-radius: 12px; padding: 22px; text-align: center; margin: 24px 0;">
+        <span style="font-size: 34px; font-weight: 800; letter-spacing: 8px; color: #FF5500; display: inline-block;">
+          ${otp}
+        </span>
+        <div style="font-size: 12.5px; color: #64748B; margin-top: 8px; font-weight: 500;">
+          Valid for <strong>10 minutes</strong>. Do not share this code with anyone.
+        </div>
+      </div>
+
+      <p style="font-size: 13px; color: #64748B; margin-top: 24px; line-height: 1.5;">
+        If you did not request a password reset, you can safely ignore this email. Your password will remain unchanged.
+      </p>
+    </div>
+  `;
+
+  const html = wrapHtmlEmail("Password Reset - Neo Cloud Bites", content, {
+    headerColor: "orange",
+    headerSubtitle: "Account Security & Recovery",
+  });
+
+  return sendEmail({
+    to: email,
+    subject: `🔐 Your Password Reset Code: ${otp} - Neo Cloud Bites`,
+    html,
+  });
+}
+
 

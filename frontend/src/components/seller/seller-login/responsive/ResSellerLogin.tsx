@@ -39,7 +39,7 @@ export const ResSellerLogin: React.FC<ResSellerLoginProps> = ({
     }
   }, [authStatus, session, router, searchParams]);
 
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -55,11 +55,29 @@ export const ResSellerLogin: React.FC<ResSellerLoginProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const emailValidation = validateEmail(email);
-    if (!emailValidation.isValid) {
-      setErrorMessage(emailValidation.error || "Please enter a valid email address.");
+    const trimmed = identifier.trim();
+    if (!trimmed) {
+      setErrorMessage("Please enter your email or mobile number.");
       return;
     }
+
+    let normalizedIdentifier = trimmed;
+    if (trimmed.includes("@")) {
+      const emailValidation = validateEmail(trimmed);
+      if (!emailValidation.isValid) {
+        setErrorMessage(emailValidation.error || "Please enter a valid email address.");
+        return;
+      }
+      normalizedIdentifier = emailValidation.normalizedEmail;
+    } else {
+      const digits = trimmed.replace(/\D/g, "");
+      if (digits.length < 10) {
+        setErrorMessage("Please enter a valid 10-digit mobile number or email address.");
+        return;
+      }
+      normalizedIdentifier = digits.length > 10 ? digits.slice(-10) : digits;
+    }
+
     if (!password) {
       setErrorMessage("Password is required.");
       return;
@@ -72,7 +90,7 @@ export const ResSellerLogin: React.FC<ResSellerLoginProps> = ({
       await discardExistingSession();
       const res = await signIn("credentials", {
         redirect: false,
-        email: emailValidation.normalizedEmail,
+        email: normalizedIdentifier,
         password: password.trim(),
         loginType: "SELLER",
       });
@@ -87,7 +105,7 @@ export const ResSellerLogin: React.FC<ResSellerLoginProps> = ({
         } else if (res.error.includes("ROLE_MISMATCH")) {
           setErrorMessage("Access denied. This portal is strictly for Seller/Owner accounts.");
         } else {
-          setErrorMessage("Invalid credentials. Please verify your email and password.");
+          setErrorMessage("Invalid credentials. Please verify your email/mobile number and password.");
         }
       } else {
         if (onSuccess) {
@@ -199,22 +217,22 @@ export const ResSellerLogin: React.FC<ResSellerLoginProps> = ({
             </div>
           )}
 
-          {/* Owner Email Field */}
+          {/* Owner Email / Mobile Number Field */}
           <div className={styles.fieldGroup}>
             <label htmlFor="resOwnerEmail" className={styles.label}>
-              Owner Email
+              Owner Email / Mobile Number
             </label>
             <div className={styles.inputWrapper}>
               <Mail size={18} className={styles.fieldIcon} />
               <input
                 id="resOwnerEmail"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="owner@cloudkitchen.com"
+                type="text"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                placeholder="owner@cloudkitchen.com or 10-digit mobile"
                 className={styles.input}
                 required
-                autoComplete="email"
+                autoComplete="username"
               />
             </div>
           </div>
