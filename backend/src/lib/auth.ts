@@ -293,8 +293,8 @@ export const getAuthSession = async () => {
 
         if (authHeader && authHeader.startsWith("Bearer ")) {
             const token = authHeader.split(" ")[1];
-            const secret = process.env.NEXTAUTH_SECRET || "fallback_secret_for_development_only";
-            const decoded = jwt.verify(token, secret) as any;
+            const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "fallback_secret_for_development_only";
+            const decoded = jwt.verify(token, secret, { algorithms: ["HS256"] }) as any;
             if (decoded && decoded.id) {
                 const dbUser = await db.user.findUnique({
                     where: { id: decoded.id },

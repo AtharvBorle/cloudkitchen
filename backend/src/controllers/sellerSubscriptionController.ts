@@ -270,13 +270,18 @@ export const verifySubscriptionPayment = async (req: Request) => {
         throw new ApiError("Payment verification details are incomplete.", 400);
     }
 
-    const secret = process.env.RAZORPAY_KEY_SECRET || "";
+    const secret = process.env.RAZORPAY_KEY_SECRET;
+    if (!secret) {
+        throw new ApiError("Payment gateway configuration error.", 500);
+    }
     const expectedSignature = crypto
         .createHmac("sha256", secret)
         .update(razorpay_order_id + "|" + razorpay_payment_id)
         .digest("hex");
 
-    if (expectedSignature !== razorpay_signature) {
+    const expectedBuf = Buffer.from(expectedSignature, "hex");
+    const receivedBuf = Buffer.from(razorpay_signature, "hex");
+    if (expectedBuf.length !== receivedBuf.length || !crypto.timingSafeEqual(expectedBuf, receivedBuf)) {
         throw new ApiError("Payment signature verification failed. Please try again.", 400);
     }
 

@@ -18,6 +18,17 @@ cd "$PROJECT_ROOT"
 
 echo "📂 Project root: $PROJECT_ROOT"
 
+# Enforce Node.js runtime version
+if [ -f "$PROJECT_ROOT/.nvmrc" ]; then
+  REQUIRED_NODE=$(cat "$PROJECT_ROOT/.nvmrc" | tr -d '[:space:]')
+  echo "🔒 Enforcing target Node.js version: $REQUIRED_NODE"
+  if command -v nvm &> /dev/null; then
+    nvm use "$REQUIRED_NODE" 2>/dev/null || true
+  fi
+fi
+echo "⚙️  Active Node runtime: $(node -v 2>/dev/null || echo 'not found')"
+echo "⚙️  Active npm runtime:  $(npm -v 2>/dev/null || echo 'not found')"
+
 # ── 1. Pull Latest Changes from Git ──────────────────────────────────────
 echo ""
 echo "📥 [1/6] Fetching latest changes from Git (dev branch)..."

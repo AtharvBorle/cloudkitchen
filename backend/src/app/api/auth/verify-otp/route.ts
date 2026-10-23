@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { verifyOtp, consumeOtp, isMasterOtpEnabled, setMasterOtpDbOverride } from "@/lib/otpStore";
+import { getClientIp, rateLimit, createRateLimitResponse } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
   try {
+    const clientIp = getClientIp(req);
+    const ipLimit = rateLimit(clientIp, { keyPrefix: "verify_otp_ip", limit: 15, windowSeconds: 600 });
+    if (!ipLimit.allowed) {
+      return createRateLimitResponse(ipLimit);
+    }
+
     const body = await req.json();
     const { phone, email, otp, purpose = "signup" } = body;
 

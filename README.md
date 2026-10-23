@@ -1,36 +1,82 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Neo Cloud Bites (Cloud Kitchen Platform)
 
-## Getting Started
+Next.js monorepo featuring customer ordering, seller kitchens, delivery rider dashboards, admin operations, and high-performance transactional services.
 
-First, run the development server:
+## Runtime & Engine Requirements
+
+In accordance with official Node.js security advisories, this application requires a supported, patched LTS runtime:
+
+- **Recommended LTS**: **Node.js 24.22.1**
+- **Supported LTS**: **Node.js 22.23.4**
+- **npm**: `>= 10.0.0`
+
+Use `nvm` or your preferred Node version manager:
 
 ```bash
-npm run dev
+nvm use
 # or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+nvm install 24.22.1 && nvm use 24.22.1
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Security & Hardening Configuration
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. **Authentication & Authorization**:
+   - RBAC enforced across User, Seller, Delivery, Agent, and Superadmin roles.
+   - Cryptographically random 6-digit OTP generation using Node.js `crypto.randomInt()`.
+   - Timing-safe constant-time string comparison (`crypto.timingSafeEqual`) for OTP and payment webhook signatures.
+   - NextAuth session tokens secured with `httpOnly`, `sameSite`, and `secure` cookies in production.
+   - Rate limiting on login, registration, password reset, and OTP generation endpoints.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+2. **Web Security & Headers**:
+   - `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`
+   - `X-Frame-Options: SAMEORIGIN` (prevents clickjacking)
+   - `X-Content-Type-Options: nosniff` (prevents MIME sniffing)
+   - `Referrer-Policy: strict-origin-when-cross-origin`
+   - `Permissions-Policy: camera=(), microphone=(), geolocation=(self)`
+   - `poweredByHeader: false` (removes Next.js signature)
 
-## Learn More
+3. **CORS**:
+   - Explicit trusted origin allowlist in `backend/src/lib/cors.ts`. Untrusted origins do not receive credentialed reflection.
 
-To learn more about Next.js, take a look at the following resources:
+4. **File Uploads**:
+   - Size limit: 10MB maximum.
+   - Allowed MIME types strictly allowlisted (JPEG, PNG, WEBP, GIF, PDF, MP4).
+   - Magic number byte verification validates raw file headers against declared MIME types.
+   - Strict canonical path resolution and sandbox CSP prevents path traversal and stored XSS.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Development Setup
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. **Install dependencies**:
+   ```bash
+   npm run install:all
+   ```
 
-## Deploy on Vercel
+2. **Environment configuration**:
+   - Copy `backend/.env.example` to `backend/.env` and provide real credentials.
+   - Copy `frontend/.env.example` to `frontend/.env`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+3. **Start development servers**:
+   - Frontend: `npm run dev:frontend` (http://localhost:3000)
+   - Backend: `npm run dev:backend` (http://localhost:5000)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Production Deployment & Verification
+
+Run the automated dev deployment script:
+```bash
+bash scripts/deploy-dev.sh
+```
+
+Or verify builds manually:
+```bash
+# Type checks
+node backend/node_modules/typescript/bin/tsc -p backend/tsconfig.json --noEmit
+node frontend/node_modules/typescript/bin/tsc -p frontend/tsconfig.json --noEmit
+
+# Production dependency audit
+npm audit --prefix backend --omit=dev
+npm audit --prefix frontend --omit=dev
+
+# Production build
+npm run build:backend
+npm run build:frontend
+```

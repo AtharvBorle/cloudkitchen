@@ -1,8 +1,11 @@
+import crypto from "crypto";
+
 /**
  * ==============================================================================
- * 🔐 In-Memory OTP Store & Validator
+ * 🔐 Cryptographically Secure In-Memory OTP Store & Validator
  * ==============================================================================
- * Manages OTP generation, time-to-live (10 minutes), rate limiting, and verification.
+ * Manages secure OTP generation, time-to-live (10 minutes), attempt limiting,
+ * and constant-time comparison to prevent timing attacks.
  */
 
 interface StoredOtp {
@@ -25,7 +28,7 @@ if (typeof setInterval !== "undefined") {
   }, 5 * 60 * 1000).unref();
 }
 
-export const OTP_TTL_MS = 10 * 60 * 1000; // 10 minutes (matches DLT message)
+export const OTP_TTL_MS = 10 * 60 * 1000; // 10 minutes
 export const MASTER_OTP = "123456";
 
 function normalizeKey(identifier: string, purpose: string): string {
@@ -39,8 +42,8 @@ function normalizeKey(identifier: string, purpose: string): string {
 }
 
 export function generate6DigitOtp(): string {
-  // Generate random 6-digit OTP
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  // Use cryptographically secure pseudorandom integer generation
+  return crypto.randomInt(100000, 1000000).toString();
 }
 
 export function setOtp(identifier: string, otp: string, purpose: string = "login"): void {
@@ -70,6 +73,11 @@ export function setMasterOtpDbOverride(enabled: boolean | null): void {
 }
 
 export function isMasterOtpEnabled(): boolean {
+  // In production, block master OTP unless explicitly authorized by ALLOW_MASTER_OTP_IN_PRODUCTION
+  if (process.env.NODE_ENV === "production" && process.env.ALLOW_MASTER_OTP_IN_PRODUCTION !== "true") {
+    return false;
+  }
+
   if (dbMasterOtpOverride !== null) {
     return dbMasterOtpOverride;
   }
@@ -90,20 +98,27 @@ export function isMasterOtpEnabled(): boolean {
   );
 }
 
+function timingSafeStringEqual(a: string, b: string): boolean {
+  if (typeof a !== "string" || typeof b !== "string") return false;
+  const bufA = Buffer.from(a, "utf-8");
+  const bufB = Buffer.from(b, "utf-8");
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
 export function verifyOtp(identifier: string, inputOtp: string, purpose: string = "login"): boolean {
   const trimmed = String(inputOtp || "").trim();
-  if (!trimmed) return false;
+  if (!trimmed || trimmed.length !== 6) return false;
 
   const allowMaster = isMasterOtpEnabled();
 
   // 1. When ALLOW_MASTER_OTP is true:
-  // ONLY master OTP ("123456") is accepted. Actual SMS OTP sending is stopped.
   if (allowMaster) {
-    return trimmed === MASTER_OTP;
+    return timingSafeStringEqual(trimmed, MASTER_OTP);
   }
 
   // 2. When ALLOW_MASTER_OTP is false:
-  // Master OTP is strictly rejected. Only the real OTP sent via SMS can match.
+  // Master OTP is strictly rejected. Only the real OTP sent via SMS/Email matches.
   const key = normalizeKey(identifier, purpose);
   const entry = otpCache.get(key);
   if (!entry) return false;
@@ -119,7 +134,11 @@ export function verifyOtp(identifier: string, inputOtp: string, purpose: string 
     return false;
   }
 
-  return entry.otp === trimmed;
+  const isValid = timingSafeStringEqual(entry.otp, trimmed);
+  if (isValid) {
+    otpCache.delete(key);
+  }
+  return isValid;
 }
 
 export function consumeOtp(identifier: string, purpose: string = "login"): void {
