@@ -58,7 +58,7 @@ function getInitialDietPreference(): "all" | "veg" | "pure_veg" | "non_veg" | "v
 
 export default function Home() {
   const { isRoomEnabled } = useRoomModule();
-  const [selectedCategory, setSelectedCategory] = useState("food");
+  const [selectedCategory, setSelectedCategory] = useState("");
   const [activeFilters, setActiveFilters] = useState<ActiveHomeFilters>(() => {
     let initialDiet: "all" | "veg" | "pure_veg" | "non_veg" | "vegan" | "jain" = "veg";
     let initialPriceTier: "all" | "under-150" | "150-300" | "300-plus" | null = null;
@@ -216,7 +216,7 @@ export default function Home() {
     setHomeSearchQuery(q);
   };
 
-  // Dynamic Categories without fallback
+  // Dynamic Categories without fallback (Food and Mess excluded per requirement)
   const categoryItems = useMemo(() => {
     if (!homeData.categories || homeData.categories.length === 0) return [];
     return homeData.categories
@@ -224,6 +224,10 @@ export default function Home() {
         const idLower = (c.id || "").toLowerCase().trim();
         const nameLower = (c.name || "").toLowerCase().trim();
         return (
+          idLower !== "food" &&
+          nameLower !== "food" &&
+          idLower !== "mess" &&
+          nameLower !== "mess" &&
           idLower !== "rooms" &&
           idLower !== "room" &&
           nameLower !== "rooms" &&
@@ -245,7 +249,15 @@ export default function Home() {
   const availableCuisines = useMemo(() => {
     const set = new Set<string>();
     homeData.categories.forEach((c) => {
-      if (c.id !== "food" && c.id !== "rooms" && c.name) {
+      const lower = (c.name || "").toLowerCase().trim();
+      if (
+        c.id !== "food" &&
+        lower !== "food" &&
+        c.id !== "mess" &&
+        lower !== "mess" &&
+        c.id !== "rooms" &&
+        c.name
+      ) {
         set.add(c.name);
       }
     });
@@ -824,7 +836,7 @@ export default function Home() {
         {categoryItems.length > 0 && (
           <CategoryBar
             activeCategoryId={selectedCategory}
-            onSelectCategory={(id) => setSelectedCategory(id)}
+            onSelectCategory={(id) => setSelectedCategory(id === selectedCategory ? "" : id)}
             items={categoryItems}
           />
         )}

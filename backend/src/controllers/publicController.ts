@@ -23,7 +23,13 @@ export const getPublicCategories = unstable_cache(
             );
         }
 
-        const foodCategories = await db.foodCategory.findMany({
+        // Exclude general "Food" and business category "Mess" from category list
+        categories = categories.filter(c => 
+            c.name.toLowerCase() !== 'food' && 
+            c.name.toLowerCase() !== 'mess'
+        );
+
+        let foodCategories = await db.foodCategory.findMany({
             include: {
                 categories: true,
                 subCategories: {
@@ -32,6 +38,12 @@ export const getPublicCategories = unstable_cache(
             },
             orderBy: { name: 'asc' }
         });
+
+        // Exclude general "Food" and business category "Mess" from food categories
+        foodCategories = foodCategories.filter(fc => 
+            fc.name.toLowerCase() !== 'food' && 
+            fc.name.toLowerCase() !== 'mess'
+        );
 
         return { categories, foodCategories, isRoomEnabled };
     },
@@ -71,9 +83,13 @@ export const getPublicExploreData = unstable_cache(
             }
         });
 
-        const foodCategories = await db.foodCategory.findMany({
+        let foodCategories = await db.foodCategory.findMany({
             orderBy: { name: 'asc' }
         });
+        foodCategories = foodCategories.filter(fc => 
+            fc.name.toLowerCase() !== 'food' && 
+            fc.name.toLowerCase() !== 'mess'
+        );
 
         // Compute dish sales and popularity metric from all customer orders
         const nonCancelledOrders = await db.order.findMany({
