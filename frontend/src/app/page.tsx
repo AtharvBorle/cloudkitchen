@@ -975,6 +975,14 @@ export default function Home() {
           foodItems={homeData.foodItems}
           allKitchens={homeData.kitchens}
           isLoading={homeData.isLoading}
+          foodCategories={homeData.foodCategories}
+          selectedCuisines={activeFilters.cuisines || []}
+          onCuisinesChange={(newCuisines) => {
+            setActiveFilters((prev) => ({
+              ...prev,
+              cuisines: newCuisines,
+            }));
+          }}
           selectedDietary={
             (activeFilters.dietary as string) === "pure_veg"
               ? ["pure_veg"]

@@ -431,6 +431,45 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [activeFilterTab, setActiveFilterTab] = useState<"cuisines" | "price">("cuisines");
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
+  const [navCategories, setNavCategories] = useState<Array<{ id: string; label: string; count?: number }>>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetch("/api/public/categories")
+      .then((res) => res.json())
+      .then((data) => {
+        if (!isMounted) return;
+        const rawFcs = data?.foodCategories || data?.categories || [];
+        if (Array.isArray(rawFcs) && rawFcs.length > 0) {
+          const list: Array<{ id: string; label: string }> = [];
+          rawFcs.forEach((fc: any) => {
+            const name = (fc.name || "").trim();
+            const lower = name.toLowerCase();
+            if (name && lower !== "food" && lower !== "mess") {
+              const cap = name.charAt(0).toUpperCase() + name.slice(1);
+              list.push({ id: cap, label: cap });
+              if (Array.isArray(fc.subCategories)) {
+                fc.subCategories.forEach((sc: any) => {
+                  const sName = (sc.name || "").trim();
+                  const sLower = sName.toLowerCase();
+                  if (sName && sLower !== "food" && sLower !== "mess") {
+                    const sCap = sName.charAt(0).toUpperCase() + sName.slice(1);
+                    list.push({ id: sCap, label: sCap });
+                  }
+                });
+              }
+            }
+          });
+          if (list.length > 0) {
+            setNavCategories(list);
+          }
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, []);
   const [selectedDietary, setSelectedDietary] = useState<string[]>([]);
   const [selectedPrice, setSelectedPrice] = useState<string>("");
 
@@ -1531,7 +1570,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               {activeFilterTab === "cuisines" && (
                 <div className={styles.filterSection}>
                   <div className={styles.checkboxList}>
-                    {FILTER_CUISINES.map((item) => {
+                    {(navCategories.length > 0 ? navCategories : FILTER_CUISINES).map((item) => {
                       const isChecked = selectedCuisines.includes(item.id);
                       return (
                         <div
@@ -1557,7 +1596,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                               {item.label}
                             </span>
                           </div>
-                          <span className={styles.checkboxCount}>{item.count}</span>
+                          {(item as any).count !== undefined && <span className={styles.checkboxCount}>{(item as any).count}</span>}
                         </div>
                       );
                     })}
