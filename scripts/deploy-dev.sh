@@ -36,7 +36,9 @@ if [ -d ".git" ]; then
   git checkout dev 2>/dev/null || true
   CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "dev")
   echo "   Active branch: $CURRENT_BRANCH"
-  git pull origin dev || echo "   Git pull completed or already up to date."
+  git fetch origin dev
+  git reset --hard origin/dev
+  echo "   ✅ Synced with origin/dev at $(git rev-parse --short HEAD)"
 else
   echo "   ℹ️  No .git directory found at root; skipping git pull."
 fi
