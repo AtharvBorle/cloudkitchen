@@ -1,7 +1,8 @@
 // ==============================================================================
 // 🚀 Neo Cloud Bites - PM2 Ecosystem Production Configuration
-// Manages: Frontend (Next.js :3000) + Backend API (Next.js :3001)
+// Manages: Frontend (Next.js :3002) + Backend API (Next.js :3003)
 // Targets: neocloudbites.com (Frontend) & api.neocloudbites.com (Backend API)
+// Note: Uses ports 3002 and 3003 so it never clashes with dev processes on 3000 and 3001
 // ==============================================================================
 
 module.exports = {
@@ -14,7 +15,7 @@ module.exports = {
       args: "start -H 0.0.0.0",
       env: {
         NODE_ENV: "production",
-        PORT: process.env.BACKEND_PORT || 3001,
+        PORT: process.env.BACKEND_PORT || 3003,
       },
       watch: false,
       max_memory_restart: "1G",
@@ -34,7 +35,7 @@ module.exports = {
       args: "start -H 0.0.0.0",
       env: {
         NODE_ENV: "production",
-        PORT: process.env.FRONTEND_PORT || 3000,
+        PORT: process.env.FRONTEND_PORT || 3002,
       },
       watch: false,
       max_memory_restart: "1G",
