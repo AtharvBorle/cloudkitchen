@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { Star, Check } from "lucide-react";
+import { Star, Check, ChevronDown } from "lucide-react";
 import Link from "next/link";
 
-import { isKitchenMatchingDiet, isNonVegDish } from "@/lib/dietary-filter";
+import { isKitchenMatchingDiet, isNonVegDish, isKitchenServingCuisine } from "@/lib/dietary-filter";
 
 export interface PlaceCardData {
   id: string;
@@ -49,7 +49,10 @@ function kitchenMatchesCuisine(
   cuisineId: string,
   foodItems: Array<any> = []
 ): boolean {
-  const keywords = CUISINE_KEYWORDS[cuisineId] || [cuisineId];
+  if (isKitchenServingCuisine(cuisineId, kitchen, foodItems)) {
+    return true;
+  }
+  const keywords = CUISINE_KEYWORDS[cuisineId.toLowerCase().trim()] || [cuisineId.toLowerCase().trim()];
   const kText = `${kitchen.name || ""} ${kitchen.category || ""}`.toLowerCase();
 
   // 1. Direct kitchen category / name keyword match
@@ -189,6 +192,7 @@ interface PropertiesProps {
     name: string;
     price?: number;
     categoryName?: string;
+    subCategoryName?: string | null;
     description?: string;
     sellerId?: string;
     sellerTrackingId?: string;
@@ -198,6 +202,18 @@ interface PropertiesProps {
   isLoading?: boolean;
   selectedDietary?: string[];
   onDietaryChange?: (dietary: string[]) => void;
+  foodCategories?: Array<{
+    id: string;
+    name: string;
+    imageUrl?: string | null;
+    subCategories?: Array<{
+      id: string;
+      name: string;
+      imageUrl?: string | null;
+    }>;
+  }>;
+  selectedCuisines?: string[];
+  onCuisinesChange?: (cuisines: string[]) => void;
 }
 
 export default function Properties({
@@ -207,8 +223,11 @@ export default function Properties({
   isLoading = false,
   selectedDietary: controlledDietary,
   onDietaryChange,
+  foodCategories = [],
+  selectedCuisines: controlledCuisines,
+  onCuisinesChange,
 }: PropertiesProps) {
-  const [selectedCuisines, setSelectedCuisines] = useState<string[]>(() => {
+  const [internalSelectedCuisines, setInternalSelectedCuisines] = useState<string[]>(() => {
     if (typeof window !== "undefined") {
       try {
         const stored = sessionStorage.getItem("cloudkitchen_selected_cuisines") || localStorage.getItem("cloudkitchen_selected_cuisines");
@@ -289,6 +308,8 @@ export default function Properties({
   });
 
   const selectedDietary = controlledDietary !== undefined ? controlledDietary : internalSelectedDietary;
+  const selectedCuisines = controlledCuisines !== undefined ? controlledCuisines : internalSelectedCuisines;
+  const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
 
   // Persist selected cuisines across session and back-navigation
   useEffect(() => {
@@ -380,18 +401,71 @@ export default function Properties({
   const allPlacesSource = allKitchens && allKitchens.length > 0 ? allKitchens : basePlaces;
 
   // Compute dynamic cuisine counts from available places & dishes
-  const dynamicCuisines = React.useMemo(() => {
-    const cuisinePool = basePlaces.length > 0 ? basePlaces : allPlacesSource;
-    return CUISINES.map((c) => {
-      const matchCount = cuisinePool.filter((p) =>
-        kitchenMatchesCuisine(p, c.id, foodItems)
-      ).length;
-      return {
-        ...c,
-        count: matchCount,
-      };
+  // Structure categories and subcategories from DB foodCategories or foodItems
+  const displayCategories = React.useMemo(() => {
+    if (foodCategories && foodCategories.length > 0) {
+      return foodCategories
+        .filter((fc) => {
+          const lower = (fc.name || "").toLowerCase().trim();
+          return lower && lower !== "food" && lower !== "mess";
+        })
+        .map((fc) => {
+          const cleanSubs = (fc.subCategories || [])
+            .filter((sc) => {
+              const lower = (sc.name || "").toLowerCase().trim();
+              return lower && lower !== "food" && lower !== "mess";
+            })
+            .map((sc) => ({
+              id: sc.id || sc.name,
+              name: sc.name.trim().charAt(0).toUpperCase() + sc.name.trim().slice(1),
+            }));
+
+          return {
+            id: fc.id || fc.name,
+            name: fc.name.trim().charAt(0).toUpperCase() + fc.name.trim().slice(1),
+            subCategories: cleanSubs,
+          };
+        });
+    }
+
+    const catMap = new Map<string, Set<string>>();
+    (foodItems || []).forEach((f: any) => {
+      const cName = (f.categoryName || "").trim();
+      const cLower = cName.toLowerCase();
+      if (cName && cLower !== "food" && cLower !== "mess") {
+        const formattedCat = cName.charAt(0).toUpperCase() + cName.slice(1);
+        if (!catMap.has(formattedCat)) {
+          catMap.set(formattedCat, new Set<string>());
+        }
+        const sName = (f.subCategoryName || "").trim();
+        const sLower = sName.toLowerCase();
+        if (sName && sLower !== "food" && sLower !== "mess") {
+          const formattedSub = sName.charAt(0).toUpperCase() + sName.slice(1);
+          catMap.get(formattedCat)!.add(formattedSub);
+        }
+      }
     });
-  }, [basePlaces, allPlacesSource, foodItems]);
+
+    if (catMap.size > 0) {
+      return Array.from(catMap.entries()).map(([catName, subs]) => ({
+        id: catName.toLowerCase(),
+        name: catName,
+        subCategories: Array.from(subs).map((subName) => ({
+          id: subName.toLowerCase(),
+          name: subName,
+        })),
+      }));
+    }
+
+    return [];
+  }, [foodCategories, foodItems]);
+
+  const dynamicCuisines = React.useMemo(() => {
+    return displayCategories.map((c) => ({
+      id: c.name,
+      label: c.name,
+    }));
+  }, [displayCategories]);
 
   // Compute dynamic dietary counts from all kitchens (filtered by cuisine/price, not dietary) so counts don't collapse to 0 when toggling a diet
   const dynamicDietary = React.useMemo(() => {
@@ -453,9 +527,11 @@ export default function Properties({
   const displayPlaces = filteredPlaces;
 
   const toggleCuisine = (id: string) => {
-    setSelectedCuisines((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
+    const next = selectedCuisines.includes(id)
+      ? selectedCuisines.filter((item) => item !== id)
+      : [...selectedCuisines, id];
+    setInternalSelectedCuisines(next);
+    onCuisinesChange?.(next);
   };
 
   const toggleDietary = (id: string) => {
@@ -498,7 +574,8 @@ export default function Properties({
   };
 
   const handleClearAll = () => {
-    setSelectedCuisines([]);
+    setInternalSelectedCuisines([]);
+    onCuisinesChange?.([]);
     setInternalSelectedDietary([]);
     onDietaryChange?.([]);
     setMaxPrice(2500);
@@ -690,69 +767,205 @@ export default function Properties({
             </button>
           </div>
 
-          {/* Section 1: Cuisines */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-            <h4
+          {/* Section 1: Cuisines & Categories */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <h4
+                style={{
+                  fontSize: "16px",
+                  fontWeight: "700",
+                  color: "#0F172A",
+                  margin: 0,
+                  fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+                }}
+              >
+                Cuisines & Categories
+              </h4>
+              {selectedCuisines.length > 0 && (
+                <span style={{ fontSize: "12px", color: "#FF6B00", fontWeight: "600" }}>
+                  {selectedCuisines.length} selected
+                </span>
+              )}
+            </div>
+
+            <div
+              className="properties-cuisines-scroll-block"
               style={{
-                fontSize: "16px",
-                fontWeight: "700",
-                color: "#0F172A",
-                margin: 0,
-                fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+                display: "flex",
+                flexDirection: "column",
+                gap: "8px",
+                maxHeight: "260px",
+                overflowY: "auto",
+                paddingRight: "6px",
+                scrollbarWidth: "thin",
+                scrollbarColor: "#CBD5E1 #F8FAFC",
               }}
             >
-              Cuisines
-            </h4>
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {dynamicCuisines.map((item) => {
-                const isChecked = selectedCuisines.includes(item.id);
+              {displayCategories.map((cat) => {
+                const isCatChecked = selectedCuisines.includes(cat.name);
+                const hasSubs = cat.subCategories && cat.subCategories.length > 0;
+                const isExpanded = collapsedCategories[cat.id] !== true;
+
                 return (
-                  <div
-                    key={item.id}
-                    onClick={() => toggleCuisine(item.id)}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      cursor: "pointer",
-                      userSelect: "none",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      {/* Custom Checkbox */}
+                  <div key={cat.id} style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    {/* Parent Category Row */}
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        userSelect: "none",
+                      }}
+                    >
                       <div
+                        onClick={() => toggleCuisine(cat.name)}
                         style={{
-                          width: "18px",
-                          height: "18px",
-                          borderRadius: "5px",
-                          border: isChecked
-                            ? "1.5px solid #FF6B00"
-                            : "1.5px solid #94A3B8",
-                          backgroundColor: isChecked ? "#FF6B00" : "#FFFFFF",
                           display: "flex",
                           alignItems: "center",
-                          justifyContent: "center",
-                          transition: "all 0.15s ease",
-                          boxSizing: "border-box",
+                          gap: "10px",
+                          cursor: "pointer",
+                          flex: 1,
                         }}
                       >
-                        {isChecked && (
-                          <Check size={13} color="#FFFFFF" strokeWidth={3} />
-                        )}
+                        {/* Custom Checkbox */}
+                        <div
+                          style={{
+                            width: "18px",
+                            height: "18px",
+                            borderRadius: "5px",
+                            border: isCatChecked
+                              ? "1.5px solid #FF6B00"
+                              : "1.5px solid #94A3B8",
+                            backgroundColor: isCatChecked ? "#FF6B00" : "#FFFFFF",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            transition: "all 0.15s ease",
+                            boxSizing: "border-box",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {isCatChecked && (
+                            <Check size={13} color="#FFFFFF" strokeWidth={3} />
+                          )}
+                        </div>
+                        <span
+                          style={{
+                            fontSize: "14px",
+                            color: isCatChecked ? "#0F172A" : "#475569",
+                            fontWeight: isCatChecked ? "600" : "400",
+                            fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+                          }}
+                        >
+                          {cat.name}
+                        </span>
                       </div>
-                      <span
+
+                      {hasSubs && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setCollapsedCategories((prev) => ({
+                              ...prev,
+                              [cat.id]: !prev[cat.id],
+                            }));
+                          }}
+                          style={{
+                            background: "transparent",
+                            border: "none",
+                            cursor: "pointer",
+                            padding: "4px",
+                            color: "#94A3B8",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                          title={isExpanded ? "Collapse subcategories" : "Expand subcategories"}
+                        >
+                          <ChevronDown
+                            size={14}
+                            style={{
+                              transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                              transition: "transform 0.2s ease",
+                            }}
+                          />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Subcategories (if expanded) */}
+                    {hasSubs && isExpanded && (
+                      <div
                         style={{
-                          fontSize: "14px",
-                          color: isChecked ? "#0F172A" : "#475569",
-                          fontWeight: isChecked ? "500" : "400",
-                          fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "6px",
+                          paddingLeft: "18px",
+                          marginLeft: "8px",
+                          borderLeft: "2px solid #F1F5F9",
                         }}
                       >
-                        {item.label}
-                      </span>
-                    </div>
+                        {cat.subCategories!.map((sub) => {
+                          const isSubChecked = selectedCuisines.includes(sub.name);
+                          return (
+                            <div
+                              key={sub.id}
+                              onClick={() => toggleCuisine(sub.name)}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "8px",
+                                cursor: "pointer",
+                                userSelect: "none",
+                                padding: "2px 0",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: "15px",
+                                  height: "15px",
+                                  borderRadius: "4px",
+                                  border: isSubChecked
+                                    ? "1.5px solid #FF6B00"
+                                    : "1.5px solid #CBD5E1",
+                                  backgroundColor: isSubChecked ? "#FF6B00" : "#FFFFFF",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  transition: "all 0.15s ease",
+                                  boxSizing: "border-box",
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {isSubChecked && (
+                                  <Check size={11} color="#FFFFFF" strokeWidth={3} />
+                                )}
+                              </div>
+                              <span
+                                style={{
+                                  fontSize: "12.5px",
+                                  color: isSubChecked ? "#FF6B00" : "#64748B",
+                                  fontWeight: isSubChecked ? "600" : "400",
+                                  fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+                                }}
+                              >
+                                {sub.name}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 );
               })}
+
+              {displayCategories.length === 0 && (
+                <div style={{ fontSize: "13px", color: "#94A3B8", padding: "12px 0" }}>
+                  {isLoading ? "Loading categories..." : "No food categories found"}
+                </div>
+              )}
             </div>
           </div>
 
@@ -1330,7 +1543,22 @@ export default function Properties({
           font-family: var(--font-poppins), 'Poppins', sans-serif;
         }
         @media (max-width: 1200px) {
-          .properties-container {
+                  .properties-cuisines-scroll-block::-webkit-scrollbar {
+          width: 5px;
+        }
+        .properties-cuisines-scroll-block::-webkit-scrollbar-track {
+          background: #F8FAFC;
+          border-radius: 4px;
+        }
+        .properties-cuisines-scroll-block::-webkit-scrollbar-thumb {
+          background: #CBD5E1;
+          border-radius: 4px;
+        }
+        .properties-cuisines-scroll-block::-webkit-scrollbar-thumb:hover {
+          background: #94A3B8;
+        }
+
+        .properties-container {
             flex-direction: column !important;
             align-items: center !important;
             height: auto !important;
