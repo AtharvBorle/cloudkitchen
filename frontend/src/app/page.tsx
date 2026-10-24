@@ -720,7 +720,7 @@ export default function Home() {
   // Check if the user's active location is out of range of all registered kitchens
   const isLocationOutOfService = useMemo(() => {
     if (homeData.isLoading) return false;
-    if (!homeData.allKitchens || homeData.allKitchens.length === 0) return false;
+
 
     // Direct deliverability check from useHomeData (calculates radius <= 5km or pincode match)
     if (homeData.isDirectlyDeliverable === false) {
