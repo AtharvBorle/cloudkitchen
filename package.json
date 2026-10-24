@@ -14,6 +14,8 @@
     "build:frontend": "npm run build --prefix frontend",
     "build:backend": "npm run build --prefix backend",
     "start:backend": "npm run start --prefix backend",
-    "db:clean": "npm run db:clean --prefix backend"
+    "db:clean": "npm run db:clean --prefix backend",
+    "deploy:dev": "bash scripts/deploy-dev.sh",
+    "deploy:prod": "bash scripts/production-deploy.sh"
   }
 }

@@ -154,7 +154,7 @@ async function uploadToLocalStorage(
         process.env.NEXTAUTH_URL ||
         process.env.NEXT_PUBLIC_API_URL ||
         process.env.API_BASE_URL ||
-        (process.env.NODE_ENV === 'production' ? 'https://dev.api.neocloudbites.com' : 'http://localhost:5000')
+        (process.env.NODE_ENV === 'production' ? (process.env.NEXTAUTH_URL || 'https://api.neocloudbites.com') : 'http://localhost:5000')
     ).replace(/\/$/, '');
 
     return `${baseUrl}/uploads/${sanitizedFolder}/${filename}`;

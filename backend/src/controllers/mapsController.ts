@@ -171,8 +171,8 @@ export async function getPlacesAutocomplete(
             const res = await fetch(url.toString(), {
                 headers: {
                     "Accept": "application/json",
-                    "Referer": "https://dev.neocloudbites.com/",
-                    "Origin": "https://dev.neocloudbites.com",
+                    "Referer": (process.env.FRONTEND_URL || "https://neocloudbites.com").replace(/\/+$/, "") + "/",
+                    "Origin": (process.env.FRONTEND_URL || "https://neocloudbites.com").replace(/\/+$/, ""),
                 },
                 next: { revalidate: 60 },
             });
@@ -384,8 +384,8 @@ export async function getPlaceDetails(
             const res = await fetch(url.toString(), {
                 headers: {
                     "Accept": "application/json",
-                    "Referer": "https://dev.neocloudbites.com/",
-                    "Origin": "https://dev.neocloudbites.com",
+                    "Referer": (process.env.FRONTEND_URL || "https://neocloudbites.com").replace(/\/+$/, "") + "/",
+                    "Origin": (process.env.FRONTEND_URL || "https://neocloudbites.com").replace(/\/+$/, ""),
                 },
                 next: { revalidate: 3600 },
             });
@@ -430,8 +430,8 @@ export async function reverseGeocode(
             const res = await fetch(url, {
                 headers: {
                     "Accept": "application/json",
-                    "Referer": "https://dev.neocloudbites.com/",
-                    "Origin": "https://dev.neocloudbites.com",
+                    "Referer": (process.env.FRONTEND_URL || "https://neocloudbites.com").replace(/\/+$/, "") + "/",
+                    "Origin": (process.env.FRONTEND_URL || "https://neocloudbites.com").replace(/\/+$/, ""),
                 },
                 next: { revalidate: 300 },
             });
@@ -526,8 +526,8 @@ export async function geocodeAddress(
             const res = await fetch(url, {
                 headers: {
                     "Accept": "application/json",
-                    "Referer": "https://dev.neocloudbites.com/",
-                    "Origin": "https://dev.neocloudbites.com",
+                    "Referer": (process.env.FRONTEND_URL || "https://neocloudbites.com").replace(/\/+$/, "") + "/",
+                    "Origin": (process.env.FRONTEND_URL || "https://neocloudbites.com").replace(/\/+$/, ""),
                 },
                 next: { revalidate: 3600 },
             });

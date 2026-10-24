@@ -24,6 +24,8 @@ build/
 *.env.*
 # Allow .env.example templates (no secrets)
 !*.env.example
+!*.env.*.example
+!.env.*.example
 !.env.example
 
 # PM2 logs

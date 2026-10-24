@@ -86,7 +86,8 @@ export async function POST(req: NextRequest) {
         const baseUrl =
             process.env.NEXT_PUBLIC_APP_URL ||
             process.env.APP_URL ||
-            "https://dev.neocloudbites.com";
+            process.env.FRONTEND_URL ||
+            "https://neocloudbites.com";
 
         const checkoutUrl = matchedPlan
             ? `${baseUrl.replace(/\/$/, "")}/seller/payment?token=${encodeURIComponent(token)}&planId=${encodeURIComponent(matchedPlan.id)}`
