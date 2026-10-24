@@ -61,7 +61,14 @@ nvm install 24.22.1 && nvm use 24.22.1
 
 ## Production Deployment & Verification
 
-Run the automated dev deployment script:
+Run the automated production deployment script:
+```bash
+bash scripts/production-deploy.sh
+# or
+bash scripts/deploy-prod.sh
+```
+
+Or run the development deployment script:
 ```bash
 bash scripts/deploy-dev.sh
 ```

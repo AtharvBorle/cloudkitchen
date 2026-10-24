@@ -124,7 +124,7 @@ export function getAppUrl(): string {
   }
 
   // Default to frontend domain
-  return "https://dev.neocloudbites.com";
+  return process.env.FRONTEND_URL || "https://neocloudbites.com";
 }
 
 const APP_URL = getAppUrl();
