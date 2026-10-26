@@ -466,7 +466,7 @@ export default function DashboardBody({
                       textOverflow: "ellipsis",
                     }}
                   >
-                    {item.category} • ₹{item.price} {item.distanceText ? `• 📍 ${item.distanceText}` : ""} • {item.time}
+                    {item.category} • ₹{item.price} • {item.time}
                   </span>
 
                   {/* Stock Notice */}

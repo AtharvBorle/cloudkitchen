@@ -414,6 +414,8 @@ export default function Home() {
       locality: k.locality,
       isOnline: k.isOnline !== false,
       foodType: k.foodType,
+      distanceText: k.distanceText,
+      distanceKm: k.distanceKm,
     }));
   }, [homeData.kitchens, homeData.foodItems, homeData.coupons, selectedCategory, activeFilters, homeSearchQuery]);
 
@@ -567,8 +569,7 @@ export default function Home() {
         isAvailable: f.isAvailable !== false,
         stockQuantity: typeof f.stockQuantity === "number" ? f.stockQuantity : -1,
         maxStock: typeof f.maxStock === "number" ? f.maxStock : (typeof f.stockQuantity === "number" ? f.stockQuantity : -1),
-        distanceText: f.distanceText,
-        discount: discountText,
+                discount: discountText,
       };
     });
   }, [homeData.foodItems, homeData.coupons, selectedCategory, activeFilters, homeSearchQuery]);
@@ -643,8 +644,7 @@ export default function Home() {
       isAvailable: f.isAvailable !== false,
       stockQuantity: typeof f.stockQuantity === "number" ? f.stockQuantity : -1,
       maxStock: typeof f.maxStock === "number" ? f.maxStock : (typeof f.stockQuantity === "number" ? f.stockQuantity : -1),
-      distanceText: f.distanceText,
-      description: f.description,
+            description: f.description,
       addons: f.addons,
       variants: f.variants,
     }));

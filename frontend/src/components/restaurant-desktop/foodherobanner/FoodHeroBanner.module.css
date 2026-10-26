@@ -206,3 +206,13 @@
 .switchThumbActive {
   transform: translateX(18px);
 }
+
+
+.distanceChip {
+  background-color: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #ffedd5;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}

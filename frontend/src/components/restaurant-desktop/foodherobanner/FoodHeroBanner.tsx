@@ -20,6 +20,7 @@ export interface FoodHeroBannerProps {
   onVegToggle?: (vegOnly: boolean) => void;
   isOnline?: boolean;
   bannerImageUrl?: string;
+  distanceText?: string;
 }
 
 export const FoodHeroBanner: React.FC<FoodHeroBannerProps> = ({
@@ -36,6 +37,7 @@ export const FoodHeroBanner: React.FC<FoodHeroBannerProps> = ({
   onVegToggle,
   isOnline = true,
   bannerImageUrl,
+  distanceText,
 }) => {
   const [internalVegOnly, setInternalVegOnly] = useState<boolean>(
     controlledVegOnly !== undefined
@@ -165,7 +167,12 @@ export const FoodHeroBanner: React.FC<FoodHeroBannerProps> = ({
         <div className={styles.topRow}>
           <div className={styles.restaurantMain}>
             <h1 className={styles.restaurantName} style={{ color: !isOnline ? "#475569" : undefined }}>{restaurantName}</h1>
-            {location && <span className={styles.locationText}>{location}</span>}
+            {location && (
+              <span className={styles.locationText}>
+                {location}
+                {distanceText ? ` • 📍 ${distanceText}` : ""}
+              </span>
+            )}
           </div>
 
           <div className={styles.ratingContainer}>
@@ -208,6 +215,23 @@ export const FoodHeroBanner: React.FC<FoodHeroBannerProps> = ({
               }}
             >
               🔴 Closed
+            </span>
+          )}
+          {distanceText && (
+            <span
+              className={styles.metaChip}
+              style={{
+                color: "#FF6B00",
+                borderColor: "#FFD8C2",
+                backgroundColor: "#FFF3EB",
+                fontWeight: "700",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+              }}
+            >
+              <span>📍</span>
+              <span>{distanceText} away</span>
             </span>
           )}
           {deliveryTime && <span className={styles.metaChip}>{deliveryTime}</span>}
