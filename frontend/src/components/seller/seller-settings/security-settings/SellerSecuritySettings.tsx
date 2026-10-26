@@ -507,13 +507,13 @@ export interface SellerSecuritySettingsProps {
 /* ======================================================== */
 export const SellerDeleteAccountCard: React.FC<{ className?: string }> = ({ className = "" }) => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   const handleConfirmDelete = async () => {
-    if (!deletePassword || !deletePassword.trim()) {
-      setDeleteError("Password is required to verify ownership and confirm deletion.");
+    if (deleteConfirmationText.trim().toUpperCase() !== "DELETE") {
+      setDeleteError('Please type "DELETE" to confirm kitchen deletion.');
       return;
     }
     setDeleteLoading(true);
@@ -522,7 +522,7 @@ export const SellerDeleteAccountCard: React.FC<{ className?: string }> = ({ clas
       const res = await fetchApi("/api/seller/delete-account", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: deletePassword.trim() })
+        body: JSON.stringify({ confirmation: deleteConfirmationText.trim().toUpperCase() })
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
@@ -566,7 +566,7 @@ export const SellerDeleteAccountCard: React.FC<{ className?: string }> = ({ clas
           type="button"
           onClick={() => {
             setDeleteError(null);
-            setDeletePassword("");
+            setDeleteConfirmationText("");
             setDeleteModalOpen(true);
           }}
           style={{
@@ -710,22 +710,22 @@ export const SellerDeleteAccountCard: React.FC<{ className?: string }> = ({ clas
 
             <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
               <label style={{ fontSize: "0.76rem", fontWeight: 700, color: "#475569" }}>
-                CONFIRM PASSWORD <span style={{ color: "#DC2626" }}>*</span>
+                TYPE "DELETE" TO CONFIRM <span style={{ color: "#DC2626" }}>*</span>
               </label>
               <input
-                type="password"
+                type="text"
                 required
-                value={deletePassword}
+                value={deleteConfirmationText}
                 onChange={(e) => {
-                  setDeletePassword(e.target.value);
+                  setDeleteConfirmationText(e.target.value);
                   if (deleteError) setDeleteError(null);
                 }}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && !deleteLoading && deletePassword.trim()) {
+                  if (e.key === "Enter" && !deleteLoading && deleteConfirmationText.trim().toUpperCase() === "DELETE") {
                     handleConfirmDelete();
                   }
                 }}
-                placeholder="Enter password to verify ownership"
+                placeholder='Type "DELETE" to confirm'
                 style={{
                   width: "100%",
                   padding: "10px 12px",
@@ -759,20 +759,20 @@ export const SellerDeleteAccountCard: React.FC<{ className?: string }> = ({ clas
               <button
                 type="button"
                 onClick={handleConfirmDelete}
-                disabled={deleteLoading || !deletePassword.trim()}
+                disabled={deleteLoading || deleteConfirmationText.trim().toUpperCase() !== "DELETE"}
                 style={{
                   padding: "9px 18px",
-                  backgroundColor: !deletePassword.trim() ? "#F87171" : "#DC2626",
+                  backgroundColor: deleteConfirmationText.trim().toUpperCase() !== "DELETE" ? "#F87171" : "#DC2626",
                   color: "#FFFFFF",
                   border: "none",
                   borderRadius: "8px",
                   fontSize: "0.85rem",
                   fontWeight: 600,
-                  cursor: deleteLoading || !deletePassword.trim() ? "not-allowed" : "pointer",
+                  cursor: deleteLoading || deleteConfirmationText.trim().toUpperCase() !== "DELETE" ? "not-allowed" : "pointer",
                   display: "inline-flex",
                   alignItems: "center",
                   gap: "6px",
-                  opacity: deleteLoading || !deletePassword.trim() ? 0.65 : 1,
+                  opacity: deleteLoading || deleteConfirmationText.trim().toUpperCase() !== "DELETE" ? 0.65 : 1,
                   transition: "all 0.18s ease",
                 }}
               >
