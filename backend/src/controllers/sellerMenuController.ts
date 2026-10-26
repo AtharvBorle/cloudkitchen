@@ -149,8 +149,14 @@ export const getMenuItems = async () => {
         orderBy: { name: 'asc' }
     });
 
+    const addons = await db.addon.findMany({
+        where: { sellerId: sellerProfile.id },
+        orderBy: { name: "asc" }
+    });
+
     return { 
         items, 
+        addons,
         servedPincodes, 
         foodType: sellerProfile.foodType, 
         foodCategories,
@@ -299,6 +305,9 @@ export const createMenuItem = async (req: Request) => {
 
     let imageUrl = providedImgUrl && providedImgUrl.trim() ? providedImgUrl.trim() : "";
     if (imageFile && imageFile.size > 0) {
+        if (imageFile.size > 10 * 1024 * 1024) {
+            throw new ApiError("Dish image size must not exceed 10MB.", 400);
+        }
         const bytes = await imageFile.arrayBuffer();
         const buffer = Buffer.from(bytes);
         imageUrl = await uploadImage(buffer, imageFile.type, imageFile.name, "menu");
@@ -442,6 +451,9 @@ export const updateMenuItem = async (req: Request, id: string) => {
         if (foodSubCategoryId !== null) dataToUpdate.foodSubCategoryId = foodSubCategoryId || null;
 
         if (imageFile && imageFile.size > 0) {
+            if (imageFile.size > 10 * 1024 * 1024) {
+                throw new ApiError("Dish image size must not exceed 10MB.", 400);
+            }
             const bytes = await imageFile.arrayBuffer();
             const buffer = Buffer.from(bytes);
             dataToUpdate.imageUrl = await uploadImage(buffer, imageFile.type, imageFile.name, "menu");

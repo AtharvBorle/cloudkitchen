@@ -1,3 +1,4 @@
+import { restoreOrderAddonsStock } from "@/lib/addon-inventory";
 import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
@@ -425,6 +426,7 @@ export const createOrder = async (req: Request) => {
 
     // --- Coupon Validation Logic ---
     let validatedCoupon: any = null;
+    let effectiveCouponDiscount = 0;
     if (appliedCouponId) {
         validatedCoupon = await db.coupon.findFirst({
             where: {
@@ -655,7 +657,6 @@ export const createOrder = async (req: Request) => {
         }
 
         // Calculate effective coupon discount and cap at baseTotal (allowing up to 100% discount)
-        let effectiveCouponDiscount = 0;
         if (isPercentage) {
             const pct = Number(validatedCoupon.discountPercentage || 0);
             effectiveCouponDiscount = Math.round((eligibleSubtotal * pct) / 100);
@@ -681,7 +682,7 @@ export const createOrder = async (req: Request) => {
         pincode,
     });
 
-    // Aggregate item quantities by base foodItemId to validate stock and update inventory properly
+    // 1. Aggregate item quantities by base foodItemId
     const aggregatedQuantities = new Map<string, { quantity: number; name: string }>();
     for (const cartItem of items) {
         const foodItemId = cartItem.foodItemId || (typeof cartItem.id === "string" && cartItem.id.includes("_") ? cartItem.id.split("_")[0] : cartItem.id);
@@ -691,7 +692,48 @@ export const createOrder = async (req: Request) => {
         aggregatedQuantities.set(foodItemId, current);
     }
 
-    const itemUpdates = [];
+    // 2. Aggregate add-on quantities across all cart items
+    const aggregatedAddons = new Map<string, { quantity: number; name: string }>();
+    for (const cartItem of items) {
+        const itemQty = Number(cartItem.quantity || cartItem.qty || 1);
+        const addons = cartItem.selectedAddons || cartItem.addons;
+        if (Array.isArray(addons)) {
+            for (const addon of addons) {
+                if (!addon || !addon.id) continue;
+                const addonId = String(addon.id);
+                const addonQty = (Number(addon.quantity) || 1) * itemQty;
+                const cur = aggregatedAddons.get(addonId) || { quantity: 0, name: addon.name || "Add-on" };
+                cur.quantity += addonQty;
+                aggregatedAddons.set(addonId, cur);
+            }
+        }
+    }
+
+    // 3. Validate add-ons and cache their authoritative DB records
+    const dbAddonsMap = new Map<string, any>();
+    for (const [addonId, { quantity, name }] of aggregatedAddons.entries()) {
+        const dbAddon = await db.addon.findUnique({ where: { id: addonId } }).catch(() => null);
+        if (!dbAddon) {
+            throw new ApiError(`Add-on "${name}" is no longer available. Please update your cart.`, 400);
+        }
+        if (dbAddon.sellerId !== sellerProfile.id && dbAddon.sellerId !== sellerProfile.userId) {
+            throw new ApiError(`Add-on "${name}" belongs to a different kitchen. Please update your cart.`, 400);
+        }
+        if (!dbAddon.isActive) {
+            throw new ApiError(`Add-on "${name}" is currently inactive. Please update your cart.`, 400);
+        }
+        if (dbAddon.stockQuantity === 0) {
+            throw new ApiError(`Add-on "${name}" is out of stock. Please update your cart.`, 400);
+        }
+        if (dbAddon.stockQuantity < quantity) {
+            throw new ApiError(`Not enough stock for add-on "${name}". Only ${dbAddon.stockQuantity} left.`, 400);
+        }
+        dbAddonsMap.set(addonId, dbAddon);
+    }
+
+    // 4. Validate FoodItems and cache their DB records
+    const dbFoodItemsMap = new Map<string, any>();
+    const itemUpdates: Array<{ id: string; newStock: number; isAvailable: boolean }> = [];
     for (const [foodItemId, { quantity, name }] of aggregatedQuantities.entries()) {
         const foodItem = await db.foodItem.findUnique({ where: { id: foodItemId } }).catch(() => null);
 
@@ -723,60 +765,137 @@ export const createOrder = async (req: Request) => {
                 isAvailable: newStock > 0
             });
         }
+        dbFoodItemsMap.set(foodItemId, foodItem);
     }
 
-    const transactionOperations = [];
+    // 5. Reconstruct items with authoritative price snapshots (never trusting client-submitted prices)
+    const itemsWithAuthoritativeSnapshots = items.map((cartItem: any) => {
+        const rawId = cartItem.foodItemId || (typeof cartItem.id === "string" && cartItem.id.includes("_") ? cartItem.id.split("_")[0] : cartItem.id);
+        const dbFoodItem = dbFoodItemsMap.get(rawId);
+        const itemQty = Number(cartItem.quantity || cartItem.qty || 1);
+        const authoritativeBasePrice = dbFoodItem ? Number(dbFoodItem.price) : Number(cartItem.basePrice || cartItem.price || 0);
 
-    for (const update of itemUpdates) {
-        transactionOperations.push(
-            db.foodItem.update({
+        const rawAddons = cartItem.selectedAddons || cartItem.addons;
+        const itemAddonSnapshots: any[] = [];
+        let addonsTotalPerUnit = 0;
+
+        if (Array.isArray(rawAddons)) {
+            for (const a of rawAddons) {
+                if (!a || !a.id) continue;
+                const dbAddon = dbAddonsMap.get(String(a.id));
+                const addonPrice = dbAddon ? Number(dbAddon.price) : (Number(a.price) || 0);
+                const addonQty = Math.max(1, Number(a.quantity) || 1);
+                const lineTotal = addonPrice * addonQty;
+                addonsTotalPerUnit += lineTotal;
+                itemAddonSnapshots.push({
+                    id: String(a.id),
+                    name: dbAddon ? dbAddon.name : String(a.name || "Add-on"),
+                    price: addonPrice,
+                    quantity: addonQty,
+                    lineTotal: lineTotal
+                });
+            }
+        }
+
+        const authoritativeUnitPrice = authoritativeBasePrice + addonsTotalPerUnit;
+
+        return {
+            ...cartItem,
+            foodItemId: rawId,
+            name: dbFoodItem ? dbFoodItem.name : (cartItem.name || "Item"),
+            basePrice: authoritativeBasePrice,
+            price: authoritativeUnitPrice,
+            addonsTotal: addonsTotalPerUnit,
+            selectedAddons: itemAddonSnapshots,
+            quantity: itemQty
+        };
+    });
+
+    const authoritativeSubtotal = itemsWithAuthoritativeSnapshots.reduce((acc: number, it: any) => acc + (it.price * it.quantity), 0);
+    const finalOrderTotal = Math.max(0, authoritativeSubtotal - effectiveCouponDiscount);
+    const finalStoredTotal = !isOnlinePayment ? finalOrderTotal : Number(totalAmount);
+
+    const shortOrderId = crypto.randomBytes(4).toString("hex");
+
+    const order = await db.$transaction(async (tx) => {
+        // A. Deduct food items stock
+        for (const update of itemUpdates) {
+            await tx.foodItem.update({
                 where: { id: update.id },
                 data: {
                     stockQuantity: update.newStock,
                     isAvailable: update.isAvailable
                 }
-            })
-        );
-    }
+            });
+        }
 
-    const shortOrderId = crypto.randomBytes(4).toString("hex");
+        // B. Atomic conditional stock deduction for add-ons (prevents overselling)
+        for (const [addonId, { quantity, name }] of aggregatedAddons.entries()) {
+            const updatedAddon = await tx.addon.updateMany({
+                where: {
+                    id: addonId,
+                    sellerId: sellerProfile.id,
+                    isActive: true,
+                    stockQuantity: { gte: quantity }
+                },
+                data: {
+                    stockQuantity: { decrement: quantity }
+                }
+            });
 
-    transactionOperations.push(
-        db.order.create({
+            if (updatedAddon.count === 0) {
+                throw new ApiError(`Not enough stock remaining for add-on "${name}". It may have just been ordered by another customer.`, 400);
+            }
+
+            const currentAddon = await tx.addon.findUnique({ where: { id: addonId } });
+            const currentStock = currentAddon?.stockQuantity ?? 0;
+
+            await tx.addonInventoryLog.create({
+                data: {
+                    addonId: addonId,
+                    orderId: shortOrderId,
+                    action: "ORDER_DEDUCTION",
+                    quantityDelta: -quantity,
+                    previousStock: currentStock + quantity,
+                    newStock: currentStock,
+                    note: `Deducted ${quantity} units for order #${shortOrderId}`
+                }
+            });
+        }
+
+        // C. Create Order with authoritative snapshot items
+        const createdOrder = await tx.order.create({
             data: {
                 id: shortOrderId,
                 userId: session.user.id,
                 sellerId: sellerProfile.id,
                 status: "PENDING",
-                items: JSON.stringify(items),
+                items: JSON.stringify(itemsWithAuthoritativeSnapshots),
                 deliveryAddress: deliveryAddress || dbUser.city || "Delivery Address",
                 customerPhone: customerPhone || dbUser.phone || "N/A",
                 paymentMethod: isOnlinePayment ? "ONLINE" : "COD",
-                totalAmount: totalAmount,
-                isPaid: isOnlinePayment || Number(totalAmount) === 0,
+                totalAmount: finalStoredTotal,
+                isPaid: isOnlinePayment || Number(finalStoredTotal) === 0,
                 appliedCouponId: validatedCoupon ? validatedCoupon.id : (appliedCouponId || null),
                 razorpayOrderId: isOnlinePayment ? razorpay_order_id : null,
                 razorpayPaymentId: isOnlinePayment ? razorpay_payment_id : null,
             }
-        })
-    );
+        });
 
-    const couponRecordId = validatedCoupon ? validatedCoupon.id : appliedCouponId;
-    if (couponRecordId) {
-        const baseCount = validatedCoupon ? Number(validatedCoupon.currentUsersCount) || 0 : 0;
-        transactionOperations.push(
-            db.coupon.update({
+        // D. Update coupon usage if applicable
+        const couponRecordId = validatedCoupon ? validatedCoupon.id : appliedCouponId;
+        if (couponRecordId) {
+            const baseCount = validatedCoupon ? Number(validatedCoupon.currentUsersCount) || 0 : 0;
+            await tx.coupon.update({
                 where: { id: couponRecordId },
                 data: baseCount < 0
                     ? { currentUsersCount: 1 }
                     : { currentUsersCount: { increment: 1 } }
-            })
-        );
-    }
+            });
+        }
 
-    const results = await db.$transaction(transactionOperations);
-    // Find the order from the transaction results. It's the one before the coupon update if applicable.
-    const order = couponRecordId ? results[results.length - 2] : results[results.length - 1];
+        return createdOrder;
+    });
 
     try {
         emitOrderCreated({

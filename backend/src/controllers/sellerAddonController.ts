@@ -1,0 +1,456 @@
+import { db } from "@/lib/db";
+import { getAuthSession } from "@/lib/auth";
+import { ApiError } from "@/lib/api-error";
+import { uploadImage } from "@/lib/upload";
+
+const getAuthenticatedSellerProfile = async () => {
+    const session = await getAuthSession();
+    if (!session?.user) {
+        throw new ApiError("Please log in first to manage add-ons.", 401);
+    }
+    if (session.user.role !== "SELLER") {
+        throw new ApiError("Access denied. Seller account required.", 403);
+    }
+
+    const sellerProfile = await db.sellerProfile.findUnique({
+        where: { userId: session.user.id }
+    });
+
+    if (!sellerProfile) {
+        throw new ApiError("Seller profile not found. Please complete seller registration.", 404);
+    }
+
+    return { session, sellerProfile };
+};
+
+export const getSellerAddons = async (req: Request) => {
+    const { sellerProfile } = await getAuthenticatedSellerProfile();
+    const url = new URL(req.url);
+    const search = (url.searchParams.get("search") || "").trim();
+    const status = (url.searchParams.get("status") || "ALL").toUpperCase();
+    const pageParam = parseInt(url.searchParams.get("page") || "1", 10);
+    const page = isNaN(pageParam) || pageParam < 1 ? 1 : pageParam;
+    const rawLimit = url.searchParams.get("limit");
+    const limit = rawLimit === "All" || rawLimit === "-1" ? 1000 : Math.min(100, Math.max(1, parseInt(rawLimit || "20", 10) || 20));
+
+    // Calculate seller inventory indicators
+    const allSellerAddons = await db.addon.findMany({
+        where: { sellerId: sellerProfile.id },
+        select: {
+            id: true,
+            stockQuantity: true,
+            lowStockThreshold: true,
+            isActive: true,
+        }
+    });
+
+    const totalCount = allSellerAddons.length;
+    const activeCount = allSellerAddons.filter(a => a.isActive).length;
+    const inactiveCount = allSellerAddons.filter(a => !a.isActive).length;
+    const outOfStockCount = allSellerAddons.filter(a => a.isActive && a.stockQuantity === 0).length;
+    const lowStockCount = allSellerAddons.filter(a => a.isActive && a.stockQuantity > 0 && a.stockQuantity <= a.lowStockThreshold).length;
+    const inStockCount = allSellerAddons.filter(a => a.isActive && a.stockQuantity > a.lowStockThreshold).length;
+    const availableCount = inStockCount + lowStockCount;
+
+    const metrics = {
+        totalCount,
+        activeCount,
+        inactiveCount,
+        availableCount,
+        inStockCount,
+        lowStockCount,
+        outOfStockCount,
+    };
+
+    // Build filter conditions
+    const where: any = {
+        sellerId: sellerProfile.id,
+    };
+
+    if (search) {
+        where.OR = [
+            { name: { contains: search, mode: "insensitive" } },
+            { description: { contains: search, mode: "insensitive" } },
+        ];
+    }
+
+    if (status === "AVAILABLE") {
+        where.isActive = true;
+        where.stockQuantity = { gt: 0 };
+    } else if (status === "LOW_STOCK") {
+        where.isActive = true;
+        where.stockQuantity = { gt: 0 };
+        // Post-filtered or condition
+    } else if (status === "OUT_OF_STOCK") {
+        where.isActive = true;
+        where.stockQuantity = 0;
+    } else if (status === "ACTIVE") {
+        where.isActive = true;
+    } else if (status === "INACTIVE") {
+        where.isActive = false;
+    }
+
+    let matchingAddons = await db.addon.findMany({
+        where,
+        orderBy: { updatedAt: "desc" },
+    });
+
+    if (status === "LOW_STOCK") {
+        matchingAddons = matchingAddons.filter(a => a.stockQuantity <= a.lowStockThreshold);
+    }
+
+    const filteredTotal = matchingAddons.length;
+    const totalPages = Math.ceil(filteredTotal / limit) || 1;
+    const paginatedItems = matchingAddons.slice((page - 1) * limit, page * limit);
+
+    const enrichedItems = paginatedItems.map(a => {
+        let stockStatus: "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK" | "INACTIVE" = "IN_STOCK";
+        if (!a.isActive) {
+            stockStatus = "INACTIVE";
+        } else if (a.stockQuantity === 0) {
+            stockStatus = "OUT_OF_STOCK";
+        } else if (a.stockQuantity <= a.lowStockThreshold) {
+            stockStatus = "LOW_STOCK";
+        }
+
+        return {
+            ...a,
+            stockStatus,
+            isAvailable: a.isActive && a.stockQuantity > 0,
+        };
+    });
+
+    return {
+        addons: enrichedItems,
+        metrics,
+        pagination: {
+            page,
+            limit,
+            totalItems: filteredTotal,
+            totalPages,
+        }
+    };
+};
+
+export const createSellerAddon = async (req: Request) => {
+    const { sellerProfile } = await getAuthenticatedSellerProfile();
+    const contentType = req.headers.get("content-type") || "";
+
+    let name = "";
+    let description = "";
+    let price = 0;
+    let stockQuantity = 0;
+    let lowStockThreshold = 5;
+    let isActive = true;
+    let imageUrl = "";
+    let imageFile: File | null = null;
+
+    if (contentType.includes("multipart/form-data")) {
+        const formData = await req.formData();
+        name = String(formData.get("name") || "").trim();
+        description = String(formData.get("description") || "").trim();
+        price = parseFloat(String(formData.get("price") || "0"));
+        const rawStock = formData.get("stockQuantity");
+        stockQuantity = rawStock !== null && rawStock !== "" ? parseInt(String(rawStock), 10) : 0;
+        const rawThreshold = formData.get("lowStockThreshold");
+        lowStockThreshold = rawThreshold !== null && rawThreshold !== "" ? parseInt(String(rawThreshold), 10) : 5;
+        if (formData.get("isActive") !== null) {
+            isActive = formData.get("isActive") === "true";
+        }
+        imageUrl = String(formData.get("imageUrl") || "").trim();
+        imageFile = formData.get("image") as File | null;
+    } else {
+        const body = await req.json();
+        name = String(body.name || "").trim();
+        description = String(body.description || "").trim();
+        price = parseFloat(String(body.price || "0"));
+        stockQuantity = body.stockQuantity !== undefined ? parseInt(String(body.stockQuantity), 10) : 0;
+        lowStockThreshold = body.lowStockThreshold !== undefined ? parseInt(String(body.lowStockThreshold), 10) : 5;
+        if (body.isActive !== undefined) {
+            isActive = Boolean(body.isActive);
+        }
+        imageUrl = String(body.imageUrl || "").trim();
+    }
+
+    if (!name) {
+        throw new ApiError("Add-on Name is required.", 400);
+    }
+    if (name.length > 100) {
+        throw new ApiError("Add-on Name cannot exceed 100 characters.", 400);
+    }
+    if (isNaN(price) || price < 0) {
+        throw new ApiError("Valid selling price (₹0 or greater) is required.", 400);
+    }
+    if (isNaN(stockQuantity) || stockQuantity < 0) {
+        throw new ApiError("Stock quantity cannot be negative.", 400);
+    }
+    if (isNaN(lowStockThreshold) || lowStockThreshold < 0) {
+        throw new ApiError("Low-stock threshold cannot be negative.", 400);
+    }
+
+    // Check duplicate addon name for this seller
+    const existing = await db.addon.findFirst({
+        where: {
+            sellerId: sellerProfile.id,
+            name: { equals: name, mode: "insensitive" }
+        }
+    });
+
+    if (existing) {
+        throw new ApiError(`An add-on named "${name}" already exists in your kitchen menu. Please choose a unique name.`, 400);
+    }
+
+    if (imageFile && imageFile.size > 0) {
+        if (imageFile.size > 10 * 1024 * 1024) {
+            throw new ApiError("Add-on image size must not exceed 10MB.", 400);
+        }
+        try {
+            const bytes = await imageFile.arrayBuffer();
+            const buffer = Buffer.from(bytes);
+            imageUrl = await uploadImage(buffer, imageFile.type, imageFile.name, "addons");
+        } catch (e: any) {
+            console.error("Failed to upload addon image:", e);
+            throw new ApiError("Failed to upload add-on image. " + (e?.message || ""), 500);
+        }
+    }
+
+    const newAddon = await db.$transaction(async (tx) => {
+        const addon = await tx.addon.create({
+            data: {
+                sellerId: sellerProfile.id,
+                name,
+                description,
+                price,
+                stockQuantity,
+                lowStockThreshold,
+                isActive,
+                imageUrl: imageUrl || null,
+            }
+        });
+
+        await tx.addonInventoryLog.create({
+            data: {
+                addonId: addon.id,
+                action: "INITIAL",
+                quantityDelta: stockQuantity,
+                previousStock: 0,
+                newStock: stockQuantity,
+                note: `Initial inventory configured with ${stockQuantity} units`,
+            }
+        });
+
+        return addon;
+    });
+
+    return newAddon;
+};
+
+export const getSellerAddonById = async (id: string) => {
+    const { sellerProfile } = await getAuthenticatedSellerProfile();
+
+    const addon = await db.addon.findFirst({
+        where: {
+            id,
+            sellerId: sellerProfile.id,
+        },
+        include: {
+            inventoryLogs: {
+                orderBy: { createdAt: "desc" },
+                take: 20,
+            }
+        }
+    });
+
+    if (!addon) {
+        throw new ApiError("Add-on not found or access denied.", 404);
+    }
+
+    return addon;
+};
+
+export const updateSellerAddon = async (id: string, req: Request) => {
+    const { sellerProfile } = await getAuthenticatedSellerProfile();
+
+    const existing = await db.addon.findFirst({
+        where: {
+            id,
+            sellerId: sellerProfile.id,
+        }
+    });
+
+    if (!existing) {
+        throw new ApiError("Add-on not found or access denied.", 404);
+    }
+
+    const contentType = req.headers.get("content-type") || "";
+    let name: string | undefined;
+    let description: string | undefined;
+    let price: number | undefined;
+    let stockQuantity: number | undefined;
+    let replenishQuantity: number | undefined;
+    let lowStockThreshold: number | undefined;
+    let isActive: boolean | undefined;
+    let imageUrl: string | undefined;
+    let imageFile: File | null = null;
+    let removeImage = false;
+    let note: string | undefined;
+
+    if (contentType.includes("multipart/form-data")) {
+        const formData = await req.formData();
+        if (formData.get("name") !== null) name = String(formData.get("name")).trim();
+        if (formData.get("description") !== null) description = String(formData.get("description")).trim();
+        if (formData.get("price") !== null) price = parseFloat(String(formData.get("price")));
+        if (formData.get("stockQuantity") !== null) stockQuantity = parseInt(String(formData.get("stockQuantity")), 10);
+        if (formData.get("replenishQuantity") !== null) replenishQuantity = parseInt(String(formData.get("replenishQuantity")), 10);
+        if (formData.get("lowStockThreshold") !== null) lowStockThreshold = parseInt(String(formData.get("lowStockThreshold")), 10);
+        if (formData.get("isActive") !== null) isActive = formData.get("isActive") === "true";
+        if (formData.get("removeImage") === "true") removeImage = true;
+        if (formData.get("imageUrl") !== null) imageUrl = String(formData.get("imageUrl")).trim();
+        if (formData.get("note") !== null) note = String(formData.get("note")).trim();
+        imageFile = formData.get("image") as File | null;
+    } else {
+        const body = await req.json();
+        if (body.name !== undefined) name = String(body.name).trim();
+        if (body.description !== undefined) description = String(body.description).trim();
+        if (body.price !== undefined) price = parseFloat(String(body.price));
+        if (body.stockQuantity !== undefined) stockQuantity = parseInt(String(body.stockQuantity), 10);
+        if (body.replenishQuantity !== undefined) replenishQuantity = parseInt(String(body.replenishQuantity), 10);
+        if (body.lowStockThreshold !== undefined) lowStockThreshold = parseInt(String(body.lowStockThreshold), 10);
+        if (body.isActive !== undefined) isActive = Boolean(body.isActive);
+        if (body.removeImage !== undefined) removeImage = Boolean(body.removeImage);
+        if (body.imageUrl !== undefined) imageUrl = String(body.imageUrl).trim();
+        if (body.note !== undefined) note = String(body.note).trim();
+    }
+
+    if (name !== undefined) {
+        if (!name) throw new ApiError("Add-on Name cannot be empty.", 400);
+        if (name.length > 100) throw new ApiError("Add-on Name cannot exceed 100 characters.", 400);
+
+        // Check for duplicate name excluding self
+        const duplicate = await db.addon.findFirst({
+            where: {
+                sellerId: sellerProfile.id,
+                name: { equals: name, mode: "insensitive" },
+                id: { not: id }
+            }
+        });
+        if (duplicate) {
+            throw new ApiError(`Another add-on named "${name}" already exists.`, 400);
+        }
+    }
+
+    if (price !== undefined && (isNaN(price) || price < 0)) {
+        throw new ApiError("Valid selling price (₹0 or greater) is required.", 400);
+    }
+
+    if (lowStockThreshold !== undefined && (isNaN(lowStockThreshold) || lowStockThreshold < 0)) {
+        throw new ApiError("Low-stock threshold cannot be negative.", 400);
+    }
+
+    if (replenishQuantity !== undefined && (isNaN(replenishQuantity) || replenishQuantity <= 0)) {
+        throw new ApiError("Replenish quantity must be greater than zero.", 400);
+    }
+
+    if (stockQuantity !== undefined && (isNaN(stockQuantity) || stockQuantity < 0)) {
+        throw new ApiError("Stock quantity cannot be negative.", 400);
+    }
+
+    if (imageFile && imageFile.size > 0) {
+        if (imageFile.size > 10 * 1024 * 1024) {
+            throw new ApiError("Add-on image size must not exceed 10MB.", 400);
+        }
+        try {
+            const bytes = await imageFile.arrayBuffer();
+            const buffer = Buffer.from(bytes);
+            imageUrl = await uploadImage(buffer, imageFile.type, imageFile.name, "addons");
+        } catch (e: any) {
+            console.error("Failed to upload addon image:", e);
+            throw new ApiError("Failed to upload add-on image: " + (e?.message || ""), 500);
+        }
+    }
+
+    const updated = await db.$transaction(async (tx) => {
+        const updateData: any = {};
+        if (name !== undefined) updateData.name = name;
+        if (description !== undefined) updateData.description = description;
+        if (price !== undefined) updateData.price = price;
+        if (lowStockThreshold !== undefined) updateData.lowStockThreshold = lowStockThreshold;
+        if (isActive !== undefined) updateData.isActive = isActive;
+
+        if (removeImage) {
+            updateData.imageUrl = null;
+        } else if (imageUrl !== undefined && imageUrl !== "") {
+            updateData.imageUrl = imageUrl;
+        }
+
+        let newStockVal = existing.stockQuantity;
+
+        if (replenishQuantity !== undefined && replenishQuantity > 0) {
+            newStockVal = existing.stockQuantity + replenishQuantity;
+            updateData.stockQuantity = newStockVal;
+
+            await tx.addonInventoryLog.create({
+                data: {
+                    addonId: id,
+                    action: "RESTOCK",
+                    quantityDelta: replenishQuantity,
+                    previousStock: existing.stockQuantity,
+                    newStock: newStockVal,
+                    note: note || `Stock replenished by +${replenishQuantity} units`,
+                }
+            });
+        } else if (stockQuantity !== undefined && stockQuantity !== existing.stockQuantity) {
+            const delta = stockQuantity - existing.stockQuantity;
+            newStockVal = stockQuantity;
+            updateData.stockQuantity = newStockVal;
+
+            await tx.addonInventoryLog.create({
+                data: {
+                    addonId: id,
+                    action: "MANUAL_ADJUSTMENT",
+                    quantityDelta: delta,
+                    previousStock: existing.stockQuantity,
+                    newStock: newStockVal,
+                    note: note || (delta > 0 ? `Stock adjusted by +${delta}` : `Stock adjusted by ${delta}`),
+                }
+            });
+        }
+
+        const res = await tx.addon.update({
+            where: { id },
+            data: updateData,
+            include: {
+                inventoryLogs: {
+                    orderBy: { createdAt: "desc" },
+                    take: 10,
+                }
+            }
+        });
+
+        return res;
+    });
+
+    return updated;
+};
+
+export const deleteSellerAddon = async (id: string) => {
+    const { sellerProfile } = await getAuthenticatedSellerProfile();
+
+    const existing = await db.addon.findFirst({
+        where: {
+            id,
+            sellerId: sellerProfile.id,
+        }
+    });
+
+    if (!existing) {
+        throw new ApiError("Add-on not found or access denied.", 404);
+    }
+
+    // Delete addon
+    await db.addon.delete({
+        where: { id }
+    });
+
+    return { success: true, message: `Add-on "${existing.name}" deleted successfully.` };
+};

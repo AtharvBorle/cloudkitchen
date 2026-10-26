@@ -279,6 +279,16 @@ export default function SellerSidebar({
   };
 
   const handleNavItemClick = (e: React.MouseEvent, item: NavItem) => {
+    // Readiness gate: If onboarding readiness is incomplete, lock everything except Settings and Profile
+    if (statusData && !statusData.isReadinessCompleted) {
+      if (item.id !== "settings" && item.id !== "profile") {
+        e.preventDefault();
+        router.push("/seller/readiness");
+        if (onClose) onClose();
+        return;
+      }
+    }
+
     const isFoodTab =
       item.id === "orders" ||
       item.id === "menu" ||
@@ -644,6 +654,34 @@ export default function SellerSidebar({
             width: "100%",
           }}
         >
+          {statusData && !statusData.isReadinessCompleted && (
+            <Link
+              href="/seller/readiness"
+              onClick={() => { if (onClose) onClose(); }}
+              title="Complete Onboarding Readiness Checklist"
+              style={{
+                width: "100%",
+                borderRadius: "8px",
+                padding: isEffectiveCollapsed ? "8px 0" : "8px 12px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: isEffectiveCollapsed ? "center" : "flex-start",
+                gap: isEffectiveCollapsed ? "0" : "8px",
+                textDecoration: "none",
+                boxSizing: "border-box",
+                backgroundColor: pathname === "/seller/readiness" ? "#EA580C" : "#FFF7ED",
+                color: pathname === "/seller/readiness" ? "#FFFFFF" : "#EA580C",
+                border: "1px solid #FED7AA",
+                fontWeight: 700,
+                fontSize: "12.5px",
+                marginBottom: "8px",
+                transition: "all 0.18s ease",
+              }}
+            >
+              <Sparkles size={16} color={pathname === "/seller/readiness" ? "#FFFFFF" : "#EA580C"} style={{ flexShrink: 0 }} />
+              {!isEffectiveCollapsed && <span>Complete Readiness</span>}
+            </Link>
+          )}
           {visibleSellerNavItems.map((item) => {
             const active = isItemActive(item);
             const IconComponent = item.icon;
@@ -655,18 +693,21 @@ export default function SellerSidebar({
               item.id === "offers" ||
               item.id === "reviews";
             const isProp = item.id === "rooms-seller" || item.id === "rooms" || item.id === "bookings";
-            const isLocked = Boolean(
+            const isReadinessIncomplete = Boolean(statusData && !statusData.isReadinessCompleted);
+            const isReadinessLocked = isReadinessIncomplete && item.id !== "settings" && item.id !== "profile";
+            const isSubscriptionLocked = Boolean(
               statusData &&
                 ((isFood && !statusData.isFoodActive) ||
                   (isProp && !statusData.isPropertyActive))
             );
+            const isLocked = isReadinessLocked || isSubscriptionLocked;
 
             return (
               <Link
                 key={item.id}
                 href={item.href}
                 onClick={(e) => handleNavItemClick(e, item)}
-                title={isLocked ? `${item.label} (Requires active subscription)` : item.label}
+                title={isReadinessLocked ? `${item.label} (Complete readiness checklist to unlock)` : isSubscriptionLocked ? `${item.label} (Requires active subscription)` : item.label}
                 style={{
                   width: "100%",
                   height: "40px",

@@ -268,7 +268,12 @@ export const updateSellerProfile = async (req: Request) => {
         profileUpdateData.isReadinessCompleted = isReadinessCompleted;
     }
 
+    const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+
     if (cardImageFile && cardImageFile.size > 0) {
+        if (cardImageFile.size > MAX_IMAGE_SIZE) {
+            throw new ApiError("Kitchen card image size must not exceed 10MB.", 400);
+        }
         const bytes = await cardImageFile.arrayBuffer();
         const buffer = Buffer.from(bytes);
         const uploadedCardUrl = await uploadImage(buffer, cardImageFile.type, cardImageFile.name, "sellers");
@@ -278,6 +283,9 @@ export const updateSellerProfile = async (req: Request) => {
     }
 
     if (bannerImageFile && bannerImageFile.size > 0) {
+        if (bannerImageFile.size > MAX_IMAGE_SIZE) {
+            throw new ApiError("Storefront cover image size must not exceed 10MB.", 400);
+        }
         const bytes = await bannerImageFile.arrayBuffer();
         const buffer = Buffer.from(bytes);
         profileUpdateData.bannerImageUrl = await uploadImage(buffer, bannerImageFile.type, bannerImageFile.name, "sellers");

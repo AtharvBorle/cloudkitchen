@@ -440,7 +440,7 @@ export async function sendSellerApplicationRejectedEmail({
     </div>
 
     <div style="text-align: center; margin-top: 24px;">
-      <a href="${reapplyUrl || `${APP_URL}/seller/register`}" class="btn btn-red">Reapply / Update Documents</a>
+      <a href="${reapplyUrl || `${getAppUrl()}/seller/revision`}" class="btn btn-red">Reapply and Update Documents</a>
     </div>
   `;
 

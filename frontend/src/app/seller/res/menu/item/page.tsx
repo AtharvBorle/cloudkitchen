@@ -143,7 +143,11 @@ function MenuItemContent() {
           return;
         }
       }
-      router.push("/seller/menu");
+      if (searchParams.get("from") === "readiness") {
+        router.push("/seller/readiness");
+      } else {
+        router.push("/seller/menu");
+      }
     } catch (err: any) {
       console.error("Error saving menu item:", err);
       alert(err.message || "Error saving menu item");
@@ -200,6 +204,15 @@ function MenuItemContent() {
       initialVariants={parsedVariants}
       initialImageUrl={initialData?.imageUrl}
       onSave={handleSave}
+      onBack={() => {
+        if (searchParams.get("from") === "readiness") {
+          router.push("/seller/readiness");
+        } else if (typeof window !== "undefined" && window.history.length > 1) {
+          router.back();
+        } else {
+          router.push("/seller/menu");
+        }
+      }}
     />
   );
 }

@@ -25,6 +25,14 @@ export interface ResponsiveOrderItemLine {
   name: string;
   qty: number;
   price: string;
+  addons?: {
+    id?: string;
+    name: string;
+    quantity: number;
+    price: number;
+    lineTotal: number;
+  }[];
+  addonsSubtotal?: number;
 }
 
 export type OrderTimelineStep = "Order Placed" | "Preparing" | "On the way" | "Delivered" | "Cancelled";
@@ -741,11 +749,27 @@ export const ResponsiveSellerOrdersDetails: React.FC<
             {/* Items List */}
             <div className={styles.itemsList}>
               {items.map((item) => (
-                <div key={item.id} className={styles.itemRow}>
-                  <span className={styles.itemTitle}>
-                    {item.name} <strong className={styles.itemMultiply}>×{item.qty}</strong>
-                  </span>
-                  <span className={styles.itemPrice}>{item.price}</span>
+                <div key={item.id} style={{ display: "flex", flexDirection: "column", gap: "2px", padding: "6px 0", borderBottom: "1px dashed #F1F5F9" }}>
+                  <div className={styles.itemRow} style={{ padding: 0 }}>
+                    <span className={styles.itemTitle}>
+                      {item.name} <strong className={styles.itemMultiply}>×{item.qty}</strong>
+                    </span>
+                    <span className={styles.itemPrice}>{item.price}</span>
+                  </div>
+                  {item.addons && item.addons.length > 0 && (
+                    <div style={{ paddingLeft: "10px", borderLeft: "2px solid #E2E8F0", margin: "4px 0 2px 4px", fontSize: "0.78rem" }}>
+                      <div style={{ color: "#64748B", fontWeight: 600 }}>Add-ons:</div>
+                      {item.addons.map((addon, aIdx) => (
+                        <div key={addon.id || aIdx} style={{ display: "flex", justifyContent: "space-between", color: "#475569", marginTop: "2px" }}>
+                          <span>• {addon.name} (x{addon.quantity} @ ₹{addon.price})</span>
+                          <span style={{ fontWeight: 600 }}>₹{addon.lineTotal}</span>
+                        </div>
+                      ))}
+                      <div style={{ textAlign: "right", color: "#EA580C", fontWeight: 600, marginTop: "2px" }}>
+                        Add-ons Total: ₹{item.addonsSubtotal}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
