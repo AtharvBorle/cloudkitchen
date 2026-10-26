@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
 import PaginationControls from "../../common/PaginationControls";
+import CreateAddonModal from "./CreateAddonModal";
 import styles from "./SellerAddonsManager.module.css";
 
 export interface AddonItemData {
@@ -723,169 +724,14 @@ export default function SellerAddonsManager() {
       {/* ========================================================
           MODAL 1: ADD NEW ADD-ON
           ======================================================== */}
-      {isAddModalOpen && (
-        <div className={styles.modalBackdrop} onClick={() => setIsAddModalOpen(false)}>
-          <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <h3 className={styles.modalTitle}>Add New Add-on</h3>
-              <button
-                type="button"
-                onClick={() => setIsAddModalOpen(false)}
-                className={styles.closeBtn}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateAddon}>
-              <div className={styles.modalBody}>
-                <div className={styles.formGroup}>
-                  <label className={styles.formLabel}>
-                    Add-on Name <span style={{ color: "#DC2626" }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Extra Roti, Extra Sabji, Extra Rice"
-                    value={formName}
-                    onChange={(e) => setFormName(e.target.value)}
-                    className={styles.formInput}
-                  />
-                </div>
-
-                <div className={styles.formRow}>
-                  <div className={styles.formGroup}>
-                    <label className={styles.formLabel}>
-                      Selling Price (₹) <span style={{ color: "#DC2626" }}>*</span>
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      min="0"
-                      step="0.5"
-                      placeholder="e.g. 15"
-                      value={formPrice}
-                      onChange={(e) => setFormPrice(e.target.value)}
-                      className={styles.formInput}
-                    />
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label className={styles.formLabel}>Initial Stock Qty</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      placeholder="e.g. 20"
-                      value={formStock}
-                      onChange={(e) => setFormStock(e.target.value)}
-                      className={styles.formInput}
-                    />
-                  </div>
-                </div>
-
-                <div className={styles.formRow}>
-                  <div className={styles.formGroup}>
-                    <label className={styles.formLabel}>Low-Stock Alert Threshold</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      placeholder="e.g. 5"
-                      value={formThreshold}
-                      onChange={(e) => setFormThreshold(e.target.value)}
-                      className={styles.formInput}
-                    />
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label className={styles.formLabel}>Status</label>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px", height: "42px" }}>
-                      <button
-                        type="button"
-                        onClick={() => setFormIsActive(!formIsActive)}
-                        className={`${styles.toggleSwitch} ${formIsActive ? styles.toggleSwitchActive : ""}`}
-                      >
-                        <span className={`${styles.toggleThumb} ${formIsActive ? styles.toggleThumbActive : ""}`} />
-                      </button>
-                      <span style={{ fontSize: "0.85rem", fontWeight: 700, color: formIsActive ? "#16A34A" : "#64748B" }}>
-                        {formIsActive ? "Active (Purchasable)" : "Inactive"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className={styles.formGroup}>
-                  <label className={styles.formLabel}>Description (Optional)</label>
-                  <textarea
-                    rows={2}
-                    placeholder="Brief description or serving size (e.g. 2 freshly cooked whole wheat rotis)"
-                    value={formDescription}
-                    onChange={(e) => setFormDescription(e.target.value)}
-                    className={styles.formTextarea}
-                  />
-                </div>
-
-                <div className={styles.formGroup}>
-                  <label className={styles.formLabel}>Add-on Image (Optional)</label>
-                  <div
-                    className={styles.imageUploadArea}
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    {formImagePreview ? (
-                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        <img
-                          src={formImagePreview}
-                          alt="Preview"
-                          className={styles.imagePreview}
-                        />
-                        <div style={{ textAlign: "left" }}>
-                          <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#FF6B00" }}>
-                            Click to change photo
-                          </span>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <Upload size={22} color="#94A3B8" />
-                        <span style={{ fontSize: "0.84rem", color: "#64748B" }}>
-                          Click to upload add-on image
-                        </span>
-                      </>
-                    )}
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      style={{ display: "none" }}
-                      onChange={handleImageChange}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className={styles.modalFooter}>
-                <button
-                  type="button"
-                  onClick={() => setIsAddModalOpen(false)}
-                  className={styles.cancelBtn}
-                  disabled={submitting}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className={styles.saveBtn}
-                  disabled={submitting}
-                >
-                  {submitting ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-                  <span>{submitting ? "Saving..." : "Create Add-on"}</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <CreateAddonModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onCreated={(newAddon) => {
+          showToast(`Add-on "${newAddon.name}" created successfully!`);
+          loadAddons();
+        }}
+      />
 
       {/* ========================================================
           MODAL 2: EDIT ADD-ON
