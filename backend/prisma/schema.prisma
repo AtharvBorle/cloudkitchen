@@ -46,6 +46,10 @@ model SellerProfile {
   longitude                  Float?
   isLocationPinned           Boolean          @default(false)
   deliveryRadiusKm           Float            @default(5.0)
+  deliveryRadiusReviewed     Boolean          @default(false)
+  operatingHoursReviewed     Boolean          @default(false)
+  operatingHours             String?          @default("[]")
+  isReadinessCompleted       Boolean          @default(false)
   kitchenImages              String           @default("[]")
   cuisineImages              String           @default("[]")
   bannerImageUrl             String?

@@ -20,6 +20,8 @@ export interface PlaceCardData {
   price?: number;
   isOnline?: boolean;
   foodType?: string;
+  distanceText?: string;
+  distanceKm?: number;
 }
 
 const CUISINES = [
@@ -1347,10 +1349,23 @@ export default function Properties({
                             <span className="place-rating-text-mobile">{Number(place.rating || 0).toFixed(1)}</span>
                           </div>
 
-                          {/* Delivery Time / Closed Text */}
-                          <span className="place-card-time">
-                            {isClosed ? "Not accepting orders" : place.time}
-                          </span>
+                          {place.distanceText && !isClosed && (
+                            <span className="place-card-distance-mobile">
+                              📍 {place.distanceText}
+                            </span>
+                          )}
+
+                          {/* Distance & Delivery Time Meta Row Right */}
+                          <div className="place-card-meta-right">
+                            {place.distanceText && !isClosed && (
+                              <span className="place-card-distance">
+                                📍 {place.distanceText}
+                              </span>
+                            )}
+                            <span className="place-card-time">
+                              {isClosed ? "Not accepting orders" : place.time}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </Link>
@@ -1535,6 +1550,24 @@ export default function Properties({
         }
         .place-star-icon {
           color: #10B981;
+        }
+        .place-card-meta-right {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .place-card-distance {
+          font-size: 11.5px;
+          color: #FF6B00;
+          font-weight: 700;
+          background-color: #FFF3EB;
+          padding: 2px 6px;
+          border-radius: 4px;
+          font-family: var(--font-poppins), 'Poppins', sans-serif;
+          white-space: nowrap;
+        }
+        .place-card-distance-mobile {
+          display: none;
         }
         .place-card-time {
           font-size: 12px;
@@ -1759,6 +1792,17 @@ export default function Properties({
             color: #FFFFFF !important;
             font-size: 12px !important;
             font-weight: 600 !important;
+          }
+          .place-card-meta-right {
+            display: none !important;
+          }
+          .place-card-distance-mobile {
+            display: inline-flex !important;
+            align-items: center !important;
+            color: #FFFFFF !important;
+            font-size: 11px !important;
+            font-weight: 600 !important;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8) !important;
           }
           .place-card-time {
             display: none !important;

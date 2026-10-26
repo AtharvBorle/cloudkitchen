@@ -54,6 +54,11 @@ export interface KitchenData {
   isOnline?: boolean;
   mealPlans?: any[];
   bannerImageUrl?: string;
+  distanceText?: string;
+  distanceKm?: number;
+  latitude?: number | null;
+  longitude?: number | null;
+  pincode?: string;
 }
 
 export const KITCHENS_REGISTRY: Record<string, KitchenData> = {

@@ -4,6 +4,8 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Navbar } from "@/components/navbar";
+import { useLocation } from "@/components/location-provider";
+import { calculateDistanceKm, formatDistance, getPincodeCoordinates, resolveLocationCoordinates } from "@/lib/geo-distance";
 import { FoodHeroBanner } from "@/components/restaurant-desktop/foodherobanner";
 import { PopularFood } from "@/components/restaurant-desktop/popularfood";
 import { SubscriptionPlans, PlanItem, SubscribeModal, SubscribeModalPlan } from "@/components/restaurant-desktop/subscriptionplans";
@@ -26,6 +28,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
   const isVegParam = searchParams?.get("vegOnly") === "true" || searchParams?.get("veg") === "true" || searchParams?.get("diet") === "veg";
   const { data: session } = useSession();
   const { addToCart, decreaseQuantity } = useCart();
+  const { defaultAddress } = useLocation();
   const isStatic = isStaticKitchen(kitchenId);
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
   const [isNotFound, setIsNotFound] = useState<boolean>(false);
@@ -71,6 +74,94 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
       })
       .catch(() => {});
   }, [session]);
+
+  
+  // User active location coordinates
+  const userCoordinates = useMemo(() => {
+    let lat: number | null = null;
+    let lng: number | null = null;
+
+    if (typeof window !== "undefined") {
+      try {
+        const storedLat = localStorage.getItem("guest-lat");
+        const storedLng = localStorage.getItem("guest-lng");
+        if (storedLat && storedLng) {
+          const parsedLat = parseFloat(storedLat);
+          const parsedLng = parseFloat(storedLng);
+          if (!isNaN(parsedLat) && !isNaN(parsedLng) && (parsedLat !== 0 || parsedLng !== 0)) {
+            lat = parsedLat;
+            lng = parsedLng;
+          }
+        }
+      } catch {}
+    }
+
+    if (lat === null || lng === null) {
+      if (defaultAddress?.latitude != null && defaultAddress?.longitude != null) {
+        const defLat = Number(defaultAddress.latitude);
+        const defLng = Number(defaultAddress.longitude);
+        if (!isNaN(defLat) && !isNaN(defLng) && (defLat !== 0 || defLng !== 0)) {
+          lat = defLat;
+          lng = defLng;
+        }
+      }
+    }
+
+    if (lat === null || lng === null) {
+      const pin =
+        (typeof window !== "undefined"
+          ? localStorage.getItem("active-selected-pincode") || localStorage.getItem("guest-pincode")
+          : null) || defaultAddress?.pincode;
+      if (pin) {
+        const pinCoords = getPincodeCoordinates(pin);
+        if (pinCoords) {
+          lat = pinCoords.lat;
+          lng = pinCoords.lng;
+        }
+      }
+    }
+
+    if (lat === null || lng === null) {
+      const loc =
+        (typeof window !== "undefined" ? localStorage.getItem("guest-locality") : null) ||
+        defaultAddress?.locality;
+      if (loc) {
+        const locCoords = resolveLocationCoordinates(loc);
+        if (locCoords) {
+          lat = locCoords.lat;
+          lng = locCoords.lng;
+        }
+      }
+    }
+
+    return { lat, lng };
+  }, [defaultAddress]);
+
+  // Dynamic distance text from active user location to this kitchen
+  const dynamicDistanceText = useMemo(() => {
+    if (!userCoordinates.lat || !userCoordinates.lng) return kitchenData.distanceText || "";
+
+    const kLat =
+      kitchenData.latitude != null && !isNaN(Number(kitchenData.latitude)) && Number(kitchenData.latitude) !== 0
+        ? Number(kitchenData.latitude)
+        : (kitchenData.pincode ? getPincodeCoordinates(kitchenData.pincode)?.lat : null) ??
+          (kitchenData.location ? resolveLocationCoordinates(kitchenData.location)?.lat : null) ??
+          null;
+
+    const kLng =
+      kitchenData.longitude != null && !isNaN(Number(kitchenData.longitude)) && Number(kitchenData.longitude) !== 0
+        ? Number(kitchenData.longitude)
+        : (kitchenData.pincode ? getPincodeCoordinates(kitchenData.pincode)?.lng : null) ??
+          (kitchenData.location ? resolveLocationCoordinates(kitchenData.location)?.lng : null) ??
+          null;
+
+    if (kLat !== null && kLng !== null) {
+      const dist = calculateDistanceKm(userCoordinates.lat, userCoordinates.lng, kLat, kLng);
+      return formatDistance(dist);
+    }
+
+    return kitchenData.distanceText || "";
+  }, [userCoordinates, kitchenData.latitude, kitchenData.longitude, kitchenData.pincode, kitchenData.location, kitchenData.distanceText]);
 
   const computedSubscriptionPlans = useMemo(() => {
     return subscriptionPlans.map((plan) => {
@@ -433,6 +524,31 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
             } else {
               computedDietType = "Veg & Non-Veg 🍱";
             }
+
+                        const sellerPincode =
+              liveData.addressPincode ||
+              liveData.pincode ||
+              liveData.user?.addressPincode ||
+              liveData.user?.pincode;
+            const sellerLocality =
+              liveData.addressLocality ||
+              liveData.user?.addressLocality ||
+              liveData.addressCity ||
+              liveData.user?.addressCity;
+            const rawLat = liveData.latitude ?? liveData.user?.latitude;
+            const rawLng = liveData.longitude ?? liveData.user?.longitude;
+            const sellerLat =
+              rawLat != null && !isNaN(Number(rawLat)) && Number(rawLat) !== 0
+                ? Number(rawLat)
+                : (sellerPincode ? getPincodeCoordinates(sellerPincode)?.lat : null) ??
+                  (sellerLocality ? resolveLocationCoordinates(sellerLocality)?.lat : null) ??
+                  null;
+            const sellerLng =
+              rawLng != null && !isNaN(Number(rawLng)) && Number(rawLng) !== 0
+                ? Number(rawLng)
+                : (sellerPincode ? getPincodeCoordinates(sellerPincode)?.lng : null) ??
+                  (sellerLocality ? resolveLocationCoordinates(sellerLocality)?.lng : null) ??
+                  null;
 
             setKitchenData((prev: any) => ({
               ...prev,
@@ -869,6 +985,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
             deliveryFeeText={kitchenData.deliveryFeeText}
             dietType={kitchenData.dietType}
             offerText={kitchenData.offerText}
+            distanceText={dynamicDistanceText || kitchenData.distanceText}
             isVegOnly={isVegOnly}
             initialVegOnly={isVegOnly}
             onVegToggle={handleVegToggle}
@@ -956,6 +1073,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
         <RestaurantMobileView
           kitchenData={{
             ...kitchenData,
+            distanceText: dynamicDistanceText || kitchenData.distanceText,
             items: displayedItems,
           }}
           isVegOnly={isVegOnly}
