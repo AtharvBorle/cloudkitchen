@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import { X, Check, ShoppingBag } from "lucide-react";
+import { X, Plus, Minus, ShoppingBag, Package } from "lucide-react";
 import styles from "./AddonCustomizationModal.module.css";
 import { AddonItem } from "@/context/CartContext";
 
@@ -20,6 +20,16 @@ export interface ModalItem {
   addons?: any[];
 }
 
+export interface ModalAddonItem extends AddonItem {
+  description?: string;
+  imageUrl?: string;
+  stockQuantity?: number;
+  lowStockThreshold?: number;
+  isActive?: boolean;
+  quantity?: number;
+  lineTotal?: number;
+}
+
 export interface AddonCustomizationModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -33,8 +43,8 @@ export interface AddonCustomizationModalProps {
   initialSelectedAddons?: any[];
   submitButtonText?: string;
   isEditMode?: boolean;
-  onConfirm?: (selectedAddons: AddonItem[], totalUnitPrice: number) => void;
-  onAddToCart?: (selectedAddons: AddonItem[], quantity?: number) => void;
+  onConfirm?: (selectedAddons: ModalAddonItem[], totalUnitPrice: number) => void;
+  onAddToCart?: (selectedAddons: ModalAddonItem[], quantity?: number) => void;
 }
 
 export const AddonCustomizationModal: React.FC<AddonCustomizationModalProps> = ({
@@ -65,17 +75,16 @@ export const AddonCustomizationModal: React.FC<AddonCustomizationModalProps> = (
         : Math.max(0, rawBasePrice)
       : parseFloat(String(rawBasePrice).replace(/[^0-9.]/g, "")) || 0;
 
-  const resolvedDescription =
-    item?.description || propDescription || "";
+  const resolvedDescription = item?.description || propDescription || "";
 
-  // 2. Parse and normalize available add-ons list with stable keys and deduplication
-  const parsedAddons: AddonItem[] = useMemo(() => {
+  // 2. Parse and normalize available add-ons list
+  const parsedAddons: ModalAddonItem[] = useMemo(() => {
     const raw = item?.addons ?? propAddons ?? [];
     try {
       const list = typeof raw === "string" ? JSON.parse(raw) : raw;
       if (Array.isArray(list)) {
         const seenNames = new Set<string>();
-        const result: AddonItem[] = [];
+        const result: ModalAddonItem[] = [];
         list.forEach((a: any, idx: number) => {
           if (!a || !(a.name || "").trim()) return;
           const cleanName = String(a.name || "").trim();
@@ -88,10 +97,23 @@ export const AddonCustomizationModal: React.FC<AddonCustomizationModalProps> = (
             typeof a.price === "number"
               ? a.price
               : parseFloat(String(a.price).replace(/[^0-9.]/g, "")) || 0;
+
+          const stockQuantity =
+            a.stockQuantity !== undefined && a.stockQuantity !== null
+              ? parseInt(String(a.stockQuantity), 10)
+              : undefined;
+
+          const isActive = a.isActive !== undefined ? Boolean(a.isActive) : true;
+
           result.push({
             id: cleanId,
             name: cleanName,
             price: Math.max(0, cleanPrice),
+            description: a.description || "",
+            imageUrl: a.imageUrl || a.image || undefined,
+            stockQuantity: !isNaN(Number(stockQuantity)) ? Number(stockQuantity) : 99,
+            lowStockThreshold: a.lowStockThreshold || 5,
+            isActive: isActive,
           });
         });
         return result;
@@ -102,53 +124,35 @@ export const AddonCustomizationModal: React.FC<AddonCustomizationModalProps> = (
     return [];
   }, [item?.addons, propAddons]);
 
-  // Helper to compute initially selected IDs matched by ID or name
-  const computeInitialIds = React.useCallback(
-    (initial: any[] | undefined, available: AddonItem[]): string[] => {
-      if (!initial || !Array.isArray(initial) || initial.length === 0) return [];
-      const initialKeys = initial
-        .map((a: any) => {
-          if (typeof a === "object" && a !== null) {
-            return {
-              id: a.id ? String(a.id).toLowerCase() : null,
-              name: a.name ? String(a.name).toLowerCase().trim() : null,
-            };
-          }
-          return {
-            id: String(a).toLowerCase(),
-            name: String(a).toLowerCase().trim(),
-          };
-        })
-        .filter((k) => k.id || k.name);
-
-      return available
-        .filter((pa) => {
-          const paId = String(pa.id).toLowerCase();
-          const paName = String(pa.name).toLowerCase().trim();
-          return initialKeys.some(
-            (k) =>
-              (k.id && (k.id === paId || k.id === paName)) ||
-              (k.name && (k.name === paName || k.name === paId))
-          );
-        })
-        .map((pa) => String(pa.id));
-    },
-    []
-  );
-
-  // 3. Track selected add-on IDs
-  const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
+  // 3. Track selected quantity per add-on ID
+  const [addonQuantities, setAddonQuantities] = useState<Record<string, number>>({});
   const isOpenRef = useRef(false);
   const activeItemKeyRef = useRef<string | undefined>(undefined);
 
-  // Synchronize initial selections ONLY when the modal transitions from closed to open or item switches
+  // Initialize quantities when modal opens
   useEffect(() => {
     const currentItemKey = item?.id || resolvedDishName;
     const isJustOpening = isOpen && !isOpenRef.current;
     const isItemSwitched = isOpen && activeItemKeyRef.current !== currentItemKey;
 
     if (isJustOpening || isItemSwitched) {
-      setSelectedAddonIds(computeInitialIds(initialSelectedAddons, parsedAddons));
+      const initialMap: Record<string, number> = {};
+      if (Array.isArray(initialSelectedAddons) && initialSelectedAddons.length > 0) {
+        for (const init of initialSelectedAddons) {
+          if (!init) continue;
+          const initId = typeof init === "object" ? String(init.id || "").toLowerCase() : String(init).toLowerCase();
+          const initName = typeof init === "object" ? String(init.name || "").toLowerCase().trim() : "";
+          const qty = typeof init === "object" ? Math.max(1, Number(init.quantity) || 1) : 1;
+
+          const matched = parsedAddons.find(
+            (pa) => String(pa.id).toLowerCase() === initId || (initName && pa.name.toLowerCase().trim() === initName)
+          );
+          if (matched && matched.id) {
+            initialMap[matched.id] = qty;
+          }
+        }
+      }
+      setAddonQuantities(initialMap);
       activeItemKeyRef.current = currentItemKey;
     }
 
@@ -156,7 +160,7 @@ export const AddonCustomizationModal: React.FC<AddonCustomizationModalProps> = (
     if (!isOpen) {
       activeItemKeyRef.current = undefined;
     }
-  }, [isOpen, item?.id, resolvedDishName, initialSelectedAddons, parsedAddons, computeInitialIds]);
+  }, [isOpen, item?.id, resolvedDishName, initialSelectedAddons, parsedAddons]);
 
   // Lock background scrolling while modal is open
   useEffect(() => {
@@ -172,24 +176,41 @@ export const AddonCustomizationModal: React.FC<AddonCustomizationModalProps> = (
 
   if (!isOpen) return null;
 
-  const toggleAddon = (addonId: string) => {
-    setSelectedAddonIds((prev) =>
-      prev.includes(addonId)
-        ? prev.filter((id) => id !== addonId)
-        : [...prev, addonId]
-    );
+  // Quantity Change Handler
+  const handleQuantityChange = (addonId: string, delta: number, maxStock: number = 99) => {
+    setAddonQuantities((prev) => {
+      const current = prev[addonId] || 0;
+      const next = current + delta;
+      if (next <= 0) {
+        const copy = { ...prev };
+        delete copy[addonId];
+        return copy;
+      }
+      const capped = Math.min(next, maxStock);
+      return { ...prev, [addonId]: capped };
+    });
   };
 
-  const selectedAddonsList = parsedAddons.filter((a) =>
-    selectedAddonIds.includes(String(a.id))
-  );
+  // Compute selected add-ons list with quantities and line totals
+  const selectedAddonsList: ModalAddonItem[] = parsedAddons
+    .filter((a) => a.id && (addonQuantities[a.id] || 0) > 0)
+    .map((a) => {
+      const qty = addonQuantities[a.id!] || 1;
+      return {
+        ...a,
+        quantity: qty,
+        lineTotal: a.price * qty,
+      };
+    });
 
-  const addonsTotal = selectedAddonsList.reduce(
-    (sum, a) => sum + (Number(a.price) || 0),
+  const addonsSubtotal = selectedAddonsList.reduce(
+    (sum, a) => sum + (Number(a.lineTotal) || 0),
     0
   );
 
-  const totalUnitPrice = resolvedBasePrice + addonsTotal;
+  const totalUnitPrice = resolvedBasePrice + addonsSubtotal;
+  const totalSelectedCount = selectedAddonsList.reduce((sum, a) => sum + (a.quantity || 1), 0);
+
   const buttonLabel =
     submitButtonText ||
     (isEditMode || Boolean(onConfirm) ? "Update Add-ons" : "Add Item");
@@ -241,37 +262,105 @@ export const AddonCustomizationModal: React.FC<AddonCustomizationModalProps> = (
           <div className={styles.sectionHeader}>
             <h3 className={styles.sectionTitle}>Choose Add-ons</h3>
             <span className={styles.sectionSubtitle}>
-              {selectedAddonIds.length > 0
-                ? `${selectedAddonIds.length} selected`
-                : "Optional extras"}
+              {totalSelectedCount > 0
+                ? `${totalSelectedCount} items selected (+₹${addonsSubtotal})`
+                : "Quantity selectors with live totals"}
             </span>
           </div>
 
           {parsedAddons.length === 0 ? (
-            <div style={{ padding: "16px 0", textAlign: "center", color: "#64748B", fontSize: "0.9rem" }}>
-              No extra add-ons available for this item.
+            <div style={{ padding: "28px 0", textAlign: "center", color: "#64748B", fontSize: "0.9rem" }}>
+              <Package size={28} color="#94A3B8" style={{ margin: "0 auto 8px" }} />
+              <p style={{ margin: 0, fontWeight: 600 }}>No add-ons available for this item</p>
             </div>
           ) : (
             <div className={styles.addonsList}>
               {parsedAddons.map((addon) => {
                 const addonId = String(addon.id);
-                const isSelected = selectedAddonIds.includes(addonId);
+                const currentQty = addonQuantities[addonId] || 0;
+                const isSelected = currentQty > 0;
+                const stock = addon.stockQuantity !== undefined ? addon.stockQuantity : 99;
+                const isOutOfStock = addon.isActive === false || stock <= 0;
+                const isLowStock = !isOutOfStock && stock <= (addon.lowStockThreshold || 5);
+                const canIncrease = !isOutOfStock && currentQty < stock;
+                const lineTotal = addon.price * currentQty;
 
                 return (
                   <div
                     key={addonId}
                     className={`${styles.addonCard} ${
                       isSelected ? styles.addonCardSelected : ""
-                    }`}
-                    onClick={() => toggleAddon(addonId)}
+                    } ${isOutOfStock ? styles.addonCardDisabled : ""}`}
                   >
+                    {/* Left: Thumbnail & Name & Unit Price */}
                     <div className={styles.addonLeft}>
-                      <div className={styles.checkbox}>
-                        {isSelected && <Check size={13} strokeWidth={3} />}
+                      {addon.imageUrl ? (
+                        <img
+                          src={addon.imageUrl}
+                          alt={addon.name}
+                          className={styles.addonImg}
+                          onError={(e) => {
+                            (e.target as HTMLElement).style.display = "none";
+                          }}
+                        />
+                      ) : null}
+
+                      <div className={styles.addonInfo}>
+                        <span className={styles.addonName}>{addon.name}</span>
+                        <div className={styles.addonPriceMeta}>
+                          <span className={styles.addonUnitPrice}>₹{addon.price}</span>
+                          {isOutOfStock ? (
+                            <span className={`${styles.stockBadge} ${styles.stockBadgeOut}`}>
+                              Out of stock
+                            </span>
+                          ) : isLowStock ? (
+                            <span className={`${styles.stockBadge} ${styles.stockBadgeLow}`}>
+                              Only {stock} left
+                            </span>
+                          ) : (
+                            <span className={`${styles.stockBadge} ${styles.stockBadgeIn}`}>
+                              In Stock
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <span className={styles.addonName}>{addon.name}</span>
                     </div>
-                    <span className={styles.addonPrice}>+₹{addon.price}</span>
+
+                    {/* Right: Quantity Stepper & Line Total */}
+                    <div className={styles.addonRight}>
+                      <div className={styles.qtyStepper}>
+                        <button
+                          type="button"
+                          className={styles.stepperBtn}
+                          disabled={currentQty <= 0}
+                          onClick={() => handleQuantityChange(addonId, -1, stock)}
+                          aria-label={`Decrease ${addon.name}`}
+                        >
+                          <Minus size={14} strokeWidth={2.8} />
+                        </button>
+
+                        <span className={styles.qtyValue}>{currentQty}</span>
+
+                        <button
+                          type="button"
+                          className={styles.stepperBtn}
+                          disabled={!canIncrease}
+                          onClick={() => handleQuantityChange(addonId, 1, stock)}
+                          aria-label={`Increase ${addon.name}`}
+                          title={!canIncrease && !isOutOfStock ? `Max available units reached (${stock})` : undefined}
+                        >
+                          <Plus size={14} strokeWidth={2.8} />
+                        </button>
+                      </div>
+
+                      <div
+                        className={`${styles.addonLineTotal} ${
+                          isSelected ? styles.addonLineTotalActive : ""
+                        }`}
+                      >
+                        ₹{lineTotal}
+                      </div>
+                    </div>
                   </div>
                 );
               })}

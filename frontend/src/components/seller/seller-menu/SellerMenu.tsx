@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Plus, Search, SquarePen, Sparkles, Trash2, Utensils, MapPin, Edit3, X, Check, AlertCircle, Loader2 } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import SellerAddonsManager from "./addons/SellerAddonsManager";
+import { Plus, Search, SquarePen, Sparkles, Trash2, Utensils, MapPin, Package, Layers, Edit3, X, Check, AlertCircle, Loader2 } from "lucide-react";
 import ConsoleSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
 import { fetchApi } from "@/lib/fetch-api";
@@ -96,6 +97,10 @@ export default function SellerMenu({
   onStockQtyChange,
 }: SellerMenuProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [menuTab, setMenuTab] = useState<"dishes" | "addons">(
+    searchParams.get("tab") === "addons" ? "addons" : "dishes"
+  );
   const seller = useSellerProfile();
   const [isOpen, setIsOpen] = useState<boolean>(typeof initialIsOpen === "boolean" ? initialIsOpen : true);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -567,20 +572,86 @@ export default function SellerMenu({
           {/* Header Row: Title & Subtitle + Add New Dish Button */}
           <div className={styles.headerRow}>
             <div className={styles.headerGroup}>
-              <h1 className={styles.title}>Menu Inventory</h1>
+              <h1 className={styles.title}>Menu &amp; Inventory</h1>
               <p className={styles.subtitle}>
-                Publish dishes, update pricing, toggle real-time availability in rooms.
+                Manage dishes, pricing, store-level add-ons, and real-time inventory.
               </p>
             </div>
+            {menuTab === "dishes" && (
+              <button
+                type="button"
+                className={styles.addDishBtn}
+                onClick={handleAddClick}
+              >
+                <Plus size={18} strokeWidth={2.8} />
+                <span>Add New Dish</span>
+              </button>
+            )}
+          </div>
+
+          {/* Section Navigation Tabs (Dishes vs Add-ons) */}
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            marginBottom: "20px",
+            borderBottom: "2px solid #F1F5F9",
+            paddingBottom: "12px",
+            flexWrap: "wrap",
+          }}>
             <button
               type="button"
-              className={styles.addDishBtn}
-              onClick={handleAddClick}
+              onClick={() => setMenuTab("dishes")}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "10px 22px",
+                borderRadius: "10px",
+                border: "none",
+                fontSize: "0.92rem",
+                fontWeight: 700,
+                cursor: "pointer",
+                backgroundColor: menuTab === "dishes" ? "#FFF7ED" : "#F8FAFC",
+                color: menuTab === "dishes" ? "#EA580C" : "#64748B",
+                borderBottom: menuTab === "dishes" ? "2.5px solid #EA580C" : "2.5px solid transparent",
+                boxShadow: menuTab === "dishes" ? "0 2px 8px rgba(234, 88, 12, 0.12)" : "none",
+                transition: "all 0.15s ease",
+              }}
             >
-              <Plus size={18} strokeWidth={2.8} />
-              <span>Add New Dish</span>
+              <Utensils size={17} />
+              <span>Dishes &amp; Meals ({dishList.length})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setMenuTab("addons")}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "10px 22px",
+                borderRadius: "10px",
+                border: "none",
+                fontSize: "0.92rem",
+                fontWeight: 700,
+                cursor: "pointer",
+                backgroundColor: menuTab === "addons" ? "#FFF7ED" : "#F8FAFC",
+                color: menuTab === "addons" ? "#EA580C" : "#64748B",
+                borderBottom: menuTab === "addons" ? "2.5px solid #EA580C" : "2.5px solid transparent",
+                boxShadow: menuTab === "addons" ? "0 2px 8px rgba(234, 88, 12, 0.12)" : "none",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <Package size={17} />
+              <span>Add-ons &amp; Inventory</span>
             </button>
           </div>
+
+          {menuTab === "addons" ? (
+            <SellerAddonsManager />
+          ) : (
+            <>
 
           {/* 2. Store Operations Banner Card */}
           <div className={styles.operationsCard}>
@@ -1086,6 +1157,8 @@ export default function SellerMenu({
             />
           )}
           </div>
+            </>
+          )}
         </main>
       </div>
 

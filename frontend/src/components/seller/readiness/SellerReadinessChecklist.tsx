@@ -28,6 +28,8 @@ import { fetchApi } from "@/lib/fetch-api";
 import { compressImage } from "@/lib/image-compression";
 import styles from "./SellerReadinessChecklist.module.css";
 
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+
 export interface ReadinessItem {
   id: "card_photo" | "cover_image" | "delivery_radius" | "operating_hours" | "upi_payment" | "delivery_person" | "menu_items";
   step: number;
@@ -91,7 +93,7 @@ const DEFAULT_ITEMS: ReadinessItem[] = [
   {
     id: "menu_items",
     step: 7,
-    title: "Add Items in menue",
+    title: "Add Items in Menu",
     description: "Create at least one dish in your kitchen menu so hungry customers can explore, order, and pay.",
     isCompleted: false,
     count: 0,
@@ -208,6 +210,10 @@ export default function SellerReadinessChecklist({
 
   // Open appropriate edit modal for an item
   const handleOpenEditModal = (item: ReadinessItem) => {
+    if (item.id === "menu_items") {
+      router.push("/seller/menu/item?from=readiness");
+      return;
+    }
     setErrorMessage("");
     setActiveModal(item.id);
 
@@ -228,6 +234,10 @@ export default function SellerReadinessChecklist({
     e.preventDefault();
     if (!cardFile && !cardPreview) {
       setErrorMessage("Please select an image file to upload for your kitchen card.");
+      return;
+    }
+    if (cardFile && cardFile.size > MAX_IMAGE_SIZE) {
+      setErrorMessage(`Kitchen card image size must not exceed 10MB. Selected file is ${(cardFile.size / (1024 * 1024)).toFixed(1)}MB.`);
       return;
     }
 
@@ -258,6 +268,10 @@ export default function SellerReadinessChecklist({
     e.preventDefault();
     if (!bannerFile && !bannerPreview) {
       setErrorMessage("Please select an image file for your storefront cover.");
+      return;
+    }
+    if (bannerFile && bannerFile.size > MAX_IMAGE_SIZE) {
+      setErrorMessage(`Storefront cover image size must not exceed 10MB. Selected file is ${(bannerFile.size / (1024 * 1024)).toFixed(1)}MB.`);
       return;
     }
 
@@ -440,6 +454,10 @@ export default function SellerReadinessChecklist({
       setErrorMessage("Please enter a short dish description.");
       return;
     }
+    if (menuImageFile && menuImageFile.size > MAX_IMAGE_SIZE) {
+      setErrorMessage(`Dish image size must not exceed 10MB. Selected file is ${(menuImageFile.size / (1024 * 1024)).toFixed(1)}MB.`);
+      return;
+    }
 
     setIsSubmitting(true);
     setErrorMessage("");
@@ -541,7 +559,7 @@ export default function SellerReadinessChecklist({
         case "delivery_person":
           return "Add Delivery Person";
         case "menu_items":
-          return "Add Item to Menu";
+          return "Add Items in Menu";
         default:
           return "Complete Step";
       }
@@ -702,6 +720,14 @@ export default function SellerReadinessChecklist({
                   onChange={(e) => {
                     const f = e.target.files?.[0];
                     if (f) {
+                      if (f.size > MAX_IMAGE_SIZE) {
+                        setErrorMessage(`Kitchen card image size must not exceed 10MB. Selected file is ${(f.size / (1024 * 1024)).toFixed(1)}MB.`);
+                        e.target.value = "";
+                        setCardFile(null);
+                        setCardPreview("");
+                        return;
+                      }
+                      setErrorMessage("");
                       setCardFile(f);
                       setCardPreview(URL.createObjectURL(f));
                     }
@@ -771,7 +797,7 @@ export default function SellerReadinessChecklist({
               >
                 <UploadCloud size={36} className={styles.dropzoneIcon} />
                 <h4 className={styles.dropzoneTitle}>Click to choose or drop storefront banner</h4>
-                <p className={styles.dropzoneHint}>Recommended: 16:9 wide banner, high resolution hero cover image</p>
+                <p className={styles.dropzoneHint}>Recommended: 16:9 wide banner, high resolution hero cover image (PNG, JPG, WebP up to 10MB)</p>
                 <input
                   ref={bannerInputRef}
                   type="file"
@@ -780,6 +806,14 @@ export default function SellerReadinessChecklist({
                   onChange={(e) => {
                     const f = e.target.files?.[0];
                     if (f) {
+                      if (f.size > MAX_IMAGE_SIZE) {
+                        setErrorMessage(`Storefront cover image size must not exceed 10MB. Selected file is ${(f.size / (1024 * 1024)).toFixed(1)}MB.`);
+                        e.target.value = "";
+                        setBannerFile(null);
+                        setBannerPreview("");
+                        return;
+                      }
+                      setErrorMessage("");
                       setBannerFile(f);
                       setBannerPreview(URL.createObjectURL(f));
                     }
@@ -1291,7 +1325,7 @@ export default function SellerReadinessChecklist({
                   onClick={() => menuInputRef.current?.click()}
                 >
                   <UploadCloud size={28} className={styles.dropzoneIcon} />
-                  <p className={styles.dropzoneHint}>Click to select mouth-watering dish photo</p>
+                  <p className={styles.dropzoneHint}>Click to select mouth-watering dish photo (up to 10MB)</p>
                   <input
                     ref={menuInputRef}
                     type="file"
@@ -1300,6 +1334,14 @@ export default function SellerReadinessChecklist({
                     onChange={(e) => {
                       const f = e.target.files?.[0];
                       if (f) {
+                        if (f.size > MAX_IMAGE_SIZE) {
+                          setErrorMessage(`Dish image size must not exceed 10MB. Selected file is ${(f.size / (1024 * 1024)).toFixed(1)}MB.`);
+                          e.target.value = "";
+                          setMenuImageFile(null);
+                          setMenuImagePreview("");
+                          return;
+                        }
+                        setErrorMessage("");
                         setMenuImageFile(f);
                         setMenuImagePreview(URL.createObjectURL(f));
                       }

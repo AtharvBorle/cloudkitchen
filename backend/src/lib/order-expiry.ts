@@ -1,3 +1,4 @@
+import { restoreOrderAddonsStock } from "@/lib/addon-inventory";
 import { db } from "@/lib/db";
 import { emitOrderCancelled, emitOrderUpdated, emitSellerDashboardRefresh } from "@/lib/realtime-events";
 import { revalidateTag } from "next/cache";
@@ -126,6 +127,11 @@ export const cancelExpiredOrder = async (order: any): Promise<any> => {
                     }
                 } catch (stockErr) {
                     console.error(`[OrderExpiry] Stock restoration failed for order #${order.id}:`, stockErr);
+                }
+                try {
+                    await restoreOrderAddonsStock(tx, order.id, itemsRaw, "Order acceptance expiry");
+                } catch (addonErr) {
+                    console.error(`[OrderExpiry] Addon restoration failed for order #${order.id}:`, addonErr);
                 }
             }
 

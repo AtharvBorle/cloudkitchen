@@ -372,7 +372,7 @@ export const getSellerNotifications = async (req: Request) => {
             isRead: false,
             severity: "critical",
             actionLabel: "Re-apply Verification",
-            actionHref: `/seller/reapply`,
+            actionHref: `/seller/revision`,
         });
     }
 

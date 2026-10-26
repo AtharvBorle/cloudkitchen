@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { uploadImage } from "@/lib/upload";
-import { sendSellerApplicationApprovedEmail, sendSellerApplicationRejectedEmail } from "@/lib/emailService";
+import { sendSellerApplicationApprovedEmail, sendSellerApplicationRejectedEmail, getAppUrl } from "@/lib/emailService";
 
 export const deleteSellerBanner = async (req: Request) => {
     const session = await getAuthSession();
@@ -334,6 +334,7 @@ export const updateSellerRegistrationStatus = async (req: Request) => {
                     sellerEmail: sellerUser.email,
                     businessName: updatedProfile.businessName,
                     reason: verificationNote || "Incomplete documentation or clarification required on submitted kitchen license.",
+                    reapplyUrl: `${getAppUrl()}/seller/revision`,
                 }).catch((err) => console.error("[EmailService] Failed to send seller rejection email:", err));
             }
         }

@@ -78,6 +78,10 @@ export const RevisionActionRequired: React.FC<RevisionActionRequiredProps> = ({
     async function loadProfile() {
       try {
         const res = await fetchApi("/api/seller/profile");
+        if (res.status === 401) {
+          router.replace("/seller/login?callbackUrl=/seller/revision");
+          return;
+        }
         if (res.ok) {
           const data = await res.json();
           const profile = data.data?.profile || data.profile || {};

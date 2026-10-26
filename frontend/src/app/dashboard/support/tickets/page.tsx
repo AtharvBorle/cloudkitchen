@@ -20,6 +20,7 @@ import { fetchApi } from "@/lib/fetch-api";
 
 import { MessageSquare, Clock, CheckCircle2, User, Send, Loader2, RefreshCw, AlertCircle, Filter, Paperclip } from "lucide-react";
 import { TicketAttachmentRenderer } from "@/components/common/TicketAttachmentRenderer";
+import { useRoomModule } from "@/context/RoomModuleContext";
 
 
 
@@ -32,6 +33,7 @@ export default function SupportTicketsPage() {
 
 
     const { data: session } = useSession();
+    const { isRoomEnabled } = useRoomModule();
 
 
 
@@ -820,6 +822,17 @@ export default function SupportTicketsPage() {
 
 
     const [submittingNewTicket, setSubmittingNewTicket] = useState(false);
+
+    useEffect(() => {
+        if (!isRoomEnabled) {
+            if (newTicketCategory === 'ROOM') {
+                setNewTicketCategory('FOOD');
+            }
+            if (categoryFilter === 'ROOM') {
+                setCategoryFilter('ALL');
+            }
+        }
+    }, [isRoomEnabled, newTicketCategory, categoryFilter]);
 
 
 
@@ -2290,7 +2303,7 @@ export default function SupportTicketsPage() {
 
 
 
-                            <option value="ROOM">Room</option>
+                            {isRoomEnabled && <option value="ROOM">Room</option>}
 
 
 
@@ -4956,7 +4969,7 @@ export default function SupportTicketsPage() {
 
 
 
-                                    <option value="ROOM">ROOM</option>
+                                    {isRoomEnabled && <option value="ROOM">ROOM</option>}
 
 
 
@@ -5248,7 +5261,7 @@ export default function SupportTicketsPage() {
 
 
 
-                                            {(newTicketCategory === 'ROOM' || newTicketCategory === 'PAYMENT' || newTicketCategory === 'OTHER') && (
+                                            {isRoomEnabled && (newTicketCategory === 'ROOM' || newTicketCategory === 'PAYMENT' || newTicketCategory === 'OTHER') && (
 
 
 

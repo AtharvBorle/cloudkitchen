@@ -82,6 +82,7 @@ model SellerProfile {
   mealPlans                  SellerMealPlan[]
   userMealSubscriptions      UserMealSubscription[]
   curatedReels               CuratedReel[]
+  addons                     Addon[]
 }
 
 model ServedPincode {
@@ -627,3 +628,38 @@ model CuratedReel {
   updatedAt         DateTime       @updatedAt
 }
 
+
+model Addon {
+  id                String              @id @default(uuid())
+  sellerId          String
+  name              String
+  description       String?             @default("")
+  imageUrl          String?
+  price             Float
+  stockQuantity     Int                 @default(0)
+  lowStockThreshold Int                 @default(5)
+  isActive          Boolean             @default(true)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  seller            SellerProfile       @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  inventoryLogs     AddonInventoryLog[]
+
+  @@index([sellerId])
+  @@index([sellerId, isActive])
+}
+
+model AddonInventoryLog {
+  id            String    @id @default(uuid())
+  addonId       String
+  orderId       String?
+  action        String
+  quantityDelta Int
+  previousStock Int
+  newStock      Int
+  note          String?
+  createdAt     DateTime  @default(now())
+  addon         Addon     @relation(fields: [addonId], references: [id], onDelete: Cascade)
+
+  @@index([addonId])
+  @@index([orderId])
+}
