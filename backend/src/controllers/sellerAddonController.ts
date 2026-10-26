@@ -354,7 +354,7 @@ export const updateSellerAddon = async (id: string, req: Request) => {
     }
 
     if (replenishQuantity !== undefined && (isNaN(replenishQuantity) || replenishQuantity <= 0)) {
-        throw new ApiError("Replenish quantity must be greater than zero.", 400);
+        throw new ApiError("Update stock quantity must be greater than zero.", 400);
     }
 
     if (stockQuantity !== undefined && (isNaN(stockQuantity) || stockQuantity < 0)) {
@@ -402,7 +402,7 @@ export const updateSellerAddon = async (id: string, req: Request) => {
                     quantityDelta: replenishQuantity,
                     previousStock: existing.stockQuantity,
                     newStock: newStockVal,
-                    note: note || `Stock replenished by +${replenishQuantity} units`,
+                    note: note || `Stock updated by +${replenishQuantity} units`,
                 }
             });
         } else if (stockQuantity !== undefined && stockQuantity !== existing.stockQuantity) {
