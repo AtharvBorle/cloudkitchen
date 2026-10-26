@@ -947,7 +947,7 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
       await fetchApi("/api/seller/delete-account", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({})
+        body: JSON.stringify({ confirmation: deleteConfirmationText.trim().toUpperCase() })
       });
       await performLogout({ redirectTo: "/seller/login?deletion_scheduled=true" });
     } catch (err: any) {

@@ -126,6 +126,7 @@ export const BusinessInformation: React.FC<BusinessInformationProps> = ({
             const defaults: AdminCategoryItem[] = [
               { name: "Cloud Kitchen", type: "FOOD" },
               { name: "Bakery & Confectionery", type: "FOOD" },
+              { name: "Mess", type: "FOOD" },
               { name: "Homestyle / Tiffin Service", type: "FOOD" },
               { name: "Cafe & Bistro", type: "FOOD" },
               { name: "Catering Service", type: "FOOD" },
