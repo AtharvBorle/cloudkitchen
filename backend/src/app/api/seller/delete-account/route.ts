@@ -66,23 +66,34 @@ export async function POST(req: NextRequest) {
             return errorResponse("This seller account has already been permanently deleted.", 400);
         }
 
-        // Mandatory password verification to verify ownership
+        // Confirmation verification: requires user to type "DELETE" to confirm kitchen deletion
+        let confirmation = "";
         let password = "";
         try {
             const body = await req.json();
+            confirmation = typeof body?.confirmation === "string" 
+                ? body.confirmation.trim() 
+                : typeof body?.confirmText === "string" 
+                    ? body.confirmText.trim() 
+                    : "";
             password = typeof body?.password === "string" ? body.password.trim() : "";
         } catch {
+            confirmation = "";
             password = "";
         }
 
-        if (!password) {
-            return errorResponse("Password is required to verify ownership and confirm kitchen deletion.", 400);
+        const isDeleteConfirmed = confirmation.toUpperCase() === "DELETE";
+
+        if (!isDeleteConfirmed && !password) {
+            return errorResponse('Please type "DELETE" in the confirmation field to confirm kitchen deletion.', 400);
         }
 
-        if (user.passwordHash) {
-            const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
-            if (!isPasswordValid) {
-                return errorResponse("Incorrect password. Please verify your password to confirm deletion.", 400);
+        if (!isDeleteConfirmed && password) {
+            if (user.passwordHash) {
+                const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+                if (!isPasswordValid) {
+                    return errorResponse('Incorrect password. Or type "DELETE" to confirm deletion.', 400);
+                }
             }
         }
 

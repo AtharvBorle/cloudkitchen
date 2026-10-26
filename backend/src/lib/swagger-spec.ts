@@ -11116,6 +11116,11 @@ export const swaggerSpec = {
               "schema": {
                 "type": "object",
                 "properties": {
+                  "confirmation": {
+                    "type": "string",
+                    "description": "Confirmation text. Must equal 'DELETE' to confirm kitchen deletion.",
+                    "example": "DELETE"
+                  },
                   "password": {
                     "type": "string",
                     "description": "Optional password verification"

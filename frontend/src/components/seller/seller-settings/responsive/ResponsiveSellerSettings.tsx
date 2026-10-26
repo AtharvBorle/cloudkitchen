@@ -965,7 +965,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
       await fetchApi("/api/seller/delete-account", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({})
+        body: JSON.stringify({ confirmation: deleteConfirmationText.trim().toUpperCase() })
       });
       setIsDeleteModalOpen(false);
       setToastData({ title: "Account deletion scheduled. Redirecting...", status: "OFF" });

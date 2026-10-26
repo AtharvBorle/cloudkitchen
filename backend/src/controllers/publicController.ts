@@ -23,10 +23,9 @@ export const getPublicCategories = unstable_cache(
             );
         }
 
-        // Exclude general "Food" and business category "Mess" from category list
+        // Exclude general "Food" legacy category from category list
         categories = categories.filter(c => 
-            c.name.toLowerCase() !== 'food' && 
-            c.name.toLowerCase() !== 'mess'
+            c.name.toLowerCase() !== 'food'
         );
 
         let foodCategories = await db.foodCategory.findMany({

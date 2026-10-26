@@ -251,7 +251,12 @@ export const SupportTickets: React.FC = () => {
       return;
     }
 
-    let finalMessage = replyText.trim();
+    const sanitizedReply = replyText
+      .replace(/\[Attachment:\s*[^\\]]+\]\s*(data:[a-zA-Z0-9+.-]+\/[a-zA-Z0-9+.-]+;base64,[A-Za-z0-9+/=]+|https?:\/\/[^\s\n]+)/gi, "")
+      .replace(/\[Attachment:\s*[^\\]]+\]\s*/gi, "")
+      .trim();
+
+    let finalMessage = sanitizedReply;
     if (replyAttachedDataUrl && replyAttachedFile) {
       finalMessage = finalMessage
         ? `${finalMessage}\n\n[Attachment: ${replyAttachedFile.name}|${replyAttachedFile.type || "image/jpeg"}]\n${replyAttachedDataUrl}`
@@ -390,10 +395,15 @@ export const SupportTickets: React.FC = () => {
       return;
     }
 
+    const sanitizedDescription = newDescription
+      .replace(/\[Attachment:\s*[^\\]]+\]\s*(data:[a-zA-Z0-9+.-]+\/[a-zA-Z0-9+.-]+;base64,[A-Za-z0-9+/=]+|https?:\/\/[^\s\n]+)/gi, "")
+      .replace(/\[Attachment:\s*[^\\]]+\]\s*/gi, "")
+      .trim();
+
     const finalDescription =
       attachedDataUrl && attachedFile
-        ? `${newDescription.trim()}\n\n[Attachment: ${attachedFile.name}|${attachedFile.type || "image/jpeg"}]\n${attachedDataUrl}`
-        : newDescription.trim();
+        ? `${sanitizedDescription}\n\n[Attachment: ${attachedFile.name}|${attachedFile.type || "image/jpeg"}]\n${attachedDataUrl}`
+        : sanitizedDescription;
 
     setSubmittingTicket(true);
     try {
@@ -415,7 +425,7 @@ export const SupportTickets: React.FC = () => {
         showToast("Support ticket raised successfully!", "success");
         const createdId = data.id || data.data?.id;
         await fetchTickets(createdId);
-        if (createdId) {
+        if (createdId && (!selectedTicket || selectedTicket.id !== createdId)) {
           fetchTicketDetails(createdId);
         }
       } else {
@@ -457,11 +467,8 @@ export const SupportTickets: React.FC = () => {
     return matchesSearch && matchesStatus && matchesCategory;
   });
 
-  const cleanTicketText = (text: string | null | undefined, isClosed: boolean): string => {
+  const cleanTicketText = (text: string | null | undefined, isClosed: boolean = false): string => {
     if (!text) return "";
-    if (isClosed) {
-      return text.replace(/\[Priority:\s*(High|Medium|Low)\]\s*\n?/gi, "").trim();
-    }
     return text.replace(/\[Priority:\s*(High|Medium|Low)\]\s*\n?/gi, "").trim();
   };
 
@@ -773,13 +780,29 @@ export const SupportTickets: React.FC = () => {
                 {/* Follow-up Message Thread */}
                 {selectedTicket.messages && selectedTicket.messages.length > 0 ? (
                   selectedTicket.messages
-                    .filter((m) => {
+                    .filter((m, idx) => {
                       if (selectedTicket.status === "CLOSED" || selectedTicket.status === "RESOLVED") {
                         const msgText = (m.message || "").trim();
                         if (/^Priority\s+(?:is\s+|updated\s+to\s+|set\s+to\s+)?(High|Medium|Low)$/i.test(msgText)) {
                           return false;
                         }
                       }
+
+                      // Skip the initial ticket creation message that duplicates the Initial Ticket Description Card (Original Request) above
+                      if (idx === 0) {
+                        const cleanMsg = cleanTicketText(m.message, false).trim();
+                        const cleanDesc = cleanTicketText(selectedTicket.description, false).trim();
+                        if (
+                          cleanMsg === cleanDesc ||
+                          m.message?.trim() === selectedTicket.description?.trim() ||
+                          (cleanMsg && cleanDesc && (cleanMsg.includes(cleanDesc) || cleanDesc.includes(cleanMsg))) ||
+                          (m.senderId === (selectedTicket as any).userId &&
+                            Math.abs(new Date(m.createdAt).getTime() - new Date(selectedTicket.createdAt).getTime()) < 10000)
+                        ) {
+                          return false;
+                        }
+                      }
+
                       return true;
                     })
                     .map((m) => {
