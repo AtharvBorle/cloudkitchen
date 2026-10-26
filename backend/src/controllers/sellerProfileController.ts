@@ -80,6 +80,10 @@ export const updateSellerProfile = async (req: Request) => {
     let cardImageFile: File | null = null;
     let removeCardImage = false;
     let removeBannerImage = false;
+    let deliveryRadiusReviewed: boolean | undefined;
+    let operatingHoursReviewed: boolean | undefined;
+    let operatingHours: string | undefined;
+    let isReadinessCompleted: boolean | undefined;
 
     if (contentType.includes("multipart/form-data")) {
         const formData = await req.formData();
@@ -105,6 +109,10 @@ export const updateSellerProfile = async (req: Request) => {
             const parsed = parseFloat(rawRadius as string);
             if (!isNaN(parsed)) deliveryRadiusKm = Math.min(15, Math.max(1, parsed));
         }
+        if (formData.get("deliveryRadiusReviewed") !== null) deliveryRadiusReviewed = formData.get("deliveryRadiusReviewed") === "true";
+        if (formData.get("operatingHoursReviewed") !== null) operatingHoursReviewed = formData.get("operatingHoursReviewed") === "true";
+        if (formData.get("operatingHours") !== null) operatingHours = formData.get("operatingHours") as string;
+        if (formData.get("isReadinessCompleted") !== null) isReadinessCompleted = formData.get("isReadinessCompleted") === "true";
         bannerImageFile = formData.get("bannerImageFile") as File | null;
         cardImageFile = (formData.get("cardImageFile") || formData.get("kitchenImageFile") || formData.get("cardGridImageFile")) as File | null;
         if (formData.get("removeCardImage") === "true") removeCardImage = true;
@@ -142,6 +150,10 @@ export const updateSellerProfile = async (req: Request) => {
             const parsed = parseFloat(body.radiusKm);
             if (!isNaN(parsed)) deliveryRadiusKm = Math.min(15, Math.max(1, parsed));
         }
+        if (body.deliveryRadiusReviewed !== undefined) deliveryRadiusReviewed = Boolean(body.deliveryRadiusReviewed);
+        if (body.operatingHoursReviewed !== undefined) operatingHoursReviewed = Boolean(body.operatingHoursReviewed);
+        if (body.operatingHours !== undefined) operatingHours = typeof body.operatingHours === "string" ? body.operatingHours : JSON.stringify(body.operatingHours);
+        if (body.isReadinessCompleted !== undefined) isReadinessCompleted = Boolean(body.isReadinessCompleted);
         if (body.removeCardImage) removeCardImage = true;
         if (body.removeBannerImage) removeBannerImage = true;
     }
@@ -239,6 +251,21 @@ export const updateSellerProfile = async (req: Request) => {
     if (isLocationPinned !== undefined) profileUpdateData.isLocationPinned = isLocationPinned;
     if (deliveryRadiusKm !== undefined && !isNaN(deliveryRadiusKm)) {
         profileUpdateData.deliveryRadiusKm = deliveryRadiusKm;
+    }
+    if (deliveryRadiusReviewed !== undefined) {
+        profileUpdateData.deliveryRadiusReviewed = deliveryRadiusReviewed;
+    } else if (deliveryRadiusKm !== undefined) {
+        profileUpdateData.deliveryRadiusReviewed = true;
+    }
+    if (operatingHoursReviewed !== undefined) {
+        profileUpdateData.operatingHoursReviewed = operatingHoursReviewed;
+    }
+    if (operatingHours !== undefined) {
+        profileUpdateData.operatingHours = operatingHours;
+        profileUpdateData.operatingHoursReviewed = true;
+    }
+    if (isReadinessCompleted !== undefined) {
+        profileUpdateData.isReadinessCompleted = isReadinessCompleted;
     }
 
     if (cardImageFile && cardImageFile.size > 0) {

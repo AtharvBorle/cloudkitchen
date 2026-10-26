@@ -21,6 +21,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { SellerCalendarModal, formatDateToYMD } from "./SellerCalendarModal";
+import SellerReadinessChecklist from "../readiness/SellerReadinessChecklist";
 import { fetchApi } from "@/lib/fetch-api";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
 import { useRealtimeStream } from "@/hooks/useRealtimeStream";
@@ -224,18 +225,19 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
     }
   }, []);
 
-  useEffect(() => {
-    async function loadStatus() {
-      try {
-        const res = await fetchApi("/api/seller/dashboard/status");
-        if (res.ok) {
-          const d = await res.json();
-          setStatusData(d.data || d);
-        }
-      } catch (err) {
-        console.error("Failed to load dashboard status:", err);
+  const loadStatus = async () => {
+    try {
+      const res = await fetchApi("/api/seller/dashboard/status");
+      if (res.ok) {
+        const d = await res.json();
+        setStatusData(d.data || d);
       }
+    } catch (err) {
+      console.error("Failed to load dashboard status:", err);
     }
+  };
+
+  useEffect(() => {
     loadStatus();
   }, []);
 
@@ -618,8 +620,17 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                 </div>
               )}
 
-              {/* Header Row: Title & Subtitle + Calendar Controls */}
-              <div className={styles.headerRow}>
+              {/* Readiness to get started checklist (required after subscription) */}
+              {hasActiveSub && statusData && !statusData.isReadinessCompleted ? (
+                <SellerReadinessChecklist
+                  onCompleted={async () => {
+                    await loadStatus();
+                  }}
+                />
+              ) : (
+                <>
+                  {/* Header Row: Title & Subtitle + Calendar Controls */}
+                  <div className={styles.headerRow}>
                 <div className={styles.headerGroup}>
                   <h1 className={styles.title}>Operations Dashboard</h1>
                   <p className={styles.subtitle}>
@@ -979,6 +990,8 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                   </table>
                 </div>
               </div>
+                </>
+              )}
             </>
           )}
         </main>

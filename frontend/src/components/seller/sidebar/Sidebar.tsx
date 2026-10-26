@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image, { StaticImageData } from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { performLogout } from "@/lib/logout";
 import { fetchApi, uploadWithProgress } from "@/lib/fetch-api";
 import CameraCaptureModal from "@/app/components/CameraCaptureModal";
@@ -104,6 +104,7 @@ export default function SellerSidebar({
   avatarInitials,
 }: SellerSidebarProps) {
   const { isRoomEnabled } = useRoomModule();
+  const router = useRouter();
   const pathname = usePathname();
   const seller = useSellerProfile();
   const { unreadCount } = useSellerNotifications();

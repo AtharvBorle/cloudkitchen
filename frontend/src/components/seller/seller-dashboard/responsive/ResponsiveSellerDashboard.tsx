@@ -16,6 +16,8 @@ import {
   X,
 } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
+import { fetchApi } from "@/lib/fetch-api";
+import SellerReadinessChecklist from "../../readiness/SellerReadinessChecklist";
 import styles from "./ResponsiveSellerDashboard.module.css";
 
 import { useSellerProfile, isGenericFallbackName } from "@/hooks/useSellerProfile";
@@ -148,6 +150,22 @@ export const ResponsiveSellerDashboard: React.FC<ResponsiveSellerDashboardProps>
 
   const [searchQuery, setSearchQuery] = useState("");
 
+  const [statusData, setStatusData] = useState<any>(null);
+
+  const fetchStatus = async () => {
+    try {
+      const res = await fetchApi("/api/seller/dashboard/status");
+      if (res.ok) {
+        const json = await res.json();
+        setStatusData(json.data || json);
+      }
+    } catch {}
+  };
+
+  useEffect(() => {
+    fetchStatus();
+  }, []);
+
   const displayedRecentOrders = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
     if (!q) return recentOrders;
@@ -221,8 +239,12 @@ export const ResponsiveSellerDashboard: React.FC<ResponsiveSellerDashboardProps>
 
         {/* Content Area */}
         <main className={styles.contentArea}>
-          {/* Greeting Section */}
-          <section className={styles.greetingSection}>
+          {statusData && statusData.hasActiveSub && !statusData.isReadinessCompleted ? (
+            <SellerReadinessChecklist onCompleted={fetchStatus} />
+          ) : (
+            <>
+              {/* Greeting Section */}
+              <section className={styles.greetingSection}>
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "10px" }}>
               <div>
                 <h2 className={styles.greetingTitle}>{effectiveOwnerName ? `Hi, ${effectiveOwnerName}` : "Dashboard"}</h2>
@@ -533,6 +555,8 @@ export const ResponsiveSellerDashboard: React.FC<ResponsiveSellerDashboardProps>
               })
             )}
           </section>
+            </>
+          )}
         </main>
       </div>
     </div>
