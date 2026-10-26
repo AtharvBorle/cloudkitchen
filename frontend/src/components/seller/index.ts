@@ -358,3 +358,7 @@ export type { SellerResponsiveWrapperProps } from "./SellerResponsiveWrapper";
 
 export { default } from "./seller-profile/Profile";
 
+
+// Readiness Checklist component
+export { default as SellerReadinessChecklist } from "./readiness/SellerReadinessChecklist";
+export type { ReadinessItem, SellerReadinessChecklistProps } from "./readiness/SellerReadinessChecklist";

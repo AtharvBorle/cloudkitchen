@@ -3,7 +3,7 @@
 import React, { useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   X,
   LayoutGrid,
@@ -87,6 +87,7 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
       : (seller.businessName && !isGenericFallbackName(seller.businessName)
           ? seller.businessName
           : (seller.ownerName && !isGenericFallbackName(seller.ownerName) ? seller.ownerName : ""));
+  const router = useRouter();
   const pathname = usePathname();
   const [statusData, setStatusData] = React.useState<any>(null);
 
