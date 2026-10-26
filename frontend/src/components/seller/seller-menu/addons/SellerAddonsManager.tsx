@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
 import PaginationControls from "../../common/PaginationControls";
+import CreateAddonModal from "./CreateAddonModal";
 import styles from "./SellerAddonsManager.module.css";
 
 export interface AddonItemData {
@@ -74,20 +75,20 @@ export default function SellerAddonsManager() {
   const [isReplenishModalOpen, setIsReplenishModalOpen] = useState(false);
   const [selectedAddon, setSelectedAddon] = useState<AddonItemData | null>(null);
 
+  // Centralized Threshold state
+  const [centralizedThreshold, setCentralizedThreshold] = useState<number>(5);
+  const [thresholdInput, setThresholdInput] = useState<string>("5");
+  const [savingThreshold, setSavingThreshold] = useState<boolean>(false);
+
   // Form State
   const [formName, setFormName] = useState("");
   const [formPrice, setFormPrice] = useState("");
   const [formStock, setFormStock] = useState("");
-  const [formThreshold, setFormThreshold] = useState("5");
   const [formDescription, setFormDescription] = useState("");
   const [formIsActive, setFormIsActive] = useState(true);
-  const [formImageFile, setFormImageFile] = useState<File | null>(null);
-  const [formImagePreview, setFormImagePreview] = useState<string | null>(null);
   const [replenishDelta, setReplenishDelta] = useState("20");
   const [submitting, setSubmitting] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -111,6 +112,10 @@ export default function SellerAddonsManager() {
         const data = json.data || json;
         setAddons(data.addons || []);
         if (data.metrics) setMetrics(data.metrics);
+        if (data.centralizedThreshold !== undefined) {
+          setCentralizedThreshold(Number(data.centralizedThreshold) || 5);
+          setThresholdInput(String(data.centralizedThreshold || 5));
+        }
         if (data.pagination) {
           setTotalItems(data.pagination.totalItems || 0);
           setTotalPages(data.pagination.totalPages || 1);
@@ -127,17 +132,39 @@ export default function SellerAddonsManager() {
     loadAddons();
   }, [loadAddons]);
 
+  // Handle centralized threshold save
+  const handleSaveCentralizedThreshold = async () => {
+    const val = parseInt(thresholdInput, 10);
+    if (isNaN(val) || val < 0) {
+      showToast("Threshold must be 0 or greater");
+      return;
+    }
+
+    setSavingThreshold(true);
+    try {
+      const res = await fetchApi("/api/seller/addons/threshold", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ threshold: val }),
+      });
+
+      if (res.ok) {
+        setCentralizedThreshold(val);
+        showToast(`Centralized low-stock threshold set to ${val} for all add-ons!`);
+        loadAddons();
+      } else {
+        const json = await res.json().catch(() => ({}));
+        showToast(json.message || "Failed to update threshold");
+      }
+    } catch (err: any) {
+      showToast(err?.message || "Failed to update threshold");
+    } finally {
+      setSavingThreshold(false);
+    }
+  };
+
   // Handle open add modal
   const handleOpenAddModal = () => {
-    setSelectedAddon(null);
-    setFormName("");
-    setFormPrice("");
-    setFormStock("20");
-    setFormThreshold("5");
-    setFormDescription("");
-    setFormIsActive(true);
-    setFormImageFile(null);
-    setFormImagePreview(null);
     setIsAddModalOpen(true);
   };
 
@@ -147,11 +174,8 @@ export default function SellerAddonsManager() {
     setFormName(addon.name);
     setFormPrice(String(addon.price));
     setFormStock(String(addon.stockQuantity));
-    setFormThreshold(String(addon.lowStockThreshold));
     setFormDescription(addon.description || "");
     setFormIsActive(addon.isActive);
-    setFormImageFile(null);
-    setFormImagePreview(addon.imageUrl || null);
     setIsEditModalOpen(true);
   };
 
@@ -163,70 +187,6 @@ export default function SellerAddonsManager() {
   };
 
   // Handle image file selection
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      if (file.size > 10 * 1024 * 1024) {
-        alert(`Image "${file.name}" (${(file.size / (1024 * 1024)).toFixed(1)} MB) exceeds the 10MB upload limit. Please select an image under 10MB.`);
-        e.target.value = "";
-        return;
-      }
-      setFormImageFile(file);
-      setFormImagePreview(URL.createObjectURL(file));
-    }
-  };
-
-  // Save New Add-on
-  const handleCreateAddon = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formName.trim()) {
-      showToast("Please enter an add-on name");
-      return;
-    }
-    const priceNum = parseFloat(formPrice);
-    if (isNaN(priceNum) || priceNum < 0) {
-      showToast("Please enter a valid price (₹0 or greater)");
-      return;
-    }
-    const stockNum = parseInt(formStock, 10);
-    if (isNaN(stockNum) || stockNum < 0) {
-      showToast("Stock quantity cannot be negative");
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const formData = new FormData();
-      formData.append("name", formName.trim());
-      formData.append("price", String(priceNum));
-      formData.append("stockQuantity", String(stockNum));
-      formData.append("lowStockThreshold", formThreshold);
-      formData.append("description", formDescription.trim());
-      formData.append("isActive", String(formIsActive));
-      if (formImageFile) {
-        formData.append("image", formImageFile);
-      }
-
-      const res = await fetchApi("/api/seller/addons", {
-        method: "POST",
-        body: formData,
-      });
-
-      const json = await res.json().catch(() => ({}));
-      if (res.ok) {
-        showToast(`Add-on "${formName.trim()}" created successfully!`);
-        setIsAddModalOpen(false);
-        loadAddons();
-      } else {
-        showToast(json.message || "Failed to create add-on");
-      }
-    } catch (err: any) {
-      showToast(err?.message || "Failed to create add-on");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   // Save Edit Add-on
   const handleUpdateAddon = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -248,25 +208,21 @@ export default function SellerAddonsManager() {
 
     setSubmitting(true);
     try {
-      const formData = new FormData();
-      formData.append("name", formName.trim());
-      formData.append("price", String(priceNum));
-      formData.append("stockQuantity", String(stockNum));
-      formData.append("lowStockThreshold", formThreshold);
-      formData.append("description", formDescription.trim());
-      formData.append("isActive", String(formIsActive));
-      if (formImageFile) {
-        formData.append("image", formImageFile);
-      }
-
       const res = await fetchApi(`/api/seller/addons/${selectedAddon.id}`, {
         method: "PATCH",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formName.trim(),
+          price: priceNum,
+          stockQuantity: stockNum,
+          description: formDescription.trim(),
+          isActive: formIsActive,
+        }),
       });
 
       const json = await res.json().catch(() => ({}));
       if (res.ok) {
-        showToast(`Add-on updated successfully!`);
+        showToast("Add-on updated successfully!");
         setIsEditModalOpen(false);
         loadAddons();
       } else {
@@ -445,6 +401,41 @@ export default function SellerAddonsManager() {
         </div>
       </div>
 
+      {/* Centralized Low-Stock Alert Threshold Setting */}
+      <div className={styles.thresholdBanner}>
+        <div className={styles.thresholdBannerLeft}>
+          <div className={styles.thresholdBadgeIcon}>
+            <AlertTriangle size={18} />
+          </div>
+          <div className={styles.thresholdTextGroup}>
+            <span className={styles.thresholdTitle}>Centralized Low-Stock Alert Threshold</span>
+            <span className={styles.thresholdSubtitle}>
+              Applies to all add-ons. The system flags low stock when quantity reaches this level or lower (Default: 5).
+            </span>
+          </div>
+        </div>
+        <div className={styles.thresholdInputWrapper}>
+          <span className={styles.thresholdPrefix}>Threshold:</span>
+          <input
+            type="number"
+            min="0"
+            max="999"
+            value={thresholdInput}
+            onChange={(e) => setThresholdInput(e.target.value)}
+            className={styles.thresholdInput}
+            aria-label="Centralized low-stock threshold"
+          />
+          <button
+            type="button"
+            onClick={handleSaveCentralizedThreshold}
+            disabled={savingThreshold || parseInt(thresholdInput, 10) === centralizedThreshold}
+            className={styles.thresholdSaveBtn}
+          >
+            {savingThreshold ? <Loader2 size={14} className="animate-spin" /> : "Save Threshold"}
+          </button>
+        </div>
+      </div>
+
       {/* 2. Control Bar: Search & Status Filters + Add Button */}
       <div className={styles.controlBar}>
         <div className={styles.searchAndFilters}>
@@ -559,23 +550,9 @@ export default function SellerAddonsManager() {
                 addons.map((addon) => {
                   return (
                     <tr key={addon.id}>
-                      {/* Name & Photo */}
+                      {/* Name & Description */}
                       <td>
                         <div className={styles.addonNameCell}>
-                          {addon.imageUrl ? (
-                            <img
-                              src={addon.imageUrl}
-                              alt={addon.name}
-                              className={styles.addonThumb}
-                              onError={(e) => {
-                                (e.target as HTMLElement).style.display = "none";
-                              }}
-                            />
-                          ) : (
-                            <div className={styles.addonPlaceholder}>
-                              <Package size={20} />
-                            </div>
-                          )}
                           <div className={styles.addonMeta}>
                             <span className={styles.addonTitle}>{addon.name}</span>
                             {addon.description && (
@@ -723,169 +700,14 @@ export default function SellerAddonsManager() {
       {/* ========================================================
           MODAL 1: ADD NEW ADD-ON
           ======================================================== */}
-      {isAddModalOpen && (
-        <div className={styles.modalBackdrop} onClick={() => setIsAddModalOpen(false)}>
-          <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <h3 className={styles.modalTitle}>Add New Add-on</h3>
-              <button
-                type="button"
-                onClick={() => setIsAddModalOpen(false)}
-                className={styles.closeBtn}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateAddon}>
-              <div className={styles.modalBody}>
-                <div className={styles.formGroup}>
-                  <label className={styles.formLabel}>
-                    Add-on Name <span style={{ color: "#DC2626" }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Extra Roti, Extra Sabji, Extra Rice"
-                    value={formName}
-                    onChange={(e) => setFormName(e.target.value)}
-                    className={styles.formInput}
-                  />
-                </div>
-
-                <div className={styles.formRow}>
-                  <div className={styles.formGroup}>
-                    <label className={styles.formLabel}>
-                      Selling Price (₹) <span style={{ color: "#DC2626" }}>*</span>
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      min="0"
-                      step="0.5"
-                      placeholder="e.g. 15"
-                      value={formPrice}
-                      onChange={(e) => setFormPrice(e.target.value)}
-                      className={styles.formInput}
-                    />
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label className={styles.formLabel}>Initial Stock Qty</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      placeholder="e.g. 20"
-                      value={formStock}
-                      onChange={(e) => setFormStock(e.target.value)}
-                      className={styles.formInput}
-                    />
-                  </div>
-                </div>
-
-                <div className={styles.formRow}>
-                  <div className={styles.formGroup}>
-                    <label className={styles.formLabel}>Low-Stock Alert Threshold</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      placeholder="e.g. 5"
-                      value={formThreshold}
-                      onChange={(e) => setFormThreshold(e.target.value)}
-                      className={styles.formInput}
-                    />
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label className={styles.formLabel}>Status</label>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px", height: "42px" }}>
-                      <button
-                        type="button"
-                        onClick={() => setFormIsActive(!formIsActive)}
-                        className={`${styles.toggleSwitch} ${formIsActive ? styles.toggleSwitchActive : ""}`}
-                      >
-                        <span className={`${styles.toggleThumb} ${formIsActive ? styles.toggleThumbActive : ""}`} />
-                      </button>
-                      <span style={{ fontSize: "0.85rem", fontWeight: 700, color: formIsActive ? "#16A34A" : "#64748B" }}>
-                        {formIsActive ? "Active (Purchasable)" : "Inactive"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className={styles.formGroup}>
-                  <label className={styles.formLabel}>Description (Optional)</label>
-                  <textarea
-                    rows={2}
-                    placeholder="Brief description or serving size (e.g. 2 freshly cooked whole wheat rotis)"
-                    value={formDescription}
-                    onChange={(e) => setFormDescription(e.target.value)}
-                    className={styles.formTextarea}
-                  />
-                </div>
-
-                <div className={styles.formGroup}>
-                  <label className={styles.formLabel}>Add-on Image (Optional)</label>
-                  <div
-                    className={styles.imageUploadArea}
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    {formImagePreview ? (
-                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        <img
-                          src={formImagePreview}
-                          alt="Preview"
-                          className={styles.imagePreview}
-                        />
-                        <div style={{ textAlign: "left" }}>
-                          <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#FF6B00" }}>
-                            Click to change photo
-                          </span>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <Upload size={22} color="#94A3B8" />
-                        <span style={{ fontSize: "0.84rem", color: "#64748B" }}>
-                          Click to upload add-on image
-                        </span>
-                      </>
-                    )}
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      style={{ display: "none" }}
-                      onChange={handleImageChange}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className={styles.modalFooter}>
-                <button
-                  type="button"
-                  onClick={() => setIsAddModalOpen(false)}
-                  className={styles.cancelBtn}
-                  disabled={submitting}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className={styles.saveBtn}
-                  disabled={submitting}
-                >
-                  {submitting ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-                  <span>{submitting ? "Saving..." : "Create Add-on"}</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <CreateAddonModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onCreated={(newAddon) => {
+          showToast(`Add-on "${newAddon.name}" created successfully!`);
+          loadAddons();
+        }}
+      />
 
       {/* ========================================================
           MODAL 2: EDIT ADD-ON
@@ -946,81 +768,30 @@ export default function SellerAddonsManager() {
                   </div>
                 </div>
 
-                <div className={styles.formRow}>
-                  <div className={styles.formGroup}>
-                    <label className={styles.formLabel}>Low-Stock Alert Threshold</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={formThreshold}
-                      onChange={(e) => setFormThreshold(e.target.value)}
-                      className={styles.formInput}
-                    />
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label className={styles.formLabel}>Status</label>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px", height: "42px" }}>
-                      <button
-                        type="button"
-                        onClick={() => setFormIsActive(!formIsActive)}
-                        className={`${styles.toggleSwitch} ${formIsActive ? styles.toggleSwitchActive : ""}`}
-                      >
-                        <span className={`${styles.toggleThumb} ${formIsActive ? styles.toggleThumbActive : ""}`} />
-                      </button>
-                      <span style={{ fontSize: "0.85rem", fontWeight: 700, color: formIsActive ? "#16A34A" : "#64748B" }}>
-                        {formIsActive ? "Active" : "Inactive"}
-                      </span>
-                    </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>Status</label>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", height: "42px" }}>
+                    <button
+                      type="button"
+                      onClick={() => setFormIsActive(!formIsActive)}
+                      className={`${styles.toggleSwitch} ${formIsActive ? styles.toggleSwitchActive : ""}`}
+                    >
+                      <span className={`${styles.toggleThumb} ${formIsActive ? styles.toggleThumbActive : ""}`} />
+                    </button>
+                    <span style={{ fontSize: "0.85rem", fontWeight: 700, color: formIsActive ? "#16A34A" : "#64748B" }}>
+                      {formIsActive ? "Active (Purchasable)" : "Inactive"}
+                    </span>
                   </div>
                 </div>
 
                 <div className={styles.formGroup}>
-                  <label className={styles.formLabel}>Description</label>
+                  <label className={styles.formLabel}>Description (Optional)</label>
                   <textarea
                     rows={2}
                     value={formDescription}
                     onChange={(e) => setFormDescription(e.target.value)}
                     className={styles.formTextarea}
                   />
-                </div>
-
-                <div className={styles.formGroup}>
-                  <label className={styles.formLabel}>Add-on Image</label>
-                  <div
-                    className={styles.imageUploadArea}
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    {formImagePreview ? (
-                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        <img
-                          src={formImagePreview}
-                          alt="Preview"
-                          className={styles.imagePreview}
-                        />
-                        <div style={{ textAlign: "left" }}>
-                          <span style={{ fontSize: "0.82rem", fontWeight: 700, color: "#FF6B00" }}>
-                            Click to change photo
-                          </span>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <Upload size={22} color="#94A3B8" />
-                        <span style={{ fontSize: "0.84rem", color: "#64748B" }}>
-                          Click to upload new image
-                        </span>
-                      </>
-                    )}
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      style={{ display: "none" }}
-                      onChange={handleImageChange}
-                    />
-                  </div>
                 </div>
               </div>
 

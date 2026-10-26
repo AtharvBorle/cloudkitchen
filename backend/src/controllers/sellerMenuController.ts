@@ -252,7 +252,8 @@ export const createMenuItem = async (req: Request) => {
                 const cleaned = parsed.map((a: any, idx: number) => ({
                     id: String(a.id || `addon_${idx + 1}`),
                     name: String(a.name || "").trim(),
-                    price: Math.max(0, parseFloat(a.price) || 0)
+                    price: Math.max(0, parseFloat(a.price) || 0),
+                    imageUrl: a.imageUrl ? String(a.imageUrl) : null
                 }));
                 addonsStr = JSON.stringify(cleaned);
             }
@@ -434,7 +435,8 @@ export const updateMenuItem = async (req: Request, id: string) => {
                     const cleaned = parsed.map((a: any, idx: number) => ({
                         id: String(a.id || `addon_${idx + 1}`),
                         name: String(a.name || "").trim(),
-                        price: Math.max(0, parseFloat(a.price) || 0)
+                        price: Math.max(0, parseFloat(a.price) || 0),
+                        imageUrl: a.imageUrl ? String(a.imageUrl) : null
                     }));
                     dataToUpdate.addons = JSON.stringify(cleaned);
                     dataToUpdate.variants = JSON.stringify(cleaned);
@@ -501,7 +503,8 @@ export const updateMenuItem = async (req: Request, id: string) => {
                     const cleaned = parsed.map((a: any, idx: number) => ({
                         id: String(a.id || `addon_${idx + 1}`),
                         name: String(a.name || "").trim(),
-                        price: Math.max(0, parseFloat(a.price) || 0)
+                        price: Math.max(0, parseFloat(a.price) || 0),
+                        imageUrl: a.imageUrl ? String(a.imageUrl) : null
                     }));
                     dataToUpdate.addons = JSON.stringify(cleaned);
                     dataToUpdate.variants = JSON.stringify(cleaned);
