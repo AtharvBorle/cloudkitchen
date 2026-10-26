@@ -1029,3 +1029,17 @@
 
 
 
+
+
+.deliveryBadge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #c2410c;
+  background-color: #fff7ed;
+  border: 1px solid #fed7aa;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: clamp(11px, 2.9vw, 12px);
+  font-weight: 600;
+}

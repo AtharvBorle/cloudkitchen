@@ -289,11 +289,31 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
         </div>
 
         {/* Location Subtitle */}
-        {kitchenData.location && <p className={styles.locationText}>{kitchenData.location}</p>}
+        {kitchenData.location && (
+          <p className={styles.locationText}>
+            {kitchenData.location}
+            {kitchenData.distanceText ? ` • 📍 ${kitchenData.distanceText}` : ""}
+          </p>
+        )}
 
         {/* Delivery Time & Free Delivery & Diet Type Info */}
-        {(kitchenData.deliveryTime || kitchenData.deliveryFeeText || kitchenData.dietType) && (
+        {(kitchenData.deliveryTime || kitchenData.deliveryFeeText || kitchenData.dietType || kitchenData.distanceText) && (
           <div className={styles.deliveryRow}>
+            {kitchenData.distanceText && (
+              <div
+                className={styles.deliveryItem}
+                style={{
+                  color: "#FF6B00",
+                  fontWeight: 700,
+                  backgroundColor: "#FFF3EB",
+                  padding: "2px 8px",
+                  borderRadius: "6px",
+                  border: "1px solid #FFD8C2",
+                }}
+              >
+                <span>📍 {kitchenData.distanceText}</span>
+              </div>
+            )}
             {kitchenData.deliveryTime && (
               <div className={styles.deliveryItem}>
                 <Clock size={15} className={styles.clockIcon} />

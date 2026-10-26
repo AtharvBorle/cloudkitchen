@@ -270,7 +270,7 @@ export default function BestPlaces({
                     />
                   </div>
 
-                  {/* Price, Distance & Delivery Time */}
+                  {/* Delivery Time */}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "4px" }}>
                     <span
                       style={{
@@ -281,20 +281,6 @@ export default function BestPlaces({
                     >
                       {isClosed ? "Currently not accepting orders" : dish.time}
                     </span>
-                    {dish.distanceText && !isClosed && (
-                      <span
-                        style={{
-                          fontSize: "0.75rem",
-                          fontWeight: "700",
-                          color: "#FF6B00",
-                          backgroundColor: "#FFF3EB",
-                          padding: "2px 6px",
-                          borderRadius: "6px",
-                        }}
-                      >
-                        📍 {dish.distanceText}
-                      </span>
-                    )}
                   </div>
                 </div>
               </div>
