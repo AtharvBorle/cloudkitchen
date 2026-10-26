@@ -4,8 +4,10 @@ import crypto from "crypto";
 import {
     sendKitchenSoftDeletedEmail,
     sendKitchenPermanentlyDeletedEmail,
+    sendKitchenDeletionRevokedEmail,
     sendUserAccountSoftDeletedEmail,
     sendUserAccountPermanentlyDeletedEmail,
+    sendUserAccountDeletionRevokedEmail,
 } from "@/lib/emailService";
 
 export interface AccountDeletionConfig {
@@ -169,12 +171,17 @@ export async function restoreAccountIfWithinGracePeriod(user: { id: string; dele
     }
 
     // Cancel deletion and reactivate
+    let fullUser: any = null;
+
     await db.$transaction(async (tx) => {
-        await tx.user.update({
+        fullUser = await tx.user.update({
             where: { id: user.id },
             data: {
                 deletedAt: null,
                 isActive: true
+            },
+            include: {
+                sellerProfile: true
             }
         });
 
@@ -194,6 +201,28 @@ export async function restoreAccountIfWithinGracePeriod(user: { id: string; dele
     });
 
     console.log(`[Account Deletion] Soft-deleted account ${user.id} has been restored upon successful login.`);
+
+    // Dispatch welcome-back & revocation confirmation email
+    try {
+        if (fullUser?.email) {
+            if (fullUser.role === "SELLER" || fullUser.sellerProfile) {
+                const businessName = fullUser.sellerProfile?.businessName || "Your Kitchen";
+                sendKitchenDeletionRevokedEmail({
+                    sellerName: fullUser.name || undefined,
+                    sellerEmail: fullUser.email,
+                    businessName
+                }).catch((err) => console.error("[EmailService] Failed to send kitchen deletion revoked email:", err));
+            } else {
+                sendUserAccountDeletionRevokedEmail({
+                    userName: fullUser.name || "Customer",
+                    userEmail: fullUser.email
+                }).catch((err) => console.error("[EmailService] Failed to send user account deletion revoked email:", err));
+            }
+        }
+    } catch (emailErr) {
+        console.error("[EmailService] Error dispatching account deletion revoked notification:", emailErr);
+    }
+
     return true;
 }
 
