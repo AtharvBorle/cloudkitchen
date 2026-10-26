@@ -211,7 +211,7 @@ export default function SellerReadinessChecklist({
   // Open appropriate edit modal for an item
   const handleOpenEditModal = (item: ReadinessItem) => {
     if (item.id === "menu_items") {
-      router.push("/seller/menu/item?from=readiness");
+      router.push("/seller/edit-menu?from=readiness");
       return;
     }
     setErrorMessage("");

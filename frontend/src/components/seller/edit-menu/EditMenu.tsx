@@ -53,6 +53,7 @@ function EditMenuInner({
   const router = useRouter();
   const searchParams = useSearchParams();
   const itemId = searchParams?.get('id');
+  const fromReadiness = searchParams?.get('from') === 'readiness';
   const seller = useSellerProfile();
 
   const ownerName = initialOwnerName || seller.ownerName;
@@ -496,7 +497,7 @@ function EditMenuInner({
         <main className={styles.mainContent}>
           {/* Top Header Row with Back Button */}
           <div className={styles.topHeaderRow}>
-            <Link href="/seller/menu" className={styles.backBtn} aria-label="Go back to menu">
+            <Link href={fromReadiness ? "/seller/readiness" : "/seller/menu"} className={styles.backBtn} aria-label={fromReadiness ? "Go back to readiness checklist" : "Go back to menu"}>
               <ArrowLeft size={18} strokeWidth={2.4} />
             </Link>
             <div className={styles.headerInfo}>
@@ -1045,7 +1046,7 @@ function EditMenuInner({
 
             {/* Bottom Actions Row */}
             <div className={styles.bottomActions}>
-              <Link href="/seller/menu" className={styles.cancelBtn}>
+              <Link href={fromReadiness ? "/seller/readiness" : "/seller/menu"} className={styles.cancelBtn}>
                 Cancel
               </Link>
               <button type="submit" className={styles.saveItemBtn} disabled={loading}>
@@ -1169,9 +1170,9 @@ function EditMenuInner({
                   <button
                     type="button"
                     className={styles.modalPrimaryBtn}
-                    onClick={() => router.push('/seller/menu')}
+                    onClick={() => router.push(fromReadiness ? '/seller/readiness' : '/seller/menu')}
                   >
-                    View Menu Inventory
+                    {fromReadiness ? 'Return to Readiness Checklist' : 'View Menu Inventory'}
                   </button>
                   {modalActionType === 'add' && (
                     <button
