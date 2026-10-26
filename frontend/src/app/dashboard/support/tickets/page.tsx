@@ -635,7 +635,7 @@ export default function SupportTicketsPage() {
 
 
 
-                const validId = potentialIds.find(id => id.toLowerCase() !== ticketIdFirstPart.toLowerCase());
+                const validId = potentialIds.find(id => (id || "").toLowerCase() !== (ticketIdFirstPart || "").toLowerCase());
 
 
 
@@ -4771,155 +4771,72 @@ export default function SupportTicketsPage() {
 
 
 
-                                                {systemUsers.filter(u => 
-
-
-
-                                                    u.name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
-
-
-
-                                                    u.email.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
-
-
-
-                                                    u.role.toLowerCase().includes(userSearchQuery.toLowerCase())
-
-
-
-                                                ).length === 0 ? (
-
-
-
-                                                    <div style={{ padding: '10px', fontSize: '0.85rem', color: '#64748B', textAlign: 'center' }}>
-
-
-
-                                                        No users found
-
-
-
-                                                    </div>
-
-
-
-                                                ) : (
-
-
-
-                                                    systemUsers.filter(u => 
-
-
-
-                                                        u.name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
-
-
-
-                                                        u.email.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
-
-
-
-                                                        u.role.toLowerCase().includes(userSearchQuery.toLowerCase())
-
-
-
-                                                    ).map((u: any) => (
-
-
-
-                                                        <div
-
-
-
-                                                            key={u.id}
-
-
-
-                                                            onClick={() => {
-
-
-
-                                                                setSelectedUser(u);
-
-
-
-                                                                setNewTicketUserId(u.id);
-
-
-
-                                                                setUserSearchQuery(`${u.name} (${u.email}) - ${u.role}`);
-
-
-
-                                                                setShowUserSuggestions(false);
-
-
-
-                                                                fetchUserActivityForModal(u.id);
-
-
-
-                                                            }}
-
-
-
-                                                            style={{
-
-
-
-                                                                padding: '10px 12px',
-
-
-
-                                                                fontSize: '0.85rem',
-
-
-
-                                                                color: '#334155',
-
-
-
-                                                                cursor: 'pointer',
-
-
-
-                                                                borderBottom: '1px solid #F1F5F9',
-
-
-
-                                                                transition: 'background 0.15s'
-
-
-
-                                                            }}
-
-
-
-                                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
-
-
-
-                                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-
-
-
-                                                        >
-
-
-
-                                                            <strong>{u.name}</strong> <span style={{ color: '#64748B' }}>({u.email})</span> • <span style={{ textTransform: 'lowercase', fontSize: '0.75rem', backgroundColor: '#E2E8F0', padding: '2px 6px', borderRadius: '4px' }}>{u.role}</span>
-
-
-
-                                                        </div>
-
-
-
-                                                    ))
-
-
-
-                                                )}
+                                                {(() => {
+                                                    const query = (userSearchQuery || "").toLowerCase().trim();
+                                                    const filtered = systemUsers.filter((u: any) => {
+                                                        if (!u) return false;
+                                                        const name = (u.name || "").toLowerCase();
+                                                        const email = (u.email || "").toLowerCase();
+                                                        const role = (u.role || "").toLowerCase();
+                                                        const phone = (u.phone || "").toLowerCase();
+                                                        const business = (u.sellerProfile?.businessName || "").toLowerCase();
+                                                        return (
+                                                            name.includes(query) ||
+                                                            email.includes(query) ||
+                                                            role.includes(query) ||
+                                                            phone.includes(query) ||
+                                                            business.includes(query)
+                                                        );
+                                                    });
+
+                                                    if (filtered.length === 0) {
+                                                        return (
+                                                            <div style={{ padding: '10px', fontSize: '0.85rem', color: '#64748B', textAlign: 'center' }}>
+                                                                No users found
+                                                            </div>
+                                                        );
+                                                    }
+
+                                                    return filtered.slice(0, 50).map((u: any) => {
+                                                        const displayName = u.name || u.sellerProfile?.businessName || "Unnamed User";
+                                                        const contact = u.email || u.phone || "";
+                                                        const label = `${displayName}${contact ? ` (${contact})` : ""} - ${u.role || "USER"}`;
+
+                                                        return (
+                                                            <div
+                                                                key={u.id}
+                                                                onClick={() => {
+                                                                    setSelectedUser(u);
+                                                                    setNewTicketUserId(u.id);
+                                                                    setUserSearchQuery(label);
+                                                                    setShowUserSuggestions(false);
+                                                                    fetchUserActivityForModal(u.id);
+                                                                }}
+                                                                style={{
+                                                                    padding: '10px 12px',
+                                                                    fontSize: '0.85rem',
+                                                                    color: '#334155',
+                                                                    cursor: 'pointer',
+                                                                    borderBottom: '1px solid #F1F5F9',
+                                                                    transition: 'background 0.15s'
+                                                                }}
+                                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+                                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                                            >
+                                                                <strong>{displayName}</strong>{" "}
+                                                                {contact && <span style={{ color: '#64748B' }}>({contact})</span>} •{" "}
+                                                                <span style={{ textTransform: 'lowercase', fontSize: '0.75rem', backgroundColor: '#E2E8F0', padding: '2px 6px', borderRadius: '4px' }}>
+                                                                    {u.role || "USER"}
+                                                                </span>
+                                                                {u.sellerProfile?.businessName && u.name && (
+                                                                    <span style={{ marginLeft: '6px', fontSize: '0.75rem', color: '#0284C7' }}>
+                                                                        [{u.sellerProfile.businessName}]
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    });
+                                                })()}
 
 
 

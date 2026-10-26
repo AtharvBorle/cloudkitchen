@@ -18,7 +18,13 @@ export async function GET(req: Request) {
                 id: true,
                 name: true,
                 email: true,
-                role: true
+                phone: true,
+                role: true,
+                sellerProfile: {
+                    select: {
+                        businessName: true
+                    }
+                }
             },
             orderBy: {
                 name: "asc"
