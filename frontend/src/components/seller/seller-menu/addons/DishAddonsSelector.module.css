@@ -182,14 +182,15 @@
   color: #DC2626;
 }
 
-/* Addons List Container */
+/* Addons List Container (Allocated height for exactly 3 items, scrollable thereafter) */
 .addonsListContainer {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 280px;
+  max-height: 184px;
   overflow-y: auto;
   padding-right: 4px;
+  overscroll-behavior: contain;
 }
 
 .addonsListContainer::-webkit-scrollbar {
@@ -210,6 +211,21 @@
   background: #94A3B8;
 }
 
+/* Success notification banner */
+.successAlert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background-color: #F0FDF4;
+  border: 1px solid #BBF7D0;
+  color: #16A34A;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border-radius: 8px;
+  animation: popIn 0.15s ease-out;
+}
+
 /* Individual Addon Row */
 .addonRow {
   display: flex;
@@ -223,6 +239,8 @@
   cursor: pointer;
   transition: all 0.15s ease;
   user-select: none;
+  min-height: 52px;
+  box-sizing: border-box;
 }
 
 .addonRow:hover {
