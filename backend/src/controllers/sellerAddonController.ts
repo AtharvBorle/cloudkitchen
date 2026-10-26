@@ -120,9 +120,13 @@ export const getSellerAddons = async (req: Request) => {
         };
     });
 
+    const firstAddon = allSellerAddons[0];
+    const centralizedThreshold = firstAddon ? firstAddon.lowStockThreshold : 5;
+
     return {
         addons: enrichedItems,
         metrics,
+        centralizedThreshold,
         pagination: {
             page,
             limit,
@@ -130,6 +134,21 @@ export const getSellerAddons = async (req: Request) => {
             totalPages,
         }
     };
+};
+
+export const updateCentralizedThreshold = async (req: Request) => {
+    const { sellerProfile } = await getAuthenticatedSellerProfile();
+    const body = await req.json().catch(() => ({}));
+    const rawVal = body.threshold !== undefined ? body.threshold : body.lowStockThreshold;
+    const thresholdNum = parseInt(String(rawVal ?? "5"), 10);
+    const threshold = isNaN(thresholdNum) || thresholdNum < 0 ? 5 : thresholdNum;
+
+    await db.addon.updateMany({
+        where: { sellerId: sellerProfile.id },
+        data: { lowStockThreshold: threshold }
+    });
+
+    return { threshold, message: "Centralized low-stock threshold updated successfully" };
 };
 
 export const createSellerAddon = async (req: Request) => {
@@ -142,8 +161,6 @@ export const createSellerAddon = async (req: Request) => {
     let stockQuantity = 0;
     let lowStockThreshold = 5;
     let isActive = true;
-    let imageUrl = "";
-    let imageFile: File | null = null;
 
     if (contentType.includes("multipart/form-data")) {
         const formData = await req.formData();
@@ -152,25 +169,26 @@ export const createSellerAddon = async (req: Request) => {
         price = parseFloat(String(formData.get("price") || "0"));
         const rawStock = formData.get("stockQuantity");
         stockQuantity = rawStock !== null && rawStock !== "" ? parseInt(String(rawStock), 10) : 0;
-        const rawThreshold = formData.get("lowStockThreshold");
-        lowStockThreshold = rawThreshold !== null && rawThreshold !== "" ? parseInt(String(rawThreshold), 10) : 5;
         if (formData.get("isActive") !== null) {
             isActive = formData.get("isActive") === "true";
         }
-        imageUrl = String(formData.get("imageUrl") || "").trim();
-        imageFile = formData.get("image") as File | null;
     } else {
         const body = await req.json();
         name = String(body.name || "").trim();
         description = String(body.description || "").trim();
         price = parseFloat(String(body.price || "0"));
         stockQuantity = body.stockQuantity !== undefined ? parseInt(String(body.stockQuantity), 10) : 0;
-        lowStockThreshold = body.lowStockThreshold !== undefined ? parseInt(String(body.lowStockThreshold), 10) : 5;
         if (body.isActive !== undefined) {
             isActive = Boolean(body.isActive);
         }
-        imageUrl = String(body.imageUrl || "").trim();
     }
+
+    // Centralized threshold for all add-ons of this seller (default 5 if not set)
+    const existingFirst = await db.addon.findFirst({
+        where: { sellerId: sellerProfile.id },
+        select: { lowStockThreshold: true }
+    });
+    lowStockThreshold = existingFirst ? existingFirst.lowStockThreshold : 5;
 
     if (!name) {
         throw new ApiError("Add-on Name is required.", 400);
@@ -200,20 +218,6 @@ export const createSellerAddon = async (req: Request) => {
         throw new ApiError(`An add-on named "${name}" already exists in your kitchen menu. Please choose a unique name.`, 400);
     }
 
-    if (imageFile && imageFile.size > 0) {
-        if (imageFile.size > 10 * 1024 * 1024) {
-            throw new ApiError("Add-on image size must not exceed 10MB.", 400);
-        }
-        try {
-            const bytes = await imageFile.arrayBuffer();
-            const buffer = Buffer.from(bytes);
-            imageUrl = await uploadImage(buffer, imageFile.type, imageFile.name, "addons");
-        } catch (e: any) {
-            console.error("Failed to upload addon image:", e);
-            throw new ApiError("Failed to upload add-on image. " + (e?.message || ""), 500);
-        }
-    }
-
     const newAddon = await db.$transaction(async (tx) => {
         const addon = await tx.addon.create({
             data: {
@@ -224,7 +228,7 @@ export const createSellerAddon = async (req: Request) => {
                 stockQuantity,
                 lowStockThreshold,
                 isActive,
-                imageUrl: imageUrl || null,
+                imageUrl: null,
             }
         });
 

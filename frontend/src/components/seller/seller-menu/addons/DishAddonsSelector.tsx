@@ -21,7 +21,6 @@ export interface SelectedAddonItem {
   id: string;
   name: string;
   price: number | string;
-  imageUrl?: string | null;
   stockQuantity?: number;
   isActive?: boolean;
 }
@@ -101,7 +100,6 @@ export default function DishAddonsSelector({
         id: addon.id,
         name: addon.name,
         price: addon.price,
-        imageUrl: addon.imageUrl || null,
         stockQuantity: addon.stockQuantity,
         isActive: addon.isActive,
       };
@@ -132,7 +130,6 @@ export default function DishAddonsSelector({
       id: newAddon.id,
       name: newAddon.name,
       price: newAddon.price,
-      imageUrl: newAddon.imageUrl || null,
       stockQuantity: newAddon.stockQuantity,
       isActive: newAddon.isActive,
     };
@@ -292,18 +289,6 @@ export default function DishAddonsSelector({
                       aria-label={addon.name}
                     />
                   </div>
-
-                  {addon.imageUrl ? (
-                    <img
-                      src={addon.imageUrl}
-                      alt={addon.name}
-                      className={styles.addonImage}
-                    />
-                  ) : (
-                    <div className={styles.addonImagePlaceholder}>
-                      <Package size={18} />
-                    </div>
-                  )}
 
                   <div className={styles.addonMeta}>
                     <span className={styles.addonName}>{addon.name}</span>
