@@ -173,11 +173,13 @@ export const createSellerAddon = async (req: Request) => {
             isActive = formData.get("isActive") === "true";
         }
     } else {
-        const body = await req.json();
+        const body = await req.json().catch(() => ({}));
         name = String(body.name || "").trim();
         description = String(body.description || "").trim();
         price = parseFloat(String(body.price || "0"));
-        stockQuantity = body.stockQuantity !== undefined ? parseInt(String(body.stockQuantity), 10) : 0;
+        const rawStock = body.stockQuantity;
+        const parsedStock = rawStock !== undefined && rawStock !== "" ? parseInt(String(rawStock), 10) : 0;
+        stockQuantity = isNaN(parsedStock) ? 0 : parsedStock;
         if (body.isActive !== undefined) {
             isActive = Boolean(body.isActive);
         }
@@ -352,7 +354,7 @@ export const updateSellerAddon = async (id: string, req: Request) => {
     }
 
     if (replenishQuantity !== undefined && (isNaN(replenishQuantity) || replenishQuantity <= 0)) {
-        throw new ApiError("Replenish quantity must be greater than zero.", 400);
+        throw new ApiError("Update stock quantity must be greater than zero.", 400);
     }
 
     if (stockQuantity !== undefined && (isNaN(stockQuantity) || stockQuantity < 0)) {
@@ -400,7 +402,7 @@ export const updateSellerAddon = async (id: string, req: Request) => {
                     quantityDelta: replenishQuantity,
                     previousStock: existing.stockQuantity,
                     newStock: newStockVal,
-                    note: note || `Stock replenished by +${replenishQuantity} units`,
+                    note: note || `Stock updated by +${replenishQuantity} units`,
                 }
             });
         } else if (stockQuantity !== undefined && stockQuantity !== existing.stockQuantity) {

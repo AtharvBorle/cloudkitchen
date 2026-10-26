@@ -235,13 +235,13 @@ export default function SellerAddonsManager() {
     }
   };
 
-  // Quick Replenish
+  // Quick Update Stock
   const handleReplenishStock = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedAddon) return;
     const qty = parseInt(replenishDelta, 10);
     if (isNaN(qty) || qty <= 0) {
-      showToast("Replenish quantity must be greater than zero");
+      showToast("Quantity must be greater than zero");
       return;
     }
 
@@ -252,20 +252,20 @@ export default function SellerAddonsManager() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           replenishQuantity: qty,
-          note: `Quick replenishment +${qty} units`,
+          note: `Quick stock update +${qty} units`,
         }),
       });
 
       const json = await res.json().catch(() => ({}));
       if (res.ok) {
-        showToast(`Replenished +${qty} units for "${selectedAddon.name}"!`);
+        showToast(`Stock updated (+${qty} units) for "${selectedAddon.name}"!`);
         setIsReplenishModalOpen(false);
         loadAddons();
       } else {
-        showToast(json.message || "Failed to replenish stock");
+        showToast(json.message || "Failed to update stock");
       }
     } catch (err: any) {
-      showToast(err?.message || "Failed to replenish stock");
+      showToast(err?.message || "Failed to update stock");
     } finally {
       setSubmitting(false);
     }
@@ -589,10 +589,10 @@ export default function SellerAddonsManager() {
                             type="button"
                             onClick={() => handleOpenReplenishModal(addon)}
                             className={styles.replenishBtn}
-                            title="Replenish stock for this add-on"
+                            title="Update stock for this add-on"
                           >
                             <Plus size={12} strokeWidth={3} />
-                            <span>Replenish</span>
+                            <span>Update Stock</span>
                           </button>
                         </div>
                       </td>
@@ -825,7 +825,7 @@ export default function SellerAddonsManager() {
         <div className={styles.modalBackdrop} onClick={() => setIsReplenishModalOpen(false)}>
           <div className={styles.modalCard} style={{ maxWidth: "420px" }} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
-              <h3 className={styles.modalTitle}>Replenish Stock</h3>
+              <h3 className={styles.modalTitle}>Update Stock</h3>
               <button
                 type="button"
                 onClick={() => setIsReplenishModalOpen(false)}
@@ -900,7 +900,7 @@ export default function SellerAddonsManager() {
                   disabled={submitting}
                 >
                   {submitting ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-                  <span>{submitting ? "Replenishing..." : "Confirm Restock"}</span>
+                  <span>{submitting ? "Updating..." : "Update Stock"}</span>
                 </button>
               </div>
             </form>
