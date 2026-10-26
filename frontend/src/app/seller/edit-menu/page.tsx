@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import { EditMenu, SellerResponsiveWrapper } from '@/components/seller';
 import ResponsiveMenuItemPage from '@/app/seller/res/menu/item/page';
 
@@ -9,9 +10,11 @@ export const metadata: Metadata = {
 
 export default function EditMenuPage() {
   return (
-    <SellerResponsiveWrapper
-      desktop={<EditMenu />}
-      mobile={<ResponsiveMenuItemPage />}
-    />
+    <Suspense fallback={<div style={{ padding: "32px", textAlign: "center", color: "#64748B" }}>Loading Menu Dish...</div>}>
+      <SellerResponsiveWrapper
+        desktop={<EditMenu />}
+        mobile={<ResponsiveMenuItemPage />}
+      />
+    </Suspense>
   );
 }

@@ -32,6 +32,9 @@ export default function SellerResponsiveWrapper({
       pathname === "/seller/menu/item" ||
       pathname.startsWith("/seller/menu/item") ||
       pathname.startsWith("/seller/res/menu/item") ||
+      pathname === "/seller/edit-menu" ||
+      pathname.startsWith("/seller/edit-menu") ||
+      pathname.startsWith("/seller/res/menu") ||
       pathname === "/seller/login" ||
       pathname.startsWith("/seller/res/login") ||
       pathname === "/seller" ||
