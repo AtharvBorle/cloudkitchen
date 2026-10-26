@@ -476,7 +476,7 @@ export default function ChatbotWidget() {
                         { label: "🛵 Track Delivery Courier", action: () => handleSelectOption("track_delivery") },
                         ...(isRoomEnabled ? [{ label: "🛌 Issues with a Room Booking", action: () => handleSelectOption("bookings") }] : []),
                         { label: "🚀 Register as a Seller", action: () => handleSelectOption("seller_info") },
-                        { label: "💳 Payment & Refund Policy", action: () => handleSelectOption("payments_info") },
+                        // { label: "💳 Payment & Refund Policy", action: () => handleSelectOption("payments_info") },
                         { label: "🎟️ Raise a custom support ticket", action: () => handleSelectOption("custom_ticket") }
                     ]
                 }
@@ -525,7 +525,7 @@ export default function ChatbotWidget() {
                         { label: "🛵 Track Delivery Courier", action: () => handleSelectOption("track_delivery") },
                         ...(isRoomEnabled ? [{ label: "🛌 Issues with a Room Booking", action: () => handleSelectOption("bookings") }] : []),
                         { label: "🚀 Register as a Seller", action: () => handleSelectOption("seller_info") },
-                        { label: "💳 Payment & Refund Policy", action: () => handleSelectOption("payments_info") },
+                        // { label: "💳 Payment & Refund Policy", action: () => handleSelectOption("payments_info") },
                         { label: "🎟️ Raise a custom support ticket", action: () => handleSelectOption("custom_ticket") }
                     ];
                 }
@@ -586,7 +586,7 @@ export default function ChatbotWidget() {
             case "delivery_duty": userText = "⚙️ Shift Duty & Profile Status"; break;
             case "bookings": userText = "🛌 Issues with a Room Booking"; break;
             case "seller_info": userText = "🚀 Register as a Seller"; break;
-            case "payments_info": userText = "💳 Payment & Refund Policy"; break;
+            // case "payments_info": userText = "💳 Payment & Refund Policy"; break;
             case "custom_ticket": userText = "🎟️ Raise a custom support ticket"; break;
             case "show_order_options": userText = `Order Details #${payload.id.slice(0, 8)}`; break;
             case "show_booking_options": userText = `Booking Details #${payload.id.slice(0, 8)}`; break;
@@ -1083,6 +1083,7 @@ export default function ChatbotWidget() {
                 }]);
             }
 
+            /*
             else if (optionType === "payments_info") {
                 setMessages(prev => [...prev, {
                     id: `b_${Date.now()}`,
@@ -1095,6 +1096,7 @@ export default function ChatbotWidget() {
                     ]
                 }]);
             }
+            */
 
             else if (optionType === "custom_ticket_prefilled") {
                 const isCustomer = !session?.user || session.user.role === "USER";
@@ -1338,7 +1340,7 @@ export default function ChatbotWidget() {
                         { label: "🛵 Track Delivery Courier", action: () => handleSelectOption("track_delivery") },
                         ...(isRoomEnabled ? [{ label: "🛌 Issues with a Room Booking", action: () => handleSelectOption("bookings") }] : []),
                         { label: "🚀 Register as a Seller", action: () => handleSelectOption("seller_info") },
-                        { label: "💳 Payment & Refund Policy", action: () => handleSelectOption("payments_info") },
+                        // { label: "💳 Payment & Refund Policy", action: () => handleSelectOption("payments_info") },
                         { label: "🎟️ Raise a custom support ticket", action: () => handleSelectOption("custom_ticket") }
                     ];
                 }
@@ -1369,7 +1371,7 @@ export default function ChatbotWidget() {
                 else if (normalizedText.includes("cancel") || normalizedText.includes("refund") || normalizedText.includes("money") || normalizedText.includes("deduct") || normalizedText.includes("failed") || normalizedText.includes("pay") || normalizedText.includes("payment")) {
                     replyText = "We support Cash on Delivery (COD) and secure online payment via Razorpay. \n- **Cancellations**: Refunds for cancellations are initiated immediately and reflect in 24-48 business hours.\n- **Payment deductions**: If money was deducted but booking/order failed, raise a ticket below for immediate refund processing.";
                     generatedOptions = [
-                        { label: "💳 View Payment Policies", action: () => handleSelectOption("payments_info") },
+                        // { label: "💳 View Payment Policies", action: () => handleSelectOption("payments_info") },
                         { label: "🎟️ Payment support ticket", action: () => handleSelectOption("custom_ticket_prefilled", { category: "PAYMENT", title: "Payment deduction failure", desc: "Money was deducted from my account but booking/order failed. Please verify." }) },
                         { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }
                     ];
