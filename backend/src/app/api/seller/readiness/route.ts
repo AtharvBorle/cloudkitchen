@@ -45,7 +45,7 @@ export async function GET() {
             { id: "operating_hours", step: 4, title: "Review operating hrs", isCompleted: hasOperatingHours, value: sellerProfile.operatingHours || "[]" },
             { id: "upi_payment", step: 5, title: "Add upi to get payments", isCompleted: hasUpi, value: sellerProfile.upiId || null },
             { id: "delivery_person", step: 6, title: "Add delivery person", isCompleted: hasDeliveryPerson, count: deliveryPersonsCount },
-            { id: "menu_items", step: 7, title: "Add Items in menue", isCompleted: hasMenuItems, count: foodItemsCount },
+            { id: "menu_items", step: 7, title: "Add Items in Menu", isCompleted: hasMenuItems, count: foodItemsCount },
         ];
 
         const completedCount = checklist.filter((c) => c.isCompleted).length;
@@ -159,7 +159,7 @@ export async function POST(req: Request) {
             { id: "operating_hours", step: 4, title: "Review operating hrs", isCompleted: hasOperatingHours, value: updated.operatingHours || "[]" },
             { id: "upi_payment", step: 5, title: "Add upi to get payments", isCompleted: hasUpi, value: updated.upiId || null },
             { id: "delivery_person", step: 6, title: "Add delivery person", isCompleted: hasDeliveryPerson, count: deliveryPersonsCount },
-            { id: "menu_items", step: 7, title: "Add Items in menue", isCompleted: hasMenuItems, count: foodItemsCount },
+            { id: "menu_items", step: 7, title: "Add Items in Menu", isCompleted: hasMenuItems, count: foodItemsCount },
         ];
 
         const completedCount = checklist.filter((c) => c.isCompleted).length;

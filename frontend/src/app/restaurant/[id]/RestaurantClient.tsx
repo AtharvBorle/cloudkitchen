@@ -418,6 +418,17 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
               setSubscriptionPlans(formatted);
             }
 
+            const rawStoreAddons: any[] = Array.isArray(liveData.addons) ? liveData.addons : [];
+            const kitchenStoreAddons = rawStoreAddons.map((a: any) => ({
+              id: String(a.id),
+              name: String(a.name || "Add-on"),
+              price: Number(a.price) || 0,
+              stockQuantity: a.stockQuantity !== undefined ? Number(a.stockQuantity) : 99,
+              lowStockThreshold: a.lowStockThreshold || 5,
+              isActive: a.isActive !== false,
+              imageUrl: a.imageUrl || null,
+              description: a.description || "",
+            }));
             const rawFoodItems = liveData.foodItems || [];
             const liveItems: FoodCardItem[] = rawFoodItems.map((item: any) => {
               let parsedAddons: Array<{ id: string; name: string; price: number }> = [];
@@ -459,7 +470,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
                 image: item.imageUrl || "/images/places/place-pizza.png",
                 isVeg: item.itemType ? !item.itemType.toUpperCase().includes("NON_VEG") : item.isVeg !== false,
                 category: item.foodCategory?.name || "Popular",
-                addons: parsedAddons,
+                addons: parsedAddons.length > 0 ? parsedAddons : kitchenStoreAddons,
                 stockQuantity: item.stockQuantity !== undefined ? item.stockQuantity : -1,
                 maxStock: item.stockQuantity !== undefined ? item.stockQuantity : -1,
                 isAvailable: item.isAvailable !== false,
@@ -1105,7 +1116,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
           }}
           onAddToCart={(selectedAddons, quantity) => {
             const base = parseInt(addonModalItem.price.replace(/[^\d]/g, ""), 10) || 0;
-            const addonsTotal = selectedAddons.reduce((sum, a) => sum + (a.price || 0), 0);
+            const addonsTotal = selectedAddons.reduce((sum, a: any) => sum + (a.lineTotal !== undefined ? a.lineTotal : (a.price || 0) * (a.quantity || 1)), 0);
             const unitPrice = base + addonsTotal;
             const rawStock = (addonModalItem as any).maxStock !== undefined ? (addonModalItem as any).maxStock : (addonModalItem as any).stockQuantity;
             const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;

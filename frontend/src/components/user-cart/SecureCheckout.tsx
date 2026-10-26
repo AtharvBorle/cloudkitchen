@@ -61,7 +61,7 @@ export interface CheckoutSummaryItem {
   sellerId?: string;
   name: string;
   variant: string;
-  selectedAddons?: Array<{ id?: string; name: string; price: number }>;
+  selectedAddons?: Array<{ id?: string; name: string; price: number; quantity?: number; lineTotal?: number }>;
   basePrice?: number;
   addonsTotal?: number;
   qty: number;
@@ -1606,7 +1606,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
         selectedAddons: ci.selectedAddons || [],
         quantity: ci.quantity || ci.qty || 1,
         image: ci.image || ci.imageUrl,
-        variant: ci.variantName || (ci.selectedAddons && ci.selectedAddons.length > 0 ? ci.selectedAddons.map((a: any) => a.name).join(", ") : ""),
+        variant: ci.variantName || (ci.selectedAddons && ci.selectedAddons.length > 0 ? ci.selectedAddons.map((a: any) => `${a.name}${a.quantity && a.quantity > 1 ? ` ×${a.quantity}` : ""}`).join(", ") : ""),
       }));
 
       const fullDeliveryAddress = `${streetAddress}, ${city} - ${postalCode}${
@@ -3012,7 +3012,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
                                     fontWeight: "600",
                                   }}
                                 >
-                                  + {a.name} (₹{a.price})
+                                  + {a.name}{a.quantity && a.quantity > 1 ? ` ×${a.quantity}` : ""} (₹{(a.price || 0) * (a.quantity || 1)})
                                 </span>
                               ))}
                             </div>

@@ -125,9 +125,10 @@ export const SellerSettings: React.FC<SellerSettingsProps> = ({
   const handleCardFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      setSuccessMessage("Card grid image must be less than 5MB");
-      setTimeout(() => setSuccessMessage(null), 3000);
+    if (file.size > 10 * 1024 * 1024) {
+      setSuccessMessage(`Card grid image size (${(file.size / (1024 * 1024)).toFixed(1)}MB) must not exceed 10MB`);
+      e.target.value = "";
+      setTimeout(() => setSuccessMessage(null), 3500);
       return;
     }
     setCardFile(file);
@@ -137,6 +138,10 @@ export const SellerSettings: React.FC<SellerSettingsProps> = ({
 
   const handleQuickUploadCard = async () => {
     if (!cardFile) return;
+    if (cardFile.size > 10 * 1024 * 1024) {
+      setSuccessMessage("Kitchen card image size must not exceed 10MB");
+      return;
+    }
     setIsUploadingCard(true);
     try {
       const data = new FormData();
@@ -196,9 +201,10 @@ export const SellerSettings: React.FC<SellerSettingsProps> = ({
   const handleBannerFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      setSuccessMessage("Banner image must be less than 5MB");
-      setTimeout(() => setSuccessMessage(null), 3000);
+    if (file.size > 10 * 1024 * 1024) {
+      setSuccessMessage(`Banner image size (${(file.size / (1024 * 1024)).toFixed(1)}MB) must not exceed 10MB`);
+      e.target.value = "";
+      setTimeout(() => setSuccessMessage(null), 3500);
       return;
     }
     setBannerFile(file);
@@ -208,6 +214,10 @@ export const SellerSettings: React.FC<SellerSettingsProps> = ({
 
   const handleQuickUploadBanner = async () => {
     if (!bannerFile) return;
+    if (bannerFile.size > 10 * 1024 * 1024) {
+      setSuccessMessage("Storefront cover banner size must not exceed 10MB");
+      return;
+    }
     setIsUploadingBanner(true);
     try {
       const data = new FormData();

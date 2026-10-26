@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
-import { Star } from "lucide-react";
+import { Star, MapPin } from "lucide-react";
 import styles from "./FoodHeroBanner.module.css";
 import heroPhoto from "./FoodHeroPhoto.jpg";
 
@@ -170,7 +170,13 @@ export const FoodHeroBanner: React.FC<FoodHeroBannerProps> = ({
             {location && (
               <span className={styles.locationText}>
                 {location}
-                {distanceText ? ` • 📍 ${distanceText}` : ""}
+                {distanceText && (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", marginLeft: "4px" }}>
+                    <span>•</span>
+                    <MapPin size={12} color="#FF6B00" style={{ flexShrink: 0 }} />
+                    <span style={{ color: "#FF6B00", fontWeight: 600 }}>{distanceText}</span>
+                  </span>
+                )}
               </span>
             )}
           </div>

@@ -1,3 +1,4 @@
+import { restoreOrderAddonsStock } from "@/lib/addon-inventory";
 import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
@@ -245,6 +246,11 @@ export const updateSellerOrder = async (req: Request, orderId: string) => {
                     }
                 } catch (error) {
                     console.error("Failed to restore inventory on seller cancelOrder:", error);
+                }
+                try {
+                    await restoreOrderAddonsStock(tx, existingOrder.id, existingOrder.items, "Cancelled by kitchen");
+                } catch (addonErr) {
+                    console.error("Failed to restore addon inventory on seller cancelOrder:", addonErr);
                 }
             }
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { Star, Check, ChevronDown } from "lucide-react";
+import { Star, Check, ChevronDown, MapPin } from "lucide-react";
 import Link from "next/link";
 
 import { isKitchenMatchingDiet, isNonVegDish, isKitchenServingCuisine } from "@/lib/dietary-filter";
@@ -1317,6 +1317,20 @@ export default function Properties({
                           className="place-card-img"
                         />
                         <div className="place-card-mobile-overlay" />
+
+                        {/* Rating or New Badge on the photo in top-right corner */}
+                        <div className="place-card-rating-badge">
+                          <Star
+                            size={11}
+                            className="place-star-icon"
+                            fill={isClosed ? "#94A3B8" : (place.rating > 0 ? "#16A34A" : "#F59E0B")}
+                            color={isClosed ? "#94A3B8" : (place.rating > 0 ? "#16A34A" : "#F59E0B")}
+                          />
+                          <span className="place-rating-text">
+                            {place.rating > 0 ? place.rating.toFixed(1) : "New"}
+                          </span>
+                        </div>
+
                         {isClosed && (
                           <div className="place-card-closed-pill">
                             <span className="place-card-closed-text">
@@ -1340,32 +1354,22 @@ export default function Properties({
                           )}
                         </div>
 
-                        {/* Rating & Delivery Time Meta Row */}
+                        {/* Location / Distance & Delivery Time Meta Row */}
                         <div className="place-card-meta-line">
-                          {/* Star Rating Badge */}
-                          <div className="place-card-rating-badge">
-                            <Star size={12} className="place-star-icon" fill={isClosed ? "#64748B" : (place.rating > 0 ? "#10B981" : "#94A3B8")} color={isClosed ? "#64748B" : (place.rating > 0 ? "#10B981" : "#94A3B8")} />
-                            <span className="place-rating-text-desktop">{place.rating > 0 ? place.rating.toFixed(1) : "New"}</span>
-                            <span className="place-rating-text-mobile">{Number(place.rating || 0).toFixed(1)}</span>
-                          </div>
-
-                          {place.distanceText && !isClosed && (
-                            <span className="place-card-distance-mobile">
-                              📍 {place.distanceText}
+                          {place.distanceText && !isClosed ? (
+                            <span className="place-card-distance">
+                              <MapPin size={11} className="place-card-distance-icon" />
+                              <span>{place.distanceText}</span>
+                            </span>
+                          ) : (
+                            <span className="place-card-category-text">
+                              {place.category || "Cloud Kitchen"}
                             </span>
                           )}
 
-                          {/* Distance & Delivery Time Meta Row Right */}
-                          <div className="place-card-meta-right">
-                            {place.distanceText && !isClosed && (
-                              <span className="place-card-distance">
-                                📍 {place.distanceText}
-                              </span>
-                            )}
-                            <span className="place-card-time">
-                              {isClosed ? "Not accepting orders" : place.time}
-                            </span>
-                          </div>
+                          <span className="place-card-time">
+                            {isClosed ? "Not accepting orders" : place.time}
+                          </span>
                         </div>
                       </div>
                     </Link>
@@ -1536,27 +1540,37 @@ export default function Properties({
           justify-content: space-between;
         }
         .place-card-rating-badge {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          z-index: 3;
           display: inline-flex;
           align-items: center;
-          gap: 4px;
-          background-color: #E8FBF2;
-          color: #10B981;
-          border: 1px solid rgba(16, 185, 129, 0.2);
-          padding: 2px 7px;
+          gap: 3.5px;
+          background-color: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(4px);
+          color: #0F172A;
+          border: 1px solid rgba(255, 255, 255, 0.7);
+          padding: 2.5px 6.5px;
           border-radius: 6px;
-          font-size: 12.5px;
+          font-size: 11.5px;
           font-weight: 700;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
           font-family: var(--font-poppins), 'Poppins', sans-serif;
+          line-height: 1;
         }
         .place-star-icon {
-          color: #10B981;
+          flex-shrink: 0;
         }
-        .place-card-meta-right {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
+        .place-rating-text {
+          font-size: 11.5px;
+          font-weight: 700;
+          color: #0F172A;
         }
         .place-card-distance {
+          display: inline-flex;
+          align-items: center;
+          gap: 3px;
           font-size: 11.5px;
           color: #FF6B00;
           font-weight: 700;
@@ -1566,8 +1580,18 @@ export default function Properties({
           font-family: var(--font-poppins), 'Poppins', sans-serif;
           white-space: nowrap;
         }
-        .place-card-distance-mobile {
-          display: none;
+        .place-card-distance-icon {
+          color: #FF6B00;
+          flex-shrink: 0;
+        }
+        .place-card-category-text {
+          font-size: 11.5px;
+          color: #64748B;
+          font-weight: 500;
+          font-family: var(--font-poppins), 'Poppins', sans-serif;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
         .place-card-time {
           font-size: 12px;
@@ -1769,43 +1793,59 @@ export default function Properties({
             margin-top: 1px !important;
           }
           .place-card-rating-badge {
-            background: transparent !important;
-            border: none !important;
-            padding: 0 !important;
-            gap: 3px !important;
-            color: #FFFFFF !important;
-            font-size: 12px !important;
-            font-weight: 600 !important;
-            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8) !important;
-          }
-          .place-star-icon {
-            fill: #F59E0B !important;
-            color: #F59E0B !important;
-            width: 11px !important;
-            height: 11px !important;
-          }
-          .place-rating-text-desktop {
-            display: none !important;
-          }
-          .place-rating-text-mobile {
-            display: inline !important;
-            color: #FFFFFF !important;
-            font-size: 12px !important;
-            font-weight: 600 !important;
-          }
-          .place-card-meta-right {
-            display: none !important;
-          }
-          .place-card-distance-mobile {
+            position: absolute !important;
+            top: 6px !important;
+            right: 6px !important;
+            z-index: 3 !important;
             display: inline-flex !important;
             align-items: center !important;
+            gap: 2.5px !important;
+            background-color: rgba(255, 255, 255, 0.95) !important;
+            backdrop-filter: blur(4px) !important;
+            color: #0F172A !important;
+            border: 1px solid rgba(255, 255, 255, 0.7) !important;
+            padding: 2px 5px !important;
+            border-radius: 5px !important;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
+            text-shadow: none !important;
+          }
+          .place-star-icon {
+            width: 10px !important;
+            height: 10px !important;
+          }
+          .place-rating-text {
+            color: #0F172A !important;
+            font-size: 10.5px !important;
+            font-weight: 700 !important;
+          }
+          .place-card-distance {
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 2.5px !important;
             color: #FFFFFF !important;
+            background: transparent !important;
+            padding: 0 !important;
             font-size: 11px !important;
             font-weight: 600 !important;
             text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8) !important;
           }
+          .place-card-distance-icon {
+            color: #FF8A34 !important;
+            width: 10px !important;
+            height: 10px !important;
+          }
+          .place-card-category-text {
+            color: #E2E8F0 !important;
+            font-size: 11px !important;
+            font-weight: 500 !important;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8) !important;
+          }
           .place-card-time {
-            display: none !important;
+            display: inline !important;
+            color: rgba(255, 255, 255, 0.85) !important;
+            font-size: 11px !important;
+            font-weight: 500 !important;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8) !important;
           }
           .place-card-closed-pill {
             position: absolute !important;

@@ -22,6 +22,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ tracking
                     foodSubCategory: true
                 }
             },
+            addons: {
+                where: { isActive: true },
+                orderBy: { name: "asc" as const }
+            },
             rooms: {
                 where: { isAvailable: true }
             },
@@ -164,6 +168,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ tracking
         const responseData = {
             ...seller,
             foodItems: processedFoodItems,
+            addons: seller.addons || [],
             mealPlans: processedMealPlans,
             averageRating,
             totalReviews

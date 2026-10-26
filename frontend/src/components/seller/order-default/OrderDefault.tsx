@@ -14,12 +14,22 @@ import RejectOrderModal from "../seller-orders/RejectOrderModal";
 import ToastNotification from "../seller-orders/ToastNotification";
 import styles from "./OrderDefault.module.css";
 
+export interface OrderItemAddon {
+  id?: string;
+  name: string;
+  quantity: number;
+  price: number;
+  lineTotal: number;
+}
+
 export interface OrderItemRow {
   id?: string;
   name: string;
   qty: number;
   price: string;
   total?: string;
+  addons?: OrderItemAddon[];
+  addonsSubtotal?: number;
 }
 
 export interface OrderDetailsData {
@@ -174,14 +184,29 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
               ? parsedItems.map((item: any, idx: number) => {
                   const qty = Number(item.quantity || item.qty) || 1;
                   const itemPrice = Number(item.price) || 0;
-                  const addonsList = Array.isArray(item.selectedAddons) ? item.selectedAddons : [];
-                  const addonStr = addonsList.length > 0 ? ` (+ ${addonsList.map((a: any) => `${a.name} ₹${a.price}`).join(', ')})` : '';
+                  const rawAddons = Array.isArray(item.selectedAddons) ? item.selectedAddons : [];
+                  const addons: OrderItemAddon[] = rawAddons.map((a: any) => {
+                    const aQty = Math.max(1, Number(a.quantity || a.qty) || 1);
+                    const aPrice = Number(a.price) || 0;
+                    const aLineTotal = Number(a.lineTotal) || (aPrice * aQty);
+                    return {
+                      id: a.id,
+                      name: a.name || "Add-on",
+                      quantity: aQty,
+                      price: aPrice,
+                      lineTotal: aLineTotal,
+                    };
+                  });
+                  const addonsSubtotal = addons.reduce((sum, a) => sum + a.lineTotal, 0);
+
                   return {
                     id: item.id || `item-${idx}`,
-                    name: `${item.name || "Food Item"}${addonStr}`,
+                    name: item.name || "Food Item",
                     qty: qty,
                     price: `₹${itemPrice}`,
                     total: `₹${itemPrice * qty}`,
+                    addons,
+                    addonsSubtotal,
                   };
                 })
               : [];
@@ -614,7 +639,29 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
                     ) : (
                       activeOrderData.items.map((item, idx) => (
                         <tr key={item.id || idx}>
-                          <td>{item.name}</td>
+                          <td>
+                            <div style={{ fontWeight: 600, color: '#111827' }}>{item.name}</div>
+                            {item.addons && item.addons.length > 0 && (
+                              <div style={{ marginTop: '6px', paddingLeft: '10px', borderLeft: '2px solid #E5E7EB' }}>
+                                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6B7280', marginBottom: '4px' }}>
+                                  Add-ons:
+                                </div>
+                                {item.addons.map((addon, aIdx) => (
+                                  <div key={addon.id || aIdx} style={{ fontSize: '0.75rem', color: '#4B5563', display: 'flex', alignItems: 'center', gap: '8px', margin: '2px 0' }}>
+                                    <span>• {addon.name}</span>
+                                    <span style={{ color: '#9CA3AF' }}>×</span>
+                                    <span style={{ fontWeight: 600 }}>{addon.quantity}</span>
+                                    <span style={{ color: '#9CA3AF' }}>@</span>
+                                    <span>₹{addon.price}</span>
+                                    <span style={{ color: '#111827', fontWeight: 600, marginLeft: 'auto' }}>= ₹{addon.lineTotal}</span>
+                                  </div>
+                                ))}
+                                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#EA580C', marginTop: '4px' }}>
+                                  Add-ons Total: ₹{item.addonsSubtotal}
+                                </div>
+                              </div>
+                            )}
+                          </td>
                           <td>{item.price}</td>
                           <td>{item.qty}</td>
                           <td>{item.total}</td>

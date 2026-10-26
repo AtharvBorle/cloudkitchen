@@ -11,6 +11,13 @@ export type AddonItem = {
     id?: string;
     name: string;
     price: number;
+    quantity?: number;
+    lineTotal?: number;
+    stockQuantity?: number;
+    lowStockThreshold?: number;
+    isActive?: boolean;
+    description?: string;
+    imageUrl?: string;
 };
 
 export function deduplicateAddons(addons?: AddonItem[]): AddonItem[] {
@@ -185,7 +192,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                             } else {
                                 const newBasePrice = Number(live.price);
                                 const currentBasePrice = item.basePrice !== undefined ? Number(item.basePrice) : Number(item.price) || 0;
-                                const addonsSum = (item.selectedAddons || []).reduce((sum, a) => sum + (Number(a.price) || 0), 0);
+                                const addonsSum = (item.selectedAddons || []).reduce((sum, a: any) => sum + ((Number(a.price) || 0) * (Number(a.quantity) || 1)), 0);
                                 const newUnitPrice = newBasePrice + addonsSum;
 
                                 const liveStock = live.stockQuantity !== undefined && live.stockQuantity !== null ? Number(live.stockQuantity) : -1;

@@ -100,13 +100,28 @@ function DetailsContent() {
 
   const formattedItems = parsedItems.length > 0
     ? parsedItems.map((it: any, idx: number) => {
-        const addonsList = Array.isArray(it.selectedAddons) ? it.selectedAddons : [];
-        const addonStr = addonsList.length > 0 ? ` (+ ${addonsList.map((a: any) => `${a.name} ₹${a.price}`).join(', ')})` : '';
+        const rawAddons = Array.isArray(it.selectedAddons) ? it.selectedAddons : [];
+        const addons = rawAddons.map((a: any) => {
+          const aQty = Math.max(1, Number(a.quantity || a.qty) || 1);
+          const aPrice = Number(a.price) || 0;
+          const aLineTotal = Number(a.lineTotal) || (aPrice * aQty);
+          return {
+            id: a.id,
+            name: a.name || "Add-on",
+            quantity: aQty,
+            price: aPrice,
+            lineTotal: aLineTotal,
+          };
+        });
+        const addonsSubtotal = addons.reduce((sum: number, a: any) => sum + a.lineTotal, 0);
+
         return {
           id: it.id || String(idx),
-          name: `${it.name || "Food Item"}${addonStr}`,
+          name: it.name || "Food Item",
           qty: it.quantity || it.qty || 1,
           price: `₹${it.price || 0}`,
+          addons,
+          addonsSubtotal,
         };
       })
     : undefined;

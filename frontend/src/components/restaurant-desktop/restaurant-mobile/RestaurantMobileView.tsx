@@ -17,6 +17,7 @@ import {
   ChevronRight,
   Menu,
   Utensils,
+  MapPin,
 } from "lucide-react";
 import styles from "./RestaurantMobileView.module.css";
 import { MobileSidebar } from "@/components/mobile-sidebar";
@@ -292,7 +293,13 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
         {kitchenData.location && (
           <p className={styles.locationText}>
             {kitchenData.location}
-            {kitchenData.distanceText ? ` • 📍 ${kitchenData.distanceText}` : ""}
+            {kitchenData.distanceText && (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "2px", marginLeft: "4px" }}>
+                <span>•</span>
+                <MapPin size={11} color="#FF6B00" style={{ flexShrink: 0 }} />
+                <span>{kitchenData.distanceText}</span>
+              </span>
+            )}
           </p>
         )}
 
@@ -311,7 +318,10 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
                   border: "1px solid #FFD8C2",
                 }}
               >
-                <span>📍 {kitchenData.distanceText}</span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "3px" }}>
+                  <MapPin size={11} color="#FF6B00" />
+                  <span>{kitchenData.distanceText}</span>
+                </span>
               </div>
             )}
             {kitchenData.deliveryTime && (

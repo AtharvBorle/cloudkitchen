@@ -415,7 +415,8 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 10 * 1024 * 1024) {
-      setToastData({ title: "Image size must be less than 10MB", status: "OFF" });
+      setToastData({ title: `Image size (${(file.size / (1024 * 1024)).toFixed(1)}MB) must not exceed 10MB`, status: "OFF" });
+      e.target.value = "";
       return;
     }
     const localUrl = URL.createObjectURL(file);
@@ -433,6 +434,10 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
 
   const handleQuickUploadCard = async () => {
     if (!cardFile) return;
+    if (cardFile.size > 10 * 1024 * 1024) {
+      setToastData({ title: "Kitchen card image size must not exceed 10MB", status: "OFF" });
+      return;
+    }
     setIsUploadingCard(true);
     try {
       const fileToUpload = await compressImage(cardFile, { maxDimension: 1200, quality: 0.82 });
@@ -510,7 +515,8 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 10 * 1024 * 1024) {
-      setToastData({ title: "Image size must be less than 10MB", status: "OFF" });
+      setToastData({ title: `Image size (${(file.size / (1024 * 1024)).toFixed(1)}MB) must not exceed 10MB`, status: "OFF" });
+      e.target.value = "";
       return;
     }
     const localUrl = URL.createObjectURL(file);
@@ -528,6 +534,10 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
 
   const handleQuickUploadBanner = async () => {
     if (!bannerFile) return;
+    if (bannerFile.size > 10 * 1024 * 1024) {
+      setToastData({ title: "Storefront banner image size must not exceed 10MB", status: "OFF" });
+      return;
+    }
     setIsUploadingBanner(true);
     try {
       const fileToUpload = await compressImage(bannerFile, { maxDimension: 1600, quality: 0.82 });
@@ -863,6 +873,14 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
       // 2. Persist Restaurant Information, Card Photo & Banner to backend database
       let res: Response;
       if (cardFile || bannerFile) {
+      if (cardFile && cardFile.size > 10 * 1024 * 1024) {
+        setToastData({ title: "Kitchen card image size must not exceed 10MB", status: "OFF" });
+        return;
+      }
+      if (bannerFile && bannerFile.size > 10 * 1024 * 1024) {
+        setToastData({ title: "Storefront cover banner size must not exceed 10MB", status: "OFF" });
+        return;
+      }
         const fd = new FormData();
         fd.append("businessName", formData.businessName);
         fd.append("email", formData.businessEmail);

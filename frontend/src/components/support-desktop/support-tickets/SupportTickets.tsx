@@ -22,6 +22,7 @@ import {
   Paperclip,
 } from "lucide-react";
 import { TicketAttachmentRenderer } from "@/components/common/TicketAttachmentRenderer";
+import { useRoomModule } from "@/context/RoomModuleContext";
 import styles from "./SupportTickets.module.css";
 
 interface TicketMessage {
@@ -50,6 +51,7 @@ interface SupportTicket {
 
 export const SupportTickets: React.FC = () => {
   const { data: session, status } = useSession();
+  const { isRoomEnabled } = useRoomModule();
   const searchParams = useSearchParams();
   const initialTicketId = searchParams?.get("id") || searchParams?.get("ticketId");
 
@@ -76,6 +78,17 @@ export const SupportTickets: React.FC = () => {
   const [newTitle, setNewTitle] = useState<string>("");
   const [newDescription, setNewDescription] = useState<string>("");
   const [submittingTicket, setSubmittingTicket] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!isRoomEnabled) {
+      if (newCategory === "ROOM") {
+        setNewCategory("FOOD");
+      }
+      if (categoryFilter === "ROOM") {
+        setCategoryFilter("ALL");
+      }
+    }
+  }, [isRoomEnabled, newCategory, categoryFilter]);
 
   // Attachment State for Create Modal
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
@@ -644,7 +657,7 @@ export const SupportTickets: React.FC = () => {
               >
                 <option value="ALL">All Categories</option>
                 <option value="FOOD">Food Delivery</option>
-                <option value="ROOM">Room Stay</option>
+                {isRoomEnabled && <option value="ROOM">Room Stay</option>}
                 <option value="PAYMENT">Payment & Refund</option>
                 <option value="OTHER">General Support</option>
               </select>
@@ -1068,7 +1081,7 @@ export const SupportTickets: React.FC = () => {
                   className={styles.formSelect}
                 >
                   <option value="FOOD">Food Delivery / Order Issue</option>
-                  <option value="ROOM">Room Booking / Stay Query</option>
+                  {isRoomEnabled && <option value="ROOM">Room Booking / Stay Query</option>}
                   <option value="PAYMENT">Payment, Billing & Refunds</option>
                   <option value="OTHER">Other / General Support</option>
                 </select>

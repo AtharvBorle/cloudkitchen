@@ -22,6 +22,7 @@ import {
   Star,
   Headphones,
   Lock,
+  Sparkles,
 } from "lucide-react";
 import { performLogout } from "@/lib/logout";
 import { useRoomModule } from "@/context/RoomModuleContext";
@@ -107,6 +108,16 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
   }, []);
 
   const handleNavItemClick = (e: React.MouseEvent, item: NavItemConfig) => {
+    // Readiness gate: If onboarding readiness is incomplete, lock everything except Settings and Profile
+    if (statusData && !statusData.isReadinessCompleted) {
+      if (item.id !== "settings" && item.id !== "profile") {
+        e.preventDefault();
+        router.push("/seller/readiness");
+        onClose();
+        return;
+      }
+    }
+
     const isFoodTab =
       item.id === "orders" ||
       item.id === "menu" ||
@@ -366,6 +377,24 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
         {/* Navigation List */}
         <nav className={styles.navList}>
           <span className={styles.sectionLabel}>Operations Menu</span>
+          {statusData && !statusData.isReadinessCompleted && (
+            <Link
+              href="/seller/readiness"
+              onClick={onClose}
+              className={styles.navItem}
+              style={{
+                backgroundColor: pathname === "/seller/readiness" ? "#EA580C" : "#FFF7ED",
+                color: pathname === "/seller/readiness" ? "#FFFFFF" : "#EA580C",
+                border: "1px solid #FED7AA",
+                fontWeight: 700,
+                marginBottom: "6px",
+              }}
+            >
+              <Sparkles size={18} color={pathname === "/seller/readiness" ? "#FFFFFF" : "#EA580C"} />
+              <span style={{ flex: 1 }}>Complete Readiness</span>
+              <ChevronRight size={16} className={styles.navArrow} />
+            </Link>
+          )}
           {visibleResponsiveItems.map((item) => {
             const active = isItemActive(item);
             const IconComponent = item.icon;
@@ -377,11 +406,14 @@ export const ResponsiveNavMenu: React.FC<ResponsiveNavMenuProps> = ({
               item.id === "offers" ||
               item.id === "reviews";
             const isProp = item.id === "rooms" || item.id === "rooms-seller" || item.id === "bookings";
-            const isLocked = Boolean(
+            const isReadinessIncomplete = Boolean(statusData && !statusData.isReadinessCompleted);
+            const isReadinessLocked = isReadinessIncomplete && item.id !== "settings" && item.id !== "profile";
+            const isSubscriptionLocked = Boolean(
               statusData &&
                 ((isFood && !statusData.isFoodActive) ||
                   (isProp && !statusData.isPropertyActive))
             );
+            const isLocked = isReadinessLocked || isSubscriptionLocked;
 
             return (
               <Link
