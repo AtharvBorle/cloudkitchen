@@ -30,16 +30,17 @@ export default function SellerReadinessPage() {
   }, []);
 
   return (
-    <div className={styles.appContainer}>
+    <div className={styles.dashboardContainer}>
       <ConsoleSidebar isMobileOpen={isMobileOpen} onClose={() => setIsMobileOpen(false)} />
 
-      <div className={styles.mainWrapper}>
+      <div className={styles.rightSection}>
         <Topbar
           onMenuToggle={() => setIsMobileOpen(true)}
           title="Onboarding Readiness"
+          showSearch={false}
         />
 
-        <main className={styles.mainContent}>
+        <main className={styles.mainContent} style={{ paddingTop: "12px", gap: 0 }}>
           <SellerReadinessChecklist
             onCompleted={() => {
               router.push("/seller/dashboard");
