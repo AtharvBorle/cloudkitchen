@@ -42,12 +42,15 @@ export default function DishAddonsSelector({
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
 
   // Fetch all seller's add-ons from inventory
-  const loadAvailableAddons = useCallback(async () => {
+  const loadAvailableAddons = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
-      const res = await fetchApi("/api/seller/addons?limit=All");
+      if (!silent) setLoading(true);
+      const res = await fetchApi(`/api/seller/addons?limit=All&t=${Date.now()}`, {
+        cache: "no-store",
+      });
       if (res.ok) {
         const json = await res.json();
         const data = json.data || json;
@@ -57,7 +60,7 @@ export default function DishAddonsSelector({
     } catch (err) {
       console.error("Failed to load seller add-ons for menu item:", err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
@@ -78,10 +81,13 @@ export default function DishAddonsSelector({
 
   // Check if an addon is selected
   const isSelected = (addon: AddonItemData | SelectedAddonItem) => {
-    return selectedAddons.some(
+    if (!addon) return false;
+    return (selectedAddons || []).some(
       (s) =>
-        s.id === addon.id ||
-        s.name.trim().toLowerCase() === addon.name.trim().toLowerCase()
+        (s.id && addon.id && s.id === addon.id) ||
+        (s.name &&
+          addon.name &&
+          s.name.trim().toLowerCase() === addon.name.trim().toLowerCase())
     );
   };
 
@@ -89,10 +95,14 @@ export default function DishAddonsSelector({
   const handleToggleAddon = (addon: AddonItemData) => {
     const alreadySelected = isSelected(addon);
     if (alreadySelected) {
-      const updated = selectedAddons.filter(
+      const updated = (selectedAddons || []).filter(
         (s) =>
-          s.id !== addon.id &&
-          s.name.trim().toLowerCase() !== addon.name.trim().toLowerCase()
+          !(
+            (s.id && addon.id && s.id === addon.id) ||
+            (s.name &&
+              addon.name &&
+              s.name.trim().toLowerCase() === addon.name.trim().toLowerCase())
+          )
       );
       onChange(updated);
     } else {
@@ -103,29 +113,40 @@ export default function DishAddonsSelector({
         stockQuantity: addon.stockQuantity,
         isActive: addon.isActive,
       };
-      onChange([...selectedAddons, newItem]);
+      onChange([...(selectedAddons || []), newItem]);
     }
   };
 
   // Remove selected item by chip
   const handleRemoveSelected = (item: SelectedAddonItem) => {
-    const updated = selectedAddons.filter(
+    const updated = (selectedAddons || []).filter(
       (s) =>
-        s.id !== item.id &&
-        s.name.trim().toLowerCase() !== item.name.trim().toLowerCase()
+        !(
+          (s.id && item.id && s.id === item.id) ||
+          (s.name &&
+            item.name &&
+            s.name.trim().toLowerCase() === item.name.trim().toLowerCase())
+        )
     );
     onChange(updated);
   };
 
   // Callback when a brand-new add-on is created in the modal
   const handleAddonCreated = (newAddon: AddonItemData) => {
+    // 1. Reset search query so newly created add-on is instantly visible
+    setSearchQuery("");
+
+    // 2. Prepend to available add-ons
     setAvailableAddons((prev) => {
-      const exists = prev.some((a) => a.id === newAddon.id);
-      if (exists) return prev;
-      return [newAddon, ...prev];
+      const filtered = prev.filter(
+        (a) =>
+          a.id !== newAddon.id &&
+          a.name.trim().toLowerCase() !== newAddon.name.trim().toLowerCase()
+      );
+      return [newAddon, ...filtered];
     });
 
-    // Automatically select the newly created add-on for this dish
+    // 3. Immediately select newly created add-on for this dish
     const newItem: SelectedAddonItem = {
       id: newAddon.id,
       name: newAddon.name,
@@ -134,9 +155,25 @@ export default function DishAddonsSelector({
       isActive: newAddon.isActive,
     };
 
-    if (!isSelected(newAddon)) {
-      onChange([...selectedAddons, newItem]);
-    }
+    const withoutOld = (selectedAddons || []).filter(
+      (s) =>
+        !(
+          (s.id && newAddon.id && s.id === newAddon.id) ||
+          (s.name &&
+            newAddon.name &&
+            s.name.trim().toLowerCase() === newAddon.name.trim().toLowerCase())
+        )
+    );
+    onChange([...withoutOld, newItem]);
+
+    // 4. Show confirmation feedback
+    setFeedbackMsg(`"${newAddon.name}" created and added to dish!`);
+    setTimeout(() => {
+      setFeedbackMsg(null);
+    }, 4000);
+
+    // 5. Silent refresh from backend
+    loadAvailableAddons(true);
   };
 
   return (
@@ -187,6 +224,14 @@ export default function DishAddonsSelector({
           <span>Add New Add-on</span>
         </button>
       </div>
+
+      {/* Instant Action Feedback */}
+      {feedbackMsg && (
+        <div className={styles.successAlert}>
+          <CheckCircle2 size={16} />
+          <span>{feedbackMsg}</span>
+        </div>
+      )}
 
       {/* Selected Add-ons Chip Strip */}
       {selectedAddons.length > 0 && (

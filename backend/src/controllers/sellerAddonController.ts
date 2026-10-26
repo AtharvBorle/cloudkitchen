@@ -173,11 +173,13 @@ export const createSellerAddon = async (req: Request) => {
             isActive = formData.get("isActive") === "true";
         }
     } else {
-        const body = await req.json();
+        const body = await req.json().catch(() => ({}));
         name = String(body.name || "").trim();
         description = String(body.description || "").trim();
         price = parseFloat(String(body.price || "0"));
-        stockQuantity = body.stockQuantity !== undefined ? parseInt(String(body.stockQuantity), 10) : 0;
+        const rawStock = body.stockQuantity;
+        const parsedStock = rawStock !== undefined && rawStock !== "" ? parseInt(String(rawStock), 10) : 0;
+        stockQuantity = isNaN(parsedStock) ? 0 : parsedStock;
         if (body.isActive !== undefined) {
             isActive = Boolean(body.isActive);
         }

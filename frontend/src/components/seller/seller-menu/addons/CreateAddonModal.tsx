@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Sparkles, X, Loader2, Plus } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
 import type { AddonItemData } from "./SellerAddonsManager";
@@ -19,22 +19,28 @@ export default function CreateAddonModal({
 }: CreateAddonModalProps) {
   const [formName, setFormName] = useState("");
   const [formPrice, setFormPrice] = useState("");
-  const [formStock, setFormStock] = useState("20");
+  const [formStock, setFormStock] = useState("");
   const [formDescription, setFormDescription] = useState("");
   const [formIsActive, setFormIsActive] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  if (!isOpen) return null;
-
   const resetForm = () => {
     setFormName("");
     setFormPrice("");
-    setFormStock("20");
+    setFormStock("");
     setFormDescription("");
     setFormIsActive(true);
     setErrorMsg(null);
   };
+
+  useEffect(() => {
+    if (isOpen) {
+      resetForm();
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
 
   const handleClose = () => {
     resetForm();
@@ -57,24 +63,30 @@ export default function CreateAddonModal({
       return;
     }
 
-    const stockNum = parseInt(formStock, 10);
-    if (isNaN(stockNum) || stockNum < 0) {
-      setErrorMsg("Stock quantity cannot be negative");
-      return;
+    const trimmedStock = formStock.trim();
+    let stockNum = 0;
+    if (trimmedStock !== "") {
+      stockNum = parseInt(trimmedStock, 10);
+      if (isNaN(stockNum) || stockNum < 0) {
+        setErrorMsg("Stock quantity cannot be negative");
+        return;
+      }
     }
 
     setSubmitting(true);
     try {
-      const formData = new FormData();
-      formData.append("name", trimmedName);
-      formData.append("price", String(priceNum));
-      formData.append("stockQuantity", String(stockNum));
-      formData.append("description", formDescription.trim());
-      formData.append("isActive", String(formIsActive));
-
       const res = await fetchApi("/api/seller/addons", {
         method: "POST",
-        body: formData,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: trimmedName,
+          price: priceNum,
+          stockQuantity: stockNum,
+          description: formDescription.trim(),
+          isActive: formIsActive,
+        }),
       });
 
       const json = await res.json().catch(() => ({}));
@@ -200,7 +212,7 @@ export default function CreateAddonModal({
                   type="number"
                   min="0"
                   step="1"
-                  placeholder="e.g. 20"
+                  placeholder="Enter stock quantity (e.g. 20)"
                   value={formStock}
                   onChange={(e) => setFormStock(e.target.value)}
                   className={styles.formInput}
