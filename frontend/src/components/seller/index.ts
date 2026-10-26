@@ -362,3 +362,11 @@ export { default } from "./seller-profile/Profile";
 // Readiness Checklist component
 export { default as SellerReadinessChecklist } from "./readiness/SellerReadinessChecklist";
 export type { ReadinessItem, SellerReadinessChecklistProps } from "./readiness/SellerReadinessChecklist";
+
+// Addons Management & Selector components
+export { default as DishAddonsSelector } from "./seller-menu/addons/DishAddonsSelector";
+export type { DishAddonsSelectorProps, SelectedAddonItem } from "./seller-menu/addons/DishAddonsSelector";
+export { default as CreateAddonModal } from "./seller-menu/addons/CreateAddonModal";
+export type { CreateAddonModalProps } from "./seller-menu/addons/CreateAddonModal";
+export { default as SellerAddonsManager } from "./seller-menu/addons/SellerAddonsManager";
+export type { AddonItemData, AddonMetrics } from "./seller-menu/addons/SellerAddonsManager";

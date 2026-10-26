@@ -67,25 +67,19 @@ function MenuItemContent() {
       formData.append("isAvailable", String(cleanStock > 0));
 
       if (data.variants && Array.isArray(data.variants) && data.variants.length > 0) {
-        for (let i = 0; i < data.variants.length; i++) {
-          const v = data.variants[i];
-          const trimmedName = (v.name || "").trim();
-          if (!trimmedName) {
-            alert(`Add-on #${i + 1} name is required.`);
-            return;
-          }
-          if (v.price === "" || v.price === undefined || v.price === null || isNaN(Number(v.price)) || Number(v.price) < 0) {
-            alert(`Price for add-on "${trimmedName}" is mandatory and must be ₹0 or greater (negative numbers are not allowed).`);
-            return;
-          }
-        }
-        const validVariants = data.variants.map((v: any) => ({
-          id: v.id,
-          name: v.name.trim(),
-          price: Math.max(0, Number(v.price) || 0)
-        }));
+        const validVariants = data.variants
+          .filter((v: any) => v.name && String(v.name).trim().length > 0)
+          .map((v: any) => ({
+            id: String(v.id),
+            name: String(v.name).trim(),
+            price: Math.max(0, Number(v.price) || 0),
+            imageUrl: v.imageUrl || null
+          }));
         formData.append("addons", JSON.stringify(validVariants));
         formData.append("variants", JSON.stringify(validVariants));
+      } else {
+        formData.append("addons", "[]");
+        formData.append("variants", "[]");
       }
 
       let foodCatId = categories[0]?.id || "";
@@ -161,9 +155,12 @@ function MenuItemContent() {
       const p = typeof rawAddons === "string" ? JSON.parse(rawAddons) : rawAddons;
       if (Array.isArray(p)) {
         parsedVariants = p.map((v: any, idx: number) => ({
-          id: v.id || String(idx + 1),
+          id: v.id ? String(v.id) : String(idx + 1),
           name: v.name || "",
-          price: String(v.price ?? "")
+          price: v.price !== undefined ? v.price : "",
+          imageUrl: v.imageUrl || null,
+          stockQuantity: v.stockQuantity !== undefined ? Number(v.stockQuantity) : undefined,
+          isActive: v.isActive !== undefined ? Boolean(v.isActive) : true,
         }));
       }
     } catch {}

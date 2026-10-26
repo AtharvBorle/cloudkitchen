@@ -19,18 +19,25 @@ import Topbar from '../nav/Topbar';
 import { fetchApi } from '@/lib/fetch-api';
 import { useSellerProfile } from '@/hooks/useSellerProfile';
 import { broadcastStockAlert } from '@/hooks/useSellerNotifications';
+import DishAddonsSelector, { SelectedAddonItem } from '../seller-menu/addons/DishAddonsSelector';
 import styles from './EditMenu.module.css';
 
 export interface VariantItem {
   id: string;
   name: string;
-  price: string;
+  price: string | number;
+  imageUrl?: string | null;
+  stockQuantity?: number;
+  isActive?: boolean;
 }
 
 export interface AddonItem {
   id: string;
   name: string;
-  price: string;
+  price: string | number;
+  imageUrl?: string | null;
+  stockQuantity?: number;
+  isActive?: boolean;
 }
 
 // DaySchedule imported from @/lib/item-timing
@@ -184,9 +191,12 @@ function EditMenuInner({
                   const parsed = typeof rawAddonsData === 'string' ? JSON.parse(rawAddonsData) : rawAddonsData;
                   if (Array.isArray(parsed)) {
                     setVariants(parsed.map((v: any, i: number) => ({
-                      id: v.id || String(i + 1),
+                      id: v.id ? String(v.id) : String(i + 1),
                       name: v.name || '',
-                      price: String(v.price ?? '')
+                      price: v.price !== undefined ? v.price : '',
+                      imageUrl: v.imageUrl || null,
+                      stockQuantity: v.stockQuantity !== undefined ? Number(v.stockQuantity) : undefined,
+                      isActive: v.isActive !== undefined ? Boolean(v.isActive) : true,
                     })));
                   }
                 } catch (e) {
@@ -397,11 +407,12 @@ function EditMenuInner({
       formData.append('isAvailable', String(cleanStock > 0));
 
       const validVariants = variants
-        .filter(v => v.name.trim().length > 0)
+        .filter(v => v.name && String(v.name).trim().length > 0)
         .map(v => ({
-          id: v.id,
-          name: v.name.trim(),
-          price: Number(v.price) || 0
+          id: String(v.id),
+          name: String(v.name).trim(),
+          price: Number(v.price) || 0,
+          imageUrl: v.imageUrl || null
         }));
       formData.append('addons', JSON.stringify(validVariants));
       formData.append('variants', JSON.stringify(validVariants));
@@ -760,68 +771,11 @@ function EditMenuInner({
             </div>
 
             {/* Dish Add-Ons Section */}
-            <div className={styles.subSection}>
-              <label className={styles.subSectionTitle}>
-                Dish Add-Ons <span style={{ fontSize: "0.85rem", fontWeight: "normal", color: "#64748B" }}>(Optional add-ons with extra price, e.g. Dahi, Extra Butter, Extra Roti)</span>
-              </label>
-              <div className={styles.variantsList}>
-                {variants.map((variant) => (
-                  <div key={variant.id} className={styles.variantRow}>
-                    <input
-                      type="text"
-                      className={styles.variantNameInput}
-                      placeholder="Add-on name (e.g. Dahi, Extra Butter, Extra Pav) *"
-                      value={variant.name}
-                      required
-                      onChange={(e) =>
-                        handleUpdateVariant(variant.id, 'name', e.target.value)
-                      }
-                    />
-                    <div className={styles.variantPriceWrapper}>
-                      <span className={styles.variantPricePrefix}>
-                        <span className={styles.variantPlus}>+</span>
-                        <span className={styles.variantCurrency}>₹</span>
-                      </span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="1"
-                        className={styles.variantPriceInput}
-                        placeholder="Price *"
-                        value={variant.price}
-                        required
-                        onChange={(e) =>
-                          handleUpdateVariant(variant.id, 'price', e.target.value)
-                        }
-                        onKeyDown={(e) => {
-                          if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') {
-                            e.preventDefault();
-                          }
-                        }}
-                        aria-label="Add-on price"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveVariant(variant.id)}
-                      className={styles.deleteVariantBtn}
-                      aria-label="Remove add-on"
-                      title="Remove add-on"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-
-              <button
-                type="button"
-                onClick={handleAddVariant}
-                className={styles.addVariantBtn}
-              >
-                <Plus size={15} strokeWidth={2.6} />
-                <span>Add Add-on</span>
-              </button>
+            <div className={styles.subSection} style={{ padding: "18px 20px", backgroundColor: "#FFFFFF", borderRadius: "14px", border: "1px solid #E2E8F0" }}>
+              <DishAddonsSelector
+                selectedAddons={variants as SelectedAddonItem[]}
+                onChange={(updated) => setVariants(updated as VariantItem[])}
+              />
             </div>
 
             {/* Weekly Availability & Operational Hours */}

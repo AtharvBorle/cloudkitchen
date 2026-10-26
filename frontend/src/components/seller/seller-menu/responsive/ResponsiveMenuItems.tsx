@@ -9,12 +9,16 @@ import {
   ensureValidEndTime,
   timeToMinutes
 } from "@/lib/item-timing";
+import DishAddonsSelector, { SelectedAddonItem } from "../addons/DishAddonsSelector";
 import styles from "./ResponsiveMenuItems.module.css";
 
 export interface ResponsiveVariantItem {
   id: string;
   name: string;
-  price: string;
+  price: string | number;
+  imageUrl?: string | null;
+  stockQuantity?: number;
+  isActive?: boolean;
 }
 
 export interface ResponsiveDaySchedule {
@@ -627,68 +631,11 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
           </div>
 
           {/* 7. Dish Add-Ons */}
-          <div className={styles.formGroup}>
-            <h2 className={styles.sectionTitle}>
-              Dish Add-Ons <span style={{ fontSize: "0.85rem", fontWeight: "normal", color: "#64748B" }}>(Optional add-ons with extra price)</span>
-            </h2>
-            <div className={styles.variantsList}>
-              {variants.map((variant) => (
-                <div key={variant.id} className={styles.variantRow}>
-                  <input
-                    type="text"
-                    className={styles.variantNameInput}
-                    value={variant.name}
-                    placeholder="Add-on name (e.g. Dahi, Extra Butter) *"
-                    required
-                    onChange={(e) =>
-                      handleUpdateVariant(variant.id, "name", e.target.value)
-                    }
-                  />
-                  <div className={styles.variantPriceWrapper}>
-                    <span className={styles.variantPricePrefix}>
-                      <span className={styles.variantPlus}>+</span>
-                      <span className={styles.variantCurrency}>₹</span>
-                    </span>
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      className={styles.variantPriceInput}
-                      value={variant.price}
-                      placeholder="Price *"
-                      required
-                      onChange={(e) =>
-                        handleUpdateVariant(variant.id, "price", e.target.value)
-                      }
-                      onKeyDown={(e) => {
-                        if (e.key === "-" || e.key === "e" || e.key === "E" || e.key === "+") {
-                          e.preventDefault();
-                        }
-                      }}
-                      aria-label="Add-on price"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    className={styles.deleteVariantBtn}
-                    onClick={() => handleRemoveVariant(variant.id)}
-                    aria-label={`Delete ${variant.name || "add-on"}`}
-                    title="Remove add-on"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))}
-
-              <button
-                type="button"
-                className={styles.addVariantBtn}
-                onClick={handleAddVariant}
-              >
-                <Plus size={16} strokeWidth={2.4} />
-                <span>Add Add-on</span>
-              </button>
-            </div>
+          <div className={styles.formGroup} style={{ padding: "14px 16px", backgroundColor: "#FFFFFF", borderRadius: "12px", border: "1px solid #E2E8F0" }}>
+            <DishAddonsSelector
+              selectedAddons={variants as SelectedAddonItem[]}
+              onChange={(updated) => setVariants(updated as ResponsiveVariantItem[])}
+            />
           </div>
 
           {/* 8. Weekly Availability & Timings Calendar */}
