@@ -192,20 +192,59 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                             } else {
                                 const newBasePrice = Number(live.price);
                                 const currentBasePrice = item.basePrice !== undefined ? Number(item.basePrice) : Number(item.price) || 0;
-                                const addonsSum = (item.selectedAddons || []).reduce((sum, a: any) => sum + ((Number(a.price) || 0) * (Number(a.quantity) || 1)), 0);
+
+                                let liveAddonsList: any[] = [];
+                                if (live.addons) {
+                                    try {
+                                        liveAddonsList = typeof live.addons === "string" ? JSON.parse(live.addons) : live.addons;
+                                    } catch {}
+                                }
+                                const liveAddonsMap = new Map<string, any>();
+                                if (Array.isArray(liveAddonsList)) {
+                                    liveAddonsList.forEach((a: any) => {
+                                        if (a && a.id) liveAddonsMap.set(String(a.id), a);
+                                        if (a && a.name) liveAddonsMap.set(String(a.name).trim().toLowerCase(), a);
+                                    });
+                                }
+
+                                let syncedSelectedAddons = item.selectedAddons;
+                                let addonsChanged = false;
+                                if (Array.isArray(item.selectedAddons) && item.selectedAddons.length > 0) {
+                                    syncedSelectedAddons = item.selectedAddons.map((sa: any) => {
+                                        const cleanId = String(sa.id || "");
+                                        const cleanName = String(sa.name || "").trim().toLowerCase();
+                                        const liveA = liveAddonsMap.get(cleanId) || liveAddonsMap.get(cleanName);
+                                        if (liveA) {
+                                            const updatedPrice = Number(liveA.price) || 0;
+                                            if (sa.name !== liveA.name || Number(sa.price) !== updatedPrice) {
+                                                addonsChanged = true;
+                                                return {
+                                                    ...sa,
+                                                    id: liveA.id,
+                                                    name: liveA.name,
+                                                    price: updatedPrice,
+                                                };
+                                            }
+                                        }
+                                        return sa;
+                                    });
+                                }
+
+                                const addonsSum = (syncedSelectedAddons || []).reduce((sum: number, a: any) => sum + ((Number(a.price) || 0) * (Number(a.quantity) || 1)), 0);
                                 const newUnitPrice = newBasePrice + addonsSum;
 
                                 const liveStock = live.stockQuantity !== undefined && live.stockQuantity !== null ? Number(live.stockQuantity) : -1;
                                 const liveImage = live.imageUrl || item.imageUrl || item.image;
 
-                                const priceChanged = currentBasePrice !== newBasePrice || item.price !== newUnitPrice;
+                                const priceChanged = currentBasePrice !== newBasePrice || item.price !== newUnitPrice || addonsChanged;
                                 const stockChanged = item.maxStock !== liveStock || item.stockQuantity !== liveStock;
 
-                                if (priceChanged || stockChanged) {
+                                if (priceChanged || stockChanged || addonsChanged) {
                                     hasAnyUpdates = true;
                                     updatesMap.set(item.id, {
                                         basePrice: newBasePrice,
                                         price: newUnitPrice,
+                                        selectedAddons: syncedSelectedAddons,
                                         addonsTotal: addonsSum,
                                         maxStock: liveStock,
                                         stockQuantity: liveStock,

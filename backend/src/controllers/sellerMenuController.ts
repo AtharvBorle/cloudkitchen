@@ -154,8 +154,55 @@ export const getMenuItems = async () => {
         orderBy: { name: "asc" }
     });
 
+    const addonsMap = new Map<string, any>();
+    addons.forEach((a: any) => {
+        if (a && a.id) addonsMap.set(String(a.id), a);
+        if (a && a.name) addonsMap.set(String(a.name).trim().toLowerCase(), a);
+    });
+
+    const enrichedItems = items.map((item) => {
+        let enrichedAddonsStr = item.addons;
+        let enrichedVariantsStr = item.variants;
+
+        const enrichField = (fieldVal: string | null) => {
+            if (!fieldVal) return fieldVal;
+            try {
+                const parsed = typeof fieldVal === "string" ? JSON.parse(fieldVal) : fieldVal;
+                if (!Array.isArray(parsed) || parsed.length === 0) return fieldVal;
+
+                const enriched = parsed.map((a: any, idx: number) => {
+                    const cleanId = String(a.id || `addon_${idx + 1}`);
+                    const cleanName = String(a.name || "").trim().toLowerCase();
+                    const live = addonsMap.get(cleanId) || addonsMap.get(cleanName);
+                    return {
+                        id: live ? live.id : cleanId,
+                        name: live ? live.name : String(a.name || "").trim(),
+                        price: live ? Number(live.price) : (Number(a.price) || 0),
+                        stockQuantity: live ? Number(live.stockQuantity) : (a.stockQuantity !== undefined ? Number(a.stockQuantity) : 0),
+                        lowStockThreshold: live ? Number(live.lowStockThreshold) : (Number(a.lowStockThreshold) || 5),
+                        isActive: live ? Boolean(live.isActive) : (a.isActive !== false),
+                        imageUrl: (live && live.imageUrl) ? live.imageUrl : (a.imageUrl || null),
+                        description: (live && live.description !== undefined) ? live.description : (a.description || "")
+                    };
+                });
+                return JSON.stringify(enriched);
+            } catch {
+                return fieldVal;
+            }
+        };
+
+        if (item.addons) enrichedAddonsStr = enrichField(item.addons);
+        if (item.variants) enrichedVariantsStr = enrichField(item.variants);
+
+        return {
+            ...item,
+            addons: enrichedAddonsStr,
+            variants: enrichedVariantsStr,
+        };
+    });
+
     return { 
-        items, 
+        items: enrichedItems, 
         addons,
         servedPincodes, 
         foodType: sellerProfile.foodType, 

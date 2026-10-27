@@ -97,6 +97,13 @@ export default function SellerAddonsManager() {
     }, 3000);
   };
 
+  const broadcastAddonSync = (addonId?: string) => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("seller-addon-updated", { detail: { id: addonId } }));
+      window.dispatchEvent(new CustomEvent("seller-menu-updated"));
+    }
+  };
+
   const loadAddons = useCallback(async () => {
     try {
       setLoading(true);
@@ -152,6 +159,7 @@ export default function SellerAddonsManager() {
         setCentralizedThreshold(val);
         showToast(`Centralized low-stock threshold set to ${val} for all add-ons!`);
         loadAddons();
+        broadcastAddonSync();
       } else {
         const json = await res.json().catch(() => ({}));
         showToast(json.message || "Failed to update threshold");
@@ -225,6 +233,7 @@ export default function SellerAddonsManager() {
         showToast("Add-on updated successfully!");
         setIsEditModalOpen(false);
         loadAddons();
+        broadcastAddonSync(selectedAddon.id);
       } else {
         showToast(json.message || "Failed to update add-on");
       }
@@ -261,6 +270,7 @@ export default function SellerAddonsManager() {
         showToast(`Stock updated (+${qty} units) for "${selectedAddon.name}"!`);
         setIsReplenishModalOpen(false);
         loadAddons();
+        broadcastAddonSync(selectedAddon.id);
       } else {
         showToast(json.message || "Failed to update stock");
       }
@@ -302,6 +312,7 @@ export default function SellerAddonsManager() {
       if (res.ok) {
         showToast(`"${addon.name}" is now ${nextStatus ? "Active" : "Inactive"}`);
         loadAddons();
+        broadcastAddonSync(addon.id);
       }
     } catch (err) {
       console.error("Failed to toggle addon status:", err);
@@ -322,6 +333,7 @@ export default function SellerAddonsManager() {
       if (res.ok) {
         showToast(`Add-on "${addon.name}" deleted.`);
         loadAddons();
+        broadcastAddonSync(addon.id);
       } else {
         const json = await res.json().catch(() => ({}));
         showToast(json.message || "Failed to delete add-on.");
@@ -706,6 +718,7 @@ export default function SellerAddonsManager() {
         onCreated={(newAddon) => {
           showToast(`Add-on "${newAddon.name}" created successfully!`);
           loadAddons();
+          broadcastAddonSync(newAddon.id);
         }}
       />
 

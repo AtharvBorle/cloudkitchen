@@ -2,6 +2,23 @@ import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { ApiError } from "@/lib/api-error";
 import { uploadImage } from "@/lib/upload";
+import { revalidateTag } from "next/cache";
+import { emitMenuUpdated } from "@/lib/realtime-events";
+
+const triggerMenuRevalidationAndEvents = (sellerId: string) => {
+    try {
+        revalidateTag("explore", {});
+        revalidateTag("public-explore-data", {});
+        revalidateTag("home", {});
+        revalidateTag("menu", {});
+    } catch (e) {}
+
+    try {
+        emitMenuUpdated(sellerId);
+    } catch (emErr) {
+        console.error("Live menu emit error:", emErr);
+    }
+};
 
 const getAuthenticatedSellerProfile = async () => {
     const session = await getAuthSession();
@@ -153,6 +170,7 @@ export const updateCentralizedThreshold = async (req: Request) => {
         data: { lowStockThreshold: threshold }
     });
 
+    triggerMenuRevalidationAndEvents(sellerProfile.id);
     return { threshold, message: "Centralized low-stock threshold updated successfully" };
 };
 
@@ -253,6 +271,7 @@ export const createSellerAddon = async (req: Request) => {
         return addon;
     });
 
+    triggerMenuRevalidationAndEvents(sellerProfile.id);
     return newAddon;
 };
 
@@ -438,9 +457,67 @@ export const updateSellerAddon = async (id: string, req: Request) => {
             }
         });
 
+        // Reconcile and update all FoodItem dishes belonging to this seller that include this add-on
+        const sellerDishes = await tx.foodItem.findMany({
+            where: { sellerId: sellerProfile.id },
+            select: { id: true, addons: true, variants: true }
+        });
+
+        for (const dish of sellerDishes) {
+            let dishUpdated = false;
+            const processField = (fieldVal: string | null) => {
+                if (!fieldVal) return null;
+                try {
+                    const parsed = typeof fieldVal === "string" ? JSON.parse(fieldVal) : fieldVal;
+                    if (!Array.isArray(parsed) || parsed.length === 0) return null;
+
+                    let changed = false;
+                    const nextList = parsed.map((item: any) => {
+                        const matchById = item.id && (String(item.id) === String(id) || String(item.id) === String(existing.id));
+                        const matchByName = item.name && existing.name && String(item.name).trim().toLowerCase() === String(existing.name).trim().toLowerCase();
+
+                        if (matchById || matchByName) {
+                            changed = true;
+                            dishUpdated = true;
+                            return {
+                                ...item,
+                                id: res.id,
+                                name: res.name,
+                                price: res.price,
+                                stockQuantity: res.stockQuantity,
+                                lowStockThreshold: res.lowStockThreshold,
+                                isActive: res.isActive,
+                                imageUrl: res.imageUrl,
+                                description: res.description || ""
+                            };
+                        }
+                        return item;
+                    });
+
+                    return changed ? JSON.stringify(nextList) : null;
+                } catch {
+                    return null;
+                }
+            };
+
+            const updatedAddons = processField(dish.addons);
+            const updatedVariants = processField(dish.variants);
+
+            if (dishUpdated && (updatedAddons !== null || updatedVariants !== null)) {
+                await tx.foodItem.update({
+                    where: { id: dish.id },
+                    data: {
+                        ...(updatedAddons !== null ? { addons: updatedAddons } : {}),
+                        ...(updatedVariants !== null ? { variants: updatedVariants } : {}),
+                    }
+                });
+            }
+        }
+
         return res;
     });
 
+    triggerMenuRevalidationAndEvents(sellerProfile.id);
     return updated;
 };
 
@@ -458,10 +535,57 @@ export const deleteSellerAddon = async (id: string) => {
         throw new ApiError("Add-on not found or access denied.", 404);
     }
 
-    // Delete addon
-    await db.addon.delete({
-        where: { id }
+    await db.$transaction(async (tx) => {
+        // Delete addon
+        await tx.addon.delete({
+            where: { id }
+        });
+
+        // Remove deleted add-on from all food dishes of this seller
+        const sellerDishes = await tx.foodItem.findMany({
+            where: { sellerId: sellerProfile.id },
+            select: { id: true, addons: true, variants: true }
+        });
+
+        for (const dish of sellerDishes) {
+            let dishUpdated = false;
+            const processField = (fieldVal: string | null) => {
+                if (!fieldVal) return null;
+                try {
+                    const parsed = typeof fieldVal === "string" ? JSON.parse(fieldVal) : fieldVal;
+                    if (!Array.isArray(parsed) || parsed.length === 0) return null;
+
+                    const filtered = parsed.filter((item: any) => {
+                        const matchById = item.id && (String(item.id) === String(id) || String(item.id) === String(existing.id));
+                        const matchByName = item.name && existing.name && String(item.name).trim().toLowerCase() === String(existing.name).trim().toLowerCase();
+                        return !(matchById || matchByName);
+                    });
+
+                    if (filtered.length !== parsed.length) {
+                        dishUpdated = true;
+                        return JSON.stringify(filtered);
+                    }
+                    return null;
+                } catch {
+                    return null;
+                }
+            };
+
+            const updatedAddons = processField(dish.addons);
+            const updatedVariants = processField(dish.variants);
+
+            if (dishUpdated && (updatedAddons !== null || updatedVariants !== null)) {
+                await tx.foodItem.update({
+                    where: { id: dish.id },
+                    data: {
+                        ...(updatedAddons !== null ? { addons: updatedAddons } : {}),
+                        ...(updatedVariants !== null ? { variants: updatedVariants } : {}),
+                    }
+                });
+            }
+        }
     });
 
+    triggerMenuRevalidationAndEvents(sellerProfile.id);
     return { success: true, message: `Add-on "${existing.name}" deleted successfully.` };
 };
