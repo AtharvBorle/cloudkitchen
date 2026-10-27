@@ -372,13 +372,13 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
                         const liveAddon = kitchenStoreAddons.find(sa => sa.id === cleanId || sa.name.trim().toLowerCase() === cleanName);
                         return {
                           id: liveAddon ? liveAddon.id : cleanId,
-                          name: String(a.name || (liveAddon ? liveAddon.name : "")),
+                          name: liveAddon ? String(liveAddon.name).trim() : String(a.name || "").trim(),
                           price: liveAddon ? liveAddon.price : (Number(a.price) || 0),
                           stockQuantity: liveAddon ? liveAddon.stockQuantity : (a.stockQuantity !== undefined ? Number(a.stockQuantity) : 0),
                           lowStockThreshold: liveAddon ? liveAddon.lowStockThreshold : (Number(a.lowStockThreshold) || 5),
                           isActive: liveAddon ? liveAddon.isActive : (a.isActive !== false),
-                          imageUrl: a.imageUrl || (liveAddon ? liveAddon.imageUrl : null),
-                          description: a.description || (liveAddon ? liveAddon.description : ""),
+                          imageUrl: (liveAddon && liveAddon.imageUrl) ? liveAddon.imageUrl : (a.imageUrl || null),
+                          description: (liveAddon && liveAddon.description !== undefined) ? liveAddon.description : (a.description || ""),
                         };
                       });
                   }
@@ -618,6 +618,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
       window.addEventListener("focus", handleSync);
       window.addEventListener("seller-status-updated", handleSync);
       window.addEventListener("seller-menu-updated", handleSync);
+      window.addEventListener("seller-addon-updated", handleSync);
       window.addEventListener("public-live-shop", handleSync);
       window.addEventListener("public-coupon-updated", handleSync);
       window.addEventListener("cloudkitchen-new-notification", handleSync);
@@ -648,6 +649,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
         window.removeEventListener("focus", handleSync);
         window.removeEventListener("seller-status-updated", handleSync);
         window.removeEventListener("seller-menu-updated", handleSync);
+        window.removeEventListener("seller-addon-updated", handleSync);
         window.removeEventListener("public-live-shop", handleSync);
         window.removeEventListener("public-coupon-updated", handleSync);
         window.removeEventListener("cloudkitchen-new-notification", handleSync);

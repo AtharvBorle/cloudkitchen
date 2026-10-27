@@ -67,8 +67,8 @@ export default function CreateAddonModal({
     }
 
     const priceNum = parseFloat(formPrice);
-    if (isNaN(priceNum) || priceNum < 0) {
-      setErrorMsg("Please enter a valid selling price (₹0 or greater)");
+    if (isNaN(priceNum) || priceNum <= 0) {
+      setErrorMsg("Price must be greater than ₹0");
       return;
     }
 
@@ -226,7 +226,7 @@ export default function CreateAddonModal({
               </label>
               <input
                 type="number"
-                min="0"
+                min="0.01"
                 step="0.5"
                 placeholder="e.g. 15"
                 value={formPrice}

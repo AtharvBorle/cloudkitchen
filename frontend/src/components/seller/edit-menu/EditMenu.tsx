@@ -190,14 +190,28 @@ function EditMenuInner({
                 try {
                   const parsed = typeof rawAddonsData === 'string' ? JSON.parse(rawAddonsData) : rawAddonsData;
                   if (Array.isArray(parsed)) {
-                    setVariants(parsed.map((v: any, i: number) => ({
-                      id: v.id ? String(v.id) : String(i + 1),
-                      name: v.name || '',
-                      price: v.price !== undefined ? v.price : '',
-                      imageUrl: v.imageUrl || null,
-                      stockQuantity: v.stockQuantity !== undefined ? Number(v.stockQuantity) : undefined,
-                      isActive: v.isActive !== undefined ? Boolean(v.isActive) : true,
-                    })));
+                    const addonsMap = new Map<string, any>();
+                    if (Array.isArray(dataPayload.addons)) {
+                      dataPayload.addons.forEach((a: any) => {
+                        if (a && a.id) addonsMap.set(String(a.id), a);
+                        if (a && a.name) addonsMap.set(String(a.name).trim().toLowerCase(), a);
+                      });
+                    }
+
+                    setVariants(parsed.map((v: any, i: number) => {
+                      const cleanId = v.id ? String(v.id) : String(i + 1);
+                      const cleanName = String(v.name || '').trim().toLowerCase();
+                      const live = addonsMap.get(cleanId) || addonsMap.get(cleanName);
+                      return {
+                        id: live ? String(live.id) : cleanId,
+                        name: live ? String(live.name).trim() : (v.name || ''),
+                        price: live ? String(live.price) : (v.price !== undefined ? String(v.price) : ''),
+                        imageUrl: (live && live.imageUrl) ? live.imageUrl : (v.imageUrl || null),
+                        stockQuantity: live ? Number(live.stockQuantity) : (v.stockQuantity !== undefined ? Number(v.stockQuantity) : undefined),
+                        lowStockThreshold: live ? Number(live.lowStockThreshold) : 5,
+                        isActive: live ? Boolean(live.isActive) : (v.isActive !== undefined ? Boolean(v.isActive) : true),
+                      };
+                    }));
                   }
                 } catch (e) {
                   console.error('Failed to parse item addons:', e);
@@ -334,8 +348,8 @@ function EditMenuInner({
       }
       seenAddonNames.add(lowerName);
 
-      if (v.price === '' || v.price === undefined || v.price === null || isNaN(Number(v.price)) || Number(v.price) < 0) {
-        alert(`Price for add-on "${trimmedName}" is mandatory and must be ₹0 or greater (negative numbers are not allowed).`);
+      if (v.price === '' || v.price === undefined || v.price === null || isNaN(Number(v.price)) || Number(v.price) <= 0) {
+        alert(`Price for add-on "${trimmedName}" is mandatory and must be greater than ₹0.`);
         return;
       }
     }

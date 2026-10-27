@@ -209,13 +209,13 @@ export const getPublicExploreData = unstable_cache(
                                 const live = sellerAddonsMap.get(cleanId) || sellerAddonsMap.get(cleanName);
                                 return {
                                     id: live ? live.id : cleanId,
-                                    name: String(a.name || (live ? live.name : "")).trim(),
+                                    name: live ? String(live.name).trim() : String(a.name || "").trim(),
                                     price: live ? Number(live.price) : (Number(a.price) || 0),
                                     stockQuantity: live ? Number(live.stockQuantity) : (a.stockQuantity !== undefined ? Number(a.stockQuantity) : 0),
                                     lowStockThreshold: live ? Number(live.lowStockThreshold) : (Number(a.lowStockThreshold) || 5),
                                     isActive: live ? Boolean(live.isActive) : (a.isActive !== false),
-                                    imageUrl: a.imageUrl || (live ? live.imageUrl : null),
-                                    description: a.description || (live ? live.description : "")
+                                    imageUrl: (live && live.imageUrl) ? live.imageUrl : (a.imageUrl || null),
+                                    description: (live && live.description !== undefined) ? live.description : (a.description || "")
                                 };
                             });
                             enrichedAddonsStr = JSON.stringify(enriched);
