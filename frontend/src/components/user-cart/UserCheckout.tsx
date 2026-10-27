@@ -31,7 +31,7 @@ export interface UserCartItem {
   qty: number;
   image: string;
   sellerId?: string;
-  selectedAddons?: Array<{ id?: string; name: string; price: number }>;
+  selectedAddons?: Array<{ id?: string; name: string; price: number; quantity?: number }>;
 }
 
 export interface UserCheckoutProps {
@@ -703,8 +703,8 @@ export const UserCheckout: React.FC<UserCheckoutProps> = ({
                                 gap: "4px",
                               }}
                             >
-                              <span>+ {addon.name}</span>
-                              <strong style={{ color: "#EA580C" }}>(₹{addon.price})</strong>
+                              <span>+ {addon.name}{addon.quantity && addon.quantity > 1 ? ` ×${addon.quantity}` : ""}</span>
+                              <strong style={{ color: "#EA580C" }}>(₹{((addon.price || 0) * (addon.quantity || 1)).toLocaleString("en-IN")})</strong>
                             </span>
                           ))}
                         </div>

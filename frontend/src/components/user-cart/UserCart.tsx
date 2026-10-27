@@ -20,7 +20,9 @@ import {
   ChevronDown,
   ChevronUp,
   Search,
+  SlidersHorizontal,
 } from "lucide-react";
+import { AddonCustomizationModal } from "@/components/cart/AddonCustomizationModal";
 import { useSession } from "next-auth/react";
 import { useCart } from "@/context/CartContext";
 import { useLocation } from "@/components/location-provider";
@@ -39,8 +41,28 @@ export interface UserCartItem {
   price: number;
   basePrice?: number;
   addonsTotal?: number;
-  selectedAddons?: Array<{ id?: string; name: string; price: number }>;
-  addons?: Array<{ id?: string; name: string; price: number }>;
+  selectedAddons?: Array<{
+    id?: string;
+    name: string;
+    price: number;
+    quantity?: number;
+    lineTotal?: number;
+    stockQuantity?: number;
+    lowStockThreshold?: number;
+    isActive?: boolean;
+    description?: string;
+    imageUrl?: string;
+  }>;
+  addons?: Array<{
+    id?: string;
+    name: string;
+    price: number;
+    quantity?: number;
+    stockQuantity?: number;
+    isActive?: boolean;
+    description?: string;
+    imageUrl?: string;
+  }>;
   qty: number;
   image: string;
   maxStock?: number;
@@ -196,6 +218,7 @@ export const UserCart: React.FC<UserCartProps> = ({
 
   // State Management
   const [localCartItems, setLocalCartItems] = useState<UserCartItem[]>(initialItems);
+  const [editingCartItem, setEditingCartItem] = useState<UserCartItem | null>(null);
   const [isVegOnly, setIsVegOnly] = useState<boolean>(true);
   const [selectedLanguage, setSelectedLanguage] = useState<string>("EN");
   const [promoCode, setPromoCode] = useState<string>("");
@@ -432,13 +455,13 @@ export const UserCart: React.FC<UserCartProps> = ({
   };
 
   // Parse add-ons from string or array safely and deduplicate
-  const parseItemAddons = (raw: any): Array<{ id?: string; name: string; price: number }> => {
+  const parseItemAddons = (raw: any): Array<{ id?: string; name: string; price: number; quantity?: number; stockQuantity?: number; isActive?: boolean; description?: string; imageUrl?: string }> => {
     if (!raw) return [];
     try {
       const list = typeof raw === "string" ? JSON.parse(raw) : raw;
       if (Array.isArray(list)) {
         const seenNames = new Set<string>();
-        const result: Array<{ id?: string; name: string; price: number }> = [];
+        const result: Array<{ id?: string; name: string; price: number; quantity?: number; stockQuantity?: number; isActive?: boolean; description?: string; imageUrl?: string }> = [];
         list.forEach((a: any, idx: number) => {
           if (!a || !(a.name || "").trim()) return;
           const cleanName = String(a.name || "").trim();
@@ -451,10 +474,26 @@ export const UserCart: React.FC<UserCartProps> = ({
             typeof a.price === "number"
               ? a.price
               : parseFloat(String(a.price).replace(/[^0-9.]/g, "")) || 0;
+
+          const liveSellerAddon = sellerDetails?.addons && Array.isArray(sellerDetails.addons)
+            ? sellerDetails.addons.find((sla: any) => String(sla.id) === cleanId || (sla.name && sla.name.toLowerCase().trim() === lowerName))
+            : null;
+
+          const authoritativePrice = liveSellerAddon ? Number(liveSellerAddon.price) : Math.max(0, cleanPrice);
+          const rawStock = liveSellerAddon?.stockQuantity !== undefined ? liveSellerAddon.stockQuantity : a.stockQuantity;
+          const hasDefinedStock = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock));
+          const stockQuantity = hasDefinedStock ? Math.max(0, parseInt(String(rawStock), 10)) : undefined;
+          const isActive = liveSellerAddon?.isActive !== undefined ? Boolean(liveSellerAddon.isActive) : (a.isActive !== undefined ? Boolean(a.isActive) : true);
+
           result.push({
             id: cleanId,
             name: cleanName,
-            price: Math.max(0, cleanPrice),
+            price: authoritativePrice,
+            quantity: Math.max(1, Number(a.quantity) || 1),
+            stockQuantity,
+            isActive,
+            description: a.description || liveSellerAddon?.description || "",
+            imageUrl: a.imageUrl || a.image || liveSellerAddon?.imageUrl || undefined,
           });
         });
         return result;
@@ -464,7 +503,7 @@ export const UserCart: React.FC<UserCartProps> = ({
   };
 
   // Get all configured add-ons available for this dish (either from cart item or live seller menu)
-  const getDishAvailableAddons = (item: UserCartItem): Array<{ id?: string; name: string; price: number }> => {
+  const getDishAvailableAddons = (item: UserCartItem): Array<{ id?: string; name: string; price: number; stockQuantity?: number; isActive?: boolean; description?: string; imageUrl?: string }> => {
     let raw: any = item.addons;
     if ((!raw || (Array.isArray(raw) && raw.length === 0)) && sellerDetails?.foodItems && Array.isArray(sellerDetails.foodItems)) {
       const baseId = item.foodItemId || (item.id.includes("_") ? item.id.split("_")[0] : item.id);
@@ -476,23 +515,194 @@ export const UserCart: React.FC<UserCartProps> = ({
     return parseItemAddons(raw);
   };
 
-  const handleAddAddonToItem = (item: UserCartItem, addon: { id?: string; name: string; price: number }) => {
-    const currentSelected = item.selectedAddons || [];
+  const getAddonStockInfo = (item: UserCartItem, addon: { id?: string; name: string }) => {
+    const available = getDishAvailableAddons(item);
     const lowerName = (addon.name || "").toLowerCase().trim();
-    if (currentSelected.some(a => (a.name || "").toLowerCase().trim() === lowerName || (addon.id && a.id === addon.id))) {
-      showToast(`${addon.name} is already added to this item`);
+    const foundInAvail = available.find(a => (addon.id && a.id === addon.id) || (a.name && a.name.toLowerCase().trim() === lowerName));
+    if (foundInAvail) {
+      return {
+        stockQuantity: foundInAvail.stockQuantity,
+        isActive: foundInAvail.isActive,
+        price: foundInAvail.price,
+      };
+    }
+    if (sellerDetails?.addons && Array.isArray(sellerDetails.addons)) {
+      const foundInSeller = sellerDetails.addons.find((a: any) => (addon.id && String(a.id) === String(addon.id)) || (a.name && a.name.toLowerCase().trim() === lowerName));
+      if (foundInSeller) {
+        return {
+          stockQuantity: foundInSeller.stockQuantity,
+          isActive: foundInSeller.isActive,
+          price: Number(foundInSeller.price) || 0,
+        };
+      }
+    }
+    return {
+      stockQuantity: (addon as any).stockQuantity,
+      isActive: (addon as any).isActive !== false,
+      price: (addon as any).price || 0,
+    };
+  };
+
+  const handleModifyAddonQuantity = (item: UserCartItem, addonIndex: number, delta: number) => {
+    const currentSelected = [...(item.selectedAddons || [])];
+    const targetAddon = currentSelected[addonIndex];
+    if (!targetAddon) return;
+
+    const currentQty = Math.max(1, Number(targetAddon.quantity) || 1);
+    const nextQty = currentQty + delta;
+
+    if (delta > 0) {
+      const stockInfo = getAddonStockInfo(item, targetAddon);
+      if (stockInfo.isActive === false) {
+        showToast(`Sorry, "${targetAddon.name}" is currently inactive.`, "warning");
+        return;
+      }
+      if (stockInfo.stockQuantity !== undefined && stockInfo.stockQuantity !== null) {
+        const totalRequestedUnits = nextQty * item.qty;
+        if (stockInfo.stockQuantity <= 0) {
+          showToast(`Sorry, "${targetAddon.name}" is currently out of stock.`, "warning");
+          return;
+        }
+        if (totalRequestedUnits > stockInfo.stockQuantity) {
+          showToast(`Cannot add more. Only ${stockInfo.stockQuantity} unit${stockInfo.stockQuantity > 1 ? "s" : ""} of "${targetAddon.name}" available in stock.`, "warning");
+          return;
+        }
+      }
+    }
+
+    if (nextQty <= 0) {
+      // Remove add-on
+      currentSelected.splice(addonIndex, 1);
+      updateItemAddons(item.id, currentSelected as any);
+      if (contextCartItems.length === 0) {
+        setLocalCartItems((prev) =>
+          prev.map((i) => {
+            if (i.id === item.id) {
+              const addonsSum = currentSelected.reduce((sum, a) => sum + ((Number(a.price) || 0) * (Number(a.quantity) || 1)), 0);
+              const basePrice = i.basePrice !== undefined ? Number(i.basePrice) : Math.max(0, i.price - (i.addonsTotal || 0));
+              return {
+                ...i,
+                selectedAddons: currentSelected,
+                addonsTotal: addonsSum,
+                price: basePrice + addonsSum,
+              };
+            }
+            return i;
+          })
+        );
+      }
+      showToast(`Removed ${targetAddon.name} from ${item.name}`);
       return;
     }
-    const newSelected = [...currentSelected, addon];
-    updateItemAddons(item.id, newSelected);
-    showToast(`Added ${addon.name} (+₹${addon.price}) to ${item.name}`);
+
+    // Update quantity
+    const stockInfo = getAddonStockInfo(item, targetAddon);
+    const updatedPrice = stockInfo.price || targetAddon.price;
+    currentSelected[addonIndex] = {
+      ...targetAddon,
+      price: updatedPrice,
+      quantity: nextQty,
+      lineTotal: updatedPrice * nextQty,
+      stockQuantity: stockInfo.stockQuantity,
+      isActive: stockInfo.isActive,
+    };
+
+    updateItemAddons(item.id, currentSelected as any);
+    if (contextCartItems.length === 0) {
+      setLocalCartItems((prev) =>
+        prev.map((i) => {
+          if (i.id === item.id) {
+            const addonsSum = currentSelected.reduce((sum, a) => sum + ((Number(a.price) || 0) * (Number(a.quantity) || 1)), 0);
+            const basePrice = i.basePrice !== undefined ? Number(i.basePrice) : Math.max(0, i.price - (i.addonsTotal || 0));
+            return {
+              ...i,
+              selectedAddons: currentSelected,
+              addonsTotal: addonsSum,
+              price: basePrice + addonsSum,
+            };
+          }
+          return i;
+        })
+      );
+    }
+    showToast(`Updated ${targetAddon.name} quantity to ${nextQty} (+₹${updatedPrice * nextQty})`);
+  };
+
+  const handleAddAddonToItem = (item: UserCartItem, addon: { id?: string; name: string; price: number; stockQuantity?: number; isActive?: boolean }) => {
+    const currentSelected = [...(item.selectedAddons || [])];
+    const lowerName = (addon.name || "").toLowerCase().trim();
+    const existingIndex = currentSelected.findIndex(a => (a.name || "").toLowerCase().trim() === lowerName || (addon.id && a.id === addon.id));
+
+    if (existingIndex !== -1) {
+      // Already selected: increase its quantity with live stock validation
+      handleModifyAddonQuantity(item, existingIndex, 1);
+      return;
+    }
+
+    // New add-on: check stock
+    const stockInfo = getAddonStockInfo(item, addon);
+    if (stockInfo.isActive === false || (stockInfo.stockQuantity !== undefined && stockInfo.stockQuantity <= 0)) {
+      showToast(`Sorry, "${addon.name}" is currently out of stock.`, "warning");
+      return;
+    }
+    if (stockInfo.stockQuantity !== undefined && item.qty > stockInfo.stockQuantity) {
+      showToast(`Cannot add "${addon.name}". Only ${stockInfo.stockQuantity} unit${stockInfo.stockQuantity > 1 ? "s" : ""} available in stock.`, "warning");
+      return;
+    }
+
+    const newAddon = {
+      ...addon,
+      price: stockInfo.price || addon.price,
+      quantity: 1,
+      lineTotal: stockInfo.price || addon.price,
+      stockQuantity: stockInfo.stockQuantity,
+      isActive: stockInfo.isActive,
+    };
+
+    const newSelected = [...currentSelected, newAddon];
+    updateItemAddons(item.id, newSelected as any);
+    if (contextCartItems.length === 0) {
+      setLocalCartItems((prev) =>
+        prev.map((i) => {
+          if (i.id === item.id) {
+            const addonsSum = newSelected.reduce((sum, a) => sum + ((Number(a.price) || 0) * (Number(a.quantity) || 1)), 0);
+            const basePrice = i.basePrice !== undefined ? Number(i.basePrice) : Math.max(0, i.price - (i.addonsTotal || 0));
+            return {
+              ...i,
+              selectedAddons: newSelected,
+              addonsTotal: addonsSum,
+              price: basePrice + addonsSum,
+            };
+          }
+          return i;
+        })
+      );
+    }
+    showToast(`Added ${addon.name} (+₹${newAddon.price}) to ${item.name}`);
   };
 
   const handleRemoveAddonFromItem = (item: UserCartItem, addonIndex: number) => {
-    const currentSelected = item.selectedAddons || [];
+    const currentSelected = [...(item.selectedAddons || [])];
     const removed = currentSelected[addonIndex];
-    const newSelected = currentSelected.filter((_, i) => i !== addonIndex);
-    updateItemAddons(item.id, newSelected);
+    currentSelected.splice(addonIndex, 1);
+    updateItemAddons(item.id, currentSelected as any);
+    if (contextCartItems.length === 0) {
+      setLocalCartItems((prev) =>
+        prev.map((i) => {
+          if (i.id === item.id) {
+            const addonsSum = currentSelected.reduce((sum, a) => sum + ((Number(a.price) || 0) * (Number(a.quantity) || 1)), 0);
+            const basePrice = i.basePrice !== undefined ? Number(i.basePrice) : Math.max(0, i.price - (i.addonsTotal || 0));
+            return {
+              ...i,
+              selectedAddons: currentSelected,
+              addonsTotal: addonsSum,
+              price: basePrice + addonsSum,
+            };
+          }
+          return i;
+        })
+      );
+    }
     if (removed) {
       showToast(`Removed ${removed.name} from ${item.name}`);
     }
@@ -1860,65 +2070,92 @@ export const UserCart: React.FC<UserCartProps> = ({
                       </div>
                       <p className={styles.itemSubtitle}>{item.description}</p>
                       
-                      {/* Selected Add-ons Badge List with Tiny Cross (X) */}
+                      {/* Selected Add-ons Badge List with Quantity Stepper */}
                       {item.selectedAddons && item.selectedAddons.length > 0 && (
                         <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", margin: "6px 0 4px 0" }}>
-                          {item.selectedAddons.map((addon, idx) => (
-                            <span
-                              key={addon.id ? `sel-${item.id}-${addon.id}-${idx}` : `sel-${item.id}-${addon.name}-${idx}`}
-                              style={{
-                                fontSize: "0.76rem",
-                                fontWeight: "600",
-                                color: "#C2410C",
-                                backgroundColor: "#FFF7ED",
-                                border: "1px solid #FFEDD5",
-                                padding: "2px 8px",
-                                borderRadius: "6px",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "5px",
-                                opacity: isSellerClosed ? 0.7 : 1,
-                              }}
-                            >
-                              <span>+ {addon.name}</span>
-                              <strong style={{ color: "#EA580C" }}>(₹{addon.price})</strong>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleRemoveAddonFromItem(item, idx);
-                                }}
-                                style={{
-                                  background: "none",
-                                  border: "none",
-                                  padding: "0",
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  color: "#9A3412",
-                                  cursor: "pointer",
-                                  borderRadius: "50%",
-                                  marginLeft: "2px",
-                                  opacity: 0.8,
-                                  transition: "all 0.15s ease",
-                                }}
-                                onMouseOver={(e) => {
-                                  e.currentTarget.style.opacity = "1";
-                                  e.currentTarget.style.color = "#DC2626";
-                                }}
-                                onMouseOut={(e) => {
-                                  e.currentTarget.style.opacity = "0.8";
-                                  e.currentTarget.style.color = "#9A3412";
-                                }}
-                                title={`Remove ${addon.name}`}
-                                aria-label={`Remove ${addon.name}`}
+                          {item.selectedAddons.map((addon, idx) => {
+                            const addonQty = Math.max(1, Number(addon.quantity) || 1);
+                            const unitPrice = Number(addon.price) || 0;
+                            const linePrice = unitPrice * addonQty;
+                            return (
+                              <span
+                                key={addon.id ? `sel-${item.id}-${addon.id}-${idx}` : `sel-${item.id}-${addon.name}-${idx}`}
+                                className={styles.selectedAddonBadge}
+                                style={{ opacity: isSellerClosed ? 0.7 : 1 }}
                               >
-                                <X size={13} strokeWidth={2.5} />
-                              </button>
-                            </span>
-                          ))}
+                                <span className={styles.selectedAddonName}>+ {addon.name}</span>
+                                <span className={styles.selectedAddonPrice}>
+                                  (₹{linePrice.toLocaleString("en-IN")})
+                                </span>
+
+                                {!isSellerClosed && (
+                                  <div className={styles.addonStepper}>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleModifyAddonQuantity(item, idx, -1);
+                                      }}
+                                      className={styles.addonStepperBtn}
+                                      title={addonQty > 1 ? "Decrease quantity" : "Remove add-on"}
+                                      aria-label="Decrease add-on quantity"
+                                    >
+                                      <Minus size={11} strokeWidth={3} />
+                                    </button>
+
+                                    <span className={styles.addonStepperQty}>
+                                      {addonQty}
+                                    </span>
+
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleModifyAddonQuantity(item, idx, 1);
+                                      }}
+                                      className={styles.addonStepperBtn}
+                                      title="Increase quantity"
+                                      aria-label="Increase add-on quantity"
+                                    >
+                                      <Plus size={11} strokeWidth={3} />
+                                    </button>
+                                  </div>
+                                )}
+
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRemoveAddonFromItem(item, idx);
+                                  }}
+                                  className={styles.addonRemoveBtn}
+                                  title={`Remove ${addon.name}`}
+                                  aria-label={`Remove ${addon.name}`}
+                                >
+                                  <X size={13} strokeWidth={2.5} />
+                                </button>
+                              </span>
+                            );
+                          })}
                         </div>
                       )}
+
+                      {/* Customize / Edit Add-ons Button */}
+                      {!isSellerClosed && (() => {
+                        const dishAddons = getDishAvailableAddons(item);
+                        if (dishAddons.length === 0 && (!item.selectedAddons || item.selectedAddons.length === 0)) return null;
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => setEditingCartItem(item)}
+                            className={styles.customizeAddonTriggerBtn}
+                            title="Open customization popup to select add-on quantities with live stock"
+                          >
+                            <SlidersHorizontal size={12} />
+                            <span>{item.selectedAddons && item.selectedAddons.length > 0 ? "Edit Add-ons & Quantities" : "Add Add-ons"}</span>
+                          </button>
+                        );
+                      })()}
 
                       {(() => {
                         const itemDisc = getItemDiscount(item);
@@ -2766,6 +3003,52 @@ export const UserCart: React.FC<UserCartProps> = ({
             {toast.message}
           </span>
         </div>
+      )}
+
+      {/* In-Cart Addon Customization Modal */}
+      {editingCartItem && (
+        <AddonCustomizationModal
+          isOpen={Boolean(editingCartItem)}
+          onClose={() => setEditingCartItem(null)}
+          item={{
+            id: editingCartItem.foodItemId || editingCartItem.id,
+            name: editingCartItem.name,
+            price: editingCartItem.basePrice !== undefined ? editingCartItem.basePrice : (editingCartItem.addonsTotal ? editingCartItem.price - editingCartItem.addonsTotal : editingCartItem.price),
+            basePrice: editingCartItem.basePrice !== undefined ? editingCartItem.basePrice : (editingCartItem.addonsTotal ? editingCartItem.price - editingCartItem.addonsTotal : editingCartItem.price),
+            description: editingCartItem.description,
+            addons: getDishAvailableAddons(editingCartItem),
+            imageUrl: editingCartItem.image,
+          }}
+          dishName={editingCartItem.name}
+          basePrice={editingCartItem.basePrice !== undefined ? editingCartItem.basePrice : (editingCartItem.addonsTotal ? editingCartItem.price - editingCartItem.addonsTotal : editingCartItem.price)}
+          description={editingCartItem.description}
+          addons={getDishAvailableAddons(editingCartItem)}
+          initialSelectedAddons={editingCartItem.selectedAddons}
+          isEditMode={true}
+          submitButtonText="Update Add-ons"
+          onConfirm={(updatedAddonsList) => {
+            updateItemAddons(editingCartItem.id, updatedAddonsList as any);
+            if (contextCartItems.length === 0) {
+              setLocalCartItems((prev) =>
+                prev.map((i) => {
+                  if (i.id === editingCartItem.id) {
+                    const addonsSum = updatedAddonsList.reduce((sum, a) => sum + ((Number(a.price) || 0) * (Number(a.quantity) || 1)), 0);
+                    const basePrice = i.basePrice !== undefined ? Number(i.basePrice) : Math.max(0, i.price - (i.addonsTotal || 0));
+                    return {
+                      ...i,
+                      selectedAddons: updatedAddonsList as any,
+                      addonsTotal: addonsSum,
+                      price: basePrice + addonsSum,
+                    };
+                  }
+                  return i;
+                })
+              );
+            }
+            showToast(`Updated add-ons for ${editingCartItem.name}`);
+            setEditingCartItem(null);
+          }}
+        />
       )}
 
       {/* Global Responsive Footer */}

@@ -30,11 +30,15 @@ export function deduplicateAddons(addons?: AddonItem[]): AddonItem[] {
         const key = cleanName.toLowerCase();
         if (!seen.has(key)) {
             seen.add(key);
+            const qty = Math.max(1, Number(addon.quantity) || 1);
+            const unitPrice = Number(addon.price) || 0;
             result.push({
                 ...addon,
                 id: addon.id ? String(addon.id) : undefined,
                 name: cleanName,
-                price: Number(addon.price) || 0,
+                price: unitPrice,
+                quantity: qty,
+                lineTotal: unitPrice * qty,
             });
         }
     }
@@ -48,7 +52,7 @@ export function generateCartItemId(foodItemId: string, selectedAddons?: AddonIte
         return baseId;
     }
     const addonKey = cleanAddons
-        .map(a => (a.id || a.name || "").trim().toLowerCase())
+        .map(a => `${(a.id || a.name || "").trim().toLowerCase()}:${a.quantity || 1}`)
         .filter(Boolean)
         .sort()
         .join("_");
@@ -359,7 +363,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             const basePrev = clearExisting ? [] : prev;
             const addons = deduplicateAddons(item.selectedAddons);
             const availableAddons = deduplicateAddons(item.addons);
-            const addonsSum = addons.reduce((sum, a) => sum + (Number(a.price) || 0), 0);
+            const addonsSum = addons.reduce((sum, a) => sum + ((Number(a.price) || 0) * (Number(a.quantity) || 1)), 0);
             const basePrice = item.basePrice !== undefined 
                 ? Number(item.basePrice) 
                 : (item.addonsTotal !== undefined ? (Number(item.price) - Number(item.addonsTotal)) : Number(item.price) || 0);
@@ -504,7 +508,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             for (const item of items) {
                 const addons = deduplicateAddons(item.selectedAddons);
                 const availableAddons = deduplicateAddons(item.addons);
-                const addonsSum = addons.reduce((sum, a) => sum + (Number(a.price) || 0), 0);
+                const addonsSum = addons.reduce((sum, a) => sum + ((Number(a.price) || 0) * (Number(a.quantity) || 1)), 0);
                 const basePrice = item.basePrice !== undefined 
                     ? Number(item.basePrice) 
                     : (item.addonsTotal !== undefined ? (Number(item.price) - Number(item.addonsTotal)) : Number(item.price) || 0);
@@ -632,11 +636,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             const cleanAddons = deduplicateAddons(selectedAddons);
 
             if (cleanAddons.length > 0) {
+                const availableList = targetItem.addons || [];
                 for (const a of cleanAddons) {
+                    const matchedInAvailable = availableList.find(av => (a.id && av.id === a.id) || (av.name && a.name && av.name.toLowerCase().trim() === a.name.toLowerCase().trim()));
                     const addonStock = a.stockQuantity !== undefined && a.stockQuantity !== null && !isNaN(Number(a.stockQuantity))
                         ? Number(a.stockQuantity)
-                        : undefined;
-                    const addonActive = a.isActive !== false;
+                        : (matchedInAvailable?.stockQuantity !== undefined && matchedInAvailable?.stockQuantity !== null && !isNaN(Number(matchedInAvailable.stockQuantity)) ? Number(matchedInAvailable.stockQuantity) : undefined);
+                    const addonActive = a.isActive !== false && (matchedInAvailable?.isActive !== false);
+
                     if (addonStock !== undefined && (addonStock <= 0 || !addonActive)) {
                         showToast(`Sorry, add-on "${a.name}" is currently out of stock.`, "warning");
                         return prev;
@@ -650,7 +657,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             }
             const baseFoodId = targetItem.foodItemId || (targetItem.id.includes("_") ? targetItem.id.split("_")[0] : targetItem.id);
             const newCartId = generateCartItemId(baseFoodId, cleanAddons);
-            const addonsSum = cleanAddons.reduce((sum, a) => sum + (Number(a.price) || 0), 0);
+            const addonsSum = cleanAddons.reduce((sum, a) => sum + ((Number(a.price) || 0) * (Number(a.quantity) || 1)), 0);
             const basePrice = targetItem.basePrice !== undefined 
                 ? Number(targetItem.basePrice) 
                 : Math.max(0, (Number(targetItem.price) || 0) - (Number(targetItem.addonsTotal) || 0));
