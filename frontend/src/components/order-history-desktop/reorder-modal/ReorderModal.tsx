@@ -28,7 +28,7 @@ export interface ReorderItemInfo {
   priceChanged?: boolean;
   basePrice?: number;
   addonsTotal?: number;
-  selectedAddons?: Array<{ id?: string; name: string; price: number }>;
+  selectedAddons?: Array<{ id?: string; name: string; price: number; quantity?: number }>;
   reason?: string;
   warning?: string | null;
 }
@@ -197,6 +197,26 @@ export const ReorderModal: React.FC<ReorderModalProps> = ({
                               Live price updated
                             </span>
                           )}
+                          {item.selectedAddons && item.selectedAddons.length > 0 && (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "3px" }}>
+                              {item.selectedAddons.map((a, aIdx) => (
+                                <span
+                                  key={aIdx}
+                                  style={{
+                                    fontSize: "0.72rem",
+                                    fontWeight: "600",
+                                    color: "#166534",
+                                    backgroundColor: "#dcfce7",
+                                    border: "1px solid #bbf7d0",
+                                    padding: "1px 6px",
+                                    borderRadius: "4px",
+                                  }}
+                                >
+                                  +{a.quantity && a.quantity > 1 ? `${a.quantity}x ` : ""}{a.name} (+₹{(a.price || 0) * (a.quantity || 1)})
+                                </span>
+                              ))}
+                            </div>
+                          )}
                           {item.warning && <span className={styles.itemWarning}>{item.warning}</span>}
                         </div>
                         <div className={styles.itemMeta}>
@@ -334,7 +354,7 @@ export const ReorderModal: React.FC<ReorderModalProps> = ({
                                     borderRadius: "4px",
                                   }}
                                 >
-                                  +{a.name} (+₹{a.price})
+                                  +{a.quantity && a.quantity > 1 ? `${a.quantity}x ` : ""}{a.name} (+₹{(a.price || 0) * (a.quantity || 1)})
                                 </span>
                               ))}
                             </div>
@@ -452,7 +472,7 @@ export const ReorderModal: React.FC<ReorderModalProps> = ({
                                     borderRadius: "4px",
                                   }}
                                 >
-                                  +{a.name} (+₹{a.price})
+                                  +{a.quantity && a.quantity > 1 ? `${a.quantity}x ` : ""}{a.name} (+₹{(a.price || 0) * (a.quantity || 1)})
                                 </span>
                               ))}
                             </div>

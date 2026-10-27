@@ -974,6 +974,9 @@ export default function MyOrdersView() {
           name: item.name || "Food Item",
           quantity: item.quantity || item.qty || 1,
           price: item.price,
+          selectedAddons: item.selectedAddons || item.addons,
+          basePrice: item.basePrice || item.price,
+          addonsTotal: item.addonsTotal || 0,
         }));
         setModalState({
           isOpen: true,
@@ -991,6 +994,9 @@ export default function MyOrdersView() {
             sellerName: order.vendorName,
             image: item.imageUrl || item.image || order.imageUrl,
             imageUrl: item.imageUrl || item.image || order.imageUrl,
+            selectedAddons: item.selectedAddons || item.addons,
+            basePrice: item.basePrice || item.price,
+            addonsTotal: item.addonsTotal || 0,
           })),
         });
       } else {
