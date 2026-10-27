@@ -55,7 +55,18 @@ export default function DishAddonsSelector({
         const json = await res.json();
         const data = json.data || json;
         const list: AddonItemData[] = data.addons || [];
-        setAvailableAddons(list);
+        setAvailableAddons((prev) => {
+          const map = new Map<string, AddonItemData>();
+          // Put items from backend in map
+          list.forEach((item) => map.set(item.id, item));
+          // Preserve any newly created items that may not have propagated yet
+          prev.forEach((item) => {
+            if (!map.has(item.id)) {
+              map.set(item.id, item);
+            }
+          });
+          return Array.from(map.values());
+        });
       }
     } catch (err) {
       console.error("Failed to load seller add-ons for menu item:", err);

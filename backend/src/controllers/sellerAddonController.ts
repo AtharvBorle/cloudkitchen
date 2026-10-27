@@ -8,13 +8,18 @@ const getAuthenticatedSellerProfile = async () => {
     if (!session?.user) {
         throw new ApiError("Please log in first to manage add-ons.", 401);
     }
-    if (session.user.role !== "SELLER") {
+    const userRole = (session.user.role || "").toUpperCase();
+    if (userRole !== "SELLER" && userRole !== "ADMIN" && userRole !== "SUPERADMIN") {
         throw new ApiError("Access denied. Seller account required.", 403);
     }
 
-    const sellerProfile = await db.sellerProfile.findUnique({
+    let sellerProfile = await db.sellerProfile.findUnique({
         where: { userId: session.user.id }
     });
+
+    if (!sellerProfile && (userRole === "ADMIN" || userRole === "SUPERADMIN")) {
+        sellerProfile = await db.sellerProfile.findFirst();
+    }
 
     if (!sellerProfile) {
         throw new ApiError("Seller profile not found. Please complete seller registration.", 404);
