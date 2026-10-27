@@ -348,8 +348,8 @@ function EditMenuInner({
       }
       seenAddonNames.add(lowerName);
 
-      if (v.price === '' || v.price === undefined || v.price === null || isNaN(Number(v.price)) || Number(v.price) < 0) {
-        alert(`Price for add-on "${trimmedName}" is mandatory and must be ₹0 or greater (negative numbers are not allowed).`);
+      if (v.price === '' || v.price === undefined || v.price === null || isNaN(Number(v.price)) || Number(v.price) <= 0) {
+        alert(`Price for add-on "${trimmedName}" is mandatory and must be greater than ₹0.`);
         return;
       }
     }

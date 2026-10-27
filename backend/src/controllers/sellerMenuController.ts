@@ -297,8 +297,8 @@ export const createMenuItem = async (req: Request) => {
                     seenAddonNames.add(lowerAddonName);
 
                     const addonPrice = parseFloat(a.price);
-                    if (isNaN(addonPrice) || addonPrice < 0) {
-                        throw new ApiError(`Add-on "${addonName}" price must be ₹0 or greater (negative numbers not allowed)`, 400);
+                    if (isNaN(addonPrice) || addonPrice <= 0) {
+                        throw new ApiError(`Add-on "${addonName}" price must be greater than ₹0`, 400);
                     }
                 }
                 const cleaned = parsed.map((a: any, idx: number) => ({
@@ -487,8 +487,8 @@ export const updateMenuItem = async (req: Request, id: string) => {
                         seenAddonNames.add(lowerAddonName);
 
                         const addonPrice = parseFloat(a.price);
-                        if (isNaN(addonPrice) || addonPrice < 0) {
-                            throw new ApiError(`Add-on "${addonName}" price must be ₹0 or greater (negative numbers not allowed)`, 400);
+                        if (isNaN(addonPrice) || addonPrice <= 0) {
+                            throw new ApiError(`Add-on "${addonName}" price must be greater than ₹0`, 400);
                         }
                     }
                     const cleaned = parsed.map((a: any, idx: number) => ({
@@ -565,8 +565,8 @@ export const updateMenuItem = async (req: Request, id: string) => {
                         seenAddonNames.add(lowerAddonName);
 
                         const addonPrice = parseFloat(a.price);
-                        if (isNaN(addonPrice) || addonPrice < 0) {
-                            throw new ApiError(`Add-on "${addonName}" price must be ₹0 or greater (negative numbers not allowed)`, 400);
+                        if (isNaN(addonPrice) || addonPrice <= 0) {
+                            throw new ApiError(`Add-on "${addonName}" price must be greater than ₹0`, 400);
                         }
                     }
                     const cleaned = parsed.map((a: any, idx: number) => ({

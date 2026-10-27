@@ -204,8 +204,8 @@ export default function SellerAddonsManager() {
       return;
     }
     const priceNum = parseFloat(formPrice);
-    if (isNaN(priceNum) || priceNum < 0) {
-      showToast("Please enter a valid price");
+    if (isNaN(priceNum) || priceNum <= 0) {
+      showToast("Price must be greater than ₹0");
       return;
     }
     const stockNum = parseInt(formStock, 10);
@@ -760,7 +760,7 @@ export default function SellerAddonsManager() {
                     <input
                       type="number"
                       required
-                      min="0"
+                      min="0.01"
                       step="0.5"
                       value={formPrice}
                       onChange={(e) => setFormPrice(e.target.value)}

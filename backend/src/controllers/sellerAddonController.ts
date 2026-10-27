@@ -221,8 +221,8 @@ export const createSellerAddon = async (req: Request) => {
     if (name.length > 100) {
         throw new ApiError("Add-on Name cannot exceed 100 characters.", 400);
     }
-    if (isNaN(price) || price < 0) {
-        throw new ApiError("Valid selling price (₹0 or greater) is required.", 400);
+    if (isNaN(price) || price <= 0) {
+        throw new ApiError("Valid selling price greater than ₹0 is required.", 400);
     }
     if (isNaN(stockQuantity) || stockQuantity < 0) {
         throw new ApiError("Stock quantity cannot be negative.", 400);
@@ -369,8 +369,8 @@ export const updateSellerAddon = async (id: string, req: Request) => {
         }
     }
 
-    if (price !== undefined && (isNaN(price) || price < 0)) {
-        throw new ApiError("Valid selling price (₹0 or greater) is required.", 400);
+    if (price !== undefined && (isNaN(price) || price <= 0)) {
+        throw new ApiError("Valid selling price greater than ₹0 is required.", 400);
     }
 
     if (lowStockThreshold !== undefined && (isNaN(lowStockThreshold) || lowStockThreshold < 0)) {
