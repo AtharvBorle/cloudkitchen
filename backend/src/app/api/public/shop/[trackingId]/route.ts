@@ -23,7 +23,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ tracking
                 }
             },
             addons: {
-                where: { isActive: true },
                 orderBy: { name: "asc" as const }
             },
             rooms: {
@@ -117,8 +116,40 @@ export async function GET(req: Request, { params }: { params: Promise<{ tracking
         const sumRating = seller.reviews.reduce((sum, r) => sum + r.rating, 0);
         const averageRating = totalReviews > 0 ? parseFloat((sumRating / totalReviews).toFixed(1)) : 0;
 
-        // Process food items with their average rating
+        const sellerAddonsMap = new Map<string, any>();
+        if (Array.isArray(seller.addons)) {
+            seller.addons.forEach((a: any) => {
+                if (a && a.id) sellerAddonsMap.set(String(a.id), a);
+                if (a && a.name) sellerAddonsMap.set(String(a.name).trim().toLowerCase(), a);
+            });
+        }
+
+        // Process food items with their average rating and live addon stock
         const processedFoodItems = seller.foodItems.map((item: any) => {
+            let enrichedAddonsStr = item.addons;
+            if (item.addons) {
+                try {
+                    const parsed = typeof item.addons === "string" ? JSON.parse(item.addons) : item.addons;
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        const enriched = parsed.map((a: any, idx: number) => {
+                            const cleanId = String(a.id || `addon_${idx + 1}`);
+                            const cleanName = String(a.name || "").trim().toLowerCase();
+                            const live = sellerAddonsMap.get(cleanId) || sellerAddonsMap.get(cleanName);
+                            return {
+                                id: live ? live.id : cleanId,
+                                name: String(a.name || (live ? live.name : "")).trim(),
+                                price: live ? Number(live.price) : (Number(a.price) || 0),
+                                stockQuantity: live ? Number(live.stockQuantity) : (a.stockQuantity !== undefined ? Number(a.stockQuantity) : 0),
+                                lowStockThreshold: live ? Number(live.lowStockThreshold) : (Number(a.lowStockThreshold) || 5),
+                                isActive: live ? Boolean(live.isActive) : (a.isActive !== false),
+                                imageUrl: a.imageUrl || (live ? live.imageUrl : null),
+                                description: a.description || (live ? live.description : "")
+                            };
+                        });
+                        enrichedAddonsStr = JSON.stringify(enriched);
+                    }
+                } catch {}
+            }
             const ratings = item.itemRatings || [];
             const totalRatings = ratings.length;
             const sumItemRating = ratings.reduce((sum: number, r: any) => sum + r.rating, 0);
@@ -126,6 +157,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ tracking
 
             return {
                 ...item,
+                addons: enrichedAddonsStr,
                 averageRating: avgRating,
                 totalRatings: totalRatings,
                 rating: avgRating > 0 ? avgRating : 0,

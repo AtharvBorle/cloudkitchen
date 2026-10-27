@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import { X, Plus, Minus, ShoppingBag, Package } from "lucide-react";
+import { X, Plus, Minus, ShoppingBag, Package, AlertTriangle } from "lucide-react";
 import styles from "./AddonCustomizationModal.module.css";
 import { AddonItem } from "@/context/CartContext";
 
@@ -98,11 +98,9 @@ export const AddonCustomizationModal: React.FC<AddonCustomizationModalProps> = (
               ? a.price
               : parseFloat(String(a.price).replace(/[^0-9.]/g, "")) || 0;
 
-          const stockQuantity =
-            a.stockQuantity !== undefined && a.stockQuantity !== null
-              ? parseInt(String(a.stockQuantity), 10)
-              : undefined;
-
+          const rawStock = a.stockQuantity;
+          const hasDefinedStock = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock));
+          const stockQuantity = hasDefinedStock ? Math.max(0, parseInt(String(rawStock), 10)) : 0;
           const isActive = a.isActive !== undefined ? Boolean(a.isActive) : true;
 
           result.push({
@@ -111,7 +109,7 @@ export const AddonCustomizationModal: React.FC<AddonCustomizationModalProps> = (
             price: Math.max(0, cleanPrice),
             description: a.description || "",
             imageUrl: a.imageUrl || a.image || undefined,
-            stockQuantity: !isNaN(Number(stockQuantity)) ? Number(stockQuantity) : 99,
+            stockQuantity: stockQuantity,
             lowStockThreshold: a.lowStockThreshold || 5,
             isActive: isActive,
           });
@@ -124,8 +122,9 @@ export const AddonCustomizationModal: React.FC<AddonCustomizationModalProps> = (
     return [];
   }, [item?.addons, propAddons]);
 
-  // 3. Track selected quantity per add-on ID
+  // 3. Track selected quantity per add-on ID & Validation state
   const [addonQuantities, setAddonQuantities] = useState<Record<string, number>>({});
+  const [validationMessage, setValidationMessage] = useState<string | null>(null);
   const isOpenRef = useRef(false);
   const activeItemKeyRef = useRef<string | undefined>(undefined);
 
@@ -136,6 +135,7 @@ export const AddonCustomizationModal: React.FC<AddonCustomizationModalProps> = (
     const isItemSwitched = isOpen && activeItemKeyRef.current !== currentItemKey;
 
     if (isJustOpening || isItemSwitched) {
+      setValidationMessage(null);
       const initialMap: Record<string, number> = {};
       if (Array.isArray(initialSelectedAddons) && initialSelectedAddons.length > 0) {
         for (const init of initialSelectedAddons) {
@@ -159,6 +159,7 @@ export const AddonCustomizationModal: React.FC<AddonCustomizationModalProps> = (
     isOpenRef.current = isOpen;
     if (!isOpen) {
       activeItemKeyRef.current = undefined;
+      setValidationMessage(null);
     }
   }, [isOpen, item?.id, resolvedDishName, initialSelectedAddons, parsedAddons]);
 
@@ -176,8 +177,21 @@ export const AddonCustomizationModal: React.FC<AddonCustomizationModalProps> = (
 
   if (!isOpen) return null;
 
-  // Quantity Change Handler
-  const handleQuantityChange = (addonId: string, delta: number, maxStock: number = 99) => {
+  // Quantity Change Handler with live stock validation
+  const handleQuantityChange = (addonId: string, delta: number, maxStock: number, addonName?: string) => {
+    setValidationMessage(null);
+    if (delta > 0) {
+      if (maxStock <= 0) {
+        setValidationMessage(`"${addonName || "This add-on"}" is currently out of stock.`);
+        return;
+      }
+      const current = addonQuantities[addonId] || 0;
+      if (current >= maxStock) {
+        setValidationMessage(`Cannot add more. Only ${maxStock} unit${maxStock > 1 ? "s" : ""} of "${addonName || "add-on"}" available in stock.`);
+        return;
+      }
+    }
+
     setAddonQuantities((prev) => {
       const current = prev[addonId] || 0;
       const next = current + delta;
@@ -216,6 +230,19 @@ export const AddonCustomizationModal: React.FC<AddonCustomizationModalProps> = (
     (isEditMode || Boolean(onConfirm) ? "Update Add-ons" : "Add Item");
 
   const handleAdd = () => {
+    // Validate that none of the selected add-ons are out of stock or exceed stock limit
+    for (const addon of selectedAddonsList) {
+      const stock = addon.stockQuantity !== undefined ? addon.stockQuantity : 0;
+      if (addon.isActive === false || stock <= 0) {
+        setValidationMessage(`"${addon.name}" is currently out of stock. Please remove it to proceed.`);
+        return;
+      }
+      if ((addon.quantity || 1) > stock) {
+        setValidationMessage(`Requested quantity for "${addon.name}" (${addon.quantity}) exceeds available stock (${stock}).`);
+        return;
+      }
+    }
+
     if (onConfirm) {
       onConfirm(selectedAddonsList, totalUnitPrice);
     }
@@ -268,6 +295,13 @@ export const AddonCustomizationModal: React.FC<AddonCustomizationModalProps> = (
             </span>
           </div>
 
+          {validationMessage && (
+            <div className={styles.validationBanner} role="alert">
+              <AlertTriangle size={18} style={{ flexShrink: 0 }} />
+              <span>{validationMessage}</span>
+            </div>
+          )}
+
           {parsedAddons.length === 0 ? (
             <div style={{ padding: "28px 0", textAlign: "center", color: "#64748B", fontSize: "0.9rem" }}>
               <Package size={28} color="#94A3B8" style={{ margin: "0 auto 8px" }} />
@@ -291,6 +325,13 @@ export const AddonCustomizationModal: React.FC<AddonCustomizationModalProps> = (
                     className={`${styles.addonCard} ${
                       isSelected ? styles.addonCardSelected : ""
                     } ${isOutOfStock ? styles.addonCardDisabled : ""}`}
+                    onClick={() => {
+                      if (isOutOfStock) {
+                        setValidationMessage(`"${addon.name}" is currently out of stock.`);
+                      } else if (!isSelected) {
+                        handleQuantityChange(addonId, 1, stock, addon.name);
+                      }
+                    }}
                   >
                     {/* Left: Thumbnail & Name & Unit Price */}
                     <div className={styles.addonLeft}>
@@ -328,12 +369,15 @@ export const AddonCustomizationModal: React.FC<AddonCustomizationModalProps> = (
 
                     {/* Right: Quantity Stepper & Line Total */}
                     <div className={styles.addonRight}>
-                      <div className={styles.qtyStepper}>
+                      <div className={styles.qtyStepper} onClick={(e) => e.stopPropagation()}>
                         <button
                           type="button"
-                          className={styles.stepperBtn}
+                          className={`${styles.stepperBtn} ${currentQty <= 0 ? styles.stepperBtnDisabled : ""}`}
                           disabled={currentQty <= 0}
-                          onClick={() => handleQuantityChange(addonId, -1, stock)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleQuantityChange(addonId, -1, stock, addon.name);
+                          }}
                           aria-label={`Decrease ${addon.name}`}
                         >
                           <Minus size={14} strokeWidth={2.8} />
@@ -343,11 +387,19 @@ export const AddonCustomizationModal: React.FC<AddonCustomizationModalProps> = (
 
                         <button
                           type="button"
-                          className={styles.stepperBtn}
-                          disabled={!canIncrease}
-                          onClick={() => handleQuantityChange(addonId, 1, stock)}
+                          className={`${styles.stepperBtn} ${!canIncrease ? styles.stepperBtnDisabled : ""}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (isOutOfStock) {
+                              setValidationMessage(`"${addon.name}" is currently out of stock.`);
+                            } else if (!canIncrease) {
+                              setValidationMessage(`Cannot add more. Only ${stock} unit${stock > 1 ? "s" : ""} of "${addon.name}" available in stock.`);
+                            } else {
+                              handleQuantityChange(addonId, 1, stock, addon.name);
+                            }
+                          }}
                           aria-label={`Increase ${addon.name}`}
-                          title={!canIncrease && !isOutOfStock ? `Max available units reached (${stock})` : undefined}
+                          title={!canIncrease && !isOutOfStock ? `Max available units reached (${stock})` : isOutOfStock ? `Out of stock` : undefined}
                         >
                           <Plus size={14} strokeWidth={2.8} />
                         </button>

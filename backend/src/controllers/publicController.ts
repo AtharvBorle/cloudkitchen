@@ -73,6 +73,7 @@ export const getPublicExploreData = unstable_cache(
                         itemRatings: true
                     }
                 },
+                addons: true,
                 rooms: {
                     where: { isAvailable: true }
                 },
@@ -154,6 +155,14 @@ export const getPublicExploreData = unstable_cache(
             const resolvedLat = seller.latitude ?? defaultCoords?.lat ?? null;
             const resolvedLng = seller.longitude ?? defaultCoords?.lng ?? null;
 
+            const sellerAddonsMap = new Map<string, any>();
+            if (Array.isArray((seller as any).addons)) {
+                (seller as any).addons.forEach((a: any) => {
+                    if (a && a.id) sellerAddonsMap.set(String(a.id), a);
+                    if (a && a.name) sellerAddonsMap.set(String(a.name).trim().toLowerCase(), a);
+                });
+            }
+
             const availableDishes = (seller.foodItems || []).filter((i: any) => i.isAvailable !== false);
             if (availableDishes.length > 0) {
                 activeSellersList.push({
@@ -189,8 +198,34 @@ export const getPublicExploreData = unstable_cache(
 
                 const sales = itemSalesCount.get(item.id) || (item.name ? itemNameSalesCount.get(item.name.trim().toLowerCase()) : 0) || 0;
 
+                let enrichedAddonsStr = item.addons;
+                if (item.addons) {
+                    try {
+                        const parsed = typeof item.addons === "string" ? JSON.parse(item.addons) : item.addons;
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            const enriched = parsed.map((a: any, idx: number) => {
+                                const cleanId = String(a.id || `addon_${idx + 1}`);
+                                const cleanName = String(a.name || "").trim().toLowerCase();
+                                const live = sellerAddonsMap.get(cleanId) || sellerAddonsMap.get(cleanName);
+                                return {
+                                    id: live ? live.id : cleanId,
+                                    name: String(a.name || (live ? live.name : "")).trim(),
+                                    price: live ? Number(live.price) : (Number(a.price) || 0),
+                                    stockQuantity: live ? Number(live.stockQuantity) : (a.stockQuantity !== undefined ? Number(a.stockQuantity) : 0),
+                                    lowStockThreshold: live ? Number(live.lowStockThreshold) : (Number(a.lowStockThreshold) || 5),
+                                    isActive: live ? Boolean(live.isActive) : (a.isActive !== false),
+                                    imageUrl: a.imageUrl || (live ? live.imageUrl : null),
+                                    description: a.description || (live ? live.description : "")
+                                };
+                            });
+                            enrichedAddonsStr = JSON.stringify(enriched);
+                        }
+                    } catch {}
+                }
+
                 return {
                     ...item,
+                    addons: enrichedAddonsStr,
                     rating: itemAvgRating,
                     averageRating: itemAvgRating,
                     totalRatings: itemRatingCount,

@@ -70,6 +70,11 @@ function parseDishAddons(rawAddons: any): AddonItem[] {
           id: String(a.id || `addon_${idx + 1}`),
           name: String(a.name || "").trim(),
           price: Math.max(0, parseFloat(a.price) || 0),
+          stockQuantity: a.stockQuantity !== undefined && a.stockQuantity !== null && !isNaN(Number(a.stockQuantity)) ? Number(a.stockQuantity) : 0,
+          lowStockThreshold: a.lowStockThreshold !== undefined && !isNaN(Number(a.lowStockThreshold)) ? Number(a.lowStockThreshold) : 5,
+          isActive: a.isActive !== false,
+          description: a.description || "",
+          imageUrl: a.imageUrl || null,
         }));
     }
   } catch {}

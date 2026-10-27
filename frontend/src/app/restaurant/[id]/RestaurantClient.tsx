@@ -423,15 +423,15 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
               id: String(a.id),
               name: String(a.name || "Add-on"),
               price: Number(a.price) || 0,
-              stockQuantity: a.stockQuantity !== undefined ? Number(a.stockQuantity) : 99,
-              lowStockThreshold: a.lowStockThreshold || 5,
+              stockQuantity: a.stockQuantity !== undefined ? Number(a.stockQuantity) : 0,
+              lowStockThreshold: Number(a.lowStockThreshold) || 5,
               isActive: a.isActive !== false,
               imageUrl: a.imageUrl || null,
               description: a.description || "",
             }));
             const rawFoodItems = liveData.foodItems || [];
             const liveItems: FoodCardItem[] = rawFoodItems.map((item: any) => {
-              let parsedAddons: Array<{ id: string; name: string; price: number }> = [];
+              let parsedAddons: any[] = [];
               const rawAddons = item.addons || item.variants;
               if (rawAddons) {
                 try {
@@ -439,11 +439,21 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
                   if (Array.isArray(parsed) && parsed.length > 0) {
                     parsedAddons = parsed
                       .filter((a: any) => a && (a.name || "").trim())
-                      .map((a: any, idx: number) => ({
-                        id: String(a.id || idx + 1),
-                        name: String(a.name || ""),
-                        price: Number(a.price) || 0,
-                      }));
+                      .map((a: any, idx: number) => {
+                        const cleanId = String(a.id || idx + 1);
+                        const cleanName = String(a.name || "").trim().toLowerCase();
+                        const liveAddon = kitchenStoreAddons.find(sa => sa.id === cleanId || sa.name.trim().toLowerCase() === cleanName);
+                        return {
+                          id: liveAddon ? liveAddon.id : cleanId,
+                          name: String(a.name || (liveAddon ? liveAddon.name : "")),
+                          price: liveAddon ? liveAddon.price : (Number(a.price) || 0),
+                          stockQuantity: liveAddon ? liveAddon.stockQuantity : (a.stockQuantity !== undefined ? Number(a.stockQuantity) : 0),
+                          lowStockThreshold: liveAddon ? liveAddon.lowStockThreshold : (Number(a.lowStockThreshold) || 5),
+                          isActive: liveAddon ? liveAddon.isActive : (a.isActive !== false),
+                          imageUrl: a.imageUrl || (liveAddon ? liveAddon.imageUrl : null),
+                          description: a.description || (liveAddon ? liveAddon.description : ""),
+                        };
+                      });
                   }
                 } catch {}
               }
