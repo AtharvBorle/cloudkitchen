@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Sparkles, X, Loader2, Plus } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
 import type { AddonItemData } from "./SellerAddonsManager";
@@ -17,6 +18,7 @@ export default function CreateAddonModal({
   onClose,
   onCreated,
 }: CreateAddonModalProps) {
+  const [mounted, setMounted] = useState(false);
   const [formName, setFormName] = useState("");
   const [formPrice, setFormPrice] = useState("");
   const [formStock, setFormStock] = useState("");
@@ -24,6 +26,10 @@ export default function CreateAddonModal({
   const [formIsActive, setFormIsActive] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const resetForm = () => {
     setFormName("");
@@ -40,15 +46,18 @@ export default function CreateAddonModal({
     }
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   const handleClose = () => {
     resetForm();
     onClose();
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent | React.MouseEvent | React.KeyboardEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     setErrorMsg(null);
 
     const trimmedName = formName.trim();
@@ -91,11 +100,12 @@ export default function CreateAddonModal({
 
       const json = await res.json().catch(() => ({}));
       if (res.ok) {
-        const createdAddon: AddonItemData =
+        const createdAddon: any =
           json.data?.addon || json.data || json.addon || json;
+        const finalId = createdAddon.id || createdAddon._id || `addon_${Date.now()}`;
         if (onCreated) {
           onCreated({
-            id: createdAddon.id,
+            id: String(finalId),
             name: createdAddon.name || trimmedName,
             price: Number(createdAddon.price) || priceNum,
             stockQuantity:
@@ -132,9 +142,27 @@ export default function CreateAddonModal({
     }
   };
 
-  return (
-    <div className={styles.modalBackdrop} onClick={handleClose}>
-      <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      e.stopPropagation();
+      handleSubmit(e);
+    }
+  };
+
+  return createPortal(
+    <div
+      className={styles.modalBackdrop}
+      onClick={(e) => {
+        e.stopPropagation();
+        handleClose();
+      }}
+    >
+      <div
+        className={styles.modalCard}
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={handleKeyDown}
+      >
         <div className={styles.modalHeader}>
           <div className={styles.modalHeaderLeft}>
             <div className={styles.modalIconBadge}>
@@ -149,7 +177,10 @@ export default function CreateAddonModal({
           </div>
           <button
             type="button"
-            onClick={handleClose}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleClose();
+            }}
             className={styles.closeBtn}
             aria-label="Close modal"
           >
@@ -157,140 +188,145 @@ export default function CreateAddonModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className={styles.modalBody}>
-            {errorMsg && (
-              <div
-                style={{
-                  backgroundColor: "#FEF2F2",
-                  color: "#DC2626",
-                  border: "1px solid #FECACA",
-                  padding: "10px 14px",
-                  borderRadius: "8px",
-                  fontSize: "0.85rem",
-                  fontWeight: 600,
-                }}
-              >
-                {errorMsg}
-              </div>
-            )}
+        <div className={styles.modalBody}>
+          {errorMsg && (
+            <div
+              style={{
+                backgroundColor: "#FEF2F2",
+                color: "#DC2626",
+                border: "1px solid #FECACA",
+                padding: "10px 14px",
+                borderRadius: "8px",
+                fontSize: "0.85rem",
+                fontWeight: 600,
+              }}
+            >
+              {errorMsg}
+            </div>
+          )}
 
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel}>
+              Add-on Name <span style={{ color: "#DC2626" }}>*</span>
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Extra Roti, Extra Sabji, Extra Rice, Dahi"
+              value={formName}
+              onChange={(e) => setFormName(e.target.value)}
+              className={styles.formInput}
+              autoFocus
+            />
+          </div>
+
+          <div className={styles.formRow}>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>
-                Add-on Name <span style={{ color: "#DC2626" }}>*</span>
+                Selling Price (₹) <span style={{ color: "#DC2626" }}>*</span>
               </label>
               <input
-                type="text"
-                required
-                placeholder="e.g. Extra Roti, Extra Sabji, Extra Rice, Dahi"
-                value={formName}
-                onChange={(e) => setFormName(e.target.value)}
+                type="number"
+                min="0"
+                step="0.5"
+                placeholder="e.g. 15"
+                value={formPrice}
+                onChange={(e) => setFormPrice(e.target.value)}
                 className={styles.formInput}
               />
             </div>
 
-            <div className={styles.formRow}>
-              <div className={styles.formGroup}>
-                <label className={styles.formLabel}>
-                  Selling Price (₹) <span style={{ color: "#DC2626" }}>*</span>
-                </label>
-                <input
-                  type="number"
-                  required
-                  min="0"
-                  step="0.5"
-                  placeholder="e.g. 15"
-                  value={formPrice}
-                  onChange={(e) => setFormPrice(e.target.value)}
-                  className={styles.formInput}
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Initial Stock Qty</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
-                  placeholder="Enter stock quantity (e.g. 20)"
-                  value={formStock}
-                  onChange={(e) => setFormStock(e.target.value)}
-                  className={styles.formInput}
-                />
-              </div>
-            </div>
-
             <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Status</label>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  height: "42px",
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() => setFormIsActive(!formIsActive)}
-                  className={`${styles.toggleSwitch} ${
-                    formIsActive ? styles.toggleSwitchActive : ""
-                  }`}
-                >
-                  <span
-                    className={`${styles.toggleThumb} ${
-                      formIsActive ? styles.toggleThumbActive : ""
-                    }`}
-                  />
-                </button>
-                <span
-                  style={{
-                    fontSize: "0.85rem",
-                    fontWeight: 700,
-                    color: formIsActive ? "#16A34A" : "#64748B",
-                  }}
-                >
-                  {formIsActive ? "Active (Purchasable)" : "Inactive"}
-                </span>
-              </div>
-            </div>
-
-            <div className={styles.formGroup}>
-              <label className={styles.formLabel}>Description (Optional)</label>
-              <textarea
-                rows={2}
-                placeholder="Brief description or serving portion size"
-                value={formDescription}
-                onChange={(e) => setFormDescription(e.target.value)}
-                className={styles.formTextarea}
+              <label className={styles.formLabel}>Initial Stock Qty</label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                placeholder="Enter stock quantity (e.g. 20)"
+                value={formStock}
+                onChange={(e) => setFormStock(e.target.value)}
+                className={styles.formInput}
               />
             </div>
           </div>
 
-          <div className={styles.modalFooter}>
-            <button
-              type="button"
-              onClick={handleClose}
-              className={styles.cancelBtn}
-              disabled={submitting}
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel}>Status</label>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                height: "42px",
+              }}
             >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className={styles.saveBtn}
-              disabled={submitting}
-            >
-              {submitting ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                <Plus size={16} />
-              )}
-              <span>{submitting ? "Saving..." : "Create Add-on"}</span>
-            </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setFormIsActive(!formIsActive);
+                }}
+                className={`${styles.toggleSwitch} ${
+                  formIsActive ? styles.toggleSwitchActive : ""
+                }`}
+              >
+                <span
+                  className={`${styles.toggleThumb} ${
+                    formIsActive ? styles.toggleThumbActive : ""
+                  }`}
+                />
+              </button>
+              <span
+                style={{
+                  fontSize: "0.85rem",
+                  fontWeight: 700,
+                  color: formIsActive ? "#16A34A" : "#64748B",
+                }}
+              >
+                {formIsActive ? "Active (Purchasable)" : "Inactive"}
+              </span>
+            </div>
           </div>
-        </form>
+
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel}>Description (Optional)</label>
+            <textarea
+              rows={2}
+              placeholder="Brief description or serving portion size"
+              value={formDescription}
+              onChange={(e) => setFormDescription(e.target.value)}
+              className={styles.formTextarea}
+            />
+          </div>
+        </div>
+
+        <div className={styles.modalFooter}>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleClose();
+            }}
+            className={styles.cancelBtn}
+            disabled={submitting}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            className={styles.saveBtn}
+            disabled={submitting}
+          >
+            {submitting ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <Plus size={16} />
+            )}
+            <span>{submitting ? "Saving..." : "Create Add-on"}</span>
+          </button>
+        </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
