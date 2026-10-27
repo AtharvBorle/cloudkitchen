@@ -947,7 +947,7 @@ export default function RiderCanvas({
                   Standard Delivery Charge
                 </div>
                 <div style={{ fontSize: "18px", fontWeight: 700, color: "#0F172A" }}>
-                  ₹{seller.deliveryCharge !== undefined ? seller.deliveryCharge : 40}
+                  ₹{seller.deliveryCharge !== undefined ? seller.deliveryCharge : 50}
                   <span style={{ fontSize: "12px", fontWeight: 500, color: "#64748B", marginLeft: "4px" }}>/ order</span>
                 </div>
               </div>

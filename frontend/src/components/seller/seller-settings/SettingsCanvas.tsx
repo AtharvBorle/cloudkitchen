@@ -148,7 +148,7 @@ const DEFAULT_DATA: SettingsFormData = {
   longitude: null,
   isLocationPinned: false,
   deliveryRadiusKm: 5,
-  deliveryCharge: 40,
+  deliveryCharge: 50,
   freeDeliveryMinOrder: 500,
   language: "English",
   timezone: "Asia/Kolkata (UTC+5:30)",
@@ -382,7 +382,7 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
         longitude: seller.longitude !== undefined && seller.longitude !== null ? seller.longitude : prev.longitude,
         isLocationPinned: seller.isLocationPinned ?? prev.isLocationPinned,
         deliveryRadiusKm: seller.deliveryRadiusKm !== undefined ? seller.deliveryRadiusKm : prev.deliveryRadiusKm,
-        deliveryCharge: seller.deliveryCharge !== undefined ? seller.deliveryCharge : (prev.deliveryCharge ?? 40),
+        deliveryCharge: seller.deliveryCharge !== undefined ? seller.deliveryCharge : (prev.deliveryCharge ?? 50),
       }));
     }
     try {
@@ -941,19 +941,19 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
             longitude: formData.longitude,
             isLocationPinned: Boolean(formData.latitude && formData.longitude),
             deliveryRadiusKm: formData.deliveryRadiusKm || 5,
-            deliveryCharge: formData.deliveryCharge !== undefined ? formData.deliveryCharge : 40,
+            deliveryCharge: formData.deliveryCharge !== undefined ? formData.deliveryCharge : 50,
           }),
         });
       }
       updateCachedProfile({
         deliveryRadiusKm: formData.deliveryRadiusKm || 5,
-        deliveryCharge: formData.deliveryCharge !== undefined ? formData.deliveryCharge : 40,
+        deliveryCharge: formData.deliveryCharge !== undefined ? formData.deliveryCharge : 50,
       });
       try {
         const existingSettings = JSON.parse(localStorage.getItem("seller_delivery_settings") || "{}");
         localStorage.setItem("seller_delivery_settings", JSON.stringify({
           ...existingSettings,
-          deliveryFee: `₹${formData.deliveryCharge ?? 40}`,
+          deliveryFee: `₹${formData.deliveryCharge ?? 50}`,
           freeDeliveryMinOrder: `₹${formData.freeDeliveryMinOrder ?? 500}`,
           deliveryRadiusKm: formData.deliveryRadiusKm || 5,
         }));
@@ -2117,8 +2117,8 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                           min="0"
                           step="1"
                           disabled={!isEditingGeneral}
-                          placeholder="40"
-                          value={formData.deliveryCharge ?? 40}
+                          placeholder="50"
+                          value={formData.deliveryCharge ?? 50}
                           onChange={(e) => {
                             if (!isEditingGeneral) return;
                             const val = parseFloat(e.target.value);
