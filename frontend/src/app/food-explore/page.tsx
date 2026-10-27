@@ -19,6 +19,18 @@ import {
   Zap,
   Leaf,
   UtensilsCrossed,
+  Utensils,
+  Croissant,
+  Coffee,
+  Egg,
+  EggFried,
+  Soup,
+  IceCream,
+  IceCream2,
+  Pizza,
+  Sandwich,
+  Flame,
+  Heart,
   X,
   Check,
   ChevronDown,
@@ -64,6 +76,52 @@ function parseDishAddons(rawAddons: any): AddonItem[] {
   return [];
 }
 
+const CrossedKnifeSpoonIcon = ({ size = 26, color = "#FFFFFF" }: { size?: number; color?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={color} stroke={color}>
+    <path
+      d="M5.5 3.5C7.2 4.2 8.5 6.2 8.5 8.5L7.2 9.8L3.2 5.8C3.8 4.5 4.6 3.8 5.5 3.5Z"
+      strokeWidth="0.5"
+    />
+    <path d="M7.8 9.2L18.5 19.9" strokeWidth="2.6" strokeLinecap="round" />
+    <ellipse
+      cx="17.2"
+      cy="6.8"
+      rx="3.4"
+      ry="4.5"
+      transform="rotate(45 17.2 6.8)"
+      strokeWidth="0.5"
+    />
+    <path d="M14.8 9.2L4.1 19.9" strokeWidth="2.6" strokeLinecap="round" />
+  </svg>
+);
+
+const NoodleBowlIcon = ({ size = 22, color = "#5C4033" }: { size?: number; color?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M7 5l11-2" />
+    <path d="M7 8l11-2" />
+    <path d="M9 8v4" />
+    <path d="M12 7.5v4.5" />
+    <path d="M5.5 12h13c0 4-2.8 6.5-6.5 6.5s-6.5-2.5-6.5-6.5Z" />
+    <path d="M8.5 18.5h7" />
+  </svg>
+);
+
+function getCategoryIcon(name: string, isSelected: boolean) {
+  const lower = name.toLowerCase().trim();
+  const color = isSelected ? "#FFFFFF" : "#5C4033";
+  const size = 24;
+  if (lower === "all" || lower === "all cuisines") return <CrossedKnifeSpoonIcon size={size} color={color} />;
+  if (lower.includes("baker") || lower.includes("cake") || lower.includes("pastr")) return <Croissant size={size} color={color} strokeWidth={1.8} />;
+  if (lower.includes("drink") || lower.includes("beverag") || lower.includes("tea") || lower.includes("coffee") || lower.includes("shake")) return <Coffee size={size} color={color} strokeWidth={1.8} />;
+  if (lower.includes("breakfast") || lower.includes("egg") || lower.includes("pohe") || lower.includes("poha") || lower.includes("upma") || lower.includes("idli") || lower.includes("dosa")) return <EggFried size={size} color={color} strokeWidth={1.8} />;
+  if (lower.includes("chinese") || lower.includes("noodle") || lower.includes("soup") || lower.includes("asian")) return <NoodleBowlIcon size={size} color={color} />;
+  if (lower.includes("dessert") || lower.includes("ice") || lower.includes("sweet")) return <IceCream size={size} color={color} strokeWidth={1.8} />;
+  if (lower.includes("pizza")) return <Pizza size={size} color={color} strokeWidth={1.8} />;
+  if (lower.includes("burger") || lower.includes("sandwich") || lower.includes("snack") || lower.includes("roll")) return <Sandwich size={size} color={color} strokeWidth={1.8} />;
+  if (lower.includes("biryani") || lower.includes("rice") || lower.includes("thali") || lower.includes("meal") || lower.includes("mess")) return <Flame size={size} color={color} strokeWidth={1.8} />;
+  return <Utensils size={size} color={color} strokeWidth={1.8} />;
+}
+
 function FoodExploreContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -85,16 +143,30 @@ function FoodExploreContent() {
     if (dietaryParam && ["all", "veg", "non_veg", "vegan", "jain"].includes(dietaryParam)) {
       return dietaryParam;
     }
-    if (typeof window !== "undefined") {
+    return "veg";
+  });
+
+  // Client-side hydration sync for diet preference from localStorage / events
+  React.useEffect(() => {
+    if (!dietaryParam) {
       try {
         const stored = localStorage.getItem("cloudkitchen_diet_preference");
         if (stored && ["all", "veg", "non_veg", "vegan", "jain"].includes(stored)) {
-          return stored as any;
+          setSelectedDiet(stored as any);
         }
       } catch {}
     }
-    return "veg";
-  });
+    const handleDietChange = (e: any) => {
+      const detail = e.detail;
+      if (detail && ["all", "veg", "non_veg", "vegan", "jain"].includes(detail)) {
+        setSelectedDiet(detail);
+      }
+    };
+    window.addEventListener("cloudkitchen_diet_preference_changed", handleDietChange);
+    return () => {
+      window.removeEventListener("cloudkitchen_diet_preference_changed", handleDietChange);
+    };
+  }, [dietaryParam]);
   const [selectedPrice, setSelectedPrice] = useState<"all" | "under-150" | "150-300" | "300-plus">(
     ["all", "under-150", "150-300", "300-plus"].includes(priceParam) ? priceParam : "all"
   );
@@ -104,6 +176,7 @@ function FoodExploreContent() {
   const [openOnly, setOpenOnly] = useState(false);
   const [activeTab, setActiveTab] = useState<"dishes" | "kitchens">("dishes");
   const categoryScrollRef = React.useRef<HTMLDivElement>(null);
+
 
   // Popover & Modal state
   const [openPricePopover, setOpenPricePopover] = useState(false);
@@ -115,6 +188,27 @@ function FoodExploreContent() {
   const searchInputRef = React.useRef<HTMLInputElement>(null);
   const [addedIds, setAddedIds] = useState<Record<string, boolean>>({});
   const [addonModalDish, setAddonModalDish] = useState<(DynamicFoodItem & { parsedAddons: AddonItem[] }) | null>(null);
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  const [favorites, setFavorites] = useState<Record<string, boolean>>({});
+
+  React.useEffect(() => {
+    try {
+      const stored = localStorage.getItem("cloudkitchen_favorites");
+      if (stored) setFavorites(JSON.parse(stored));
+    } catch {}
+  }, []);
+
+  const toggleFavorite = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setFavorites((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      try {
+        localStorage.setItem("cloudkitchen_favorites", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
 
   // Outside click to close price, cuisine, and search popovers
   React.useEffect(() => {
@@ -603,6 +697,30 @@ function FoodExploreContent() {
     }));
   }, [homeData.categories, homeData.foodItems, selectedDiet]);
 
+  // Mobile Explore Categories (exact 8 cuisines as Image 2)
+  const mobileCategories = useMemo(() => {
+    const coreNames = ["Bakery", "Drinks", "Breakfast", "Chinese", "Desserts", "Pizza", "Burger", "Biryani"];
+    const list: Array<{ id: string; name: string; count: number }> = [];
+
+    coreNames.forEach((name) => {
+      const existing = dynamicCategories.find((c) => c.name.toLowerCase().trim() === name.toLowerCase().trim());
+      const count = existing ? existing.count : homeData.foodItems.filter((f) => matchesDishCategory(name, f)).length;
+      list.push({
+        id: name.toLowerCase(),
+        name,
+        count,
+      });
+    });
+
+    dynamicCategories.forEach((c) => {
+      if (!coreNames.some((cn) => cn.toLowerCase() === c.name.toLowerCase())) {
+        list.push(c);
+      }
+    });
+
+    return list;
+  }, [dynamicCategories, homeData.foodItems]);
+
   // Interactive live search suggestions for autocomplete popover
   const searchSuggestions = useMemo(() => {
     const q = (searchQuery || "").trim().toLowerCase();
@@ -732,10 +850,10 @@ function FoodExploreContent() {
 
   return (
     <div
+      className="food-explore-page-wrapper"
       style={{
         width: "100%",
         minHeight: "100vh",
-        background: "linear-gradient(180deg, #FFF6ED 0%, #FFFFFF 30%)",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -783,6 +901,7 @@ function FoodExploreContent() {
         }}
         className="food-explore-container"
       >
+        <div className="food-explore-desktop-hero">
         {/* Breadcrumb */}
         <div style={{ fontSize: "0.85rem", color: "#64748B", fontWeight: "500", marginTop: "-12px", marginBottom: "-14px" }}>
           <span>Food marketplace</span>
@@ -1201,7 +1320,71 @@ function FoodExploreContent() {
             )}
           </div>
         </div>
+        </div>{/* End food-explore-desktop-hero */}
 
+        {/* Mobile Explore Categories (Image 2 Design) */}
+        {mobileCategories.length > 0 && (
+          <div className="food-explore-mobile-categories">
+            <div className="mobile-categories-header">
+              <h3 className="mobile-categories-title">Explore Categories</h3>
+              <span className="mobile-categories-count">8 CUISINES</span>
+            </div>
+            <div className="mobile-categories-scroll-row hide-scrollbar">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCategory("");
+                  if (typeof window !== "undefined") {
+                    const params = new URLSearchParams(window.location.search);
+                    params.delete("category");
+                    const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
+                    router.replace(newUrl, { scroll: false });
+                  }
+                }}
+                className="mobile-category-item-btn"
+              >
+                <div className={`mobile-category-square ${!selectedCategory ? "active" : ""}`}>
+                  <CrossedKnifeSpoonIcon size={24} color={!selectedCategory ? "#FFFFFF" : "#5C4033"} />
+                </div>
+                <span className={`mobile-category-text ${!selectedCategory ? "active" : ""}`}>
+                  All
+                </span>
+              </button>
+
+              {mobileCategories.map((cat) => {
+                const isSelected = selectedCategory.toLowerCase().trim() === cat.name.toLowerCase().trim();
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => {
+                      const newCat = isSelected ? "" : cat.name;
+                      setSelectedCategory(newCat);
+                      if (typeof window !== "undefined") {
+                        const params = new URLSearchParams(window.location.search);
+                        if (newCat) params.set("category", newCat);
+                        else params.delete("category");
+                        const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
+                        router.replace(newUrl, { scroll: false });
+                      }
+                    }}
+                    className="mobile-category-item-btn"
+                  >
+                    <div className={`mobile-category-square ${isSelected ? "active" : ""}`}>
+                      {getCategoryIcon(cat.name, isSelected)}
+                    </div>
+                    <span className={`mobile-category-text ${isSelected ? "active" : ""}`}>
+                      {cat.name}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Desktop Dynamic Category Chips Carousel */}
+        <div className="food-explore-desktop-categories">
         {/* Dynamic Category Chips Carousel */}
         {dynamicCategories.length > 0 && (
           <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
@@ -1334,6 +1517,218 @@ function FoodExploreContent() {
             </button>
           </div>
         )}
+        </div>{/* End food-explore-desktop-categories */}
+
+        {/* Mobile Sticky Filter Bar (Image 2 Design) */}
+        <div className="food-explore-mobile-filter-bar">
+          <div className="mobile-filter-pills-row hide-scrollbar">
+            {/* 1. All Filters Button */}
+            <button
+              type="button"
+              onClick={() => setIsMobileFilterOpen(true)}
+              className={`mobile-filter-pill-btn ${activeFiltersCount > 0 ? "active-filters" : ""}`}
+            >
+              <SlidersHorizontal size={13} color="#1E293B" />
+              <span>Filters</span>
+              {activeFiltersCount > 0 && (
+                <span className="mobile-filter-pill-badge">{activeFiltersCount}</span>
+              )}
+            </button>
+
+            {/* 2. Pure Veg Pill */}
+            <button
+              type="button"
+              onClick={() => {
+                const nextDiet = selectedDiet === "veg" ? "all" : "veg";
+                setSelectedDiet(nextDiet);
+                if (typeof window !== "undefined") {
+                  localStorage.setItem("cloudkitchen_diet_preference", nextDiet);
+                  window.dispatchEvent(new CustomEvent("cloudkitchen_diet_preference_changed", { detail: nextDiet }));
+                }
+              }}
+              className={`mobile-filter-pill-btn ${selectedDiet === "veg" ? "active-veg" : ""}`}
+            >
+              <span className="mobile-filter-veg-dot" />
+              <span>Pure Veg {filterCounts.veg !== undefined ? `(${filterCounts.veg})` : ""}</span>
+            </button>
+
+            {/* 3. Non-Veg Pill */}
+            <button
+              type="button"
+              onClick={() => {
+                const nextDiet = selectedDiet === "non_veg" ? "all" : "non_veg";
+                setSelectedDiet(nextDiet);
+                if (typeof window !== "undefined") {
+                  localStorage.setItem("cloudkitchen_diet_preference", nextDiet);
+                  window.dispatchEvent(new CustomEvent("cloudkitchen_diet_preference_changed", { detail: nextDiet }));
+                }
+              }}
+              className={`mobile-filter-pill-btn ${selectedDiet === "non_veg" ? "active-nonveg" : ""}`}
+            >
+              <span className="mobile-filter-nonveg-dot" />
+              <span>Non-Veg {filterCounts.non_veg !== undefined ? `(${filterCounts.non_veg})` : ""}</span>
+            </button>
+
+            {/* 4. Vegan Pill */}
+            <button
+              type="button"
+              onClick={() => {
+                const nextDiet = selectedDiet === "vegan" ? "all" : "vegan";
+                setSelectedDiet(nextDiet);
+                if (typeof window !== "undefined") {
+                  localStorage.setItem("cloudkitchen_diet_preference", nextDiet);
+                  window.dispatchEvent(new CustomEvent("cloudkitchen_diet_preference_changed", { detail: nextDiet }));
+                }
+              }}
+              className={`mobile-filter-pill-btn ${selectedDiet === "vegan" ? "active-veg" : ""}`}
+            >
+              <Leaf size={12} color={selectedDiet === "vegan" ? "#16A34A" : "#64748B"} />
+              <span>Vegan {filterCounts.vegan !== undefined ? `(${filterCounts.vegan})` : ""}</span>
+            </button>
+
+            {/* 5. Jain Pill */}
+            <button
+              type="button"
+              onClick={() => {
+                const nextDiet = selectedDiet === "jain" ? "all" : "jain";
+                setSelectedDiet(nextDiet);
+                if (typeof window !== "undefined") {
+                  localStorage.setItem("cloudkitchen_diet_preference", nextDiet);
+                  window.dispatchEvent(new CustomEvent("cloudkitchen_diet_preference_changed", { detail: nextDiet }));
+                }
+              }}
+              className={`mobile-filter-pill-btn ${selectedDiet === "jain" ? "active-veg" : ""}`}
+            >
+              <span>🌾 Jain {filterCounts.jain !== undefined ? `(${filterCounts.jain})` : ""}</span>
+            </button>
+
+            {/* 6. Offers Pill */}
+            <button
+              type="button"
+              onClick={() => {
+                const next = !offersOnly;
+                setOffersOnly(next);
+                if (typeof window !== "undefined") {
+                  const params = new URLSearchParams(window.location.search);
+                  if (next) params.set("offers", "true");
+                  else params.delete("offers");
+                  const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
+                  router.replace(newUrl, { scroll: false });
+                }
+              }}
+              className={`mobile-filter-pill-btn ${offersOnly ? "active-offers" : ""}`}
+            >
+              <Tag size={12} color={offersOnly ? "#FF6B00" : "#64748B"} />
+              <span>Offers</span>
+            </button>
+
+            {/* 7. Under ₹150 Pill */}
+            <button
+              type="button"
+              onClick={() => {
+                const next = selectedPrice === "under-150" ? "all" : "under-150";
+                setSelectedPrice(next as any);
+              }}
+              className={`mobile-filter-pill-btn ${selectedPrice === "under-150" ? "active-price" : ""}`}
+            >
+              <span>Under ₹150</span>
+            </button>
+          </div>
+
+          {/* Active Filter Removable Tags (Image 2 style) */}
+          {activeFiltersCount > 0 && (
+            <div className="mobile-active-tags-row hide-scrollbar">
+              {selectedDiet !== "all" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedDiet("all");
+                    if (typeof window !== "undefined") {
+                      localStorage.setItem("cloudkitchen_diet_preference", "all");
+                      window.dispatchEvent(new CustomEvent("cloudkitchen_diet_preference_changed", { detail: "all" }));
+                    }
+                  }}
+                  className="mobile-active-filter-tag"
+                >
+                  <span>{selectedDiet === "veg" ? "Pure Veg" : selectedDiet === "non_veg" ? "Non-Veg" : selectedDiet === "vegan" ? "Vegan" : "Jain"}</span>
+                  <X size={12} />
+                </button>
+              )}
+
+              {selectedPrice !== "all" && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedPrice("all")}
+                  className="mobile-active-filter-tag"
+                >
+                  <span>{selectedPrice === "under-150" ? "Under ₹150" : selectedPrice === "150-300" ? "₹150 – ₹300" : "₹300+"}</span>
+                  <X size={12} />
+                </button>
+              )}
+
+              {offersOnly && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOffersOnly(false);
+                    if (typeof window !== "undefined") {
+                      const params = new URLSearchParams(window.location.search);
+                      params.delete("offers");
+                      const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
+                      router.replace(newUrl, { scroll: false });
+                    }
+                  }}
+                  className="mobile-active-filter-tag"
+                >
+                  <span>Offers</span>
+                  <X size={12} />
+                </button>
+              )}
+
+              {openOnly && (
+                <button
+                  type="button"
+                  onClick={() => setOpenOnly(false)}
+                  className="mobile-active-filter-tag"
+                >
+                  <span>Open Kitchens</span>
+                  <X size={12} />
+                </button>
+              )}
+
+              {selectedCategory && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedCategory("");
+                    if (typeof window !== "undefined") {
+                      const params = new URLSearchParams(window.location.search);
+                      params.delete("category");
+                      const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
+                      router.replace(newUrl, { scroll: false });
+                    }
+                  }}
+                  className="mobile-active-filter-tag"
+                >
+                  <span>{selectedCategory}</span>
+                  <X size={12} />
+                </button>
+              )}
+
+              {selectedCuisines.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setSelectedCuisines((prev) => prev.filter((item) => item !== c))}
+                  className="mobile-active-filter-tag"
+                >
+                  <span>{c}</span>
+                  <X size={12} />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Multi-Dimensional Filter Box */}
         <div className={filterStyles.filterBox}>
@@ -1631,7 +2026,45 @@ function FoodExploreContent() {
           </div>
         </div>
 
-        {/* Results Header: Category Title + Subtitle + Sort Selector */}
+        {/* Mobile Results Header: "Curated For You" (Image 2 Design) */}
+        <div className="food-explore-mobile-results-header">
+          <div className="mobile-results-header-left">
+            <h2 className="mobile-curated-title">
+              {selectedCategory ? `${selectedCategory}` : "Curated For You"}
+            </h2>
+            <p className="mobile-curated-sub">
+              {filteredFoodItems.length} top-rated dishes delivering fast in {defaultAddress?.area || defaultAddress?.city || "Kothrud"}
+            </p>
+          </div>
+          <div className="mobile-sort-container">
+            <select
+              value={sortBy}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSortBy(val);
+                if (typeof window !== "undefined") {
+                  const params = new URLSearchParams(window.location.search);
+                  if (val) params.set("sort", val);
+                  else params.delete("sort");
+                  const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
+                  router.replace(newUrl, { scroll: false });
+                }
+              }}
+              className="mobile-sort-select"
+            >
+              <option value="">Relevance</option>
+              <option value="rating">Top Rated</option>
+              <option value="popular">Most Popular</option>
+              <option value="price_asc">Price: Low to High</option>
+              <option value="price_desc">Price: High to Low</option>
+              <option value="fastest">Fastest Delivery</option>
+            </select>
+            <ChevronDown size={13} className="mobile-sort-arrow" strokeWidth={2.2} />
+          </div>
+        </div>
+
+        {/* Desktop Results Header */}
+        <div className="food-explore-desktop-results-header">
         <div
           style={{
             display: "flex",
@@ -1738,6 +2171,7 @@ function FoodExploreContent() {
             </button>
           </div>
         </div>
+        </div>{/* End food-explore-desktop-results-header */}
 
         {/* 2. Results Content: Dishes Grid or Kitchens Grid */}
         {activeTab === "dishes" ? (
@@ -1828,7 +2262,21 @@ function FoodExploreContent() {
                           backgroundColor: "#F1F5F9",
                         }}
                       >
-                        {/* Offer Badge on Top Left (Only displayed when the dish has an active deal/offer/coupon) */}
+                        {/* Top Right Favorite Button for Mobile */}
+<button
+  type="button"
+  onClick={(e) => toggleFavorite(dish.id, e)}
+  className="mobile-dish-favorite-btn"
+  aria-label={favorites[dish.id] ? "Remove from favorites" : "Add to favorites"}
+>
+  <Heart
+    size={18}
+    color={favorites[dish.id] ? "#EF4444" : "#64748B"}
+    fill={favorites[dish.id] ? "#EF4444" : "none"}
+  />
+</button>
+
+{/* Offer Badge on Top Left (Only displayed when the dish has an active deal/offer/coupon) */}
                         {!isClosed && offerDetails.hasOffer && offerDetails.badgeText && (
                           <div
                             style={{
@@ -1929,8 +2377,8 @@ function FoodExploreContent() {
                         </div>
                       </div>
 
-                      {/* Card Info */}
-                      <div
+                      {/* Card Info: Desktop */}
+                      <div className="desktop-card-body"
                         style={{
                           padding: "14px 16px 16px 16px",
                           display: "flex",
@@ -2083,12 +2531,9 @@ function FoodExploreContent() {
                               fontSize: "0.78rem",
                               color: isClosed ? "#94A3B8" : "#475569",
                               fontWeight: "500",
-                              lineHeight: "1.35",
-                              display: "-webkit-box",
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: "vertical",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
+                              lineHeight: "1.4",
+                              wordBreak: "break-word",
+                              overflowWrap: "break-word",
                             }}
                             title={dish.description}
                           >
@@ -2441,6 +2886,102 @@ function FoodExploreContent() {
                           )}
                         </div>
                       </div>
+
+                      {/* Card Info: Mobile View (Image 2 Design) */}
+                      <div className="mobile-card-body">
+                        {/* Row 1: Veg / Non-Veg Icon + Kitchen Name | Rating Badge */}
+                        <div className="mobile-card-row1">
+                          <div className="mobile-card-row1-left">
+                            {isNonVegDish(dish) ? (
+                              <span className="fssai-nonveg-icon" title="Non-Veg">
+                                <span className="fssai-nonveg-triangle" />
+                              </span>
+                            ) : (
+                              <span className="fssai-veg-icon" title="Pure Veg">
+                                <span className="fssai-veg-dot" />
+                              </span>
+                            )}
+                            <span className="mobile-card-kitchen-name">
+                              {dish.sellerName || "VERIFIED KITCHEN"}
+                            </span>
+                          </div>
+                          <div className="mobile-card-rating-pill">
+                            <Star size={11} fill="#F97316" color="#F97316" />
+                            <span className="mobile-card-rating-val">{dish.rating && Number(dish.rating) > 0 ? Number(dish.rating).toFixed(1) : "4.8"}</span>
+                            <span className="mobile-card-rating-count">(180+)</span>
+                          </div>
+                        </div>
+
+                        {/* Row 2: Dish Title */}
+                        <h3 className="mobile-card-dish-name">{dish.name}</h3>
+
+                        {/* Row 3: Description */}
+                        {dish.description && dish.description.trim() && dish.description.trim().toLowerCase() !== "xyz" && (
+                          <p className="mobile-card-dish-desc">{dish.description}</p>
+                        )}
+
+                        {/* Row 4: Meta: Time & Cuisine */}
+                        <div className="mobile-card-meta-row">
+                          <Clock size={12} color="#64748B" />
+                          <span>{dish.deliveryTime || "25–35 min"}</span>
+                          <span className="mobile-card-meta-dot">•</span>
+                          <span>{dish.categoryName || (dish as any).category || "Italian Classic"}</span>
+                        </div>
+
+                        {/* Row 5: Price & Add Button */}
+                        <div className="mobile-card-bottom-row">
+                          <div className="mobile-card-price-group">
+                            <span className="mobile-card-current-price">₹{dish.price}</span>
+                            {offerDetails.hasOffer && (
+                              <>
+                                <span className="mobile-card-original-price">₹{Math.round(dish.price * 1.35)}</span>
+                                <span className="mobile-card-discount-badge">{offerDetails.badgeText || "30% OFF"}</span>
+                              </>
+                            )}
+                          </div>
+
+                          {isClosed ? (
+                            <button type="button" disabled className="mobile-card-closed-btn">
+                              {isSellerClosed ? "Closed" : "Out of Stock"}
+                            </button>
+                          ) : quantityInCart > 0 ? (
+                            <div className="mobile-card-qty-stepper">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDecreaseFromCart(dish.id);
+                                }}
+                                className="mobile-card-qty-btn"
+                              >
+                                −
+                              </button>
+                              <span className="mobile-card-qty-val">{quantityInCart}</span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAddToCart(dish, false);
+                                }}
+                                className="mobile-card-qty-btn"
+                              >
+                                +
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAddToCart(dish, false);
+                              }}
+                              className="mobile-card-add-btn"
+                            >
+                              + ADD
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   );
                 })}
@@ -2780,10 +3321,910 @@ function FoodExploreContent() {
         />
       )}
 
+      {/* Mobile Filter Sheet Modal */}
+      {isMobileFilterOpen && (
+        <div className="mobile-filter-drawer-backdrop" onClick={() => setIsMobileFilterOpen(false)}>
+          <div className="mobile-filter-drawer-content" onClick={(e) => e.stopPropagation()}>
+            <div className="mobile-drawer-header">
+              <div className="mobile-drawer-handle" />
+              <div className="mobile-drawer-title-row">
+                <span className="mobile-drawer-title">Filters & Sorting</span>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  {activeFiltersCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleClearAll}
+                      className="mobile-drawer-clear-btn"
+                    >
+                      Reset All
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setIsMobileFilterOpen(false)}
+                    className="mobile-drawer-close-btn"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="mobile-drawer-body">
+              {/* Dietary */}
+              <div className="mobile-drawer-section">
+                <h4 className="mobile-drawer-section-title">Dietary Preference</h4>
+                <div className="mobile-drawer-chips-grid">
+                  {[
+                    { id: "all", label: "All Diet", count: filterCounts.all },
+                    { id: "veg", label: "🌱 Pure Veg", count: filterCounts.veg },
+                    { id: "non_veg", label: "🍗 Non-Veg", count: filterCounts.non_veg },
+                    { id: "vegan", label: "🌿 Vegan", count: filterCounts.vegan },
+                    { id: "jain", label: "🌾 Jain", count: filterCounts.jain },
+                  ].map((d) => (
+                    <button
+                      key={d.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedDiet(d.id as any);
+                        if (typeof window !== "undefined") {
+                          localStorage.setItem("cloudkitchen_diet_preference", d.id);
+                          window.dispatchEvent(new CustomEvent("cloudkitchen_diet_preference_changed", { detail: d.id }));
+                        }
+                      }}
+                      className={`mobile-drawer-chip ${selectedDiet === d.id ? "active" : ""}`}
+                    >
+                      <span>{d.label}</span>
+                      {d.count !== undefined && <span className="mobile-drawer-chip-count">({d.count})</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Price Range */}
+              <div className="mobile-drawer-section">
+                <h4 className="mobile-drawer-section-title">Price Range</h4>
+                <div className="mobile-drawer-chips-grid">
+                  {[
+                    { id: "all", label: "Any Price" },
+                    { id: "under-150", label: "Under ₹150" },
+                    { id: "150-300", label: "₹150 – ₹300" },
+                    { id: "300-plus", label: "₹300+" },
+                  ].map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setSelectedPrice(p.id as any)}
+                      className={`mobile-drawer-chip ${selectedPrice === p.id ? "active" : ""}`}
+                    >
+                      <span>{p.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Cuisines */}
+              {availableCuisines.length > 0 && (
+                <div className="mobile-drawer-section">
+                  <h4 className="mobile-drawer-section-title">Cuisines</h4>
+                  <div className="mobile-drawer-chips-grid">
+                    {availableCuisines.map((c) => {
+                      const isSelected = selectedCuisines.includes(c);
+                      return (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => {
+                            setSelectedCuisines((prev) =>
+                              prev.includes(c) ? prev.filter((item) => item !== c) : [...prev, c]
+                            );
+                          }}
+                          className={`mobile-drawer-chip ${isSelected ? "active" : ""}`}
+                        >
+                          <span>{c}</span>
+                          {isSelected && <Check size={12} color="#FF6B00" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Quick Toggles */}
+              <div className="mobile-drawer-section">
+                <h4 className="mobile-drawer-section-title">More Options</h4>
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <label className="mobile-drawer-toggle-row">
+                    <span>Offers & Deals Only</span>
+                    <input
+                      type="checkbox"
+                      checked={offersOnly}
+                      onChange={(e) => setOffersOnly(e.target.checked)}
+                      className="mobile-drawer-checkbox"
+                    />
+                  </label>
+                  <label className="mobile-drawer-toggle-row">
+                    <span>Open Kitchens Only</span>
+                    <input
+                      type="checkbox"
+                      checked={openOnly}
+                      onChange={(e) => setOpenOnly(e.target.checked)}
+                      className="mobile-drawer-checkbox"
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="mobile-drawer-footer">
+              <button
+                type="button"
+                onClick={() => setIsMobileFilterOpen(false)}
+                className="mobile-drawer-apply-btn"
+              >
+                Apply Filters ({filteredFoodItems.length} dishes)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Footer */}
       <Footer />
 
       <style jsx>{`
+        .food-explore-page-wrapper {
+          width: 100%;
+          min-height: 100vh;
+          background: linear-gradient(180deg, #FFF6ED 0%, #FFFFFF 30%);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
+
+        /* Mobile vs Desktop View Visibility Rules */
+        .food-explore-mobile-categories,
+        .food-explore-mobile-filter-bar,
+        .food-explore-mobile-results-header,
+        .mobile-card-body,
+        .mobile-dish-favorite-btn {
+          display: none !important;
+        }
+
+        @media (max-width: 768px) {
+          :global(html),
+          :global(body) {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            overflow-x: hidden !important;
+          }
+          :global(body:has(.food-explore-page-wrapper)) {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            overflow-x: hidden !important;
+            background: linear-gradient(
+              180deg,
+              #FEE4D1 0px,
+              #FEECDF 100px,
+              #FEF2E8 180px,
+              #FEFAF6 260px,
+              #FFFFFF 360px,
+              #FFFFFF 100%
+            ) !important;
+            background-color: #FFFFFF !important;
+          }
+          .food-explore-page-wrapper {
+            width: 100% !important;
+            max-width: 100vw !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow-x: hidden !important;
+            background: linear-gradient(
+              180deg,
+              #FEE4D1 0px,
+              #FEECDF 100px,
+              #FEF2E8 180px,
+              #FEFAF6 260px,
+              #FFFFFF 360px,
+              #FFFFFF 100%
+            ) !important;
+            background-color: #FFFFFF !important;
+          }
+          :global(.food-explore-page-wrapper header) {
+            border-bottom-left-radius: 28px !important;
+            border-bottom-right-radius: 28px !important;
+            border-bottom: none !important;
+            box-shadow: 0 10px 24px -4px rgba(0, 0, 0, 0.05), 0 4px 12px -2px rgba(0, 0, 0, 0.02) !important;
+            overflow: hidden !important;
+            width: 100% !important;
+            margin: 0 !important;
+            background-color: #FFFFFF !important;
+          }
+          :global(.food-explore-page-wrapper header > div) {
+            border-bottom-left-radius: 28px !important;
+            border-bottom-right-radius: 28px !important;
+            padding-bottom: 12px !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+          }
+          .food-explore-desktop-hero,
+          .food-explore-desktop-categories,
+          .food-explore-desktop-filters,
+          .food-explore-desktop-results-header,
+          .desktop-card-body {
+            display: none !important;
+          }
+          .food-explore-container {
+            width: 100% !important;
+            max-width: 100vw !important;
+            box-sizing: border-box !important;
+            background: transparent !important;
+            background-color: transparent !important;
+            padding: 16px 16px 80px 16px !important;
+            gap: 16px !important;
+            overflow-x: hidden !important;
+          }
+          .food-explore-mobile-categories {
+            display: block !important;
+          }
+          .food-explore-mobile-filter-bar {
+            display: block !important;
+            position: sticky;
+            top: 0;
+            z-index: 30;
+            background: transparent !important;
+            padding: 8px 0 6px 0;
+            margin: -4px 0 2px 0;
+          }
+          .food-explore-mobile-results-header {
+            display: flex !important;
+          }
+          .mobile-card-body {
+            display: flex !important;
+          }
+          .mobile-dish-favorite-btn {
+            display: flex !important;
+          }
+        }
+
+        /* Mobile Categories Header & Scroll */
+        .mobile-categories-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 12px;
+          padding: 0 2px;
+        }
+        .mobile-categories-title {
+          font-size: 1.15rem;
+          font-weight: 800;
+          color: #1E293B;
+          margin: 0;
+          letter-spacing: -0.01em;
+        }
+        .mobile-categories-count {
+          font-size: 0.78rem;
+          font-weight: 800;
+          color: #FF6B00;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        .mobile-categories-scroll-row {
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+          overflow-x: auto;
+          padding: 4px 0 12px 0;
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+        .mobile-categories-scroll-row::-webkit-scrollbar {
+          display: none;
+        }
+        .mobile-category-item-btn {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          background: transparent;
+          border: none;
+          cursor: pointer;
+          padding: 0;
+          flex-shrink: 0;
+          width: 60px;
+        }
+        .mobile-category-square {
+          width: 60px;
+          height: 60px;
+          border-radius: 18px;
+          background-color: #FFFFFF;
+          border: 1px solid rgba(0, 0, 0, 0.05);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+          transition: all 0.2s ease;
+        }
+        .mobile-category-square.active {
+          background: #FF6B00 !important;
+          border-color: #FF6B00 !important;
+          box-shadow: 0 8px 18px -4px rgba(255, 107, 0, 0.38) !important;
+        }
+        .mobile-category-text {
+          font-size: 0.76rem;
+          font-weight: 500;
+          color: #64748B;
+          margin-top: 6px;
+          text-align: center;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          width: 100%;
+        }
+        .mobile-category-text.active {
+          color: #FF6B00 !important;
+          font-weight: 700 !important;
+        }
+
+        /* Mobile Filter Pills Row */
+        .mobile-filter-pills-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          overflow-x: auto;
+          padding: 4px 0 6px 0;
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+        .mobile-filter-pills-row::-webkit-scrollbar {
+          display: none;
+        }
+        .mobile-active-tags-row::-webkit-scrollbar {
+          display: none;
+        }
+        .mobile-filter-pill-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 7px 14px;
+          border-radius: 9999px;
+          border: 1px solid #E2E8F0;
+          background-color: #FFFFFF;
+          color: #475569;
+          font-size: 0.82rem;
+          font-weight: 600;
+          cursor: pointer;
+          white-space: nowrap;
+          flex-shrink: 0;
+          transition: all 0.15s ease;
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
+        }
+        .mobile-filter-pill-btn.active-veg {
+          border: 1.5px solid #86EFAC !important;
+          background-color: #DCFCE7 !important;
+          color: #15803D !important;
+          font-weight: 700 !important;
+        }
+        .mobile-filter-pill-btn.active-nonveg {
+          border: 1.5px solid #EF4444 !important;
+          background-color: #FEF2F2 !important;
+          color: #B91C1C !important;
+          font-weight: 700 !important;
+        }
+        .mobile-filter-pill-btn.active-filters {
+          border: 1px solid #FEDDC4 !important;
+          background-color: #FFF6EE !important;
+          color: #1E293B !important;
+          font-weight: 700 !important;
+        }
+        .mobile-filter-pill-btn.active-offers,
+        .mobile-filter-pill-btn.active-price {
+          border: 1.5px solid #FF6B00 !important;
+          background-color: #FFF3EB !important;
+          color: #FF6B00 !important;
+          font-weight: 700 !important;
+        }
+        .mobile-filter-pill-badge {
+          background-color: #FF6B00;
+          color: #FFFFFF;
+          font-size: 0.72rem;
+          font-weight: 800;
+          border-radius: 50%;
+          width: 18px;
+          height: 18px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .mobile-filter-veg-dot {
+          width: 9px;
+          height: 9px;
+          border-radius: 50%;
+          background-color: #047857;
+          flex-shrink: 0;
+        }
+        .mobile-filter-nonveg-dot {
+          width: 9px;
+          height: 9px;
+          border-radius: 2.5px;
+          background-color: #BE123C;
+          flex-shrink: 0;
+        }
+
+        /* Active Filter Removable Tags */
+        .mobile-active-tags-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          overflow-x: auto;
+          padding: 4px 0 8px 0;
+          margin-top: 2px;
+          -webkit-overflow-scrolling: touch;
+        }
+        .mobile-active-filter-tag {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 4px 10px;
+          border-radius: 8px;
+          border: 1px solid #E2E8F0;
+          background-color: #FFFFFF;
+          color: #1E293B;
+          font-size: 0.76rem;
+          font-weight: 600;
+          cursor: pointer;
+          white-space: nowrap;
+          flex-shrink: 0;
+          transition: all 0.15s ease;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+        }
+        .mobile-active-filter-tag:hover {
+          background-color: #FEE2E2;
+          border-color: #FCA5A5;
+          color: #DC2626;
+        }
+
+        /* Mobile Results Header */
+        .food-explore-mobile-results-header {
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          margin-top: 6px;
+          margin-bottom: 2px;
+        }
+        .mobile-results-header-left {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .mobile-curated-title {
+          font-size: 1.25rem;
+          font-weight: 800;
+          color: #18181B;
+          margin: 0;
+          letter-spacing: -0.02em;
+        }
+        .mobile-curated-sub {
+          font-size: 0.82rem;
+          color: #64748B;
+          font-weight: 500;
+          margin: 0;
+        }
+        .mobile-sort-container {
+          position: relative;
+          flex-shrink: 0;
+        }
+        .mobile-sort-select {
+          appearance: none;
+          background-color: #EEF2FF;
+          border: 1px solid #E0E7FF;
+          border-radius: 9999px;
+          padding: 6px 28px 6px 14px;
+          font-size: 0.78rem;
+          font-weight: 700;
+          color: #1E293B;
+          cursor: pointer;
+          outline: none;
+        }
+        .mobile-sort-arrow {
+          position: absolute;
+          right: 10px;
+          top: 50%;
+          transform: translateY(-50%);
+          pointer-events: none;
+          color: #1E293B;
+        }
+
+        /* Mobile Dish Card Details */
+        .mobile-dish-coupon-badge {
+          position: absolute;
+          top: 12px;
+          left: 12px;
+          z-index: 3;
+          background-color: rgba(15, 23, 42, 0.88);
+          color: #FFFFFF;
+          font-size: 10.5px;
+          font-weight: 800;
+          padding: 3px 8px;
+          border-radius: 6px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+        }
+        .mobile-dish-favorite-btn {
+          position: absolute;
+          top: 12px;
+          right: 12px;
+          z-index: 3;
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          background-color: #FFFFFF;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+          border: none;
+          cursor: pointer;
+          transition: transform 0.15s ease;
+        }
+        .mobile-dish-favorite-btn:active {
+          transform: scale(0.9);
+        }
+        .mobile-card-body {
+          padding: 12px 14px 16px 14px;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+        .mobile-card-row1 {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 2px;
+        }
+        .mobile-card-row1-left {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          min-width: 0;
+        }
+        .fssai-veg-icon {
+          width: 15px;
+          height: 15px;
+          border: 1.5px solid #16A34A;
+          border-radius: 3px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          background-color: #FFFFFF;
+        }
+        .fssai-veg-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background-color: #16A34A;
+        }
+        .fssai-nonveg-icon {
+          width: 15px;
+          height: 15px;
+          border: 1.5px solid #DC2626;
+          border-radius: 3px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          background-color: #FFFFFF;
+        }
+        .fssai-nonveg-triangle {
+          width: 0;
+          height: 0;
+          border-left: 3.5px solid transparent;
+          border-right: 3.5px solid transparent;
+          border-bottom: 7px solid #DC2626;
+        }
+        .mobile-card-kitchen-name {
+          font-size: 0.78rem;
+          font-weight: 800;
+          color: #334155;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .mobile-card-rating-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 3px;
+          background-color: #EEF2FF;
+          border-radius: 9999px;
+          padding: 3px 10px;
+          flex-shrink: 0;
+        }
+        .mobile-card-rating-val {
+          font-size: 0.82rem;
+          font-weight: 800;
+          color: #0F172A;
+        }
+        .mobile-card-rating-count {
+          font-size: 0.76rem;
+          font-weight: 500;
+          color: #64748B;
+        }
+        .mobile-card-dish-name {
+          font-size: 1.1rem;
+          font-weight: 800;
+          color: #0F172A;
+          margin: 2px 0 1px 0;
+          line-height: 1.3;
+        }
+        .mobile-card-dish-desc {
+          font-size: 0.82rem;
+          color: #64748B;
+          margin: 0;
+          line-height: 1.4;
+          word-break: break-word;
+          overflow-wrap: break-word;
+        }
+        .mobile-card-meta-row {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          font-size: 0.78rem;
+          color: #475569;
+          font-weight: 500;
+          margin: 3px 0 6px 0;
+        }
+        .mobile-card-meta-dot {
+          color: #94A3B8;
+        }
+        .mobile-card-bottom-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-top: 4px;
+        }
+        .mobile-card-price-group {
+          display: flex;
+          align-items: baseline;
+          gap: 6px;
+        }
+        .mobile-card-current-price {
+          font-size: 1.3rem;
+          font-weight: 800;
+          color: #0F172A;
+        }
+        .mobile-card-original-price {
+          font-size: 0.85rem;
+          color: #94A3B8;
+          text-decoration: line-through;
+          font-weight: 500;
+        }
+        .mobile-card-discount-badge {
+          font-size: 0.8rem;
+          font-weight: 800;
+          color: #16A34A;
+        }
+        .mobile-card-add-btn {
+          background-color: #FF6B00;
+          color: #FFFFFF;
+          border: none;
+          font-weight: 800;
+          font-size: 0.88rem;
+          padding: 8px 24px;
+          border-radius: 12px;
+          cursor: pointer;
+          box-shadow: 0 4px 14px rgba(255, 107, 0, 0.28);
+          letter-spacing: 0.4px;
+          transition: all 0.15s ease;
+        }
+        .mobile-card-add-btn:active {
+          transform: scale(0.96);
+        }
+        .mobile-card-closed-btn {
+          background-color: #F1F5F9;
+          color: #94A3B8;
+          border: 1px solid #E2E8F0;
+          font-weight: 700;
+          font-size: 0.8rem;
+          padding: 6px 14px;
+          border-radius: 8px;
+          cursor: not-allowed;
+        }
+        .mobile-card-qty-stepper {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          background-color: #FF6B00;
+          color: #FFFFFF;
+          border-radius: 10px;
+          padding: 5px 12px;
+          box-shadow: 0 3px 12px rgba(255, 107, 0, 0.28);
+        }
+        .mobile-card-qty-btn {
+          background: none;
+          border: none;
+          color: #FFFFFF;
+          font-size: 1.1rem;
+          font-weight: 800;
+          cursor: pointer;
+          padding: 0 4px;
+        }
+        .mobile-card-qty-val {
+          font-size: 0.9rem;
+          font-weight: 800;
+          min-width: 14px;
+          text-align: center;
+        }
+
+        /* Mobile Filter Drawer Modal */
+        .mobile-filter-drawer-backdrop {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: rgba(15, 23, 42, 0.55);
+          z-index: 100;
+          display: flex;
+          align-items: flex-end;
+          justify-content: center;
+          backdrop-filter: blur(4px);
+          animation: fadeIn 0.2s ease-out;
+        }
+        .mobile-filter-drawer-content {
+          width: 100%;
+          max-width: 500px;
+          max-height: 85vh;
+          background-color: #FFFFFF;
+          border-top-left-radius: 24px;
+          border-top-right-radius: 24px;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.16);
+          animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes slideUp {
+          from { transform: translateY(100%); }
+          to { transform: translateY(0); }
+        }
+        .mobile-drawer-header {
+          padding: 12px 18px 14px 18px;
+          border-bottom: 1px solid #F1F5F9;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 10px;
+        }
+        .mobile-drawer-handle {
+          width: 40px;
+          height: 4px;
+          border-radius: 9999px;
+          background-color: #CBD5E1;
+        }
+        .mobile-drawer-title-row {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+        .mobile-drawer-title {
+          font-size: 1.1rem;
+          font-weight: 800;
+          color: #18181B;
+        }
+        .mobile-drawer-clear-btn {
+          background: none;
+          border: none;
+          color: #EA580C;
+          font-size: 0.82rem;
+          font-weight: 700;
+          cursor: pointer;
+          padding: 4px 6px;
+        }
+        .mobile-drawer-close-btn {
+          background: #F1F5F9;
+          border: none;
+          border-radius: 50%;
+          width: 32px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #64748B;
+          cursor: pointer;
+        }
+        .mobile-drawer-body {
+          padding: 16px 18px;
+          overflow-y: auto;
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+          flex: 1;
+        }
+        .mobile-drawer-section {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+        .mobile-drawer-section-title {
+          font-size: 0.88rem;
+          font-weight: 800;
+          color: #0F172A;
+          margin: 0;
+          text-transform: uppercase;
+          letter-spacing: 0.4px;
+        }
+        .mobile-drawer-chips-grid {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+        .mobile-drawer-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 8px 14px;
+          border-radius: 10px;
+          border: 1px solid #E2E8F0;
+          background-color: #FFFFFF;
+          color: #475569;
+          font-size: 0.82rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .mobile-drawer-chip.active {
+          border: 1.5px solid #FF6B00 !important;
+          background-color: #FFF3EB !important;
+          color: #FF6B00 !important;
+          font-weight: 700 !important;
+        }
+        .mobile-drawer-chip-count {
+          font-size: 0.74rem;
+          color: #94A3B8;
+        }
+        .mobile-drawer-toggle-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 10px 14px;
+          border-radius: 10px;
+          background-color: #F8FAFC;
+          font-size: 0.86rem;
+          font-weight: 600;
+          color: #334155;
+          cursor: pointer;
+        }
+        .mobile-drawer-checkbox {
+          width: 18px;
+          height: 18px;
+          accent-color: #FF6B00;
+          cursor: pointer;
+        }
+        .mobile-drawer-footer {
+          padding: 14px 18px 20px 18px;
+          border-top: 1px solid #F1F5F9;
+          background-color: #FFFFFF;
+        }
+        .mobile-drawer-apply-btn {
+          width: 100%;
+          padding: 12px 18px;
+          border-radius: 12px;
+          background-color: #FF6B00;
+          color: #FFFFFF;
+          border: none;
+          font-size: 0.95rem;
+          font-weight: 800;
+          cursor: pointer;
+          box-shadow: 0 4px 16px rgba(255, 107, 0, 0.3);
+        }
         @keyframes foodExploreSearchPopover {
           0% {
             opacity: 0;

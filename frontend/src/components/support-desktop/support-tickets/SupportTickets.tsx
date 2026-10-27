@@ -657,7 +657,6 @@ export const SupportTickets: React.FC = () => {
               >
                 <option value="ALL">All Categories</option>
                 <option value="FOOD">Food Delivery</option>
-                {isRoomEnabled && <option value="ROOM">Room Stay</option>}
                 <option value="PAYMENT">Payment & Refund</option>
                 <option value="OTHER">General Support</option>
               </select>
@@ -1081,7 +1080,6 @@ export const SupportTickets: React.FC = () => {
                   className={styles.formSelect}
                 >
                   <option value="FOOD">Food Delivery / Order Issue</option>
-                  {isRoomEnabled && <option value="ROOM">Room Booking / Stay Query</option>}
                   <option value="PAYMENT">Payment, Billing & Refunds</option>
                   <option value="OTHER">Other / General Support</option>
                 </select>
