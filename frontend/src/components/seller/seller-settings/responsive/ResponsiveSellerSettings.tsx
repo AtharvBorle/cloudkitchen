@@ -39,7 +39,7 @@ import { performLogout } from "@/lib/logout";
 import SellerMapPicker from "@/components/seller/seller-registration/business-information/SellerMapPicker";
 import styles from "./ResponsiveSellerSettings.module.css";
 
-export type SettingsTabType = "General" | "Notifications" | "Security" | "Preferences";
+export type SettingsTabType = "General" | "Tax" | "Notifications" | "Security" | "Preferences";
 
 export interface OperatingHoursDay {
   day: string;
@@ -240,7 +240,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
       : (!isGenericFallbackName(seller.ownerName) ? seller.ownerName : "");
 
   const [activeTab, setActiveTab] = useState<SettingsTabType>(() => {
-    const allowedTabs: SettingsTabType[] = ["General", "Security"];
+    const allowedTabs: SettingsTabType[] = ["General", "Tax", "Security"];
     const tabParam = searchParams?.get("tab");
     if (tabParam) {
       const matched = allowedTabs.find(
@@ -263,6 +263,36 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
   });
 
   const [isEditingGeneral, setIsEditingGeneral] = useState(false);
+  const [sellerTaxMode, setSellerTaxMode] = useState<"TAX_INCLUSIVE" | "TAX_EXCLUSIVE">(seller.taxMode || "TAX_INCLUSIVE");
+  const [isSavingTaxMode, setIsSavingTaxMode] = useState(false);
+
+  useEffect(() => {
+    if (seller.taxMode) {
+      setSellerTaxMode(seller.taxMode);
+    }
+  }, [seller.taxMode]);
+
+  const handleSaveTaxMode = async () => {
+    setIsSavingTaxMode(true);
+    try {
+      const res = await fetchApi("/api/seller/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taxMode: sellerTaxMode }),
+      });
+      if (res.ok) {
+        updateCachedProfile({ taxMode: sellerTaxMode });
+        setToastData({ title: `Tax mode updated to ${sellerTaxMode === "TAX_INCLUSIVE" ? "Tax Inclusive" : "Tax Exclusive"}`, status: "ON" });
+      } else {
+        setToastData({ title: "Failed to update tax mode", status: "OFF" });
+      }
+    } catch (err) {
+      console.error("Save tax mode error:", err);
+      setToastData({ title: "Error updating tax mode", status: "OFF" });
+    } finally {
+      setIsSavingTaxMode(false);
+    }
+  };
   const [originalGeneralData, setOriginalGeneralData] = useState<ResponsiveSellerSettingsData | null>(null);
 
   const handleTabChange = (tab: SettingsTabType) => {
@@ -383,7 +413,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
   useEffect(() => {
     const tabParam = searchParams?.get("tab");
     if (tabParam) {
-      const matched = (["General", "Security"] as SettingsTabType[]).find(
+      const matched = (["General", "Tax", "Security"] as SettingsTabType[]).find(
         (t) => t.toLowerCase() === tabParam.toLowerCase()
       );
       if (matched) {
@@ -705,7 +735,7 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
     return () => clearTimeout(timer);
   }, [toastData]);
 
-  const tabs: SettingsTabType[] = ["General", "Security"];
+  const tabs: SettingsTabType[] = ["General", "Tax", "Security"];
 
   const handleInputChange = (field: keyof ResponsiveSellerSettingsData, value: any) => {
     setFormData((prev) => {
@@ -2102,6 +2132,140 @@ export const ResponsiveSellerSettings: React.FC<ResponsiveSellerSettingsProps> =
                 </div>
               </div>
             </>
+          )}
+
+          {activeTab === "Tax" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "4px 0" }}>
+              <div style={{
+                backgroundColor: "#FFFFFF",
+                borderRadius: "14px",
+                padding: "20px 16px",
+                border: "1.5px solid #E2E8F0"
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
+                  <div style={{
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "8px",
+                    backgroundColor: "#FFF7ED",
+                    color: "#EA580C",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontWeight: "bold",
+                    fontSize: "1.1rem"
+                  }}>
+                    %
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: "1.05rem", fontWeight: "700", color: "#1E293B", margin: 0 }}>
+                      Tax & Pricing Mode
+                    </h3>
+                    <p style={{ fontSize: "0.78rem", color: "#64748B", margin: "2px 0 0 0" }}>
+                      Select how food prices are taxed
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "16px" }}>
+                  {/* Tax Inclusive */}
+                  <div
+                    onClick={() => setSellerTaxMode("TAX_INCLUSIVE")}
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: "12px",
+                      padding: "14px",
+                      borderRadius: "10px",
+                      border: `2px solid ${sellerTaxMode === "TAX_INCLUSIVE" ? "#EA580C" : "#E2E8F0"}`,
+                      backgroundColor: sellerTaxMode === "TAX_INCLUSIVE" ? "#FFF7ED" : "#FFFFFF",
+                      cursor: "pointer"
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="mSellerTaxMode"
+                      value="TAX_INCLUSIVE"
+                      checked={sellerTaxMode === "TAX_INCLUSIVE"}
+                      onChange={() => setSellerTaxMode("TAX_INCLUSIVE")}
+                      style={{ marginTop: "2px", accentColor: "#EA580C" }}
+                    />
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span style={{ fontSize: "0.92rem", fontWeight: "700", color: "#1E293B" }}>
+                          Tax Inclusive
+                        </span>
+                        <span style={{ fontSize: "0.68rem", fontWeight: "700", padding: "1px 6px", borderRadius: "9999px", backgroundColor: "#DCFCE7", color: "#166534" }}>
+                          Default
+                        </span>
+                      </div>
+                      <p style={{ fontSize: "0.8rem", color: "#64748B", margin: "3px 0 6px 0" }}>
+                        Dish prices already include GST.
+                      </p>
+                      <div style={{ fontSize: "0.75rem", color: "#475569", backgroundColor: "#F1F5F9", padding: "6px 8px", borderRadius: "6px" }}>
+                        ₹160 dish - 10% discount = <strong>₹144.00</strong> customer pays (₹137.14 taxable + ₹6.86 GST).
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Tax Exclusive */}
+                  <div
+                    onClick={() => setSellerTaxMode("TAX_EXCLUSIVE")}
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: "12px",
+                      padding: "14px",
+                      borderRadius: "10px",
+                      border: `2px solid ${sellerTaxMode === "TAX_EXCLUSIVE" ? "#EA580C" : "#E2E8F0"}`,
+                      backgroundColor: sellerTaxMode === "TAX_EXCLUSIVE" ? "#FFF7ED" : "#FFFFFF",
+                      cursor: "pointer"
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="mSellerTaxMode"
+                      value="TAX_EXCLUSIVE"
+                      checked={sellerTaxMode === "TAX_EXCLUSIVE"}
+                      onChange={() => setSellerTaxMode("TAX_EXCLUSIVE")}
+                      style={{ marginTop: "2px", accentColor: "#EA580C" }}
+                    />
+                    <div>
+                      <span style={{ fontSize: "0.92rem", fontWeight: "700", color: "#1E293B" }}>
+                        Tax Exclusive
+                      </span>
+                      <p style={{ fontSize: "0.8rem", color: "#64748B", margin: "3px 0 6px 0" }}>
+                        GST is added on top of food prices at checkout.
+                      </p>
+                      <div style={{ fontSize: "0.75rem", color: "#475569", backgroundColor: "#F1F5F9", padding: "6px 8px", borderRadius: "6px" }}>
+                        ₹160 dish - 10% discount = Taxable ₹144.00 + 5% GST = <strong>₹151.20</strong> customer pays.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ marginTop: "18px" }}>
+                  <button
+                    type="button"
+                    disabled={isSavingTaxMode}
+                    onClick={handleSaveTaxMode}
+                    style={{
+                      width: "100%",
+                      padding: "12px",
+                      backgroundColor: "#EA580C",
+                      color: "#FFFFFF",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontSize: "0.9rem",
+                      fontWeight: "700",
+                      cursor: isSavingTaxMode ? "wait" : "pointer"
+                    }}
+                  >
+                    {isSavingTaxMode ? "Saving Tax Preferences..." : "Save Tax Preferences"}
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
 
           {activeTab === "Notifications" && (

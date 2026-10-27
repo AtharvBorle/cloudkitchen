@@ -1,12 +1,68 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRoomModule } from "@/context/RoomModuleContext";
-import { ShieldCheck, Sparkles, BedDouble, Utensils, CheckCircle2, AlertCircle, MessageSquare } from "lucide-react";
+import { ShieldCheck, Sparkles, BedDouble, Utensils, CheckCircle2, AlertCircle, MessageSquare, Receipt, Percent, Save, Loader2 } from "lucide-react";
+import { fetchApi } from "@/lib/fetch-api";
 
 export default function SuperadminSettingsPage() {
   const { isRoomEnabled, setRoomEnabled, isChatbotEnabled, setChatbotEnabled, isLoading } = useRoomModule();
   const [successToast, setSuccessToast] = useState<string | null>(null);
+
+  // Tax Settings State
+  const [productTaxRate, setProductTaxRate] = useState<string>("5");
+  const [deliveryTaxRate, setDeliveryTaxRate] = useState<string>("18");
+  const [isSavingTax, setIsSavingTax] = useState<boolean>(false);
+  const [taxLoaded, setTaxLoaded] = useState<boolean>(false);
+
+  useEffect(() => {
+    async function loadTaxSettings() {
+      try {
+        const res = await fetchApi("/api/superadmin/settings");
+        if (res.ok) {
+          const data = await res.json();
+          const map = data.data?.settingsMap || data.settingsMap || {};
+          if (map.PRODUCT_TAX_RATE !== undefined) setProductTaxRate(String(map.PRODUCT_TAX_RATE));
+          if (map.DELIVERY_TAX_RATE !== undefined) setDeliveryTaxRate(String(map.DELIVERY_TAX_RATE));
+        }
+      } catch (err) {
+        console.error("Failed to load tax settings:", err);
+      } finally {
+        setTaxLoaded(true);
+      }
+    }
+    loadTaxSettings();
+  }, []);
+
+  const handleSaveTax = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingTax(true);
+    try {
+      const pRate = parseFloat(productTaxRate) || 0;
+      const dRate = parseFloat(deliveryTaxRate) || 0;
+      const res = await fetchApi("/api/superadmin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          settings: [
+            { key: "PRODUCT_TAX_RATE", value: pRate.toString() },
+            { key: "DELIVERY_TAX_RATE", value: dRate.toString() }
+          ]
+        })
+      });
+      if (res.ok) {
+        setSuccessToast("Platform tax settings successfully updated & applied platform-wide!");
+        setTimeout(() => setSuccessToast(null), 4000);
+      } else {
+        alert("Failed to save tax settings");
+      }
+    } catch (err) {
+      console.error("Error saving tax settings:", err);
+      alert("Error saving tax settings");
+    } finally {
+      setIsSavingTax(false);
+    }
+  };
 
   const handleToggle = async (nextState: boolean) => {
     const ok = await setRoomEnabled(nextState);
@@ -64,6 +120,158 @@ export default function SuperadminSettingsPage() {
           <span>{successToast}</span>
         </div>
       )}
+
+      {/* Tax Settings Section */}
+      <div style={{
+        backgroundColor: "#FFFFFF",
+        border: "1.5px solid var(--border)",
+        borderRadius: "14px",
+        padding: "24px 28px",
+        boxShadow: "0 4px 15px rgba(0,0,0,0.03)",
+        marginBottom: "28px"
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "14px" }}>
+          <div style={{
+            width: "40px",
+            height: "40px",
+            borderRadius: "10px",
+            backgroundColor: "#EFF6FF",
+            color: "#2563EB",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center"
+          }}>
+            <Receipt size={22} />
+          </div>
+          <div>
+            <h3 style={{ fontSize: "1.2rem", fontWeight: "700", margin: 0, color: "var(--text-main)" }}>
+              Platform Tax Settings
+            </h3>
+            <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", margin: "2px 0 0 0" }}>
+              Configure GST rates applicable across all kitchen products and delivery charges platform-wide.
+            </p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSaveTax}>
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+            gap: "20px",
+            marginTop: "16px"
+          }}>
+            {/* Product Tax */}
+            <div style={{
+              backgroundColor: "#F8FAFC",
+              border: "1px solid #E2E8F0",
+              borderRadius: "10px",
+              padding: "16px"
+            }}>
+              <label style={{ display: "block", fontSize: "0.88rem", fontWeight: "700", color: "#1E293B", marginBottom: "4px" }}>
+                Product Tax Rate (%)
+              </label>
+              <p style={{ fontSize: "0.8rem", color: "#64748B", margin: "0 0 10px 0" }}>
+                Applies GST to dishes and products sold on the platform (e.g. 5% GST, split into 2.5% CGST + 2.5% SGST).
+              </p>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  value={productTaxRate}
+                  onChange={(e) => setProductTaxRate(e.target.value)}
+                  disabled={!taxLoaded || isSavingTax}
+                  style={{
+                    flex: 1,
+                    padding: "9px 12px",
+                    borderRadius: "8px",
+                    border: "1.5px solid #CBD5E1",
+                    fontSize: "0.95rem",
+                    fontWeight: "600",
+                    color: "#0F172A",
+                    backgroundColor: "#FFFFFF"
+                  }}
+                  required
+                />
+                <span style={{ fontSize: "0.95rem", fontWeight: "700", color: "#64748B" }}>%</span>
+              </div>
+            </div>
+
+            {/* Seller-Side Delivery Tax */}
+            <div style={{
+              backgroundColor: "#F8FAFC",
+              border: "1px solid #E2E8F0",
+              borderRadius: "10px",
+              padding: "16px"
+            }}>
+              <label style={{ display: "block", fontSize: "0.88rem", fontWeight: "700", color: "#1E293B", marginBottom: "4px" }}>
+                Seller-Side Delivery Tax Rate (%)
+              </label>
+              <p style={{ fontSize: "0.8rem", color: "#64748B", margin: "0 0 10px 0" }}>
+                Applies GST to delivery charges added by sellers (e.g. 18% GST, split into 9% CGST + 9% SGST).
+              </p>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  value={deliveryTaxRate}
+                  onChange={(e) => setDeliveryTaxRate(e.target.value)}
+                  disabled={!taxLoaded || isSavingTax}
+                  style={{
+                    flex: 1,
+                    padding: "9px 12px",
+                    borderRadius: "8px",
+                    border: "1.5px solid #CBD5E1",
+                    fontSize: "0.95rem",
+                    fontWeight: "600",
+                    color: "#0F172A",
+                    backgroundColor: "#FFFFFF"
+                  }}
+                  required
+                />
+                <span style={{ fontSize: "0.95rem", fontWeight: "700", color: "#64748B" }}>%</span>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "18px" }}>
+            <button
+              type="submit"
+              disabled={isSavingTax || !taxLoaded}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "10px 22px",
+                backgroundColor: "#2563EB",
+                color: "#FFFFFF",
+                border: "none",
+                borderRadius: "8px",
+                fontWeight: "700",
+                fontSize: "0.88rem",
+                cursor: isSavingTax ? "wait" : "pointer",
+                boxShadow: "0 2px 6px rgba(37, 99, 235, 0.25)",
+                transition: "background-color 0.2s"
+              }}
+            >
+              {isSavingTax ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save size={16} />
+                  Save Tax Configuration
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
 
       {/* Main Feature Flag Card: Room Module */}
       <div style={{
