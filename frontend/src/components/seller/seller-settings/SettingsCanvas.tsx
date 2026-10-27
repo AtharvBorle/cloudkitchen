@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ChevronDown,
   CheckCircle2,
@@ -23,6 +23,7 @@ import {
   Save,
   Edit2,
   Check,
+  ArrowRight,
 } from "lucide-react";
 import SellerNotificationChannels, {
   NotificationChannelsData,
@@ -61,6 +62,8 @@ export interface SettingsFormData {
   longitude?: number | null;
   isLocationPinned?: boolean;
   deliveryRadiusKm?: number;
+  deliveryCharge?: number;
+  freeDeliveryMinOrder?: number;
   language: string;
   timezone: string;
   currency: string;
@@ -145,6 +148,8 @@ const DEFAULT_DATA: SettingsFormData = {
   longitude: null,
   isLocationPinned: false,
   deliveryRadiusKm: 5,
+  deliveryCharge: 40,
+  freeDeliveryMinOrder: 500,
   language: "English",
   timezone: "Asia/Kolkata (UTC+5:30)",
   currency: "INR (₹)",
@@ -217,6 +222,7 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
   onSave,
   onCancel,
 }) => {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const seller = useSellerProfile();
   const [activeTab, setActiveTab] = useState<SettingsTab>(() => {
@@ -376,9 +382,24 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
         longitude: seller.longitude !== undefined && seller.longitude !== null ? seller.longitude : prev.longitude,
         isLocationPinned: seller.isLocationPinned ?? prev.isLocationPinned,
         deliveryRadiusKm: seller.deliveryRadiusKm !== undefined ? seller.deliveryRadiusKm : prev.deliveryRadiusKm,
+        deliveryCharge: seller.deliveryCharge !== undefined ? seller.deliveryCharge : (prev.deliveryCharge ?? 40),
       }));
     }
-  }, [seller.businessName, seller.email, seller.phone, seller.address, seller.latitude, seller.longitude, seller.isLocationPinned, seller.deliveryRadiusKm]);
+    try {
+      const saved = localStorage.getItem("seller_delivery_settings");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.freeDeliveryMinOrder !== undefined) {
+          const num = parseFloat(String(parsed.freeDeliveryMinOrder).replace(/[^0-9.]/g, ''));
+          if (!isNaN(num)) setFormData((p) => ({ ...p, freeDeliveryMinOrder: num }));
+        }
+        if (parsed.deliveryFee !== undefined && seller.deliveryCharge === undefined) {
+          const num = parseFloat(String(parsed.deliveryFee).replace(/[^0-9.]/g, ''));
+          if (!isNaN(num)) setFormData((p) => ({ ...p, deliveryCharge: num }));
+        }
+      }
+    } catch {}
+  }, [seller.businessName, seller.email, seller.phone, seller.address, seller.latitude, seller.longitude, seller.isLocationPinned, seller.deliveryRadiusKm, seller.deliveryCharge]);
 
   useEffect(() => {
     const tabParam = searchParams?.get("tab");
@@ -899,6 +920,7 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
         if (formData.longitude) fd.append("longitude", String(formData.longitude));
         fd.append("isLocationPinned", String(Boolean(formData.latitude && formData.longitude)));
         if (formData.deliveryRadiusKm) fd.append("deliveryRadiusKm", String(formData.deliveryRadiusKm));
+        if (formData.deliveryCharge !== undefined) fd.append("deliveryCharge", String(formData.deliveryCharge));
         if (cardFile) fd.append("cardImageFile", cardFile);
         if (bannerFile) fd.append("bannerImageFile", bannerFile);
 
@@ -919,10 +941,23 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
             longitude: formData.longitude,
             isLocationPinned: Boolean(formData.latitude && formData.longitude),
             deliveryRadiusKm: formData.deliveryRadiusKm || 5,
+            deliveryCharge: formData.deliveryCharge !== undefined ? formData.deliveryCharge : 40,
           }),
         });
       }
-      updateCachedProfile({ deliveryRadiusKm: formData.deliveryRadiusKm || 5 });
+      updateCachedProfile({
+        deliveryRadiusKm: formData.deliveryRadiusKm || 5,
+        deliveryCharge: formData.deliveryCharge !== undefined ? formData.deliveryCharge : 40,
+      });
+      try {
+        const existingSettings = JSON.parse(localStorage.getItem("seller_delivery_settings") || "{}");
+        localStorage.setItem("seller_delivery_settings", JSON.stringify({
+          ...existingSettings,
+          deliveryFee: `₹${formData.deliveryCharge ?? 40}`,
+          freeDeliveryMinOrder: `₹${formData.freeDeliveryMinOrder ?? 500}`,
+          deliveryRadiusKm: formData.deliveryRadiusKm || 5,
+        }));
+      } catch {}
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
@@ -2033,6 +2068,109 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "#64748B", marginTop: "4px" }}>
                     <span>1 km (Hyperlocal)</span>
                     <span>15 km (Extended reach)</span>
+                  </div>
+                </div>
+
+                {/* Delivery Charge & Free Delivery Minimum Threshold */}
+                <div className={styles.fieldGroup} style={{ marginTop: "14px", padding: "14px 16px", backgroundColor: "#F8FAFC", borderRadius: "12px", border: "1px solid #E2E8F0" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
+                    <div>
+                      <label className={styles.label} style={{ margin: 0, fontSize: "13.5px", fontWeight: 700, color: "#0F172A", display: "flex", alignItems: "center", gap: "6px" }}>
+                        <Truck size={16} color="#EA580C" />
+                        <span>Standard Delivery Charge</span>
+                      </label>
+                      <p style={{ fontSize: "12px", color: "#64748B", margin: "2px 0 0 0" }}>
+                        Delivery fee charged to customers within your {formData.deliveryRadiusKm ?? 5} km service radius
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => router.push("/seller/delivery/settings")}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        padding: 0,
+                        color: "#EA580C",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                      }}
+                      title="Open full delivery & rider settings"
+                    >
+                      <span>Delivery Settings</span>
+                      <ArrowRight size={12} />
+                    </button>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                    <div>
+                      <label style={{ fontSize: "12px", fontWeight: 600, color: "#475569", marginBottom: "4px", display: "block" }}>
+                        Base Delivery Fee (₹)
+                      </label>
+                      <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                        <span style={{ position: "absolute", left: "10px", color: "#64748B", fontWeight: 600, fontSize: "13px" }}>₹</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          disabled={!isEditingGeneral}
+                          placeholder="40"
+                          value={formData.deliveryCharge ?? 40}
+                          onChange={(e) => {
+                            if (!isEditingGeneral) return;
+                            const val = parseFloat(e.target.value);
+                            setFormData((prev) => ({ ...prev, deliveryCharge: isNaN(val) ? 0 : val }));
+                          }}
+                          style={{
+                            width: "100%",
+                            padding: "8px 10px 8px 24px",
+                            borderRadius: "8px",
+                            border: "1px solid #CBD5E1",
+                            fontSize: "13px",
+                            fontWeight: 600,
+                            color: "#0F172A",
+                            backgroundColor: isEditingGeneral ? "#FFFFFF" : "#F1F5F9",
+                            cursor: isEditingGeneral ? "text" : "not-allowed",
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: "12px", fontWeight: 600, color: "#475569", marginBottom: "4px", display: "block" }}>
+                        Free Delivery Cart Threshold (₹)
+                      </label>
+                      <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                        <span style={{ position: "absolute", left: "10px", color: "#64748B", fontWeight: 600, fontSize: "13px" }}>₹</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="10"
+                          disabled={!isEditingGeneral}
+                          placeholder="500"
+                          value={formData.freeDeliveryMinOrder ?? 500}
+                          onChange={(e) => {
+                            if (!isEditingGeneral) return;
+                            const val = parseFloat(e.target.value);
+                            setFormData((prev) => ({ ...prev, freeDeliveryMinOrder: isNaN(val) ? 0 : val }));
+                          }}
+                          style={{
+                            width: "100%",
+                            padding: "8px 10px 8px 24px",
+                            borderRadius: "8px",
+                            border: "1px solid #CBD5E1",
+                            fontSize: "13px",
+                            fontWeight: 600,
+                            color: "#0F172A",
+                            backgroundColor: isEditingGeneral ? "#FFFFFF" : "#F1F5F9",
+                            cursor: isEditingGeneral ? "text" : "not-allowed",
+                          }}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

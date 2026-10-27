@@ -143,10 +143,10 @@ function EditMenuInner({
                 const match = found.description.match(/^\(Serves\s*([1-4])\)\s*([\s\S]*)$/i) || found.description.match(/^\[Serves:\s*([1-4])\]\s*([\s\S]*)$/i);
                 if (match) {
                   setSelectedServes(Number(match[1]) || null);
-                  setDescription(match[2] || '');
+                  setDescription((match[2] || '').trim().slice(0, 50));
                 } else {
                   setSelectedServes(null);
-                  setDescription(found.description || '');
+                  setDescription((found.description || '').trim().slice(0, 50));
                 }
               } else {
                 setSelectedServes(null);
@@ -376,9 +376,8 @@ function EditMenuInner({
     }
 
     const cleanDescForValidation = description.replace(/^\(Serves\s*[1-4]\)\s*/i, '').replace(/^\[Serves:\s*[1-4]\]\s*/i, '').trim();
-    const descWordCount = cleanDescForValidation ? cleanDescForValidation.split(/\s+/).filter(Boolean).length : 0;
-    if (descWordCount > 50) {
-      alert(`Description must not exceed 50 words. Currently ${descWordCount} words.`);
+    if (cleanDescForValidation.length > 50) {
+      alert(`Description must not exceed 50 characters. Currently ${cleanDescForValidation.length} characters.`);
       return;
     }
 
@@ -743,11 +742,10 @@ function EditMenuInner({
                   Description <span className={styles.requiredStar}>*</span>
                 </label>
                 {(() => {
-                  const clean = description.replace(/^\(Serves\s*[1-4]\)\s*/i, '').replace(/^\[Serves:\s*[1-4]\]\s*/i, '').trim();
-                  const count = clean ? clean.split(/\s+/).filter(Boolean).length : 0;
+                  const count = description.length;
                   return (
-                    <span style={{ fontSize: '0.78rem', color: count > 50 ? '#EF4444' : '#64748B', fontWeight: count > 50 ? '700' : '500' }}>
-                      {count}/50 words
+                    <span style={{ fontSize: '0.78rem', color: count >= 50 ? '#EF4444' : '#64748B', fontWeight: count >= 50 ? '700' : '500' }}>
+                      {count}/50 characters
                     </span>
                   );
                 })()}
@@ -755,9 +753,10 @@ function EditMenuInner({
               <textarea
                 className={styles.textAreaInput}
                 rows={3}
+                maxLength={50}
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Dish description..."
+                onChange={(e) => setDescription(e.target.value.slice(0, 50))}
+                placeholder="Dish description (max 50 characters)..."
                 required
               />
             </div>
@@ -893,21 +892,6 @@ function EditMenuInner({
                 <label className={styles.subSectionTitle}>
                   Dish Image representation <span className={styles.requiredStar}>*</span>
                 </label>
-                {(imageFile || existingImageUrl) && (
-                  <button
-                    type="button"
-                    className={styles.headerPreviewBtn}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setIsPreviewOpen(true);
-                    }}
-                    title="Preview dish image"
-                  >
-                    <Eye size={14} />
-                    <span>Preview</span>
-                  </button>
-                )}
               </div>
 
               <input

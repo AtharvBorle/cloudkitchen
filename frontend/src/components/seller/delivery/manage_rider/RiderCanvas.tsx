@@ -24,7 +24,9 @@ import {
   Search,
   Calendar,
   RotateCcw,
+  Settings,
 } from "lucide-react";
+import { useSellerProfile } from "@/hooks/useSellerProfile";
 import { fetchApi } from "@/lib/fetch-api";
 import { validateEmail } from "@/lib/email-validation";
 import PaginationControls from "@/components/seller/common/PaginationControls";
@@ -104,6 +106,7 @@ export default function RiderCanvas({
   onAddDeliveryBoy,
 }: RiderCanvasProps) {
   const router = useRouter();
+  const seller = useSellerProfile();
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQueryProp || "");
   const searchQuery = searchQueryProp !== undefined ? searchQueryProp : localSearchQuery;
   const handleSearchChange = (query: string) => {
@@ -847,6 +850,33 @@ export default function RiderCanvas({
               </button>
             )}
 
+            {/* Delivery Rates & Settings Action Button */}
+            <button
+              type="button"
+              onClick={() => router.push("/seller/delivery/settings")}
+              style={{
+                backgroundColor: "#FFFFFF",
+                border: "1.5px solid #CBD5E1",
+                borderRadius: "8px",
+                padding: "8.5px 14px",
+                fontSize: "13px",
+                fontWeight: 600,
+                color: "#1E293B",
+                cursor: "pointer",
+                boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
+                transition: "all 0.18s ease",
+                fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+                whiteSpace: "nowrap",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "7px",
+              }}
+              title="Configure Delivery Fee, Radius, and Thresholds"
+            >
+              <Settings size={15} color="#EA580C" />
+              <span>Delivery Rates &amp; Settings</span>
+            </button>
+
             {/* Add Delivery Boy Action Button */}
             <button
               type="button"
@@ -879,6 +909,104 @@ export default function RiderCanvas({
               <span>Add Delivery Boy</span>
             </button>
           </div>
+        </div>
+
+        {/* Delivery Rates & Radius Quick Overview Bar */}
+        <div
+          style={{
+            width: "100%",
+            backgroundColor: "#FFFFFF",
+            border: "1.5px solid #E2E8F0",
+            borderRadius: "12px",
+            padding: "14px 20px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "14px",
+            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.03)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "24px", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div
+                style={{
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "10px",
+                  backgroundColor: "#FFF7ED",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Truck size={22} color="#EA580C" />
+              </div>
+              <div>
+                <div style={{ fontSize: "11px", color: "#64748B", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                  Standard Delivery Charge
+                </div>
+                <div style={{ fontSize: "18px", fontWeight: 700, color: "#0F172A" }}>
+                  ₹{seller.deliveryCharge !== undefined ? seller.deliveryCharge : 40}
+                  <span style={{ fontSize: "12px", fontWeight: 500, color: "#64748B", marginLeft: "4px" }}>/ order</span>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ width: "1px", height: "32px", backgroundColor: "#E2E8F0" }} />
+
+            <div>
+              <div style={{ fontSize: "11px", color: "#64748B", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Max Service Radius
+              </div>
+              <div style={{ fontSize: "16px", fontWeight: 700, color: "#0F172A" }}>
+                {seller.deliveryRadiusKm ?? 5} km
+              </div>
+            </div>
+
+            <div style={{ width: "1px", height: "32px", backgroundColor: "#E2E8F0" }} />
+
+            <div>
+              <div style={{ fontSize: "11px", color: "#64748B", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Tax Regime
+              </div>
+              <div
+                style={{
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  color: "#059669",
+                  backgroundColor: "#ECFDF5",
+                  padding: "3px 8px",
+                  borderRadius: "6px",
+                  display: "inline-block",
+                }}
+              >
+                {seller.taxMode === "TAX_EXCLUSIVE" ? "Tax Exclusive (GST Added)" : "Tax Inclusive"}
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => router.push("/seller/delivery/settings")}
+            style={{
+              backgroundColor: "#FFF7ED",
+              border: "1.5px solid #FED7AA",
+              borderRadius: "8px",
+              padding: "8px 16px",
+              fontSize: "13px",
+              fontWeight: 600,
+              color: "#C2410C",
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              transition: "all 0.15s ease",
+            }}
+          >
+            <span>Configure Delivery Charges &amp; Rates</span>
+            <ArrowRight size={14} />
+          </button>
         </div>
 
         {/* Historical Date Active Banner */}
