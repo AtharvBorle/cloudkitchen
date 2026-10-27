@@ -656,104 +656,27 @@ export const CATEGORY_ALIASES: Record<string, string[]> = {
 
 export const FOOD_TAG_KEYWORDS = CATEGORY_ALIASES;
 
-/**
- * Matches a single dish against a food category filter.
- * Strict category matching:
- * 1. Checks specific category name matches (ignoring generic words like 'Food').
- * 2. Checks word-bounded title matches based on category rules.
- * 3. Checks description for healthy / category-specific keywords.
- */
 export function matchesDishCategory(
   category: string | null | undefined,
   dish: {
     name?: string | null;
     categoryName?: string | null;
+    subCategoryName?: string | null;
     description?: string | null;
+    isAvailable?: boolean;
+    [key: string]: any;
   }
 ): boolean {
-  if (!category || !category.trim()) return true;
-  const cleanCat = category.trim().toLowerCase();
-  if (cleanCat === "all" || cleanCat === "food") return true;
-
-  const catNorm = normalizeSearchString(category);
-  const dishCatNorm = normalizeSearchString(dish.categoryName);
-  const dishName = (dish.name || "").trim();
-  const dishDesc = (dish.description || "").trim();
-
-  // 1. Exact normalized category match (dish.categoryName === category, not 'food')
-  if (dishCatNorm && dishCatNorm !== "food" && dishCatNorm === catNorm) {
-    return true;
-  }
-
-  // 2. Check defined category rule
-  const ruleKey = Object.keys(CATEGORY_RULES).find(
-    (key) =>
-      key.toLowerCase() === catNorm ||
-      key.toLowerCase().replace(/[^a-z0-9]/g, "") === catNorm.replace(/[^a-z0-9]/g, "")
-  );
-
-  if (ruleKey) {
-    const rule = CATEGORY_RULES[ruleKey];
-
-    // Check if dish.categoryName matches any defined categoryNames (excluding generic 'food')
-    if (dishCatNorm && dishCatNorm !== "food") {
-      const isCatMatch = rule.categoryNames.some(
-        (cn) => cn === dishCatNorm || dishCatNorm === normalizeSearchString(cn)
-      );
-      if (isCatMatch) return true;
-    }
-
-    // Check if dish.name matches any regex pattern
-    if (dishName && rule.namePatterns.some((pat) => pat.test(dishName))) {
-      return true;
-    }
-
-    // Check if dish.description matches any description or name regex patterns
-    if (dishDesc) {
-      if (rule.descriptionPatterns && rule.descriptionPatterns.some((pat) => pat.test(dishDesc))) {
-        return true;
-      }
-      if (rule.namePatterns.some((pat) => pat.test(dishDesc))) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  // 3. Fallback for custom or unlisted categories (e.g. 'Pasta', 'Keto', etc.)
-  if (dishCatNorm && dishCatNorm !== "food") {
-    if (dishCatNorm === catNorm || dishCatNorm.includes(catNorm)) {
-      return true;
-    }
-  }
-
-  if (dishName) {
-    const wordPattern = new RegExp(`\\b${escapeRegex(catNorm)}\\b`, "i");
-    if (wordPattern.test(dishName)) {
-      return true;
-    }
-  }
-
-  if (dishDesc) {
-    const wordPattern = new RegExp(`\\b${escapeRegex(catNorm)}\\b`, "i");
-    if (wordPattern.test(dishDesc)) {
-      return true;
-    }
-  }
-
-  return false;
+  return isDishMatchingCuisine(category, dish);
 }
 
-/**
- * Checks whether a kitchen serves dishes matching the requested food category.
- * A kitchen matches a category IF AND ONLY IF it has active menu items in that category.
- */
+
 export function matchesKitchenCategoryFilter(
   category: string | null | undefined,
   kitchen: {
     id?: string | null;
     trackingId?: string | null;
+    kitchenId?: string | null;
     name?: string | null;
     category?: string | null;
   },
@@ -763,44 +686,16 @@ export function matchesKitchenCategoryFilter(
     sellerName?: string | null;
     name?: string | null;
     categoryName?: string | null;
+    subCategoryName?: string | null;
     description?: string | null;
+    isAvailable?: boolean;
+    [key: string]: any;
   }>
 ): boolean {
-  if (!category || !category.trim()) return true;
-  const cleanCat = category.trim().toLowerCase();
-  if (cleanCat === "all" || cleanCat === "food") return true;
-
-  // 1. If food items are provided, check actual dishes of this kitchen first
-  if (foodItems && foodItems.length > 0) {
-    const kitchenDishes = foodItems.filter((f) => {
-      const matchId = kitchen.id && f.sellerId && String(f.sellerId).toLowerCase() === String(kitchen.id).toLowerCase();
-      const matchTracking = kitchen.trackingId && f.sellerTrackingId && String(f.sellerTrackingId).toLowerCase() === String(kitchen.trackingId).toLowerCase();
-      const matchCrossId =
-        (kitchen.id && f.sellerTrackingId && String(f.sellerTrackingId).toLowerCase() === String(kitchen.id).toLowerCase()) ||
-        (kitchen.trackingId && f.sellerId && String(f.sellerId).toLowerCase() === String(kitchen.trackingId).toLowerCase());
-      const matchName = kitchen.name && f.sellerName && kitchen.name.toLowerCase().trim() === f.sellerName.toLowerCase().trim();
-      return matchId || matchTracking || matchCrossId || matchName;
-    });
-
-    if (kitchenDishes.length > 0) {
-      return kitchenDishes.some((dish) => matchesDishCategory(category, dish));
-    }
-  }
-
-  // 2. Fallback only if no dishes loaded for this kitchen
-  if (
-    kitchen.category &&
-    matchesDishCategory(category, { name: kitchen.category, categoryName: kitchen.category })
-  ) {
-    return true;
-  }
-
-  if (kitchen.name && matchesDishCategory(category, { name: kitchen.name, categoryName: kitchen.name })) {
-    return true;
-  }
-
-  return false;
+  return isKitchenServingCuisine(category, kitchen, foodItems);
 }
+
+
 
 export function matchesDishSearch(
   query: string | null | undefined,
@@ -892,12 +787,12 @@ export function matchesKitchenOrDishSearch(
 }
 
 /**
- * Checks whether a single food item / dish matches a cuisine filter.
- * Matches by:
- * - Category name (exact or substring)
- * - Dish name (exact or substring)
- * - Description keywords
- * - Predefined category rules (CATEGORY_RULES)
+ * Checks whether a single food item / dish matches a cuisine or category filter.
+ * Strict match:
+ * 1. Category name exact or normalized match
+ * 2. Subcategory name exact or normalized match
+ * 3. Category/Subcategory ID match
+ * 4. Dish name whole-word match (e.g. "Chicken Dum Biryani" matches "Biryani")
  */
 export function isDishMatchingCuisine(
   cuisine: string | null | undefined,
@@ -905,29 +800,82 @@ export function isDishMatchingCuisine(
     name?: string | null;
     categoryName?: string | null;
     subCategoryName?: string | null;
+    categoryId?: string | null;
+    subCategoryId?: string | null;
+    foodCategory?: { id?: string; name?: string } | null;
+    foodSubCategory?: { id?: string; name?: string } | null;
     description?: string | null;
+    isAvailable?: boolean;
+    [key: string]: any;
   }
 ): boolean {
   if (!cuisine || !cuisine.trim()) return true;
-  const c = cuisine.trim().toLowerCase();
-  const dishCat = (dish.categoryName || "").toLowerCase().trim();
-  const dishSubCat = ((dish as any).subCategoryName || "").toLowerCase().trim();
-  const dishName = (dish.name || "").toLowerCase().trim();
-  const dishDesc = (dish.description || "").toLowerCase().trim();
+  if (dish.isAvailable === false) return false;
 
-  if (dishCat && (dishCat === c || dishCat.includes(c) || c.includes(dishCat))) return true;
-  if (dishSubCat && (dishSubCat === c || dishSubCat.includes(c) || c.includes(dishSubCat))) return true;
-  if (dishName && dishName.includes(c)) return true;
-  if (dishDesc && dishDesc.includes(c)) return true;
-  if (matchesDishCategory(c, dish)) return true;
+  const target = cuisine.trim().toLowerCase();
+  const cleanTarget = target.replace(/[^a-z0-9]/g, "");
+  if (!cleanTarget || cleanTarget === "all" || cleanTarget === "food") return true;
+
+  const dishCat = (dish.categoryName || dish.foodCategory?.name || "").trim().toLowerCase();
+  const cleanCat = dishCat.replace(/[^a-z0-9]/g, "");
+
+  const dishSubCat = ((dish as any).subCategoryName || dish.foodSubCategory?.name || "").trim().toLowerCase();
+  const cleanSubCat = dishSubCat.replace(/[^a-z0-9]/g, "");
+
+  const dishName = (dish.name || "").trim().toLowerCase();
+
+  // 1. Direct Category Name Match (excluding generic 'food' or 'mess')
+  if (cleanCat && cleanCat !== "food" && cleanCat !== "mess") {
+    if (dishCat === target || cleanCat === cleanTarget) return true;
+    if (dishCat.length >= 3 && target.length >= 3) {
+      const regex = new RegExp(`\\b${escapeRegex(target)}\\b`, "i");
+      if (regex.test(dishCat)) return true;
+      const catRegex = new RegExp(`\\b${escapeRegex(dishCat)}\\b`, "i");
+      if (catRegex.test(target)) return true;
+    }
+  }
+
+  // 2. Direct Subcategory Name Match (excluding generic 'food' or 'mess')
+  if (cleanSubCat && cleanSubCat !== "food" && cleanSubCat !== "mess") {
+    if (dishSubCat === target || cleanSubCat === cleanTarget) return true;
+    if (dishSubCat.length >= 3 && target.length >= 3) {
+      const regex = new RegExp(`\\b${escapeRegex(target)}\\b`, "i");
+      if (regex.test(dishSubCat)) return true;
+      const subRegex = new RegExp(`\\b${escapeRegex(dishSubCat)}\\b`, "i");
+      if (subRegex.test(target)) return true;
+    }
+  }
+
+  // 3. ID matches if an ID was passed
+  if (dish.categoryId && dish.categoryId.toLowerCase() === target) return true;
+  if (dish.subCategoryId && dish.subCategoryId.toLowerCase() === target) return true;
+  if (dish.foodCategory?.id && dish.foodCategory.id.toLowerCase() === target) return true;
+  if (dish.foodSubCategory?.id && dish.foodSubCategory.id.toLowerCase() === target) return true;
+
+  // 4. Dish Name Whole-Word Match
+  if (dishName && cleanTarget.length >= 3) {
+    const wordPattern = new RegExp(`\\b${escapeRegex(target)}\\b`, "i");
+    if (wordPattern.test(dishName)) return true;
+
+    // Singular form match (e.g. 'burgers' -> 'burger', 'shakes' -> 'shake')
+    if (target.endsWith("s") && target.length > 3) {
+      const singular = target.slice(0, -1);
+      const singPattern = new RegExp(`\\b${escapeRegex(singular)}\\b`, "i");
+      if (singPattern.test(dishName)) return true;
+    }
+
+    // Plural form match (e.g. 'burger' -> 'burgers')
+    const plural = target + "s";
+    const plurPattern = new RegExp(`\\b${escapeRegex(plural)}\\b`, "i");
+    if (plurPattern.test(dishName)) return true;
+  }
+
   return false;
 }
 
 /**
- * Checks whether a kitchen serves the requested cuisine.
- * A kitchen matches IF AND ONLY IF:
- * 1. The kitchen has at least one dish matching the cuisine in its menu.
- * 2. OR the kitchen's declared category or kitchen name explicitly matches the cuisine.
+ * Checks whether a kitchen serves the requested cuisine or category.
+ * A kitchen matches IF AND ONLY IF it has at least one active menu item matching that category.
  */
 export function isKitchenServingCuisine(
   cuisine: string | null | undefined,
@@ -944,58 +892,55 @@ export function isKitchenServingCuisine(
     sellerName?: string | null;
     name?: string | null;
     categoryName?: string | null;
+    subCategoryName?: string | null;
     description?: string | null;
+    isAvailable?: boolean;
+    [key: string]: any;
   }>
 ): boolean {
   if (!cuisine || !cuisine.trim()) return true;
-  const c = cuisine.trim().toLowerCase();
+  const cleanCat = cuisine.trim().toLowerCase();
+  if (cleanCat === "all" || cleanCat === "food") return true;
 
-  // 1. Check actual child dishes of this kitchen
-  if (foodItems && foodItems.length > 0) {
-    const kId = (kitchen.id || "").toLowerCase().trim();
-    const kTracking = (kitchen.trackingId || "").toLowerCase().trim();
-    const kKitchenId = (kitchen.kitchenId || "").toLowerCase().trim();
-    const kName = (kitchen.name || "").toLowerCase().trim();
-
-    const kitchenDishes = foodItems.filter((f) => {
-      const fSellerId = (f.sellerId || "").toLowerCase().trim();
-      const fTracking = (f.sellerTrackingId || "").toLowerCase().trim();
-      const fSellerName = (f.sellerName || "").toLowerCase().trim();
-
-      const matchId = kId && fSellerId && (fSellerId === kId || fTracking === kId);
-      const matchTracking = kTracking && (fTracking === kTracking || fSellerId === kTracking);
-      const matchKitchenId = kKitchenId && (fSellerId === kKitchenId || fTracking === kKitchenId);
-      const matchCrossId =
-        (kId && fTracking && fTracking === kId) ||
-        (kTracking && fSellerId && fSellerId === kTracking);
-      const matchName = kName && fSellerName && (
-        kName === fSellerName ||
-        kName.includes(fSellerName) ||
-        fSellerName.includes(kName)
-      );
-
-      return matchId || matchTracking || matchKitchenId || matchCrossId || matchName;
-    });
-
-    if (kitchenDishes.length > 0) {
-      return kitchenDishes.some((dish) => isDishMatchingCuisine(c, dish));
-    }
+  // ONLY show exact kitchen that has items of that category!
+  if (!foodItems || foodItems.length === 0) {
+    return false;
   }
 
-  // 2. Fallback on kitchen category or kitchen name if no dishes loaded
-  const kCat = (kitchen.category || "").toLowerCase().trim();
+  const kId = (kitchen.id || "").toLowerCase().trim();
+  const kTracking = (kitchen.trackingId || "").toLowerCase().trim();
+  const kKitchenId = (kitchen.kitchenId || "").toLowerCase().trim();
   const kName = (kitchen.name || "").toLowerCase().trim();
-  if (kCat && (kCat.includes(c) || c.includes(kCat))) return true;
-  if (kName && (kName.includes(c) || c.includes(kName))) return true;
-  if (kitchen.category && matchesDishCategory(c, { name: kitchen.category, categoryName: kitchen.category })) return true;
 
-  return false;
+  // Find all active dishes belonging to this kitchen
+  const kitchenDishes = foodItems.filter((f) => {
+    if (f.isAvailable === false) return false;
+
+    const fSellerId = (f.sellerId || "").toLowerCase().trim();
+    const fTracking = (f.sellerTrackingId || "").toLowerCase().trim();
+    const fSellerName = (f.sellerName || "").toLowerCase().trim();
+
+    const matchId = kId && fSellerId && (fSellerId === kId || fTracking === kId);
+    const matchTracking = kTracking && (fTracking === kTracking || fSellerId === kTracking);
+    const matchKitchenId = kKitchenId && (fSellerId === kKitchenId || fTracking === kKitchenId);
+    const matchCrossId =
+      (kId && fTracking && fTracking === kId) ||
+      (kTracking && fSellerId && fSellerId === kTracking);
+    const matchName = kName && fSellerName && (
+      kName === fSellerName ||
+      kName.includes(fSellerName) ||
+      fSellerName.includes(kName)
+    );
+
+    return matchId || matchTracking || matchKitchenId || matchCrossId || matchName;
+  });
+
+  if (kitchenDishes.length === 0) {
+    return false;
+  }
+
+  return kitchenDishes.some((dish) => isDishMatchingCuisine(cuisine, dish));
 }
-
-/**
- * Returns offer details and badge text if a dish has active seller/item-specific offers, discounts, or coupons.
- * Evaluates all applicable item offers and selects the single BEST discount (maximum savings) for this item.
- */
 export function getDishOfferBadge(
   dish: {
     id?: string | null;

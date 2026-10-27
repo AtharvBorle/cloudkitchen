@@ -24,63 +24,12 @@ export interface PlaceCardData {
   distanceKm?: number;
 }
 
-const CUISINES = [
-  { id: "biryani", label: "Biryani & Mughlai" },
-  { id: "homemeals", label: "Homely Meals / Thali" },
-  { id: "italian", label: "Pizzas & Italian" },
-  { id: "healthy", label: "Healthy Bowls & Salads" },
-  { id: "bakery", label: "Bakery & Desserts" },
-  { id: "fastfood", label: "Burgers & Fast Food" },
-  { id: "chinese", label: "Chinese & Asian" },
-  { id: "south-indian", label: "South Indian" },
-];
-
-const CUISINE_KEYWORDS: Record<string, string[]> = {
-  biryani: ["biryani", "mughlai", "indian", "rice", "curry", "kebab", "tandoor", "tikka", "hyderabadi", "dum", "pulao"],
-  homemeals: ["mess", "homemeal", "thali", "maharashtrian", "roti", "chapati", "dal", "sabzi", "sabji", "lunch", "dinner", "tiffin", "bhaat", "pithla", "poli", "khichdi"],
-  italian: ["italian", "pizza", "pasta", "garlic bread", "lasagna", "calzone", "crust", "cheese", "margherita", "parmesan", "oregano"],
-  healthy: ["healthy", "salad", "salads", "organic", "bowl", "smoothie", "fruit", "diet", "sprouts", "oats", "greens", "juice", "avocado", "keto", "vegetable", "vegetables", "veggie", "veggies", "boiled", "steamed", "whole wheat", "wrap", "grilled paneer", "quinoa", "protein", "superfood", "nutritious"],
-  bakery: ["bakery", "cake", "dessert", "pastry", "brownie", "bread", "sweet", "croissant", "ice cream", "mousse", "cupcake", "donut", "cookies", "biscuit", "pie"],
-  fastfood: ["burger", "snack", "fast food", "fries", "sandwich", "wrap", "roll", "shawarma", "nuggets", "hot dog", "pao", "chaat", "samosa", "frankie"],
-  chinese: ["chinese", "noodle", "wok", "manchurian", "fried rice", "momos", "asian", "chilli", "schezwan", "hakka", "spring roll", "chowmein"],
-  "south-indian": ["south", "dosa", "idli", "vada", "uttapam", "sambar", "chutney", "appam", "medu vada", "mysore"],
-};
-
 function kitchenMatchesCuisine(
   kitchen: PlaceCardData,
   cuisineId: string,
   foodItems: Array<any> = []
 ): boolean {
-  if (isKitchenServingCuisine(cuisineId, kitchen, foodItems)) {
-    return true;
-  }
-  const keywords = CUISINE_KEYWORDS[cuisineId.toLowerCase().trim()] || [cuisineId.toLowerCase().trim()];
-  const kText = `${kitchen.name || ""} ${kitchen.category || ""}`.toLowerCase();
-
-  // 1. Direct kitchen category / name keyword match
-  if (keywords.some((kw) => kText.includes(kw))) {
-    return true;
-  }
-
-  // 2. Kitchen child dishes keyword match
-  const dishes = foodItems.filter((f) => {
-    const matchId = kitchen.id && f.sellerId && String(f.sellerId).toLowerCase() === String(kitchen.id).toLowerCase();
-    const matchTracking = kitchen.trackingId && f.sellerTrackingId && String(f.sellerTrackingId).toLowerCase() === String(kitchen.trackingId).toLowerCase();
-    const matchKitchenId = kitchen.kitchenId && (
-      (f.sellerId && String(f.sellerId).toLowerCase() === String(kitchen.kitchenId).toLowerCase()) ||
-      (f.sellerTrackingId && String(f.sellerTrackingId).toLowerCase() === String(kitchen.kitchenId).toLowerCase())
-    );
-    const matchCrossId =
-      (kitchen.id && f.sellerTrackingId && String(f.sellerTrackingId).toLowerCase() === String(kitchen.id).toLowerCase()) ||
-      (kitchen.trackingId && f.sellerId && String(f.sellerId).toLowerCase() === String(kitchen.trackingId).toLowerCase());
-    const matchName = kitchen.name && f.sellerName && kitchen.name.toLowerCase().trim() === f.sellerName.toLowerCase().trim();
-    return matchId || matchTracking || matchKitchenId || matchCrossId || matchName;
-  });
-
-  return dishes.some((dish) => {
-    const dText = `${dish.name || ""} ${dish.categoryName || ""} ${dish.description || ""}`.toLowerCase();
-    return keywords.some((kw) => dText.includes(kw));
-  });
+  return isKitchenServingCuisine(cuisineId, kitchen, foodItems);
 }
 
 function getKitchenDishes(kitchen: PlaceCardData, foodItems: Array<any> = []): Array<any> {
