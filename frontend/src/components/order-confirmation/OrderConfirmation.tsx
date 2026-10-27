@@ -65,6 +65,7 @@ interface ConfirmedOrderData {
   couponDiscountPercentage?: number;
   deliveryFee: number;
   taxes: number;
+  taxBreakdown?: any;
   grandTotal: number;
   sellerName?: string;
   deliveryPerson?: {
@@ -173,6 +174,13 @@ export default function OrderConfirmation({ orderIdProp }: OrderConfirmationProp
     const couponCode = appliedCoupon?.code || rawOrder.couponCode;
     const couponDiscountPercentage = appliedCoupon?.discountPercentage || rawOrder.couponDiscountPercentage;
 
+    let parsedTaxBreakdown: any = null;
+    try {
+      if (rawOrder.taxBreakdown) {
+        parsedTaxBreakdown = typeof rawOrder.taxBreakdown === "string" ? JSON.parse(rawOrder.taxBreakdown) : rawOrder.taxBreakdown;
+      }
+    } catch {}
+
     setOrderData({
       orderId: rawOrder.id,
       orderTime: dateStr,
@@ -189,13 +197,14 @@ export default function OrderConfirmation({ orderIdProp }: OrderConfirmationProp
       isPaid: Boolean(rawOrder.isPaid),
       rawPaymentMethod: rawOrder.paymentMethod || (rawOrder.isPaid ? "ONLINE" : "COD"),
       items: parsedItems,
-      subtotal: computedItemsSubtotal > 0 ? computedItemsSubtotal : finalTotal,
-      discount: computedDiscount,
+      subtotal: parsedTaxBreakdown ? parsedTaxBreakdown.productGross : (computedItemsSubtotal > 0 ? computedItemsSubtotal : finalTotal),
+      discount: parsedTaxBreakdown ? parsedTaxBreakdown.productDiscount : computedDiscount,
       couponCode,
       couponDiscountPercentage,
-      deliveryFee: 0,
-      taxes: 0,
-      grandTotal: finalTotal,
+      deliveryFee: parsedTaxBreakdown ? parsedTaxBreakdown.deliveryGross : 0,
+      taxes: parsedTaxBreakdown ? (parsedTaxBreakdown.productGst + parsedTaxBreakdown.deliveryGst) : 0,
+      taxBreakdown: parsedTaxBreakdown,
+      grandTotal: parsedTaxBreakdown ? parsedTaxBreakdown.grandTotal : finalTotal,
       sellerName: rawOrder.seller?.restaurantName || rawOrder.seller?.businessName,
       deliveryPerson: rawOrder.deliveryPerson,
     });
@@ -769,6 +778,49 @@ export default function OrderConfirmation({ orderIdProp }: OrderConfirmationProp
                       - ₹{orderData.discount.toLocaleString("en-IN")}
                     </span>
                   </div>
+                )}
+
+                {orderData.taxBreakdown && (
+                  <>
+                    <div className={styles.pricingRow} style={{ fontSize: "0.82rem", color: "#64748B" }}>
+                      <span>Product Taxable Value</span>
+                      <span>₹{orderData.taxBreakdown.productTaxable.toFixed(2)}</span>
+                    </div>
+                    <div className={styles.pricingRow} style={{ fontSize: "0.82rem", color: "#64748B" }}>
+                      <span>CGST ({orderData.taxBreakdown.productTaxRate / 2}%)</span>
+                      <span>₹{orderData.taxBreakdown.productCgst.toFixed(2)}</span>
+                    </div>
+                    <div className={styles.pricingRow} style={{ fontSize: "0.82rem", color: "#64748B" }}>
+                      <span>SGST ({orderData.taxBreakdown.productTaxRate / 2}%)</span>
+                      <span>₹{orderData.taxBreakdown.productSgst.toFixed(2)}</span>
+                    </div>
+
+                    {orderData.taxBreakdown.deliveryTotal > 0 && (
+                      <>
+                        <div className={styles.pricingRow}>
+                          <span>Delivery Charges</span>
+                          <span>₹{orderData.taxBreakdown.deliveryGross.toFixed(2)}</span>
+                        </div>
+                        <div className={styles.pricingRow} style={{ fontSize: "0.8rem", color: "#64748B", paddingLeft: "10px" }}>
+                          <span>Delivery GST ({orderData.taxBreakdown.deliveryTaxRate}%: CGST ₹{orderData.taxBreakdown.deliveryCgst.toFixed(2)} + SGST ₹{orderData.taxBreakdown.deliverySgst.toFixed(2)})</span>
+                          <span>₹{orderData.taxBreakdown.deliveryGst.toFixed(2)}</span>
+                        </div>
+                      </>
+                    )}
+
+                    <div style={{ margin: "4px 0", display: "flex", justifyContent: "flex-end" }}>
+                      <span style={{
+                        fontSize: "0.72rem",
+                        fontWeight: 700,
+                        padding: "2px 8px",
+                        borderRadius: "9999px",
+                        backgroundColor: orderData.taxBreakdown.taxMode === "TAX_INCLUSIVE" ? "#DCFCE7" : "#EFF6FF",
+                        color: orderData.taxBreakdown.taxMode === "TAX_INCLUSIVE" ? "#166534" : "#1E40AF"
+                      }}>
+                        {orderData.taxBreakdown.taxMode === "TAX_INCLUSIVE" ? "Tax Inclusive Pricing (GST included)" : "Tax Exclusive Pricing (GST added)"}
+                      </span>
+                    </div>
+                  </>
                 )}
 
                 <div className={styles.pricingTotalRow}>

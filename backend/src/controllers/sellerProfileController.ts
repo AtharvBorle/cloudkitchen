@@ -84,6 +84,8 @@ export const updateSellerProfile = async (req: Request) => {
     let operatingHoursReviewed: boolean | undefined;
     let operatingHours: string | undefined;
     let isReadinessCompleted: boolean | undefined;
+    let taxMode: string | undefined;
+    let deliveryCharge: number | undefined;
 
     if (contentType.includes("multipart/form-data")) {
         const formData = await req.formData();
@@ -113,6 +115,15 @@ export const updateSellerProfile = async (req: Request) => {
         if (formData.get("operatingHoursReviewed") !== null) operatingHoursReviewed = formData.get("operatingHoursReviewed") === "true";
         if (formData.get("operatingHours") !== null) operatingHours = formData.get("operatingHours") as string;
         if (formData.get("isReadinessCompleted") !== null) isReadinessCompleted = formData.get("isReadinessCompleted") === "true";
+        if (formData.get("taxMode") !== null) {
+            const rawTaxMode = (formData.get("taxMode") as string).trim();
+            if (rawTaxMode === "TAX_EXCLUSIVE" || rawTaxMode === "TAX_INCLUSIVE") taxMode = rawTaxMode;
+        }
+        const rawDeliveryCharge = formData.get("deliveryCharge") || formData.get("deliveryFee");
+        if (rawDeliveryCharge !== null && rawDeliveryCharge !== undefined && rawDeliveryCharge !== "") {
+            const parsed = parseFloat(String(rawDeliveryCharge).replace(/[^0-9.]/g, ""));
+            if (!isNaN(parsed) && parsed >= 0) deliveryCharge = parsed;
+        }
         bannerImageFile = formData.get("bannerImageFile") as File | null;
         cardImageFile = (formData.get("cardImageFile") || formData.get("kitchenImageFile") || formData.get("cardGridImageFile")) as File | null;
         if (formData.get("removeCardImage") === "true") removeCardImage = true;
@@ -154,6 +165,15 @@ export const updateSellerProfile = async (req: Request) => {
         if (body.operatingHoursReviewed !== undefined) operatingHoursReviewed = Boolean(body.operatingHoursReviewed);
         if (body.operatingHours !== undefined) operatingHours = typeof body.operatingHours === "string" ? body.operatingHours : JSON.stringify(body.operatingHours);
         if (body.isReadinessCompleted !== undefined) isReadinessCompleted = Boolean(body.isReadinessCompleted);
+        if (body.taxMode !== undefined) {
+            const rawTax = String(body.taxMode).trim();
+            if (rawTax === "TAX_EXCLUSIVE" || rawTax === "TAX_INCLUSIVE") taxMode = rawTax;
+        }
+        const rawCharge = body.deliveryCharge !== undefined ? body.deliveryCharge : body.deliveryFee;
+        if (rawCharge !== undefined && rawCharge !== null && rawCharge !== "") {
+            const parsed = parseFloat(String(rawCharge).replace(/[^0-9.]/g, ""));
+            if (!isNaN(parsed) && parsed >= 0) deliveryCharge = parsed;
+        }
         if (body.removeCardImage) removeCardImage = true;
         if (body.removeBannerImage) removeBannerImage = true;
     }
@@ -266,6 +286,12 @@ export const updateSellerProfile = async (req: Request) => {
     }
     if (isReadinessCompleted !== undefined) {
         profileUpdateData.isReadinessCompleted = isReadinessCompleted;
+    }
+    if (taxMode !== undefined) {
+        profileUpdateData.taxMode = taxMode;
+    }
+    if (deliveryCharge !== undefined && !isNaN(deliveryCharge)) {
+        profileUpdateData.deliveryCharge = deliveryCharge;
     }
 
     const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB

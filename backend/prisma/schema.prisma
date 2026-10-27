@@ -49,6 +49,8 @@ model SellerProfile {
   deliveryRadiusReviewed     Boolean          @default(false)
   operatingHoursReviewed     Boolean          @default(false)
   operatingHours             String?          @default("[]")
+  taxMode                    String           @default("TAX_INCLUSIVE")
+  deliveryCharge             Float            @default(50.0)
   isReadinessCompleted       Boolean          @default(false)
   kitchenImages              String           @default("[]")
   cuisineImages              String           @default("[]")
@@ -174,6 +176,11 @@ model Order {
   razorpayOrderId      String?               @unique
   razorpayPaymentId    String?               @unique
   appliedCouponId      String?
+  taxMode              String                @default("TAX_INCLUSIVE")
+  productTaxRate       Float                 @default(5.0)
+  deliveryTaxRate      Float                 @default(18.0)
+  deliveryCharge       Float                 @default(0.0)
+  taxBreakdown         String?               @default("{}")
   cancelledBy          String?
   cancellationReason   String?
   createdAt            DateTime              @default(now())

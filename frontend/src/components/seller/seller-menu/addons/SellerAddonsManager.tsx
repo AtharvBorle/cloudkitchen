@@ -761,7 +761,7 @@ export default function SellerAddonsManager() {
                       type="number"
                       required
                       min="0.01"
-                      step="0.5"
+                      step="any"
                       value={formPrice}
                       onChange={(e) => setFormPrice(e.target.value)}
                       className={styles.formInput}

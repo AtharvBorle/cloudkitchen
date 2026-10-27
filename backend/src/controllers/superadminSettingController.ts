@@ -22,7 +22,9 @@ export const getSystemSetting = async (req: Request) => {
             MAINTENANCE_MODE: "false",
             AUTO_ASSIGN_DELIVERY: "true",
             ENABLE_ROOM_MODULE: "false",
-            ENABLE_CHATBOT: "true"
+            ENABLE_CHATBOT: "true",
+            PRODUCT_TAX_RATE: "5",
+            DELIVERY_TAX_RATE: "18"
         };
         for (const s of allSettings) {
             settingsMap[s.key] = s.value;
@@ -49,6 +51,14 @@ export const getSystemSetting = async (req: Request) => {
         return { key, value: "true" };
     }
 
+    if (!setting && key === "PRODUCT_TAX_RATE") {
+        return { key, value: "5" };
+    }
+
+    if (!setting && key === "DELIVERY_TAX_RATE") {
+        return { key, value: "18" };
+    }
+
     return setting || { key, value: null };
 };
 
@@ -64,18 +74,36 @@ export const getPublicSystemSettings = async () => {
         });
         const isChatbotEnabled = botSetting ? botSetting.value !== "false" : true;
 
+        const productTaxSetting = await db.systemSettings.findUnique({
+            where: { key: "PRODUCT_TAX_RATE" }
+        });
+        const productTaxRate = productTaxSetting ? parseFloat(productTaxSetting.value) || 5 : 5;
+
+        const deliveryTaxSetting = await db.systemSettings.findUnique({
+            where: { key: "DELIVERY_TAX_RATE" }
+        });
+        const deliveryTaxRate = deliveryTaxSetting ? parseFloat(deliveryTaxSetting.value) || 18 : 18;
+
         return {
             isRoomEnabled,
             ENABLE_ROOM_MODULE: isRoomEnabled ? "true" : "false",
             isChatbotEnabled,
-            ENABLE_CHATBOT: isChatbotEnabled ? "true" : "false"
+            ENABLE_CHATBOT: isChatbotEnabled ? "true" : "false",
+            productTaxRate,
+            deliveryTaxRate,
+            PRODUCT_TAX_RATE: productTaxRate.toString(),
+            DELIVERY_TAX_RATE: deliveryTaxRate.toString()
         };
     } catch (e) {
         return {
             isRoomEnabled: false,
             ENABLE_ROOM_MODULE: "false",
             isChatbotEnabled: true,
-            ENABLE_CHATBOT: "true"
+            ENABLE_CHATBOT: "true",
+            productTaxRate: 5,
+            deliveryTaxRate: 18,
+            PRODUCT_TAX_RATE: "5",
+            DELIVERY_TAX_RATE: "18"
         };
     }
 };

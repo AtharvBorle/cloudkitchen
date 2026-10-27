@@ -227,7 +227,7 @@ export default function CreateAddonModal({
               <input
                 type="number"
                 min="0.01"
-                step="0.5"
+                step="any"
                 placeholder="e.g. 15"
                 value={formPrice}
                 onChange={(e) => setFormPrice(e.target.value)}

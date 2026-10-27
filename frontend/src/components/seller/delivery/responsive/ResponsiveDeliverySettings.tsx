@@ -80,7 +80,10 @@ export const ResponsiveDeliverySettings: React.FC<
     if (seller.deliveryRadiusKm && initialSettings.deliveryRadiusKm === undefined) {
       setDeliveryRadiusKm(seller.deliveryRadiusKm);
     }
-  }, [seller.deliveryRadiusKm, initialSettings]);
+    if (seller.deliveryCharge !== undefined && initialSettings.deliveryFee === undefined) {
+      setDeliveryFee(`₹${seller.deliveryCharge}`);
+    }
+  }, [seller.deliveryRadiusKm, seller.deliveryCharge, initialSettings]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -124,14 +127,15 @@ export const ResponsiveDeliverySettings: React.FC<
     }
 
     try {
+      const parsedFee = parseFloat(String(deliveryFee).replace(/[^0-9.]/g, "")) || 0;
       await fetchApi("/api/seller/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ deliveryRadiusKm }),
+        body: JSON.stringify({ deliveryRadiusKm, deliveryCharge: parsedFee }),
       });
-      updateCachedProfile({ deliveryRadiusKm });
+      updateCachedProfile({ deliveryRadiusKm, deliveryCharge: parsedFee });
     } catch (err) {
-      console.error("Failed to persist delivery radius:", err);
+      console.error("Failed to persist delivery radius and fee:", err);
     }
 
     if (onSave) {
