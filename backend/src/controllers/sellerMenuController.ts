@@ -272,9 +272,8 @@ export const createMenuItem = async (req: Request) => {
         throw new ApiError("Description is required", 400);
     }
     const cleanDesc = description.replace(/^\(Serves\s*[1-4]\)\s*/i, '').replace(/^\[Serves:\s*[1-4]\]\s*/i, '').trim();
-    const descWords = cleanDesc ? cleanDesc.split(/\s+/).filter(Boolean).length : 0;
-    if (descWords > 50) {
-        throw new ApiError("Description must not exceed 50 words", 400);
+    if (cleanDesc.length > 50) {
+        throw new ApiError("Description must not exceed 50 characters", 400);
     }
 
     const rawAddons = (formData.get("addons") as string | null) || (formData.get("variants") as string | null);
@@ -450,9 +449,8 @@ export const updateMenuItem = async (req: Request, id: string) => {
         if (name !== null) dataToUpdate.name = name.trim();
         if (description !== null) {
             const cleanDesc = description.replace(/^\(Serves\s*[1-4]\)\s*/i, '').replace(/^\[Serves:\s*[1-4]\]\s*/i, '').trim();
-            const descWords = cleanDesc ? cleanDesc.split(/\s+/).filter(Boolean).length : 0;
-            if (descWords > 50) {
-                throw new ApiError("Description must not exceed 50 words", 400);
+            if (cleanDesc.length > 50) {
+                throw new ApiError("Description must not exceed 50 characters", 400);
             }
             dataToUpdate.description = description;
         }
@@ -526,9 +524,8 @@ export const updateMenuItem = async (req: Request, id: string) => {
             const rawDesc = body.comment !== undefined ? body.comment : body.description;
             if (typeof rawDesc === "string") {
                 const cleanDesc = rawDesc.replace(/^\(Serves\s*[1-4]\)\s*/i, '').replace(/^\[Serves:\s*[1-4]\]\s*/i, '').trim();
-                const descWords = cleanDesc ? cleanDesc.split(/\s+/).filter(Boolean).length : 0;
-                if (descWords > 50) {
-                    throw new ApiError("Description must not exceed 50 words", 400);
+                if (cleanDesc.length > 50) {
+                    throw new ApiError("Description must not exceed 50 characters", 400);
                 }
             }
             dataToUpdate.description = rawDesc;
