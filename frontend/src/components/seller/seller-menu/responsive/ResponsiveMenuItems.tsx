@@ -142,7 +142,7 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
   });
   const [description, setDescription] = useState(() => {
     if (!initialDescription) return "";
-    return initialDescription.replace(/^\(Serves\s*[1-4]\)\s*/i, '').replace(/^\[Serves:\s*[1-4]\]\s*/i, '').trim();
+    return initialDescription.replace(/^\(Serves\s*[1-4]\)\s*/i, '').replace(/^\[Serves:\s*[1-4]\]\s*/i, '').trim().slice(0, 50);
   });
   const [variants, setVariants] = useState<ResponsiveVariantItem[]>(initialVariants);
   const [schedules, setSchedules] = useState<ResponsiveDaySchedule[]>(initialSchedules);
@@ -272,9 +272,8 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
     }
 
     const cleanDescForValidation = description.replace(/^\(Serves\s*[1-4]\)\s*/i, '').replace(/^\[Serves:\s*[1-4]\]\s*/i, '').trim();
-    const descWordCount = cleanDescForValidation ? cleanDescForValidation.split(/\s+/).filter(Boolean).length : 0;
-    if (descWordCount > 50) {
-      alert(`Description must not exceed 50 words. Currently ${descWordCount} words.`);
+    if (cleanDescForValidation.length > 50) {
+      alert(`Description must not exceed 50 characters. Currently ${cleanDescForValidation.length} characters.`);
       return;
     }
 
@@ -588,11 +587,10 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
                 Description <span style={{ color: "#EF4444" }}>*</span>
               </label>
               {(() => {
-                const clean = description.replace(/^\(Serves\s*[1-4]\)\s*/i, '').replace(/^\[Serves:\s*[1-4]\]\s*/i, '').trim();
-                const count = clean ? clean.split(/\s+/).filter(Boolean).length : 0;
+                const count = description.length;
                 return (
-                  <span style={{ fontSize: '0.74rem', color: count > 50 ? '#EF4444' : '#64748B', fontWeight: count > 50 ? '700' : '500' }}>
-                    {count}/50 words
+                  <span style={{ fontSize: '0.74rem', color: count >= 50 ? '#EF4444' : '#64748B', fontWeight: count >= 50 ? '700' : '500' }}>
+                    {count}/50 characters
                   </span>
                 );
               })()}
@@ -601,9 +599,10 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
               id="descInput"
               className={styles.textAreaInput}
               rows={3}
+              maxLength={50}
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Rich and creamy tomato-based curry with succulent chicken tandoori pieces cooked in butter and aromatic spices."
+              onChange={(e) => setDescription(e.target.value.slice(0, 50))}
+              placeholder="Rich and creamy tomato-based curry (max 50 characters)"
               required
             />
           </div>

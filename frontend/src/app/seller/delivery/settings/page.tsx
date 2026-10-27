@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { SellerResponsiveWrapper } from "@/components/seller";
 import ResponsiveDeliverySettingsPage from "@/app/seller/res/delivery/settings/page";
+import DeliverySettingsDas from "@/components/seller/delivery/manage_rider/DeliverySettingsDas";
 
 export const metadata: Metadata = {
   title: "Delivery Settings | Neo Cloud Kitchen",
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
 export default function SellerDeliverySettingsPage() {
   return (
     <SellerResponsiveWrapper
-      desktop={<ResponsiveDeliverySettingsPage />}
+      desktop={<DeliverySettingsDas />}
       mobile={<ResponsiveDeliverySettingsPage />}
     />
   );
