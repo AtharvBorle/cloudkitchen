@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Navbar } from "@/components/navbar";
 import { useLocation } from "@/components/location-provider";
-import { calculateDistanceKm, formatDistance, getPincodeCoordinates, resolveLocationCoordinates } from "@/lib/geo-distance";
+import { calculateDistanceKm, formatDistance, getPincodeCoordinates, resolveLocationCoordinates, resolveUserCoordinates, resolveSellerCoordinates, getUnifiedDeliveryDistance, calculateDeliveryTime } from "@/lib/geo-distance";
 import { FoodHeroBanner } from "@/components/restaurant-desktop/foodherobanner";
 import { PopularFood } from "@/components/restaurant-desktop/popularfood";
 import { SubscriptionPlans, PlanItem, SubscribeModal, SubscribeModalPlan } from "@/components/restaurant-desktop/subscriptionplans";
@@ -78,90 +78,17 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
   
   // User active location coordinates
   const userCoordinates = useMemo(() => {
-    let lat: number | null = null;
-    let lng: number | null = null;
-
-    if (typeof window !== "undefined") {
-      try {
-        const storedLat = localStorage.getItem("guest-lat");
-        const storedLng = localStorage.getItem("guest-lng");
-        if (storedLat && storedLng) {
-          const parsedLat = parseFloat(storedLat);
-          const parsedLng = parseFloat(storedLng);
-          if (!isNaN(parsedLat) && !isNaN(parsedLng) && (parsedLat !== 0 || parsedLng !== 0)) {
-            lat = parsedLat;
-            lng = parsedLng;
-          }
-        }
-      } catch {}
-    }
-
-    if (lat === null || lng === null) {
-      if (defaultAddress?.latitude != null && defaultAddress?.longitude != null) {
-        const defLat = Number(defaultAddress.latitude);
-        const defLng = Number(defaultAddress.longitude);
-        if (!isNaN(defLat) && !isNaN(defLng) && (defLat !== 0 || defLng !== 0)) {
-          lat = defLat;
-          lng = defLng;
-        }
-      }
-    }
-
-    if (lat === null || lng === null) {
-      const pin =
-        (typeof window !== "undefined"
-          ? localStorage.getItem("active-selected-pincode") || localStorage.getItem("guest-pincode")
-          : null) || defaultAddress?.pincode;
-      if (pin) {
-        const pinCoords = getPincodeCoordinates(pin);
-        if (pinCoords) {
-          lat = pinCoords.lat;
-          lng = pinCoords.lng;
-        }
-      }
-    }
-
-    if (lat === null || lng === null) {
-      const loc =
-        (typeof window !== "undefined" ? localStorage.getItem("guest-locality") : null) ||
-        defaultAddress?.locality;
-      if (loc) {
-        const locCoords = resolveLocationCoordinates(loc);
-        if (locCoords) {
-          lat = locCoords.lat;
-          lng = locCoords.lng;
-        }
-      }
-    }
-
-    return { lat, lng };
+    const coords = resolveUserCoordinates(defaultAddress);
+    return { lat: coords?.lat ?? null, lng: coords?.lng ?? null };
   }, [defaultAddress]);
 
-  // Dynamic distance text from active user location to this kitchen
-  const dynamicDistanceText = useMemo(() => {
-    if (!userCoordinates.lat || !userCoordinates.lng) return kitchenData.distanceText || "";
+  // Dynamic distance and dynamic delivery time from active user location to this kitchen
+  const dynamicDeliveryInfo = useMemo(() => {
+    return getUnifiedDeliveryDistance(defaultAddress, kitchenData);
+  }, [defaultAddress, kitchenData]);
 
-    const kLat =
-      kitchenData.latitude != null && !isNaN(Number(kitchenData.latitude)) && Number(kitchenData.latitude) !== 0
-        ? Number(kitchenData.latitude)
-        : (kitchenData.pincode ? getPincodeCoordinates(kitchenData.pincode)?.lat : null) ??
-          (kitchenData.location ? resolveLocationCoordinates(kitchenData.location)?.lat : null) ??
-          null;
-
-    const kLng =
-      kitchenData.longitude != null && !isNaN(Number(kitchenData.longitude)) && Number(kitchenData.longitude) !== 0
-        ? Number(kitchenData.longitude)
-        : (kitchenData.pincode ? getPincodeCoordinates(kitchenData.pincode)?.lng : null) ??
-          (kitchenData.location ? resolveLocationCoordinates(kitchenData.location)?.lng : null) ??
-          null;
-
-    if (kLat !== null && kLng !== null) {
-      const dist = calculateDistanceKm(userCoordinates.lat, userCoordinates.lng, kLat, kLng);
-      return formatDistance(dist);
-    }
-
-    return kitchenData.distanceText || "";
-  }, [userCoordinates, kitchenData.latitude, kitchenData.longitude, kitchenData.pincode, kitchenData.location, kitchenData.distanceText]);
+  const dynamicDistanceText = dynamicDeliveryInfo.distanceText || kitchenData.distanceText || "";
+  const dynamicDeliveryTime = dynamicDeliveryInfo.deliveryTimeText || kitchenData.deliveryTime || "20-25 min";
 
   const computedSubscriptionPlans = useMemo(() => {
     return subscriptionPlans.map((plan) => {
@@ -578,10 +505,31 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
               trackingId: liveData.trackingId || prev.trackingId || kitchenId,
               restaurantName:
                 liveData.businessName || liveData.user?.name || prev.restaurantName || "Cloud Kitchen",
-              location:
-                liveData.addressLocality ||
-                liveData.addressCity ||
-                (liveData.user?.addressLocality ? `${liveData.user.addressLocality}, ${liveData.user.addressCity || "Pune"}` : prev.location || "Pune, Maharashtra"),
+              location: (() => {
+                const flat = (liveData.addressFlat || "").trim();
+                const loc = (liveData.addressLocality || "").trim();
+                const landmark = (liveData.addressLandmark || "").trim();
+                const parts: string[] = [];
+                if (flat) parts.push(flat);
+                if (landmark && !flat.toLowerCase().includes(landmark.toLowerCase()) && !loc.toLowerCase().includes(landmark.toLowerCase())) {
+                  parts.push(landmark);
+                }
+                if (loc) {
+                  if (!flat || !loc.toLowerCase().includes(flat.toLowerCase())) {
+                    parts.push(loc);
+                  } else {
+                    parts.push(loc);
+                  }
+                }
+                if (parts.length > 0) return parts.join(", ");
+                return (
+                  liveData.addressCity ||
+                  (liveData.user?.addressLocality ? `${liveData.user.addressLocality}, ${liveData.user.addressCity || "Pune"}` : prev.location || "Pune, Maharashtra")
+                );
+              })(),
+              latitude: sellerLat,
+              longitude: sellerLng,
+              pincode: sellerPincode,
               rating: computedSellerRating,
               reviewsCount: computedReviewsText,
               deliveryTime: liveData.deliveryTime || prev.deliveryTime || "25-35 min",
@@ -1002,7 +950,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
             location={kitchenData.location}
             rating={kitchenData.rating}
             reviewsCount={kitchenData.reviewsCount}
-            deliveryTime={kitchenData.deliveryTime}
+            deliveryTime={dynamicDeliveryTime}
             deliveryFeeText={kitchenData.deliveryFeeText}
             dietType={kitchenData.dietType}
             offerText={kitchenData.offerText}
@@ -1095,6 +1043,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
           kitchenData={{
             ...kitchenData,
             distanceText: dynamicDistanceText || kitchenData.distanceText,
+            deliveryTime: dynamicDeliveryTime,
             items: displayedItems,
           }}
           isVegOnly={isVegOnly}

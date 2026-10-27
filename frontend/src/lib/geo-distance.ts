@@ -315,3 +315,202 @@ export function formatShortDeliveryLocation(addr?: LocationAddressInput | null, 
 
   return finalStr || (pin ? `PIN ${pin}` : "Select Location");
 }
+
+/**
+ * Calculates dynamic delivery time based on distance.
+ * Realistic delivery estimation for cloud kitchens:
+ * - Prep time: 10-15 mins
+ * - Travel time: ~4-5 mins/km
+ */
+export function calculateDeliveryTime(distanceKm?: number | null): string {
+  if (distanceKm === undefined || distanceKm === null || isNaN(distanceKm) || distanceKm <= 0) {
+    return "20-25 min";
+  }
+  if (distanceKm <= 1.2) {
+    return "15-20 min";
+  }
+  if (distanceKm <= 2.5) {
+    return "20-25 min";
+  }
+  if (distanceKm <= 4.0) {
+    return "25-30 min";
+  }
+  if (distanceKm <= 5.5) {
+    return "30-40 min";
+  }
+  return "40-50 min";
+}
+
+/**
+ * Resolves user coordinates consistently across all pages (Explore, Restaurant, Cart, Checkout).
+ */
+export function resolveUserCoordinates(defaultAddress?: any): { lat: number; lng: number } | null {
+  if (defaultAddress && typeof defaultAddress.lat === "number" && typeof defaultAddress.lng === "number") {
+    if (!isNaN(defaultAddress.lat) && !isNaN(defaultAddress.lng) && (defaultAddress.lat !== 0 || defaultAddress.lng !== 0)) {
+      return { lat: defaultAddress.lat, lng: defaultAddress.lng };
+    }
+  }
+
+  // 1. If user has explicitly selected/saved coordinates in localStorage
+  if (typeof window !== "undefined") {
+    try {
+      const hasSelected =
+        localStorage.getItem("user-manually-selected-location") === "true" ||
+        localStorage.getItem("user-has-selected-location") === "true";
+
+      const storedLat = localStorage.getItem("guest-lat");
+      const storedLng = localStorage.getItem("guest-lng");
+
+      if (hasSelected && storedLat && storedLng) {
+        const pLat = parseFloat(storedLat);
+        const pLng = parseFloat(storedLng);
+        if (!isNaN(pLat) && !isNaN(pLng) && (pLat !== 0 || pLng !== 0)) {
+          return { lat: pLat, lng: pLng };
+        }
+      }
+    } catch {}
+  }
+
+  // 2. Default address coordinates
+  if (defaultAddress) {
+    const dLat = Number(defaultAddress.latitude);
+    const dLng = Number(defaultAddress.longitude);
+    if (!isNaN(dLat) && !isNaN(dLng) && (dLat !== 0 || dLng !== 0)) {
+      return { lat: dLat, lng: dLng };
+    }
+  }
+
+  // 3. Stored GPS coordinates even without explicit flag
+  if (typeof window !== "undefined") {
+    try {
+      const storedLat = localStorage.getItem("guest-lat");
+      const storedLng = localStorage.getItem("guest-lng");
+      if (storedLat && storedLng) {
+        const pLat = parseFloat(storedLat);
+        const pLng = parseFloat(storedLng);
+        if (!isNaN(pLat) && !isNaN(pLng) && (pLat !== 0 || pLng !== 0)) {
+          return { lat: pLat, lng: pLng };
+        }
+      }
+    } catch {}
+  }
+
+  // 4. Pincode centroid (from active localStorage pin or defaultAddress pincode)
+  const pin =
+    (typeof window !== "undefined"
+      ? localStorage.getItem("active-selected-pincode") || localStorage.getItem("guest-pincode")
+      : null) || defaultAddress?.pincode;
+
+  if (pin) {
+    const pinCoords = getPincodeCoordinates(pin);
+    if (pinCoords) return { lat: pinCoords.lat, lng: pinCoords.lng };
+  }
+
+  // 5. Locality text match
+  const loc =
+    (typeof window !== "undefined" ? localStorage.getItem("guest-locality") : null) ||
+    defaultAddress?.locality ||
+    defaultAddress?.street;
+
+  if (loc) {
+    const locCoords = resolveLocationCoordinates(loc);
+    if (locCoords) return { lat: locCoords.lat, lng: locCoords.lng };
+  }
+
+  return null;
+}
+
+/**
+ * Resolves seller / kitchen coordinates consistently across all pages.
+ */
+export function resolveSellerCoordinates(seller: any): { lat: number; lng: number } | null {
+  if (!seller) return null;
+
+  if (typeof seller.lat === "number" && typeof seller.lng === "number") {
+    if (!isNaN(seller.lat) && !isNaN(seller.lng) && (seller.lat !== 0 || seller.lng !== 0)) {
+      return { lat: seller.lat, lng: seller.lng };
+    }
+  }
+
+  // 1. Direct latitude / longitude on seller or seller.user
+  const rawLat =
+    seller.latitude ??
+    seller.sellerLatitude ??
+    seller.user?.latitude;
+  const rawLng =
+    seller.longitude ??
+    seller.sellerLongitude ??
+    seller.user?.longitude;
+
+  if (rawLat != null && rawLng != null) {
+    const lat = Number(rawLat);
+    const lng = Number(rawLng);
+    if (!isNaN(lat) && !isNaN(lng) && (lat !== 0 || lng !== 0)) {
+      return { lat, lng };
+    }
+  }
+
+  // 2. Pincode lookup
+  const pin =
+    seller.pincode ||
+    seller.sellerPincode ||
+    seller.addressPincode ||
+    seller.user?.addressPincode ||
+    seller.user?.pincode ||
+    (Array.isArray(seller.servedPincodes) && (seller.servedPincodes[0]?.pincode || seller.servedPincodes[0]));
+
+  if (pin) {
+    const pinCoords = getPincodeCoordinates(pin);
+    if (pinCoords) return { lat: pinCoords.lat, lng: pinCoords.lng };
+  }
+
+  // 3. Locality text lookup
+  const locText =
+    seller.addressLocality ||
+    seller.sellerLocality ||
+    seller.location ||
+    seller.fullAddress ||
+    seller.user?.addressLocality ||
+    seller.addressCity ||
+    seller.user?.addressCity;
+
+  if (locText) {
+    const locCoords = resolveLocationCoordinates(locText);
+    if (locCoords) return { lat: locCoords.lat, lng: locCoords.lng };
+  }
+
+  return null;
+}
+
+/**
+ * Unified delivery distance and dynamic delivery time calculator.
+ */
+export function getUnifiedDeliveryDistance(
+  user: any,
+  seller: any
+): {
+  distanceKm: number | null;
+  distanceText: string;
+  deliveryTimeText: string;
+} {
+  const userCoords = resolveUserCoordinates(user);
+  const sellerCoords = resolveSellerCoordinates(seller);
+
+  if (!userCoords || !sellerCoords) {
+    return {
+      distanceKm: null,
+      distanceText: "",
+      deliveryTimeText: "20-25 min",
+    };
+  }
+
+  const distanceKm = calculateDistanceKm(userCoords.lat, userCoords.lng, sellerCoords.lat, sellerCoords.lng);
+  const distanceText = formatDistance(distanceKm);
+  const deliveryTimeText = calculateDeliveryTime(distanceKm);
+
+  return {
+    distanceKm,
+    distanceText,
+    deliveryTimeText,
+  };
+}
