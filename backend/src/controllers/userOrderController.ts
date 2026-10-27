@@ -12,6 +12,7 @@ import { cancelExpiredOrder, isOrderExpired, revertCouponUsageFloorZero } from "
 import { enrichOrderWithEta } from "@/lib/order-eta";
 import { sendOrderPlacedNotification, sendOrderStatusNotification, sendRefundInitiatedEmail } from "@/lib/emailService";
 import { sendCouponExpiryReport } from "@/lib/subscriptionNotificationService";
+import { calculateOrderTax } from "@/lib/tax-calculator";
 
 export const validateDeliveryCoverage = async ({
     sellerProfile,
@@ -812,8 +813,28 @@ export const createOrder = async (req: Request) => {
     });
 
     const authoritativeSubtotal = itemsWithAuthoritativeSnapshots.reduce((acc: number, it: any) => acc + (it.price * it.quantity), 0);
-    const finalOrderTotal = Math.max(0, authoritativeSubtotal - effectiveCouponDiscount);
-    const finalStoredTotal = !isOnlinePayment ? finalOrderTotal : Number(totalAmount);
+
+    const productTaxSetting = await db.systemSettings.findUnique({ where: { key: "PRODUCT_TAX_RATE" } });
+    const productTaxRate = productTaxSetting ? parseFloat(productTaxSetting.value) || 5.0 : 5.0;
+
+    const deliveryTaxSetting = await db.systemSettings.findUnique({ where: { key: "DELIVERY_TAX_RATE" } });
+    const deliveryTaxRate = deliveryTaxSetting ? parseFloat(deliveryTaxSetting.value) || 18.0 : 18.0;
+
+    const sellerTaxMode = (sellerProfile as any).taxMode || "TAX_INCLUSIVE";
+    const sellerDeliveryCharge = typeof (sellerProfile as any).deliveryCharge === "number"
+        ? (sellerProfile as any).deliveryCharge
+        : 50.0;
+
+    const taxCalculation = calculateOrderTax({
+        items: itemsWithAuthoritativeSnapshots,
+        sellerTaxMode,
+        productTaxRate,
+        deliveryTaxRate,
+        deliveryCharge: sellerDeliveryCharge,
+        orderCouponDiscount: effectiveCouponDiscount,
+    });
+
+    const finalStoredTotal = !isOnlinePayment ? taxCalculation.grandTotal : Number(totalAmount);
 
     const shortOrderId = crypto.randomBytes(4).toString("hex");
 
@@ -879,6 +900,11 @@ export const createOrder = async (req: Request) => {
                 appliedCouponId: validatedCoupon ? validatedCoupon.id : (appliedCouponId || null),
                 razorpayOrderId: isOnlinePayment ? razorpay_order_id : null,
                 razorpayPaymentId: isOnlinePayment ? razorpay_payment_id : null,
+                taxMode: sellerTaxMode,
+                productTaxRate: productTaxRate,
+                deliveryTaxRate: deliveryTaxRate,
+                deliveryCharge: sellerDeliveryCharge,
+                taxBreakdown: JSON.stringify(taxCalculation),
             }
         });
 

@@ -31,6 +31,7 @@ import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/explore-desktop/footer";
 import { fetchApi } from "@/lib/fetch-api";
 import { useLiveShopStream } from "@/hooks/useLiveShopStream";
+import { calculateOrderTax, TaxCalculationResult } from "@/lib/tax-calculator";
 import styles from "./UserCart.module.css";
 
 export interface UserCartItem {
@@ -1783,7 +1784,50 @@ export const UserCart: React.FC<UserCartProps> = ({
   };
   const deliveryFee = 0;
   const taxesAndCharges = 0;
-  const grandTotal = Math.max(0, subtotal - discountAmount);
+    const [platformTaxRates, setPlatformTaxRates] = useState<{ productTaxRate: number; deliveryTaxRate: number }>({
+    productTaxRate: 5.0,
+    deliveryTaxRate: 18.0,
+  });
+
+  useEffect(() => {
+    fetchApi("/api/public/settings")
+      .then(res => res.json())
+      .then(data => {
+        const payload = data.data || data;
+        if (payload) {
+          setPlatformTaxRates({
+            productTaxRate: typeof payload.productTaxRate === "number" ? payload.productTaxRate : 5.0,
+            deliveryTaxRate: typeof payload.deliveryTaxRate === "number" ? payload.deliveryTaxRate : 18.0,
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const taxCalc = React.useMemo(() => {
+    const sellerTaxMode = sellerDetails?.taxMode || "TAX_INCLUSIVE";
+    const sellerDeliveryCharge = typeof sellerDetails?.deliveryCharge === "number"
+      ? sellerDetails.deliveryCharge
+      : 50.0;
+
+    return calculateOrderTax({
+      items: cartItems.map(it => ({
+        id: it.id,
+        foodItemId: it.foodItemId,
+        name: it.name,
+        quantity: it.qty,
+        price: it.price,
+      })),
+      sellerTaxMode,
+      productTaxRate: platformTaxRates.productTaxRate,
+      deliveryTaxRate: platformTaxRates.deliveryTaxRate,
+      deliveryCharge: sellerDeliveryCharge,
+      orderCouponDiscount: discountAmount,
+      eligibleItemIds: couponCategoryDetails?.matchingItems ? couponCategoryDetails.matchingItems.map(it => it.foodItemId || it.id) : undefined,
+    });
+  }, [cartItems, sellerDetails, platformTaxRates, discountAmount, couponCategoryDetails]);
+
+  const grandTotal = taxCalc.grandTotal;
 
   // Suggest the closest unlockable coupon where minimumCartValue > subtotal
   const unlockableCouponSuggestion = React.useMemo(() => {
@@ -2732,13 +2776,53 @@ export const UserCart: React.FC<UserCartProps> = ({
                   </>
                 )}
 
+                {/* Tax Breakdown Rows */}
+                <div className={styles.pricingRow} style={{ fontSize: "0.82rem", color: "#64748B" }}>
+                  <span>Product Taxable Value:</span>
+                  <span>₹{taxCalc.productTaxable.toFixed(2)}</span>
+                </div>
+                <div className={styles.pricingRow} style={{ fontSize: "0.82rem", color: "#64748B" }}>
+                  <span>CGST ({taxCalc.productTaxRate / 2}%):</span>
+                  <span>₹{taxCalc.productCgst.toFixed(2)}</span>
+                </div>
+                <div className={styles.pricingRow} style={{ fontSize: "0.82rem", color: "#64748B" }}>
+                  <span>SGST ({taxCalc.productTaxRate / 2}%):</span>
+                  <span>₹{taxCalc.productSgst.toFixed(2)}</span>
+                </div>
+
+                {taxCalc.deliveryTotal > 0 && (
+                  <>
+                    <div className={styles.pricingRow}>
+                      <span className={styles.pricingLabel}>Delivery Charges:</span>
+                      <span className={styles.pricingValue}>₹{taxCalc.deliveryGross.toFixed(2)}</span>
+                    </div>
+                    <div className={styles.pricingRow} style={{ fontSize: "0.8rem", color: "#64748B", paddingLeft: "10px" }}>
+                      <span>Delivery GST ({taxCalc.deliveryTaxRate}%: CGST ₹{taxCalc.deliveryCgst.toFixed(2)} + SGST ₹{taxCalc.deliverySgst.toFixed(2)}):</span>
+                      <span>₹{taxCalc.deliveryGst.toFixed(2)}</span>
+                    </div>
+                  </>
+                )}
+
+                <div style={{ margin: "6px 0", display: "flex", justifyContent: "flex-end" }}>
+                  <span style={{
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    padding: "2px 8px",
+                    borderRadius: "9999px",
+                    backgroundColor: taxCalc.taxMode === "TAX_INCLUSIVE" ? "#DCFCE7" : "#EFF6FF",
+                    color: taxCalc.taxMode === "TAX_INCLUSIVE" ? "#166534" : "#1E40AF"
+                  }}>
+                    {taxCalc.taxMode === "TAX_INCLUSIVE" ? "Tax Inclusive Pricing (GST included)" : "Tax Exclusive Pricing (GST added)"}
+                  </span>
+                </div>
+
                 <div className={styles.divider} />
 
                 {/* Grand Total Row */}
                 <div className={styles.grandTotalRow}>
                   <span className={styles.grandTotalLabel}>Grand Total</span>
                   <span className={styles.grandTotalAmount}>
-                    ₹{grandTotal.toLocaleString("en-IN")}
+                    ₹{grandTotal.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>
