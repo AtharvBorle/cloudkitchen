@@ -82,7 +82,7 @@ export async function restoreOrderAddonsStock(
                     data: {
                         addonId,
                         orderId,
-                        action: "ORDER_RESTORE",
+                        action: "ORDER_CANCELLED",
                         quantityDelta: quantity,
                         previousStock: currentAddon.stockQuantity,
                         newStock,

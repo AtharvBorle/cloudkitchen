@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        const result = await softDeleteAccount(user.id);
+        const result = await softDeleteAccount(user.id, true);
 
         return successResponse(
             result,

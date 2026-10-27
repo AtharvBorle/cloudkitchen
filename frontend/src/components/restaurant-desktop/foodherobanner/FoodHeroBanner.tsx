@@ -223,23 +223,6 @@ export const FoodHeroBanner: React.FC<FoodHeroBannerProps> = ({
               🔴 Closed
             </span>
           )}
-          {distanceText && (
-            <span
-              className={styles.metaChip}
-              style={{
-                color: "#FF6B00",
-                borderColor: "#FFD8C2",
-                backgroundColor: "#FFF3EB",
-                fontWeight: "700",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "4px",
-              }}
-            >
-              <span>📍</span>
-              <span>{distanceText} away</span>
-            </span>
-          )}
           {deliveryTime && <span className={styles.metaChip}>{deliveryTime}</span>}
           {deliveryFeeText && (
             <span className={`${styles.metaChip} ${styles.freeDeliveryChip}`}>

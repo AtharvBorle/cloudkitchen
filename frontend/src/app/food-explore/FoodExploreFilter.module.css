@@ -324,9 +324,7 @@
    =================================================================== */
 @media (max-width: 768px) {
   .filterBox {
-    padding: 14px 14px;
-    gap: 12px;
-    border-radius: 14px;
+    display: none !important;
   }
 
   .filterRow {

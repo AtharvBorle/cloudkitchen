@@ -80,7 +80,7 @@ export function isGracePeriodExpired(deletedAt: Date | string | null | undefined
  * Soft deletes an account by marking deletedAt timestamp.
  * If user is a seller, marks deletedAt on the seller profile and sets isOnline = false.
  */
-export async function softDeleteAccount(userId: string) {
+export async function softDeleteAccount(userId: string, isSellerAccount?: boolean) {
     const user = await db.user.findUnique({
         where: { id: userId },
         include: { sellerProfile: true }
@@ -93,6 +93,12 @@ export async function softDeleteAccount(userId: string) {
     if (user.isPermanentlyDeleted) {
         throw new Error("This account has already been permanently deleted.");
     }
+
+    const isSeller = Boolean(
+        isSellerAccount ||
+        (user.role && user.role.toUpperCase() === "SELLER") ||
+        user.sellerProfile
+    );
 
     const now = new Date();
     const scheduledDeletionDate = getScheduledPermanentDeletionDate(now);
@@ -127,7 +133,7 @@ export async function softDeleteAccount(userId: string) {
         const daysRemaining = Math.max(1, Math.ceil(graceConfig.gracePeriodMs / (1000 * 60 * 60 * 24)));
 
         if (user.email) {
-            if (user.role === "SELLER") {
+            if (isSeller) {
                 sendKitchenSoftDeletedEmail({
                     sellerName: user.name || undefined,
                     sellerEmail: user.email,
@@ -242,12 +248,13 @@ export async function anonymizeUserAccount(userId: string) {
     const shortId = user.id.replace(/-/g, "").slice(0, 8);
     const anonymizedEmail = `deleted_${shortId}_${Date.now()}@deleted.local`;
     const anonymizedPhone = `deleted_${shortId}`;
-    const anonymizedName = user.role === "SELLER" ? "Deleted Seller" : "Deleted User";
+    const isSeller = Boolean((user.role && user.role.toUpperCase() === "SELLER") || user.sellerProfile);
+    const anonymizedName = isSeller ? "Deleted Seller" : "Deleted User";
     const unreachablePasswordHash = await bcrypt.hash(crypto.randomUUID() + "-deleted-" + Date.now(), 10);
 
     try {
         if (user.email) {
-            if (user.role === "SELLER") {
+            if (isSeller) {
                 sendKitchenPermanentlyDeletedEmail({
                     sellerName: user.name || undefined,
                     sellerEmail: user.email,

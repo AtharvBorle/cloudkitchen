@@ -342,7 +342,19 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const chatMessagesRef = useRef<HTMLDivElement | null>(null);
   const [isReopeningTicket, setIsReopeningTicket] = useState(false);
+
+  const scrollToBottom = (smooth = true) => {
+    if (chatMessagesRef.current) {
+      chatMessagesRef.current.scrollTo({
+        top: chatMessagesRef.current.scrollHeight,
+        behavior: smooth ? "smooth" : "auto",
+      });
+    } else if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "nearest" });
+    }
+  };
 
   // Attachment State for Chat Reply
   const [replyAttachedFile, setReplyAttachedFile] = useState<File | null>(null);
@@ -463,6 +475,9 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
       setReplyAttachedFile(file);
       setReplyAttachedDataUrl(dataUrl);
       setReplyAttachedPreview(preview);
+      setTimeout(() => {
+        scrollToBottom(true);
+      }, 50);
     });
   };
 
@@ -473,6 +488,9 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
     if (replyFileInputRef.current) {
       replyFileInputRef.current.value = "";
     }
+    setTimeout(() => {
+      scrollToBottom(true);
+    }, 50);
   };
 
   const fetchTickets = async (selectId?: string) => {
@@ -525,7 +543,7 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
   const selectedTicket = tickets.find((t) => t.id === selectedTicketId) || tickets[0] || null;
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    scrollToBottom(true);
   }, [selectedTicket?.messages]);
 
   const filteredTickets = tickets.filter((ticket) => {
@@ -669,7 +687,7 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
     );
 
     setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      scrollToBottom(true);
     }, 50);
 
     try {
@@ -682,7 +700,7 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
       if (res.ok) {
         await loadTicketDetails(selectedTicket.id);
         setTimeout(() => {
-          messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+          scrollToBottom(true);
         }, 80);
       } else {
         const data = await res.json();
@@ -947,7 +965,7 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
                 </div>
 
                 {/* Messages Body */}
-                <div className={styles.chatMessagesArea}>
+                <div ref={chatMessagesRef} className={styles.chatMessagesArea}>
                   {selectedTicket.messages.map((msg) => {
                     const isSupport = msg.role === "support";
                     return (

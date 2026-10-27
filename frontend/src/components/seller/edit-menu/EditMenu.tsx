@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, ChevronDown, Plus, Trash2, CloudUpload, Check, Clock, Copy, Eye, RefreshCw, X, ExternalLink, Utensils, User, Users } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Plus, Trash2, CloudUpload, Check, Clock, Eye, RefreshCw, X, ExternalLink, Utensils, User, Users } from 'lucide-react';
 import {
   DaySchedule,
   DEFAULT_ITEM_SCHEDULE,
@@ -305,18 +305,6 @@ function EditMenuInner({
     );
   };
 
-  const handleCopyMondayTimings = () => {
-    const mondaySchedule = schedules.find((s) => s.day === 'Monday') || schedules[0];
-    if (!mondaySchedule) return;
-    setSchedules((prev) =>
-      prev.map((s) => ({
-        ...s,
-        openTime: mondaySchedule.openTime,
-        closeTime: mondaySchedule.closeTime,
-      }))
-    );
-  };
-
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -370,6 +358,13 @@ function EditMenuInner({
 
     if (!description || !description.trim()) {
       alert("Description is required.");
+      return;
+    }
+
+    const cleanDescForValidation = description.replace(/^\(Serves\s*[1-4]\)\s*/i, '').replace(/^\[Serves:\s*[1-4]\]\s*/i, '').trim();
+    const descWordCount = cleanDescForValidation ? cleanDescForValidation.split(/\s+/).filter(Boolean).length : 0;
+    if (descWordCount > 50) {
+      alert(`Description must not exceed 50 words. Currently ${descWordCount} words.`);
       return;
     }
 
@@ -729,9 +724,20 @@ function EditMenuInner({
 
             {/* Field: Description */}
             <div className={styles.fieldGroup}>
-              <label className={styles.fieldLabel}>
-                Description <span className={styles.requiredStar}>*</span>
-              </label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <label className={styles.fieldLabel} style={{ marginBottom: 0 }}>
+                  Description <span className={styles.requiredStar}>*</span>
+                </label>
+                {(() => {
+                  const clean = description.replace(/^\(Serves\s*[1-4]\)\s*/i, '').replace(/^\[Serves:\s*[1-4]\]\s*/i, '').trim();
+                  const count = clean ? clean.split(/\s+/).filter(Boolean).length : 0;
+                  return (
+                    <span style={{ fontSize: '0.78rem', color: count > 50 ? '#EF4444' : '#64748B', fontWeight: count > 50 ? '700' : '500' }}>
+                      {count}/50 words
+                    </span>
+                  );
+                })()}
+              </div>
               <textarea
                 className={styles.textAreaInput}
                 rows={3}
@@ -790,15 +796,6 @@ function EditMenuInner({
                     Dish is visible and orderable only during active days and hours (12-hour schedule).
                   </p>
                 </div>
-                <button
-                  type="button"
-                  className={styles.copyTimingsBtn}
-                  onClick={handleCopyMondayTimings}
-                  title="Copy Monday's open & close times to all 7 days"
-                >
-                  <Copy size={13} />
-                  <span>Copy Mon to all</span>
-                </button>
               </div>
 
               <div className={styles.timingDaysList}>

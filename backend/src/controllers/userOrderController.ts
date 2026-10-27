@@ -1037,6 +1037,15 @@ export const cancelOrder = async (
                 }
             }
 
+            // Restore inventory stock for add-ons in the order
+            if (order.items) {
+                try {
+                    await restoreOrderAddonsStock(tx, id, order.items, fullCancellationReason);
+                } catch (addonErr) {
+                    console.error("Failed to restore addon inventory on cancelOrder:", addonErr);
+                }
+            }
+
             // Revert coupon usage count by 1 (floored at 0) if coupon was applied
             if (order.appliedCouponId) {
                 try {

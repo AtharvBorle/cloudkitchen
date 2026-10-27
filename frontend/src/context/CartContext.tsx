@@ -355,6 +355,28 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             const stockLimit = itemStock !== undefined ? itemStock : (existingStock !== undefined ? existingStock : -1);
             const itemImage = item.imageUrl || item.image || existing?.imageUrl || existing?.image;
 
+            // Validate selected add-ons stock
+            if (addons.length > 0) {
+                const itemQty = item.quantity !== undefined ? item.quantity : 1;
+                for (const a of addons) {
+                    const addonStock = a.stockQuantity !== undefined && a.stockQuantity !== null && !isNaN(Number(a.stockQuantity))
+                        ? Number(a.stockQuantity)
+                        : undefined;
+                    const addonActive = a.isActive !== false;
+
+                    if (addonStock !== undefined && (addonStock <= 0 || !addonActive)) {
+                        showToast(`Sorry, add-on "${a.name}" is currently out of stock.`, "warning");
+                        return basePrev;
+                    }
+
+                    const requestedAddonQty = (Number(a.quantity) || 1) * (existing ? (existing.quantity + itemQty) : itemQty);
+                    if (addonStock !== undefined && requestedAddonQty > addonStock) {
+                        showToast(`Cannot add "${a.name}". Only ${addonStock} unit${addonStock > 1 ? "s" : ""} available in stock.`, "warning");
+                        return basePrev;
+                    }
+                }
+            }
+
             // Out-of-stock validation
             if (stockLimit === 0) {
                 showToast(`Sorry, "${item.name}" is currently out of stock.`, "warning");
@@ -528,6 +550,24 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 return prev.map(i => i.id === itemId ? { ...i, quantity: stockLimit } : i);
             }
 
+            if (existing.selectedAddons && existing.selectedAddons.length > 0 && newQuantity > existing.quantity) {
+                for (const a of existing.selectedAddons) {
+                    const addonStock = a.stockQuantity !== undefined && a.stockQuantity !== null && !isNaN(Number(a.stockQuantity))
+                        ? Number(a.stockQuantity)
+                        : undefined;
+                    const addonActive = a.isActive !== false;
+                    if (addonStock !== undefined && (addonStock <= 0 || !addonActive)) {
+                        showToast(`Sorry, add-on "${a.name}" is currently out of stock.`, "warning");
+                        return prev;
+                    }
+                    const totalUnitsNeeded = (Number(a.quantity) || 1) * newQuantity;
+                    if (addonStock !== undefined && totalUnitsNeeded > addonStock) {
+                        showToast(`Cannot increase. Only ${addonStock} unit${addonStock > 1 ? "s" : ""} of add-on "${a.name}" available in stock.`, "warning");
+                        return prev;
+                    }
+                }
+            }
+
             return prev.map(i => i.id === itemId ? { ...i, quantity: newQuantity } : i);
         });
     };
@@ -551,6 +591,24 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
             const targetItem = prev[targetIndex];
             const cleanAddons = deduplicateAddons(selectedAddons);
+
+            if (cleanAddons.length > 0) {
+                for (const a of cleanAddons) {
+                    const addonStock = a.stockQuantity !== undefined && a.stockQuantity !== null && !isNaN(Number(a.stockQuantity))
+                        ? Number(a.stockQuantity)
+                        : undefined;
+                    const addonActive = a.isActive !== false;
+                    if (addonStock !== undefined && (addonStock <= 0 || !addonActive)) {
+                        showToast(`Sorry, add-on "${a.name}" is currently out of stock.`, "warning");
+                        return prev;
+                    }
+                    const totalUnitsNeeded = (Number(a.quantity) || 1) * targetItem.quantity;
+                    if (addonStock !== undefined && totalUnitsNeeded > addonStock) {
+                        showToast(`Cannot select "${a.name}". Only ${addonStock} unit${addonStock > 1 ? "s" : ""} available in stock.`, "warning");
+                        return prev;
+                    }
+                }
+            }
             const baseFoodId = targetItem.foodItemId || (targetItem.id.includes("_") ? targetItem.id.split("_")[0] : targetItem.id);
             const newCartId = generateCartItemId(baseFoodId, cleanAddons);
             const addonsSum = cleanAddons.reduce((sum, a) => sum + (Number(a.price) || 0), 0);

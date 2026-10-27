@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Camera, ChevronDown, Trash2, Plus, Bell, Clock, Copy, Eye, RefreshCw, X, Utensils, User, Users } from 'lucide-react';
+import { ChevronLeft, Camera, ChevronDown, Trash2, Plus, Bell, Clock, Eye, RefreshCw, X, Utensils, User, Users } from 'lucide-react';
 import {
   TIME_SLOTS_12H,
   getValidEndTimes,
@@ -206,18 +206,6 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
     );
   };
 
-  const handleCopyMondayTimings = () => {
-    const monday = schedules.find((s) => s.day === "Monday") || schedules[0];
-    if (!monday) return;
-    setSchedules((prev) =>
-      prev.map((s) => ({
-        ...s,
-        openTime: monday.openTime,
-        closeTime: monday.closeTime,
-      }))
-    );
-  };
-
   const handleAddVariant = () => {
     const nextId = (Date.now() + Math.random()).toString();
     setVariants((prev) => [...prev, { id: nextId, name: "", price: "" }]);
@@ -280,6 +268,13 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
 
     if (!description || !description.trim()) {
       alert("Description is required.");
+      return;
+    }
+
+    const cleanDescForValidation = description.replace(/^\(Serves\s*[1-4]\)\s*/i, '').replace(/^\[Serves:\s*[1-4]\]\s*/i, '').trim();
+    const descWordCount = cleanDescForValidation ? cleanDescForValidation.split(/\s+/).filter(Boolean).length : 0;
+    if (descWordCount > 50) {
+      alert(`Description must not exceed 50 words. Currently ${descWordCount} words.`);
       return;
     }
 
@@ -588,9 +583,20 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
 
           {/* 6. Description */}
           <div className={styles.formGroup}>
-            <label className={styles.fieldLabel} htmlFor="descInput">
-              Description <span style={{ color: "#EF4444" }}>*</span>
-            </label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+              <label className={styles.fieldLabel} htmlFor="descInput" style={{ marginBottom: 0 }}>
+                Description <span style={{ color: "#EF4444" }}>*</span>
+              </label>
+              {(() => {
+                const clean = description.replace(/^\(Serves\s*[1-4]\)\s*/i, '').replace(/^\[Serves:\s*[1-4]\]\s*/i, '').trim();
+                const count = clean ? clean.split(/\s+/).filter(Boolean).length : 0;
+                return (
+                  <span style={{ fontSize: '0.74rem', color: count > 50 ? '#EF4444' : '#64748B', fontWeight: count > 50 ? '700' : '500' }}>
+                    {count}/50 words
+                  </span>
+                );
+              })()}
+            </div>
             <textarea
               id="descInput"
               className={styles.textAreaInput}
@@ -650,15 +656,6 @@ export const ResponsiveMenuItems: React.FC<ResponsiveMenuItemsProps> = ({
                   Dish is only available to users during configured times.
                 </p>
               </div>
-              <button
-                type="button"
-                className={styles.copyTimingsBtn}
-                onClick={handleCopyMondayTimings}
-                title="Copy Monday timings to all days"
-              >
-                <Copy size={12} />
-                <span>Copy Mon</span>
-              </button>
             </div>
 
             <div className={styles.timingDaysList}>

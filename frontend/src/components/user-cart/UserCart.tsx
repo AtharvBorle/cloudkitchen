@@ -24,7 +24,7 @@ import {
 import { useSession } from "next-auth/react";
 import { useCart } from "@/context/CartContext";
 import { useLocation } from "@/components/location-provider";
-import { calculateDistanceKm, getPincodeCoordinates, MAX_DELIVERY_RADIUS_KM } from "@/lib/geo-distance";
+import { calculateDistanceKm, getPincodeCoordinates, MAX_DELIVERY_RADIUS_KM, resolveUserCoordinates, resolveSellerCoordinates } from "@/lib/geo-distance";
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/explore-desktop/footer";
 import { fetchApi } from "@/lib/fetch-api";
@@ -406,52 +406,18 @@ export const UserCart: React.FC<UserCartProps> = ({
       return { isOutsideCoverage: false, shopDistanceKm: null, maxDeliveryRadius: MAX_DELIVERY_RADIUS_KM };
     }
 
-    const sellerCoords = (sellerDetails.latitude && sellerDetails.longitude)
-      ? { lat: Number(sellerDetails.latitude), lng: Number(sellerDetails.longitude) }
-      : getPincodeCoordinates(sellerDetails.user?.pincode);
-    
-    const sellerLat = sellerCoords?.lat ?? null;
-    const sellerLng = sellerCoords?.lng ?? null;
-
-    let userLat: number | null = null;
-    let userLng: number | null = null;
-
-    if (defaultAddress?.latitude && defaultAddress?.longitude) {
-      userLat = Number(defaultAddress.latitude);
-      userLng = Number(defaultAddress.longitude);
-    } else {
-      const activePin = defaultAddress?.pincode || (typeof window !== "undefined" ? localStorage.getItem("active-selected-pincode") || localStorage.getItem("guest-pincode") : null);
-      const userCoords = getPincodeCoordinates(activePin);
-      if (userCoords) {
-        userLat = userCoords.lat;
-        userLng = userCoords.lng;
-      }
-    }
+    const userCoords = resolveUserCoordinates(defaultAddress);
+    const sellerCoords = resolveSellerCoordinates(sellerDetails);
 
     const maxRadius = sellerDetails.deliveryRadiusKm || MAX_DELIVERY_RADIUS_KM; // 5.0 km
 
-    if (userLat !== null && userLng !== null && sellerLat !== null && sellerLng !== null) {
-      const distance = calculateDistanceKm(userLat, userLng, sellerLat, sellerLng);
+    if (userCoords && sellerCoords) {
+      const distance = calculateDistanceKm(userCoords.lat, userCoords.lng, sellerCoords.lat, sellerCoords.lng);
       return {
         isOutsideCoverage: distance > maxRadius,
         shopDistanceKm: distance,
         maxDeliveryRadius: maxRadius,
       };
-    }
-
-    // Pincode fallback
-    const userPin = defaultAddress?.pincode || (typeof window !== "undefined" ? localStorage.getItem("active-selected-pincode") : "");
-    if (userPin && sellerDetails.user?.pincode) {
-      const userPinCoords = getPincodeCoordinates(userPin);
-      const sellerPinCoords = getPincodeCoordinates(sellerDetails.user.pincode);
-      if (userPinCoords && sellerPinCoords) {
-        const pinDistance = calculateDistanceKm(userPinCoords.lat, userPinCoords.lng, sellerPinCoords.lat, sellerPinCoords.lng);
-        return {
-          isOutsideCoverage: pinDistance > maxRadius,
-          shopDistanceKm: pinDistance,
-          maxDeliveryRadius: maxRadius,
-        };
-      }
     }
 
     return { isOutsideCoverage: false, shopDistanceKm: null, maxDeliveryRadius: maxRadius };
