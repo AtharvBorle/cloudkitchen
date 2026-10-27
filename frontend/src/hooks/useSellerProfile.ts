@@ -182,6 +182,7 @@ export function useSellerProfile() {
       longitude: isSeller ? (cachedProfile?.longitude ?? null) : null,
       isLocationPinned: isSeller ? (cachedProfile?.isLocationPinned ?? false) : false,
       deliveryRadiusKm: isSeller ? (cachedProfile?.deliveryRadiusKm ?? 5) : 5,
+      deliveryCharge: isSeller ? (cachedProfile?.deliveryCharge !== undefined ? cachedProfile.deliveryCharge : 50) : 50,
       bannerImageUrl: isSeller ? (cachedProfile?.bannerImageUrl || cachedProfile?.profile?.bannerImageUrl || "") : "",
       cardImageUrl: isSeller ? (cachedProfile?.cardImageUrl || "") : "",
       kitchenImages: isSeller ? (cachedProfile?.kitchenImages || []) : [],

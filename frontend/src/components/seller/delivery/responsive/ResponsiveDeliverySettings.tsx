@@ -2,18 +2,16 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, CheckCircle2, Bell } from "lucide-react";
+import { ChevronLeft, CheckCircle2, Bell, Truck } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
 import { useSellerProfile, updateCachedProfile } from "@/hooks/useSellerProfile";
 import styles from "./ResponsiveDeliverySettings.module.css";
 
 export interface DeliverySettingsData {
-  enableDelivery: boolean;
   deliveryRadiusKm: number;
   deliveryFee: string;
   enableFreeDelivery: boolean;
   freeDeliveryMinOrder: string;
-  riderCommission: string;
   enableCod: boolean;
 }
 
@@ -23,42 +21,27 @@ export interface ResponsiveDeliverySettingsProps {
   onBack?: () => void;
 }
 
-const DEFAULT_SETTINGS: DeliverySettingsData = {
-  enableDelivery: true,
-  deliveryRadiusKm: 5,
-  deliveryFee: "₹40",
-  enableFreeDelivery: true,
-  freeDeliveryMinOrder: "₹500",
-  riderCommission: "₹20 per delivery",
-  enableCod: true,
-};
-
 export const ResponsiveDeliverySettings: React.FC<
   ResponsiveDeliverySettingsProps
-> = ({ initialSettings = DEFAULT_SETTINGS, onSave, onBack }) => {
+> = ({ initialSettings, onSave, onBack }) => {
   const router = useRouter();
   const seller = useSellerProfile();
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const [enableDelivery, setEnableDelivery] = useState(
-    initialSettings.enableDelivery ?? true
-  );
-  const [deliveryRadiusKm, setDeliveryRadiusKm] = useState(
-    initialSettings.deliveryRadiusKm ?? 5
-  );
-  const [deliveryFee, setDeliveryFee] = useState(
-    initialSettings.deliveryFee ?? "₹40"
-  );
+  const [deliveryRadiusKm, setDeliveryRadiusKm] = useState<number>(() => {
+    return initialSettings?.deliveryRadiusKm ?? (seller.deliveryRadiusKm ?? 5);
+  });
+  const [deliveryFee, setDeliveryFee] = useState<string>(() => {
+    const fee = seller.deliveryCharge !== undefined ? seller.deliveryCharge : 50;
+    return initialSettings?.deliveryFee ?? `₹${fee}`;
+  });
   const [enableFreeDelivery, setEnableFreeDelivery] = useState(
-    initialSettings.enableFreeDelivery ?? true
+    initialSettings?.enableFreeDelivery ?? true
   );
   const [freeDeliveryMinOrder, setFreeDeliveryMinOrder] = useState(
-    initialSettings.freeDeliveryMinOrder ?? "₹500"
+    initialSettings?.freeDeliveryMinOrder ?? "₹500"
   );
-  const [riderCommission, setRiderCommission] = useState(
-    initialSettings.riderCommission ?? "₹20 per delivery"
-  );
-  const [enableCod, setEnableCod] = useState(initialSettings.enableCod ?? true);
+  const [enableCod, setEnableCod] = useState(initialSettings?.enableCod ?? true);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -67,20 +50,22 @@ export const ResponsiveDeliverySettings: React.FC<
         const saved = localStorage.getItem("seller_delivery_settings");
         if (saved) {
           const parsed = JSON.parse(saved);
-          if (parsed.deliveryFee !== undefined && initialSettings.deliveryFee === undefined) setDeliveryFee(parsed.deliveryFee);
-          if (parsed.enableFreeDelivery !== undefined && initialSettings.enableFreeDelivery === undefined) setEnableFreeDelivery(parsed.enableFreeDelivery);
-          if (parsed.freeDeliveryMinOrder !== undefined && initialSettings.freeDeliveryMinOrder === undefined) setFreeDeliveryMinOrder(parsed.freeDeliveryMinOrder);
-          if (parsed.riderCommission !== undefined && initialSettings.riderCommission === undefined) setRiderCommission(parsed.riderCommission);
-          if (parsed.enableDelivery !== undefined && initialSettings.enableDelivery === undefined) setEnableDelivery(parsed.enableDelivery);
-          if (parsed.enableCod !== undefined && initialSettings.enableCod === undefined) setEnableCod(parsed.enableCod);
-          if (parsed.deliveryRadiusKm !== undefined && initialSettings.deliveryRadiusKm === undefined) setDeliveryRadiusKm(parsed.deliveryRadiusKm);
+          if (parsed.enableFreeDelivery !== undefined && initialSettings?.enableFreeDelivery === undefined) {
+            setEnableFreeDelivery(parsed.enableFreeDelivery);
+          }
+          if (parsed.freeDeliveryMinOrder !== undefined && initialSettings?.freeDeliveryMinOrder === undefined) {
+            setFreeDeliveryMinOrder(parsed.freeDeliveryMinOrder);
+          }
+          if (parsed.enableCod !== undefined && initialSettings?.enableCod === undefined) {
+            setEnableCod(parsed.enableCod);
+          }
         }
       } catch {}
     }
-    if (seller.deliveryRadiusKm && initialSettings.deliveryRadiusKm === undefined) {
+    if (seller.deliveryRadiusKm && initialSettings?.deliveryRadiusKm === undefined) {
       setDeliveryRadiusKm(seller.deliveryRadiusKm);
     }
-    if (seller.deliveryCharge !== undefined && initialSettings.deliveryFee === undefined) {
+    if (seller.deliveryCharge !== undefined && initialSettings?.deliveryFee === undefined) {
       setDeliveryFee(`₹${seller.deliveryCharge}`);
     }
   }, [seller.deliveryRadiusKm, seller.deliveryCharge, initialSettings]);
@@ -107,13 +92,14 @@ export const ResponsiveDeliverySettings: React.FC<
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
+
+    const parsedFee = parseFloat(String(deliveryFee).replace(/[^0-9.]/g, "")) || 50;
+    const formattedFee = `₹${parsedFee}`;
     const data: DeliverySettingsData = {
-      enableDelivery,
       deliveryRadiusKm,
-      deliveryFee,
+      deliveryFee: formattedFee,
       enableFreeDelivery,
       freeDeliveryMinOrder,
-      riderCommission,
       enableCod,
     };
 
@@ -127,7 +113,6 @@ export const ResponsiveDeliverySettings: React.FC<
     }
 
     try {
-      const parsedFee = parseFloat(String(deliveryFee).replace(/[^0-9.]/g, "")) || 0;
       await fetchApi("/api/seller/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -151,7 +136,6 @@ export const ResponsiveDeliverySettings: React.FC<
 
   return (
     <div className={styles.screenWrapper}>
-      {/* 420px Mobile View Container */}
       <div className={styles.mobileContainer}>
         {/* Top Header Bar */}
         <header className={styles.topBar}>
@@ -180,23 +164,7 @@ export const ResponsiveDeliverySettings: React.FC<
 
         {/* Form Content Area */}
         <form onSubmit={handleSave} className={styles.contentArea}>
-          {/* 1. Enable Delivery Card */}
-          <div className={`${styles.settingCard} ${styles.cardHeaderRow}`}>
-            <span className={styles.settingTitle}>Enable delivery</span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={enableDelivery}
-              className={`${styles.toggleSwitch} ${
-                enableDelivery ? styles.toggleSwitchActive : ""
-              }`}
-              onClick={() => setEnableDelivery((prev) => !prev)}
-            >
-              <span className={styles.toggleThumb} />
-            </button>
-          </div>
-
-          {/* 2. Delivery Radius Card */}
+          {/* 1. Delivery Radius Card */}
           <div className={styles.settingCard}>
             <div className={styles.cardHeaderRow}>
               <span className={styles.settingLabelUpper}>DELIVERY RADIUS</span>
@@ -212,12 +180,12 @@ export const ResponsiveDeliverySettings: React.FC<
               className={styles.rangeSlider}
             />
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "#64748B", marginTop: "4px" }}>
-              <span>1 km</span>
+              <span>1 km (Hyperlocal)</span>
               <span>15 km</span>
             </div>
           </div>
 
-          {/* 3. Delivery Fee Card */}
+          {/* 2. Delivery Fee Card */}
           <div className={styles.settingCard}>
             <span className={styles.settingLabelUpper}>DELIVERY FEE</span>
             <input
@@ -225,12 +193,12 @@ export const ResponsiveDeliverySettings: React.FC<
               className={styles.textInput}
               value={deliveryFee}
               onChange={(e) => setDeliveryFee(e.target.value)}
-              placeholder="₹40"
+              placeholder="₹50"
             />
-            <p className={styles.subtitle}>Per order delivery charge</p>
+            <p className={styles.subtitle}>Per order delivery charge (Consistent with cart and checkout)</p>
           </div>
 
-          {/* 4. Free Delivery Card */}
+          {/* 3. Free Delivery Card */}
           <div className={styles.settingCard}>
             <div className={styles.cardHeaderRow}>
               <span className={styles.settingTitleUpper}>FREE DELIVERY</span>
@@ -246,32 +214,23 @@ export const ResponsiveDeliverySettings: React.FC<
                 <span className={styles.toggleThumb} />
               </button>
             </div>
-            <input
-              type="text"
-              className={styles.textInput}
-              value={freeDeliveryMinOrder}
-              onChange={(e) => setFreeDeliveryMinOrder(e.target.value)}
-              placeholder="₹500"
-            />
-            <p className={styles.subtitle}>
-              Minimum order value for free delivery
-            </p>
+            {enableFreeDelivery && (
+              <>
+                <input
+                  type="text"
+                  className={styles.textInput}
+                  value={freeDeliveryMinOrder}
+                  onChange={(e) => setFreeDeliveryMinOrder(e.target.value)}
+                  placeholder="₹500"
+                />
+                <p className={styles.subtitle}>
+                  Minimum cart value to waive delivery fee
+                </p>
+              </>
+            )}
           </div>
 
-          {/* 5. Rider Commission Card */}
-          <div className={styles.settingCard}>
-            <span className={styles.settingLabelUpper}>RIDER COMMISSION</span>
-            <input
-              type="text"
-              className={styles.textInput}
-              value={riderCommission}
-              onChange={(e) => setRiderCommission(e.target.value)}
-              placeholder="₹20 per delivery"
-            />
-            <p className={styles.subtitle}>Rider earns per delivery</p>
-          </div>
-
-          {/* 6. COD Settings Card */}
+          {/* 4. COD Settings Card */}
           <div className={styles.settingCard}>
             <div className={styles.cardHeaderRow}>
               <span className={styles.settingTitleUpper}>COD SETTINGS</span>
@@ -288,14 +247,13 @@ export const ResponsiveDeliverySettings: React.FC<
               </button>
             </div>
             <div className={styles.codInfoBox}>
-              Riders collect cash and settle with you periodically via the
-              Delivery &amp; COD screen.
+              Riders collect cash upon delivery and settle in the Delivery &amp; COD ledger.
             </div>
           </div>
 
           {/* Save Settings Button */}
           <button type="submit" className={styles.saveButton} disabled={isSaving}>
-            {isSaving ? "Saving..." : "Save Settings"}
+            {isSaving ? "Saving..." : "Save Delivery Settings"}
           </button>
         </form>
 
@@ -312,4 +270,3 @@ export const ResponsiveDeliverySettings: React.FC<
 };
 
 export default ResponsiveDeliverySettings;
-
