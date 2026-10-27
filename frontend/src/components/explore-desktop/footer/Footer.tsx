@@ -88,11 +88,6 @@ export const Footer: React.FC = () => {
                   My Orders
                 </Link>
               </li>
-              {/* <li>
-                <Link href="/my-subscriptions-desktop" className={styles.footerLink}>
-                  Meal Subscriptions
-                </Link>
-              </li> */}
               <li>
                 <Link href="/support" className={styles.footerLink}>
                   Help &amp; FAQs

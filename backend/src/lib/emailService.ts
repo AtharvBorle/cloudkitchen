@@ -568,7 +568,7 @@ export async function sendKitchenSoftDeletedEmail({
     </div>
 
     <div style="text-align: center; margin-top: 24px;">
-      <a href="${APP_URL}/seller/login" class="btn">Log In to Cancel Deletion</a>
+      <a href="${APP_URL}/seller/login?deletion_scheduled=true" class="btn">Log In to Cancel Deletion</a>
     </div>
   `;
 

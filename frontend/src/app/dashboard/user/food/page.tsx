@@ -567,7 +567,7 @@ export default function UserFoodPage() {
                                                 ) : null}
                                             </p>
                                         </div>
-                                        <p style={{ color: '#555', fontSize: '0.9rem', flex: 1, marginBottom: '20px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>
+                                        <p style={{ color: '#555', fontSize: '0.9rem', flex: 1, marginBottom: '20px', wordBreak: 'break-word', overflowWrap: 'break-word', lineHeight: '1.4' }}>{item.description}</p>
                                         {isOutOfStock && (
                                             <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px' }}>
                                                 <span style={{ color: '#DC2626', fontWeight: 'bold' }}>Out of Stock</span>
@@ -646,7 +646,7 @@ export default function UserFoodPage() {
                                                         ) : null}
                                                     </p>
                                                 </div>
-                                                <p style={{ color: '#555', fontSize: '0.9rem', flex: 1, marginBottom: '20px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.description}</p>
+                                                <p style={{ color: '#555', fontSize: '0.9rem', flex: 1, marginBottom: '20px', wordBreak: 'break-word', overflowWrap: 'break-word', lineHeight: '1.4' }}>{item.description}</p>
                                                 {isOutOfStock && (
                                                     <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '15px' }}>
                                                         <span style={{ color: '#DC2626', fontWeight: 'bold' }}>Out of Stock</span>

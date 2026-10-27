@@ -18,6 +18,8 @@ import {
   MAX_DELIVERY_RADIUS_KM,
   getPincodeCoordinates,
   formatDistance,
+  resolveUserCoordinates,
+  resolveSellerCoordinates,
 } from "@/lib/geo-distance";
 import { isItemAvailableNow } from "@/lib/item-timing";
 
@@ -58,22 +60,15 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
     });
     const [activeTab, setActiveTab] = useState<"menu" | "reviews">("menu");
 
-    const userLat = (userAddress?.latitude != null && !isNaN(Number(userAddress.latitude)) && Number(userAddress.latitude) !== 0) ? Number(userAddress.latitude) : null;
-    const userLng = (userAddress?.longitude != null && !isNaN(Number(userAddress.longitude)) && Number(userAddress.longitude) !== 0) ? Number(userAddress.longitude) : null;
-    const userFallback = userAddress?.pincode ? getPincodeCoordinates(userAddress.pincode) : null;
-    const finalUserLat = userLat ?? userFallback?.lat ?? null;
-    const finalUserLng = userLng ?? userFallback?.lng ?? null;
-
-    const sellerCoords = (seller?.latitude && seller?.longitude && Number(seller.latitude) !== 0 && Number(seller.longitude) !== 0) ? { lat: Number(seller.latitude), lng: Number(seller.longitude) } : getPincodeCoordinates(seller?.user?.pincode || seller?.pincode);
-    const sellerLat = (seller?.latitude != null && !isNaN(Number(seller.latitude)) && Number(seller.latitude) !== 0) ? Number(seller.latitude) : (sellerCoords?.lat ?? null);
-    const sellerLng = (seller?.longitude != null && !isNaN(Number(seller.longitude)) && Number(seller.longitude) !== 0) ? Number(seller.longitude) : (sellerCoords?.lng ?? null);
+    const userCoords = resolveUserCoordinates(userAddress);
+    const sellerCoords = resolveSellerCoordinates(seller);
 
     const shopDistanceKm = useMemo(() => {
-        if (finalUserLat !== null && finalUserLng !== null && sellerLat !== null && sellerLng !== null) {
-            return calculateDistanceKm(finalUserLat, finalUserLng, sellerLat, sellerLng);
+        if (userCoords && sellerCoords) {
+            return calculateDistanceKm(userCoords.lat, userCoords.lng, sellerCoords.lat, sellerCoords.lng);
         }
         return null;
-    }, [finalUserLat, finalUserLng, sellerLat, sellerLng]);
+    }, [userCoords, sellerCoords]);
 
     const maxRadiusKm = seller?.deliveryRadiusKm && Number(seller.deliveryRadiusKm) > 0
         ? Number(seller.deliveryRadiusKm)

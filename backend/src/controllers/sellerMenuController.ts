@@ -224,6 +224,11 @@ export const createMenuItem = async (req: Request) => {
     if (!description || !description.trim()) {
         throw new ApiError("Description is required", 400);
     }
+    const cleanDesc = description.replace(/^\(Serves\s*[1-4]\)\s*/i, '').replace(/^\[Serves:\s*[1-4]\]\s*/i, '').trim();
+    const descWords = cleanDesc ? cleanDesc.split(/\s+/).filter(Boolean).length : 0;
+    if (descWords > 50) {
+        throw new ApiError("Description must not exceed 50 words", 400);
+    }
 
     const rawAddons = (formData.get("addons") as string | null) || (formData.get("variants") as string | null);
     let addonsStr = "[]";
@@ -396,7 +401,14 @@ export const updateMenuItem = async (req: Request, id: string) => {
         const foodSubCategoryId = formData.get("foodSubCategoryId") as string | null;
 
         if (name !== null) dataToUpdate.name = name.trim();
-        if (description !== null) dataToUpdate.description = description;
+        if (description !== null) {
+            const cleanDesc = description.replace(/^\(Serves\s*[1-4]\)\s*/i, '').replace(/^\[Serves:\s*[1-4]\]\s*/i, '').trim();
+            const descWords = cleanDesc ? cleanDesc.split(/\s+/).filter(Boolean).length : 0;
+            if (descWords > 50) {
+                throw new ApiError("Description must not exceed 50 words", 400);
+            }
+            dataToUpdate.description = description;
+        }
         if (price !== null && !isNaN(parseFloat(price))) dataToUpdate.price = parseFloat(price);
         if (isAvailable !== null) dataToUpdate.isAvailable = isAvailable === "true";
         if (stockQuantity !== null && !isNaN(parseInt(stockQuantity))) dataToUpdate.stockQuantity = Math.max(0, parseInt(stockQuantity));
@@ -463,7 +475,17 @@ export const updateMenuItem = async (req: Request, id: string) => {
     } else {
         const body = await req.json();
         if (body.name !== undefined) dataToUpdate.name = String(body.name).trim();
-        if (body.description !== undefined) dataToUpdate.description = body.comment !== undefined ? body.comment : body.description;
+        if (body.description !== undefined) {
+            const rawDesc = body.comment !== undefined ? body.comment : body.description;
+            if (typeof rawDesc === "string") {
+                const cleanDesc = rawDesc.replace(/^\(Serves\s*[1-4]\)\s*/i, '').replace(/^\[Serves:\s*[1-4]\]\s*/i, '').trim();
+                const descWords = cleanDesc ? cleanDesc.split(/\s+/).filter(Boolean).length : 0;
+                if (descWords > 50) {
+                    throw new ApiError("Description must not exceed 50 words", 400);
+                }
+            }
+            dataToUpdate.description = rawDesc;
+        }
         if (body.price !== undefined) dataToUpdate.price = parseFloat(body.price);
         if (body.isAvailable !== undefined) dataToUpdate.isAvailable = body.isAvailable;
         if (body.stockQuantity !== undefined) dataToUpdate.stockQuantity = Math.max(0, parseInt(body.stockQuantity));

@@ -18,7 +18,7 @@ import { fetchApi } from "@/lib/fetch-api";
 
 
 
-import { MessageSquare, Clock, CheckCircle2, User, Send, Loader2, RefreshCw, AlertCircle, Filter, Paperclip } from "lucide-react";
+import { MessageSquare, Clock, CheckCircle2, User, Send, Loader2, RefreshCw, AlertCircle, Filter, Paperclip, X, FileText } from "lucide-react";
 import { TicketAttachmentRenderer } from "@/components/common/TicketAttachmentRenderer";
 import { useRoomModule } from "@/context/RoomModuleContext";
 
@@ -63,6 +63,47 @@ export default function SuperAdminSupportPage() {
 
     const [replyText, setReplyText] = useState("");
     const replyFileInputRef = useRef<HTMLInputElement>(null);
+    const [replyAttachedFile, setReplyAttachedFile] = useState<File | null>(null);
+    const [replyAttachedPreview, setReplyAttachedPreview] = useState<string | null>(null);
+    const [replyAttachedDataUrl, setReplyAttachedDataUrl] = useState<string | null>(null);
+
+    const removeReplyAttachment = () => {
+        setReplyAttachedFile(null);
+        setReplyAttachedPreview(null);
+        setReplyAttachedDataUrl(null);
+        if (replyFileInputRef.current) {
+            replyFileInputRef.current.value = "";
+        }
+    };
+
+    const handleReplyFileSelected = (file: File) => {
+        const ext = file.name.split('.').pop()?.toLowerCase();
+        const blockedExtensions = ['exe', 'bat', 'cmd', 'sh', 'dll', 'bin', 'msi', 'com', 'vbs', 'scr', 'jar'];
+        if (ext && blockedExtensions.includes(ext)) {
+            alert("Executable or script files are not allowed. Please attach documents (PDF, TXT, DOC, DOCX, CSV) or images.");
+            return;
+        }
+
+        if (file.size > 15 * 1024 * 1024) {
+            alert("File size exceeds 15MB limit. Please choose a smaller document or image.");
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const result = e.target?.result as string;
+            if (result) {
+                setReplyAttachedFile(file);
+                setReplyAttachedDataUrl(result);
+                if (file.type.startsWith("image/") || /\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(file.name)) {
+                    setReplyAttachedPreview(result);
+                } else {
+                    setReplyAttachedPreview(null);
+                }
+            }
+        };
+        reader.readAsDataURL(file);
+    };
 
 
 
@@ -217,11 +258,10 @@ export default function SuperAdminSupportPage() {
                 let targetCategoryIds: string[] = [];
 
                 if (sellerType && businessCategories.length > 0) {
-                    const sTypeLower = (sellerType || "").toLowerCase();
-                    const matched = businessCategories.filter((bc: any) => {
-                        const bcName = (bc?.name || "").toLowerCase();
-                        return (bcName && sTypeLower.includes(bcName)) || (sTypeLower && bcName.includes(sTypeLower));
-                    });
+                    const matched = businessCategories.filter((bc: any) =>
+                        bc.name.toLowerCase().includes(sellerType.toLowerCase()) ||
+                        sellerType.toLowerCase().includes(bc.name.toLowerCase())
+                    );
                     if (matched.length > 0) {
                         targetCategoryIds = matched.map((m: any) => m.id);
                     }
@@ -656,7 +696,7 @@ export default function SuperAdminSupportPage() {
 
 
 
-                const validId = potentialIds.find(id => (id || "").toLowerCase() !== (ticketIdFirstPart || "").toLowerCase());
+                const validId = potentialIds.find(id => id.toLowerCase() !== ticketIdFirstPart.toLowerCase());
 
 
 
@@ -1580,7 +1620,7 @@ export default function SuperAdminSupportPage() {
 
 
 
-        if (!replyText.trim() || !selectedTicket) return;
+        if ((!replyText.trim() && !replyAttachedDataUrl) || !selectedTicket) return;
 
 
 
@@ -1588,7 +1628,7 @@ export default function SuperAdminSupportPage() {
 
 
 
-        if (replyText.trim().length < 2) {
+        if (!replyAttachedDataUrl && replyText.trim().length < 2) {
 
 
 
@@ -1628,7 +1668,15 @@ export default function SuperAdminSupportPage() {
 
 
 
-                body: JSON.stringify({ message: replyText.trim() })
+                body: JSON.stringify({ message: (() => {
+                    let finalMessage = replyText.trim();
+                    if (replyAttachedDataUrl && replyAttachedFile) {
+                        finalMessage = finalMessage
+                            ? `${finalMessage}\n\n[Attachment: ${replyAttachedFile.name}|${replyAttachedFile.type || "image/jpeg"}]\n${replyAttachedDataUrl}`
+                            : `[Attachment: ${replyAttachedFile.name}|${replyAttachedFile.type || "image/jpeg"}]\n${replyAttachedDataUrl}`;
+                    }
+                    return finalMessage;
+                })() })
 
 
 
@@ -1641,6 +1689,7 @@ export default function SuperAdminSupportPage() {
 
 
                 setReplyText("");
+                removeReplyAttachment();
 
 
 
@@ -3349,182 +3398,133 @@ export default function SuperAdminSupportPage() {
 
 
 
-                                            <form onSubmit={handleSendReply} style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-
-                                                <input
-                                                    type="file"
-                                                    ref={replyFileInputRef}
-                                                    accept="image/*"
-                                                    style={{ display: "none" }}
-                                                    onChange={(e) => {
-                                                        if (e.target.files && e.target.files[0]) {
-                                                            const file = e.target.files[0];
-                                                            const reader = new FileReader();
-                                                            reader.onload = () => {
-                                                                const dataUrl = reader.result as string;
-                                                                setReplyText(prev => (prev ? `${prev}\n\n![${file.name}](${dataUrl})` : `![${file.name}](${dataUrl})`));
-                                                            };
-                                                            reader.readAsDataURL(file);
-                                                        }
-                                                    }}
-                                                />
-
-                                                <button
-                                                    type="button"
-                                                    onClick={() => replyFileInputRef.current?.click()}
-                                                    style={{
-                                                        backgroundColor: "#F1F5F9",
-                                                        border: "1px solid #CBD5E1",
-                                                        borderRadius: "10px",
-                                                        padding: "10px 12px",
-                                                        color: "#475569",
-                                                        cursor: "pointer",
-                                                        display: "flex",
-                                                        alignItems: "center",
-                                                        justifyContent: "center"
-                                                    }}
-                                                    title="Attach screenshot/image"
-                                                >
-                                                    <Paperclip size={18} />
-                                                </button>
-
-                                                <input
-
-
-
-                                                    type="text"
-
-
-
-                                                    placeholder="Type reply to customer/seller..."
-
-
-
-                                                    value={replyText}
-
-
-
-                                                    onChange={(e) => setReplyText(e.target.value)}
-
-
-
-                                                    style={{
-
-
-
-                                                        flex: 1,
-
-
-
-                                                        padding: "12px 16px",
-
-
-
-                                                        borderRadius: "10px",
-
-
-
-                                                        border: "1px solid #CBD5E1",
-
-
-
-                                                        outline: "none",
-
-
-
-                                                        fontSize: "0.9rem"
-
-
-
-                                                    }}
-
-
-
-                                                    required
-
-
-
-                                                />
-
-
-
-                                                <button
-
-
-
-                                                    type="submit"
-
-
-
-                                                    disabled={submittingReply || !replyText.trim()}
-
-
-
-                                                    style={{
-
-
-
-                                                        backgroundColor: "var(--primary, #10B981)",
-
-
-
-                                                        color: "white",
-
-
-
-                                                        border: "none",
-
-
-
-                                                        padding: "0 20px",
-
-
-
-                                                        borderRadius: "10px",
-
-
-
-                                                        cursor: "pointer",
-
-
-
-                                                        fontWeight: "700",
-
-
-
-                                                        display: "flex",
-
-
-
-                                                        alignItems: "center",
-
-
-
-                                                        justifyContent: "center",
-
-
-
-                                                        gap: "6px"
-
-
-
-                                                    }}
-
-
-
-                                                >
-
-
-
-                                                    {submittingReply ? <Loader2 className="animate-spin" size={16} /> : <Send size={16} />}
-
-
-
-                                                </button>
-
-
-
-                                            </form>
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "8px", width: "100%" }}>
+                                                {replyAttachedFile && (
+                                                    <div
+                                                        style={{
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            justifyContent: "space-between",
+                                                            backgroundColor: "#FFF7ED",
+                                                            border: "1px solid #FFEDD5",
+                                                            borderRadius: "8px",
+                                                            padding: "6px 10px",
+                                                        }}
+                                                    >
+                                                        <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+                                                            {replyAttachedPreview ? (
+                                                                <img
+                                                                    src={replyAttachedPreview}
+                                                                    alt="Attachment preview"
+                                                                    style={{ width: "32px", height: "32px", objectFit: "cover", borderRadius: "4px", flexShrink: 0 }}
+                                                                />
+                                                            ) : (
+                                                                <div style={{ width: "32px", height: "32px", borderRadius: "4px", backgroundColor: "#FED7AA", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                                                    <FileText size={18} color="#EA580C" />
+                                                                </div>
+                                                            )}
+                                                            <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+                                                                <span style={{ fontSize: "0.82rem", fontWeight: "600", color: "#C2410C", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                                                    {replyAttachedFile.name}
+                                                                </span>
+                                                                <span style={{ fontSize: "0.72rem", color: "#9A3412" }}>
+                                                                    {(replyAttachedFile.size / 1024).toFixed(1)} KB • <span style={{ color: "#059669", fontWeight: 600 }}>Ready to send</span>
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={removeReplyAttachment}
+                                                            style={{
+                                                                background: "none",
+                                                                border: "none",
+                                                                color: "#9A3412",
+                                                                cursor: "pointer",
+                                                                padding: "4px",
+                                                                display: "flex",
+                                                                alignItems: "center",
+                                                                borderRadius: "4px",
+                                                            }}
+                                                            title="Remove attachment"
+                                                            aria-label="Remove attachment"
+                                                        >
+                                                            <X size={16} />
+                                                        </button>
+                                                    </div>
+                                                )}
+
+                                                <form onSubmit={handleSendReply} style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                                                    <input
+                                                        type="file"
+                                                        ref={replyFileInputRef}
+                                                        accept=".pdf,.txt,.doc,.docx,.csv,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.webp,image/*,application/pdf,text/plain,*/*"
+                                                        style={{ display: "none" }}
+                                                        onChange={(e) => {
+                                                            if (e.target.files && e.target.files[0]) {
+                                                                handleReplyFileSelected(e.target.files[0]);
+                                                            }
+                                                            e.target.value = "";
+                                                        }}
+                                                    />
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => replyFileInputRef.current?.click()}
+                                                        style={{
+                                                            backgroundColor: replyAttachedFile ? "#FFEDD5" : "#F1F5F9",
+                                                            border: replyAttachedFile ? "1px solid #FDBA74" : "1px solid #CBD5E1",
+                                                            borderRadius: "10px",
+                                                            padding: "10px 12px",
+                                                            color: replyAttachedFile ? "#EA580C" : "#475569",
+                                                            cursor: "pointer",
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            justifyContent: "center",
+                                                            transition: "all 0.15s ease",
+                                                        }}
+                                                        title="Attach document or image"
+                                                    >
+                                                        <Paperclip size={18} />
+                                                    </button>
+
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Type reply to customer/seller..."
+                                                        value={replyText}
+                                                        onChange={(e) => setReplyText(e.target.value)}
+                                                        style={{
+                                                            flex: 1,
+                                                            padding: "12px 16px",
+                                                            borderRadius: "10px",
+                                                            border: "1px solid #CBD5E1",
+                                                            outline: "none",
+                                                            fontSize: "0.9rem"
+                                                        }}
+                                                        required={!replyAttachedDataUrl}
+                                                    />
+
+                                                    <button
+                                                        type="submit"
+                                                        disabled={submittingReply || (!replyText.trim() && !replyAttachedDataUrl)}
+                                                        style={{
+                                                            backgroundColor: "var(--primary, #10B981)",
+                                                            color: "white",
+                                                            border: "none",
+                                                            padding: "0 20px",
+                                                            borderRadius: "10px",
+                                                            cursor: (submittingReply || (!replyText.trim() && !replyAttachedDataUrl)) ? "not-allowed" : "pointer",
+                                                            opacity: (submittingReply || (!replyText.trim() && !replyAttachedDataUrl)) ? 0.6 : 1,
+                                                            fontWeight: "700",
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            justifyContent: "center",
+                                                            gap: "6px"
+                                                        }}
+                                                    >
+                                                        {submittingReply ? <Loader2 className="animate-spin" size={16} /> : <Send size={16} />}
+                                                    </button>
+                                                </form>
+                                            </div>
 
 
 
@@ -4790,72 +4790,155 @@ export default function SuperAdminSupportPage() {
 
 
 
-                                                {(() => {
-                                                    const query = (userSearchQuery || "").toLowerCase().trim();
-                                                    const filtered = systemUsers.filter((u: any) => {
-                                                        if (!u) return false;
-                                                        const name = (u.name || "").toLowerCase();
-                                                        const email = (u.email || "").toLowerCase();
-                                                        const role = (u.role || "").toLowerCase();
-                                                        const phone = (u.phone || "").toLowerCase();
-                                                        const business = (u.sellerProfile?.businessName || "").toLowerCase();
-                                                        return (
-                                                            name.includes(query) ||
-                                                            email.includes(query) ||
-                                                            role.includes(query) ||
-                                                            phone.includes(query) ||
-                                                            business.includes(query)
-                                                        );
-                                                    });
+                                                {systemUsers.filter(u => 
 
-                                                    if (filtered.length === 0) {
-                                                        return (
-                                                            <div style={{ padding: '10px', fontSize: '0.85rem', color: '#64748B', textAlign: 'center' }}>
-                                                                No users found
-                                                            </div>
-                                                        );
-                                                    }
 
-                                                    return filtered.slice(0, 50).map((u: any) => {
-                                                        const displayName = u.name || u.sellerProfile?.businessName || "Unnamed User";
-                                                        const contact = u.email || u.phone || "";
-                                                        const label = `${displayName}${contact ? ` (${contact})` : ""} - ${u.role || "USER"}`;
 
-                                                        return (
-                                                            <div
-                                                                key={u.id}
-                                                                onClick={() => {
-                                                                    setSelectedUser(u);
-                                                                    setNewTicketUserId(u.id);
-                                                                    setUserSearchQuery(label);
-                                                                    setShowUserSuggestions(false);
-                                                                    fetchUserActivityForModal(u.id);
-                                                                }}
-                                                                style={{
-                                                                    padding: '10px 12px',
-                                                                    fontSize: '0.85rem',
-                                                                    color: '#334155',
-                                                                    cursor: 'pointer',
-                                                                    borderBottom: '1px solid #F1F5F9',
-                                                                    transition: 'background 0.15s'
-                                                                }}
-                                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
-                                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                                            >
-                                                                <strong>{displayName}</strong>{" "}
-                                                                {contact && <span style={{ color: '#64748B' }}>({contact})</span>} •{" "}
-                                                                <span style={{ textTransform: 'lowercase', fontSize: '0.75rem', backgroundColor: '#E2E8F0', padding: '2px 6px', borderRadius: '4px' }}>
-                                                                    {u.role || "USER"}
-                                                                </span>
-                                                                {u.sellerProfile?.businessName && u.name && (
-                                                                    <span style={{ marginLeft: '6px', fontSize: '0.75rem', color: '#0284C7' }}>
-                                                                        [{u.sellerProfile.businessName}]
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        );
-                                                    });
-                                                })()}
+                                                    u.name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+
+
+
+                                                    u.email.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+
+
+
+                                                    u.role.toLowerCase().includes(userSearchQuery.toLowerCase())
+
+
+
+                                                ).length === 0 ? (
+
+
+
+                                                    <div style={{ padding: '10px', fontSize: '0.85rem', color: '#64748B', textAlign: 'center' }}>
+
+
+
+                                                        No users found
+
+
+
+                                                    </div>
+
+
+
+                                                ) : (
+
+
+
+                                                    systemUsers.filter(u => 
+
+
+
+                                                        u.name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+
+
+
+                                                        u.email.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+
+
+
+                                                        u.role.toLowerCase().includes(userSearchQuery.toLowerCase())
+
+
+
+                                                    ).map((u: any) => (
+
+
+
+                                                        <div
+
+
+
+                                                            key={u.id}
+
+
+
+                                                            onClick={() => {
+
+
+
+                                                                setSelectedUser(u);
+
+
+
+                                                                setNewTicketUserId(u.id);
+
+
+
+                                                                setUserSearchQuery(`${u.name} (${u.email}) - ${u.role}`);
+
+
+
+                                                                setShowUserSuggestions(false);
+
+
+
+                                                                fetchUserActivityForModal(u.id);
+
+
+
+                                                            }}
+
+
+
+                                                            style={{
+
+
+
+                                                                padding: '10px 12px',
+
+
+
+                                                                fontSize: '0.85rem',
+
+
+
+                                                                color: '#334155',
+
+
+
+                                                                cursor: 'pointer',
+
+
+
+                                                                borderBottom: '1px solid #F1F5F9',
+
+
+
+                                                                transition: 'background 0.15s'
+
+
+
+                                                            }}
+
+
+
+                                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F8FAFC'}
+
+
+
+                                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+
+
+
+                                                        >
+
+
+
+                                                            <strong>{u.name}</strong> <span style={{ color: '#64748B' }}>({u.email})</span> • <span style={{ textTransform: 'lowercase', fontSize: '0.75rem', backgroundColor: '#E2E8F0', padding: '2px 6px', borderRadius: '4px' }}>{u.role}</span>
+
+
+
+                                                        </div>
+
+
+
+                                                    ))
+
+
+
+                                                )}
 
 
 

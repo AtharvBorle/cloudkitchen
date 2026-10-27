@@ -14,6 +14,7 @@ import {
   X,
   Search,
   SlidersHorizontal,
+  Sliders,
   Check,
   LogIn,
   LogOut,
@@ -507,7 +508,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     // Default to Food / Explore
     return {
       section: "Food",
-      placeholder: "Search home meals, cuisines, kitchens...",
+      placeholder: "near by home meals...",
       targetRoute: "/explore-desktop",
     };
   };
@@ -1414,7 +1415,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     onClick={() => setIsFilterModalOpen(true)}
                     aria-label="Open filter options"
                   >
-                    <SlidersHorizontal size={18} color="#FF5500" strokeWidth={2.2} />
+                    <Sliders size={18} color="#FF6B00" strokeWidth={2.2} />
                     {activeFiltersCount > 0 && (
                       <span className={styles.filterDotBadge} />
                     )}

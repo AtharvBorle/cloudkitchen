@@ -7,6 +7,10 @@ import {
   MAX_DELIVERY_RADIUS_KM,
   getPincodeCoordinates,
   resolveLocationCoordinates,
+  resolveUserCoordinates,
+  resolveSellerCoordinates,
+  getUnifiedDeliveryDistance,
+  calculateDeliveryTime,
 } from './geo-distance';
 import { extractRoomPropertyLocation, cleanRoomAboutText } from './room-location-helper';
 
@@ -887,72 +891,57 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
   const resolvedCandidate = resolveLocationCoordinates(rawCandidate || (hasUserExplicitlySelected ? localLocality : (defaultAddress?.locality || localLocality)));
   const activePincode = (resolvedCandidate?.pincode || rawCandidate || '').trim() || null;
 
-  const userLat = (hasUserExplicitlySelected && localLat !== null && !isNaN(localLat) && localLat !== 0)
-    ? localLat
-    : (defaultAddress?.latitude != null && !isNaN(Number(defaultAddress.latitude)) && Number(defaultAddress.latitude) !== 0)
-    ? Number(defaultAddress.latitude)
-    : (localLat !== null && !isNaN(localLat) && localLat !== 0 ? localLat : null);
-  const userLng = (hasUserExplicitlySelected && localLng !== null && !isNaN(localLng) && localLng !== 0)
-    ? localLng
-    : (defaultAddress?.longitude != null && !isNaN(Number(defaultAddress.longitude)) && Number(defaultAddress.longitude) !== 0)
-    ? Number(defaultAddress.longitude)
-    : (localLng !== null && !isNaN(localLng) && localLng !== 0 ? localLng : null);
-
-  const activeUserLat = userLat ?? (resolvedCandidate?.lat && resolvedCandidate.lat !== 0 ? resolvedCandidate.lat : null);
-  const activeUserLng = userLng ?? (resolvedCandidate?.lng && resolvedCandidate.lng !== 0 ? resolvedCandidate.lng : null);
+  const resolvedCoords = resolveUserCoordinates(defaultAddress);
+  const activeUserLat = resolvedCoords?.lat ?? null;
+  const activeUserLng = resolvedCoords?.lng ?? null;
   const hasUserCoords = activeUserLat !== null && activeUserLng !== null;
 
   // Compute enriched food items with accurate distances
   const enrichedFoodItems = useMemo(() => {
     return foodItems.map((item) => {
-      const sLat = (item.sellerLatitude != null && !isNaN(Number(item.sellerLatitude)) && Number(item.sellerLatitude) !== 0)
-        ? Number(item.sellerLatitude)
-        : (item.sellerPincode ? getPincodeCoordinates(item.sellerPincode)?.lat : null) ?? (item.sellerLocality ? resolveLocationCoordinates(item.sellerLocality)?.lat : null) ?? null;
-      const sLng = (item.sellerLongitude != null && !isNaN(Number(item.sellerLongitude)) && Number(item.sellerLongitude) !== 0)
-        ? Number(item.sellerLongitude)
-        : (item.sellerPincode ? getPincodeCoordinates(item.sellerPincode)?.lng : null) ?? (item.sellerLocality ? resolveLocationCoordinates(item.sellerLocality)?.lng : null) ?? null;
+      const deliveryInfo = getUnifiedDeliveryDistance(
+        hasUserCoords ? { lat: activeUserLat, lng: activeUserLng } : defaultAddress,
+        item
+      );
 
-      if (hasUserCoords && sLat !== null && sLng !== null) {
-        const dist = calculateDistanceKm(activeUserLat!, activeUserLng!, sLat, sLng);
-        const estTime = dist <= 1.5 ? "15-20 min" : dist <= 3.0 ? "20-30 min" : "30-40 min";
+      if (deliveryInfo.distanceKm !== null) {
+        const sCoords = resolveSellerCoordinates(item);
         return {
           ...item,
-          sellerLatitude: sLat,
-          sellerLongitude: sLng,
-          distanceKm: dist,
-          distanceText: formatDistance(dist),
-          deliveryTime: estTime,
+          sellerLatitude: sCoords?.lat ?? item.sellerLatitude,
+          sellerLongitude: sCoords?.lng ?? item.sellerLongitude,
+          distanceKm: deliveryInfo.distanceKm,
+          distanceText: deliveryInfo.distanceText,
+          deliveryTime: deliveryInfo.deliveryTimeText,
         };
       }
       return item;
     });
-  }, [foodItems, hasUserCoords, activeUserLat, activeUserLng]);
+  }, [foodItems, hasUserCoords, activeUserLat, activeUserLng, defaultAddress]);
 
   // Compute enriched kitchens with accurate distances
   const enrichedKitchens = useMemo(() => {
     return kitchens.map((k) => {
-      const kLat = (k.latitude != null && !isNaN(Number(k.latitude)) && Number(k.latitude) !== 0)
-        ? Number(k.latitude)
-        : (k.pincode ? getPincodeCoordinates(k.pincode)?.lat : null) ?? (k.locality ? resolveLocationCoordinates(k.locality)?.lat : null) ?? null;
-      const kLng = (k.longitude != null && !isNaN(Number(k.longitude)) && Number(k.longitude) !== 0)
-        ? Number(k.longitude)
-        : (k.pincode ? getPincodeCoordinates(k.pincode)?.lng : null) ?? (k.locality ? resolveLocationCoordinates(k.locality)?.lng : null) ?? null;
+      const deliveryInfo = getUnifiedDeliveryDistance(
+        hasUserCoords ? { lat: activeUserLat, lng: activeUserLng } : defaultAddress,
+        k
+      );
 
-      if (hasUserCoords && kLat !== null && kLng !== null) {
-        const dist = calculateDistanceKm(activeUserLat!, activeUserLng!, kLat, kLng);
-        const estTime = dist <= 1.5 ? "15-20 min" : dist <= 3.0 ? "20-30 min" : "30-40 min";
+      if (deliveryInfo.distanceKm !== null) {
+        const kCoords = resolveSellerCoordinates(k);
         return {
           ...k,
-          latitude: kLat,
-          longitude: kLng,
-          distanceKm: dist,
-          distanceText: formatDistance(dist),
-          time: estTime,
+          latitude: kCoords?.lat ?? k.latitude,
+          longitude: kCoords?.lng ?? k.longitude,
+          distanceKm: deliveryInfo.distanceKm,
+          distanceText: deliveryInfo.distanceText,
+          time: deliveryInfo.deliveryTimeText,
+          deliveryTime: deliveryInfo.deliveryTimeText,
         };
       }
       return k;
     });
-  }, [kitchens, hasUserCoords, activeUserLat, activeUserLng]);
+  }, [kitchens, hasUserCoords, activeUserLat, activeUserLng, defaultAddress]);
 
   // Compute enriched rooms with accurate distances
   const enrichedRooms = useMemo(() => {

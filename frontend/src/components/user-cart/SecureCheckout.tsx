@@ -35,7 +35,7 @@ import { useLocation } from "@/components/location-provider";
 import { Footer } from "@/components/explore-desktop/footer";
 import { PhoneInput } from "@/components/common/PhoneInput/PhoneInput";
 import { broadcastOrderToSellerNotifications } from "@/hooks/useSellerNotifications";
-import { calculateDistanceKm, getPincodeCoordinates, MAX_DELIVERY_RADIUS_KM } from "@/lib/geo-distance";
+import { calculateDistanceKm, getPincodeCoordinates, MAX_DELIVERY_RADIUS_KM, resolveUserCoordinates, resolveSellerCoordinates } from "@/lib/geo-distance";
 import { HouseMapPicker } from "@/components/house-map-picker";
 import { useLiveShopStream } from "@/hooks/useLiveShopStream";
 import styles from "./SecureCheckout.module.css";
@@ -317,84 +317,40 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
       return { isOutsideCoverage: false, shopDistanceKm: null, maxDeliveryRadius: MAX_DELIVERY_RADIUS_KM };
     }
 
-    const sellerCoords = (sellerDetails.latitude && sellerDetails.longitude)
-      ? { lat: Number(sellerDetails.latitude), lng: Number(sellerDetails.longitude) }
-      : getPincodeCoordinates(sellerDetails.user?.pincode);
-    
-    const sellerLat = sellerCoords?.lat ?? null;
-    const sellerLng = sellerCoords?.lng ?? null;
+    const sellerCoords = resolveSellerCoordinates(sellerDetails);
 
-    let userLat: number | null = null;
-    let userLng: number | null = null;
+    let userCoords: { lat: number; lng: number } | null = null;
     let activePin: string | null = null;
 
-    // 1. If in Saved Address mode and an address is selected, prioritize selected saved address
     if (addressMode === "saved" && selectedSavedAddressId) {
       const selectedAddr = savedAddresses.find((a) => a.id === selectedSavedAddressId);
       if (selectedAddr) {
-        if (selectedAddr.latitude != null && selectedAddr.longitude != null && !isNaN(Number(selectedAddr.latitude)) && !isNaN(Number(selectedAddr.longitude))) {
-          userLat = Number(selectedAddr.latitude);
-          userLng = Number(selectedAddr.longitude);
-        } else if (selectedAddr.pincode) {
-          const pinCoords = getPincodeCoordinates(selectedAddr.pincode);
-          if (pinCoords) {
-            userLat = pinCoords.lat;
-            userLng = pinCoords.lng;
-          }
-        }
+        userCoords = resolveUserCoordinates(selectedAddr);
         activePin = selectedAddr.pincode ? selectedAddr.pincode.trim() : null;
       }
-    } else if (addressMode === "manual") {
-      if (manualLat !== null && manualLng !== null && !isNaN(manualLat) && !isNaN(manualLng)) {
-        userLat = manualLat;
-        userLng = manualLng;
-      }
+    } else if (addressMode === "manual" && manualLat !== null && manualLng !== null && !isNaN(manualLat) && !isNaN(manualLng)) {
+      userCoords = { lat: manualLat, lng: manualLng };
+      activePin = postalCode.trim() || null;
+    }
+
+    if (!userCoords) {
       if (postalCode && postalCode.trim()) {
         activePin = postalCode.trim();
-        if (userLat === null || userLng === null) {
-          const pinCoords = getPincodeCoordinates(activePin);
-          if (pinCoords) {
-            userLat = pinCoords.lat;
-            userLng = pinCoords.lng;
-          }
-        }
+        userCoords = resolveUserCoordinates({ pincode: activePin });
       }
     }
 
-    // 2. If in Manual Address mode or no saved address coordinates yet
-    if (userLat === null || userLng === null) {
-      if (postalCode && postalCode.trim()) {
-        activePin = postalCode.trim();
-        const pinCoords = getPincodeCoordinates(activePin);
-        if (pinCoords) {
-          userLat = pinCoords.lat;
-          userLng = pinCoords.lng;
-        }
-      }
-    }
-
-    // 3. Fallback only if no address or pincode selected at all
-    if (userLat === null || userLng === null) {
-      if (defaultAddress?.latitude && defaultAddress?.longitude) {
-        userLat = Number(defaultAddress.latitude);
-        userLng = Number(defaultAddress.longitude);
-      } else {
-        const fallbackPin = defaultAddress?.pincode || (typeof window !== "undefined" ? localStorage.getItem("active-selected-pincode") || localStorage.getItem("guest-pincode") : null);
-        if (fallbackPin) {
-          activePin = fallbackPin;
-          const userCoords = getPincodeCoordinates(fallbackPin);
-          if (userCoords) {
-            userLat = userCoords.lat;
-            userLng = userCoords.lng;
-          }
-        }
+    if (!userCoords) {
+      userCoords = resolveUserCoordinates(defaultAddress);
+      if (!activePin && defaultAddress?.pincode) {
+        activePin = defaultAddress.pincode;
       }
     }
 
     const maxRadius = sellerDetails.deliveryRadiusKm || MAX_DELIVERY_RADIUS_KM; // 5.0 km
 
-    if (userLat !== null && userLng !== null && sellerLat !== null && sellerLng !== null) {
-      const distance = calculateDistanceKm(userLat, userLng, sellerLat, sellerLng);
+    if (userCoords && sellerCoords) {
+      const distance = calculateDistanceKm(userCoords.lat, userCoords.lng, sellerCoords.lat, sellerCoords.lng);
       return {
         isOutsideCoverage: distance > maxRadius,
         shopDistanceKm: distance,
@@ -2417,16 +2373,11 @@ const loadRazorpayScript = (): Promise<boolean> => {
                           (addr.type || "").toUpperCase().includes("WORK") ||
                           (addr.type || "").toUpperCase().includes("OFFICE");
 
-                        const sellerCoords = (sellerDetails?.latitude && sellerDetails?.longitude)
-                          ? { lat: Number(sellerDetails.latitude), lng: Number(sellerDetails.longitude) }
-                          : getPincodeCoordinates(sellerDetails?.user?.pincode);
-                        const sellerLat = sellerCoords?.lat ?? null;
-                        const sellerLng = sellerCoords?.lng ?? null;
-                        const addrLat = addr.latitude != null ? Number(addr.latitude) : (getPincodeCoordinates(addr.pincode)?.lat ?? null);
-                        const addrLng = addr.longitude != null ? Number(addr.longitude) : (getPincodeCoordinates(addr.pincode)?.lng ?? null);
+                        const sellerCoords = resolveSellerCoordinates(sellerDetails);
+                        const addrCoords = resolveUserCoordinates(addr);
                         let addrDist: number | null = null;
-                        if (addrLat != null && addrLng != null && sellerLat != null && sellerLng != null) {
-                          addrDist = calculateDistanceKm(addrLat, addrLng, sellerLat, sellerLng);
+                        if (addrCoords && sellerCoords) {
+                          addrDist = calculateDistanceKm(addrCoords.lat, addrCoords.lng, sellerCoords.lat, sellerCoords.lng);
                         } else if (addr.pincode && sellerDetails?.user?.pincode) {
                           const p1 = getPincodeCoordinates(addr.pincode);
                           const p2 = getPincodeCoordinates(sellerDetails.user.pincode);
