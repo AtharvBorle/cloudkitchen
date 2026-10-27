@@ -1407,18 +1407,52 @@ export const validateReorder = async (orderId: string) => {
     const allUnavailableAddons: any[] = [];
     const allItems: any[] = [];
 
-    const parseItemAddons = (itemObj: any): Array<{ id: string; name: string; price: number }> => {
+    // Query seller's live add-ons directly from db.addon table (authoritative inventory and pricing)
+    const sellerIds = Array.from(new Set([order.sellerId, seller?.id, seller?.userId, seller?.trackingId].filter(Boolean))) as string[];
+    const liveSellerAddons = await db.addon.findMany({
+        where: {
+            sellerId: { in: sellerIds }
+        }
+    });
+
+    const liveAddonsById = new Map<string, any>();
+    const liveAddonsByName = new Map<string, any>();
+    for (const addon of liveSellerAddons) {
+        if (addon.id) {
+            liveAddonsById.set(String(addon.id).trim().toLowerCase(), addon);
+        }
+        if (addon.name) {
+            liveAddonsByName.set(String(addon.name).trim().toLowerCase(), addon);
+        }
+    }
+
+    const parseItemAddons = (itemObj: any): Array<{ id: string; name: string; price: number; isActive?: boolean; stockQuantity?: number; imageUrl?: string | null }> => {
         const raw = itemObj?.addons || itemObj?.variants;
         if (!raw) return [];
         try {
             const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
             if (Array.isArray(parsed)) {
                 return parsed
-                    .map((a: any, idx: number) => ({
-                        id: String(a.id || `addon_${idx + 1}`),
-                        name: String(a.name || "").trim(),
-                        price: Math.max(0, typeof a.price === "number" ? a.price : parseFloat(String(a.price).replace(/[^0-9.]/g, "")) || 0)
-                    }))
+                    .map((a: any, idx: number) => {
+                        const rawId = String(a.id || `addon_${idx + 1}`).trim();
+                        const rawName = String(a.name || "").trim();
+
+                        const dbMatch = (rawId ? liveAddonsById.get(rawId.toLowerCase()) : null)
+                            || (rawName ? liveAddonsByName.get(rawName.toLowerCase()) : null);
+
+                        const livePrice = dbMatch !== undefined && dbMatch !== null
+                            ? Number(dbMatch.price)
+                            : Math.max(0, typeof a.price === "number" ? a.price : parseFloat(String(a.price).replace(/[^0-9.]/g, "")) || 0);
+
+                        return {
+                            id: dbMatch ? String(dbMatch.id) : rawId,
+                            name: dbMatch ? String(dbMatch.name) : rawName,
+                            price: livePrice,
+                            isActive: dbMatch ? Boolean(dbMatch.isActive) : (a.isActive !== undefined ? Boolean(a.isActive) : true),
+                            stockQuantity: dbMatch ? Number(dbMatch.stockQuantity) : (a.stockQuantity !== undefined ? Number(a.stockQuantity) : undefined),
+                            imageUrl: dbMatch?.imageUrl || a.imageUrl || null,
+                        };
+                    })
                     .filter(a => Boolean(a.name));
             }
         } catch (e) {
@@ -1428,7 +1462,8 @@ export const validateReorder = async (orderId: string) => {
     };
 
     for (const item of rawItems) {
-        const foodItemId = item.foodItemId || item.id;
+        const rawItemId = item.foodItemId || item.id;
+        const foodItemId = typeof rawItemId === "string" && rawItemId.includes("_") ? rawItemId.split("_")[0] : rawItemId;
         let foodItem = null;
 
         if (foodItemId) {
@@ -1437,10 +1472,10 @@ export const validateReorder = async (orderId: string) => {
             }).catch(() => null);
         }
 
-        if (!foodItem && item.name && order.sellerId) {
+        if (!foodItem && item.name) {
             foodItem = await db.foodItem.findFirst({
                 where: {
-                    sellerId: order.sellerId,
+                    sellerId: { in: sellerIds },
                     name: item.name
                 }
             }).catch(() => null);
@@ -1529,34 +1564,89 @@ export const validateReorder = async (orderId: string) => {
             stockWarning = `Only ${foodItem.stockQuantity} item(s) available in stock (you previously ordered ${requestedQty}).`;
         }
 
-        // Validate add-ons against live foodItem addons
+        // Validate add-ons against live menu and authoritative db.addon inventory
         const liveAddons = parseItemAddons(foodItem);
-        const validSelectedAddons: Array<{ id: string; name: string; price: number }> = [];
-        const itemUnavailableAddons: Array<{ id?: string; name: string; price: number; itemName: string }> = [];
+        const validSelectedAddons: Array<{ id: string; name: string; price: number; quantity?: number }> = [];
+        const itemUnavailableAddons: Array<{ id?: string; name: string; price: number; itemName: string; reason?: string }> = [];
 
+        // Extract historical add-ons from previous order
+        let prevItemAddons: any[] = [];
         if (Array.isArray(item.selectedAddons) && item.selectedAddons.length > 0) {
-            for (const prevAddon of item.selectedAddons) {
-                const prevName = String(prevAddon.name || "").toLowerCase().trim();
-                const prevId = prevAddon.id ? String(prevAddon.id).trim() : null;
+            prevItemAddons = item.selectedAddons;
+        } else if (typeof item.selectedAddons === "string") {
+            try {
+                const parsed = JSON.parse(item.selectedAddons);
+                if (Array.isArray(parsed)) prevItemAddons = parsed;
+            } catch {}
+        } else if (Array.isArray(item.addons) && item.addons.length > 0) {
+            prevItemAddons = item.addons;
+        } else if (typeof item.addons === "string") {
+            try {
+                const parsed = JSON.parse(item.addons);
+                if (Array.isArray(parsed)) prevItemAddons = parsed;
+            } catch {}
+        } else if (Array.isArray(item.variants) && item.variants.length > 0) {
+            prevItemAddons = item.variants;
+        } else if (typeof item.variants === "string") {
+            try {
+                const parsed = JSON.parse(item.variants);
+                if (Array.isArray(parsed)) prevItemAddons = parsed;
+            } catch {}
+        }
 
-                // Match with live menu add-ons by ID or Name
-                const matchedLiveAddon = liveAddons.find((la) => 
-                    (prevId && String(la.id).trim() === prevId) ||
+        if (prevItemAddons.length > 0) {
+            for (const prevAddon of prevItemAddons) {
+                if (!prevAddon) continue;
+                const prevName = String(prevAddon.name || "").toLowerCase().trim();
+                const prevId = prevAddon.id ? String(prevAddon.id).trim().toLowerCase() : null;
+                const addonQty = Math.max(1, Number(prevAddon.quantity) || 1);
+
+                // 1. Primary check: live seller add-ons from db.addon table
+                const dbMatch = (prevId ? liveAddonsById.get(prevId) : null)
+                    || (prevName ? liveAddonsByName.get(prevName) : null);
+
+                // 2. Secondary check: parsed live foodItem add-ons
+                const dishMatch = liveAddons.find((la) => 
+                    (prevId && String(la.id).toLowerCase().trim() === prevId) ||
                     (la.name && String(la.name).toLowerCase().trim() === prevName)
                 );
 
+                const matchedLiveAddon = dbMatch || dishMatch;
+
                 if (matchedLiveAddon) {
-                    validSelectedAddons.push({
-                        id: matchedLiveAddon.id,
-                        name: matchedLiveAddon.name,
-                        price: matchedLiveAddon.price
-                    });
+                    const isAddonActive = matchedLiveAddon.isActive !== false;
+                    const isAddonInStock = matchedLiveAddon.stockQuantity === undefined || matchedLiveAddon.stockQuantity > 0;
+
+                    if (!isAddonActive || !isAddonInStock) {
+                        const reason = !isAddonActive 
+                            ? "This add-on has been deactivated by the kitchen." 
+                            : "This add-on is currently out of stock.";
+                        const unAddon = {
+                            id: matchedLiveAddon.id || prevAddon.id,
+                            name: matchedLiveAddon.name || prevAddon.name || "Add-on",
+                            price: Number(matchedLiveAddon.price !== undefined ? matchedLiveAddon.price : prevAddon.price) || 0,
+                            itemName: foodItem.name,
+                            reason
+                        };
+                        itemUnavailableAddons.push(unAddon);
+                        allUnavailableAddons.push(unAddon);
+                    } else {
+                        // Live add-on is available and active: take latest authoritative price updated by seller
+                        const latestPrice = Number(matchedLiveAddon.price);
+                        validSelectedAddons.push({
+                            id: String(matchedLiveAddon.id),
+                            name: String(matchedLiveAddon.name),
+                            price: latestPrice,
+                            quantity: addonQty,
+                        });
+                    }
                 } else {
                     const unAddon = {
                         id: prevAddon.id,
                         name: prevAddon.name || "Add-on",
                         price: Number(prevAddon.price) || 0,
-                        itemName: foodItem.name
+                        itemName: foodItem.name,
+                        reason: "Deleted by seller (No longer available)"
                     };
                     itemUnavailableAddons.push(unAddon);
                     allUnavailableAddons.push(unAddon);
@@ -1564,14 +1654,24 @@ export const validateReorder = async (orderId: string) => {
             }
         }
 
-        const validAddonsTotal = validSelectedAddons.reduce((sum, a) => sum + (Number(a.price) || 0), 0);
+        const validAddonsTotal = validSelectedAddons.reduce((sum, a) => sum + ((Number(a.price) || 0) * (Number(a.quantity) || 1)), 0);
         const currentBasePrice = foodItem.price !== undefined 
             ? Number(foodItem.price) 
             : (item.basePrice !== undefined ? Number(item.basePrice) : (Number(item.price) || 0));
         const finalUnitPrice = currentBasePrice + validAddonsTotal;
-        const prevUnitPrice = Number(item.price) || (Number(item.basePrice) || 0);
-        const priceChanged = prevUnitPrice > 0 && Math.abs(prevUnitPrice - finalUnitPrice) > 0.01;
 
+        // Calculate previous unit price from order history
+        let prevUnitPrice = 0;
+        if (item.price !== undefined && Number(item.price) > 0) {
+            prevUnitPrice = Number(item.price);
+        } else if (item.basePrice !== undefined && Number(item.basePrice) > 0) {
+            const prevAddonsSum = prevItemAddons.reduce((sum, a) => sum + ((Number(a.price) || 0) * (Number(a.quantity) || 1)), 0);
+            prevUnitPrice = Number(item.basePrice) + prevAddonsSum;
+        } else {
+            prevUnitPrice = finalUnitPrice;
+        }
+
+        const priceChanged = prevUnitPrice > 0 && Math.abs(prevUnitPrice - finalUnitPrice) > 0.01;
         const availItem = {
             id: foodItem.id,
             foodItemId: foodItem.id,

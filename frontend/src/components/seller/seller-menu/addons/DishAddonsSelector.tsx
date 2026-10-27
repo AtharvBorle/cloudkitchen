@@ -79,6 +79,58 @@ export default function DishAddonsSelector({
     loadAvailableAddons();
   }, [loadAvailableAddons]);
 
+  // Real-time synchronization when add-ons are updated in inventory
+  useEffect(() => {
+    const handleSync = () => {
+      loadAvailableAddons(true);
+    };
+    window.addEventListener("seller-addon-updated", handleSync);
+    window.addEventListener("seller-menu-updated", handleSync);
+    return () => {
+      window.removeEventListener("seller-addon-updated", handleSync);
+      window.removeEventListener("seller-menu-updated", handleSync);
+    };
+  }, [loadAvailableAddons]);
+
+  // Automatically reconcile selectedAddons when availableAddons update
+  useEffect(() => {
+    if (!availableAddons || availableAddons.length === 0 || !selectedAddons || selectedAddons.length === 0) return;
+
+    let hasDifferences = false;
+    const reconciled = selectedAddons.map((sel) => {
+      const match = availableAddons.find(
+        (a) =>
+          (a.id && sel.id && a.id === sel.id) ||
+          (a.name && sel.name && a.name.trim().toLowerCase() === sel.name.trim().toLowerCase())
+      );
+      if (match) {
+        const priceNum = Number(match.price) || 0;
+        const currentPriceNum = Number(sel.price) || 0;
+        if (
+          sel.name !== match.name ||
+          currentPriceNum !== priceNum ||
+          sel.stockQuantity !== match.stockQuantity ||
+          sel.isActive !== match.isActive
+        ) {
+          hasDifferences = true;
+          return {
+            ...sel,
+            id: match.id,
+            name: match.name,
+            price: match.price,
+            stockQuantity: match.stockQuantity,
+            isActive: match.isActive,
+          };
+        }
+      }
+      return sel;
+    });
+
+    if (hasDifferences) {
+      onChange(reconciled);
+    }
+  }, [availableAddons, selectedAddons, onChange]);
+
   // Filter add-ons by search query
   const filteredAddons = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
