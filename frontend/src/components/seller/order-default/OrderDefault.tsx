@@ -259,7 +259,7 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
 
             setOrder({
               id: target.id,
-              orderId: target.orderId || `#ORD-${String(target.id || "").slice(-6).toUpperCase()}`,
+              orderId: target.id || target.orderId || "",
               createdAt: target.createdAt,
               placedTime: formatOrderDateTime(target.createdAt),
               cancelledTime: formatOrderDateTime(target.updatedAt || target.createdAt),
@@ -564,7 +564,7 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
               <ArrowLeft size={18} />
             </Link>
             <div className={styles.headerGroup}>
-              <h1 className={styles.orderTitle}>Order {activeOrderData.orderId}</h1>
+              <h1 className={styles.orderTitle}>Order #{activeOrderData.orderId?.replace(/^#/, "")}</h1>
               <p className={styles.orderSubtitle}>{activeOrderData.placedTime}</p>
             </div>
             {isDelivered ? (

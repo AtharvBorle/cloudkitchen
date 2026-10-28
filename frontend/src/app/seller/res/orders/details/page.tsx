@@ -210,7 +210,7 @@ function DetailsContent() {
 
   return (
     <ResponsiveSellerOrdersDetails
-      orderId={order ? `#${order.id.slice(0, 6).toUpperCase()}` : rawId}
+      orderId={order ? `#${order.id.replace(/^#/, "")}` : rawId}
       rawOrder={order}
       taxCalc={calc}
       customerName={order?.user?.name || order?.customerName || "Customer"}

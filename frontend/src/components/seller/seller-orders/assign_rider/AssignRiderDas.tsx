@@ -113,13 +113,13 @@ function AssignRiderContent() {
         setAssignedRiderId(rider.id);
         try {
           broadcastDeliveryAlert({
-            orderId: order.id.slice(0, 6).toUpperCase(),
+            orderId: order.id,
             riderName: rider.name || "Delivery Partner",
             riderPhone: rider.phone,
             status: "RIDER_ASSIGNED",
           });
         } catch {}
-        showToast(`Rider ${rider.name} assigned to Order #${order.id.slice(0, 6).toUpperCase()}!`);
+        showToast(`Rider ${rider.name} assigned to Order #${order.id.replace(/^#/, "")}!`);
         setTimeout(() => {
           router.push(`/seller/orders/details?orderId=${encodeURIComponent(order.id)}`);
         }, 1000);
