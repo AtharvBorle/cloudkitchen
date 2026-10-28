@@ -61,6 +61,9 @@ export interface OrderDetailsData {
   cancellationReason?: string | null;
   rawOrder?: any;
   taxBreakdown?: any;
+  taxMode?: string;
+  taxCalc?: any;
+  seller?: any;
 }
 
 export type OrderDetailData = OrderDetailsData;
@@ -152,29 +155,42 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
 
     try {
       if (!isPolling) setLoading(true);
-      const res = await fetchApi("/api/seller/orders");
-      if (res.ok) {
-        const data = await res.json();
-        const list = data.data?.orders || data.orders || data.data || [];
-        if (Array.isArray(list) && list.length > 0) {
-          let found = null;
-          if (rawOrderId) {
-            const rawClean = rawOrderId.replace(/^#/, "").trim().toLowerCase();
-            const clean = rawClean.replace(/^(?:ord|ncr)-/i, "").trim();
-            found = list.find((o: any) => {
-              const oId = (o.id || "").toLowerCase();
-              return (
-                oId === rawClean ||
-                oId === clean ||
-                oId.startsWith(clean) ||
-                oId.endsWith(clean) ||
-                `#ncr-${oId.slice(0, 4)}` === rawOrderId.toLowerCase() ||
-                `#ord-${oId.slice(-6)}` === rawOrderId.toLowerCase()
-              );
-            });
+      let target: any = null;
+      if (rawOrderId) {
+        try {
+          const detailRes = await fetchApi(`/api/seller/orders/${rawOrderId}`);
+          if (detailRes.ok) {
+            const detailData = await detailRes.json();
+            target = detailData.data || detailData;
           }
-          // Default to found order, or the latest order if no rawOrderId was provided
-          const target = found || (!rawOrderId ? list[0] : list[0]);
+        } catch {}
+      }
+
+      if (!target) {
+        const res = await fetchApi("/api/seller/orders");
+        if (res.ok) {
+          const data = await res.json();
+          const list = data.data?.orders || data.orders || data.data || [];
+          if (Array.isArray(list) && list.length > 0) {
+            if (rawOrderId) {
+              const rawClean = rawOrderId.replace(/^#/, "").trim().toLowerCase();
+              const clean = rawClean.replace(/^(?:ord|ncr)-/i, "").trim();
+              target = list.find((o: any) => {
+                const oId = (o.id || "").toLowerCase();
+                return (
+                  oId === rawClean ||
+                  oId === clean ||
+                  oId.startsWith(clean) ||
+                  oId.endsWith(clean) ||
+                  `#ncr-${oId.slice(0, 4)}` === rawOrderId.toLowerCase() ||
+                  `#ord-${oId.slice(-6)}` === rawOrderId.toLowerCase()
+                );
+              });
+            }
+            if (!target) target = list[0];
+          }
+        }
+      }
 
           if (target) {
             let parsedItems: any[] = [];
@@ -258,10 +274,13 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
               deliveryPersonName: target.deliveryPerson?.name,
               cancelledBy: target.cancelledBy || ((Boolean(target.refund?.reason) && /cancelled by (customer|user|you)/i.test(target.refund.reason)) ? "USER" : null),
               cancellationReason: target.cancellationReason || target.refund?.reason || null,
+              rawOrder: target,
+              taxBreakdown: target.taxBreakdown,
+              taxMode: target.taxMode || calc.taxMode,
+              seller: target.seller,
+              taxCalc: calc,
             });
           }
-        }
-      }
     } catch (err) {
       console.error("Failed to load seller order details:", err);
     } finally {
@@ -699,13 +718,11 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
                     order={{
                       ...(activeOrderData.rawOrder || {}),
                       ...activeOrderData,
-                      items: activeOrderData.rawOrder?.items || activeOrderData.items,
-                      subtotal: activeOrderData.subtotal,
-                      deliveryFee: activeOrderData.deliveryFee,
-                      discount: activeOrderData.discount,
-                      totalAmount: activeOrderData.grandTotal || activeOrderData.total,
                       taxBreakdown: activeOrderData.rawOrder?.taxBreakdown || activeOrderData.taxBreakdown,
+                      taxMode: activeOrderData.rawOrder?.taxMode || activeOrderData.taxMode,
+                      seller: activeOrderData.rawOrder?.seller || activeOrderData.seller,
                     }}
+                    taxCalc={activeOrderData.taxCalc}
                     isPaid={activeOrderData.status === "Completed"}
                     paymentMethod={activeOrderData.paymentMethod}
                     orderId={activeOrderData.id}

@@ -289,16 +289,19 @@ export function getOrderBreakdown(order: any): TaxCalculationResult {
     }
 
     // 1. Authoritative check: If order has taxBreakdown stored from checkout, use it directly!
-    if (order.taxBreakdown) {
+    const rawBreakdown = order.taxBreakdown || order.rawOrder?.taxBreakdown;
+    if (rawBreakdown) {
         try {
-            const parsed = typeof order.taxBreakdown === "string" ? JSON.parse(order.taxBreakdown) : order.taxBreakdown;
+            const parsed = typeof rawBreakdown === "string" ? JSON.parse(rawBreakdown) : rawBreakdown;
             if (
                 parsed &&
                 typeof parsed.grandTotal === "number" &&
-                typeof parsed.productGross === "number" &&
                 Array.isArray(parsed.items) &&
                 parsed.items.length > 0
             ) {
+                if (typeof parsed.productGross !== "number") {
+                    parsed.productGross = round2(parsed.items.reduce((acc: number, it: any) => acc + (Number(it.grossAmount) || 0), 0));
+                }
                 return parsed;
             }
         } catch {}
@@ -307,24 +310,25 @@ export function getOrderBreakdown(order: any): TaxCalculationResult {
     // 2. Failsafe calculation using order items and fields matching checkout/cart
     let rawItems: any[] = [];
     try {
-        if (typeof order.items === "string") {
-            rawItems = JSON.parse(order.items);
-        } else if (Array.isArray(order.items)) {
-            rawItems = order.items;
-        } else if (Array.isArray(order.rawItems)) {
-            rawItems = order.rawItems;
+        const itemSource = order.rawOrder?.items || order.items || order.rawItems;
+        if (typeof itemSource === "string") {
+            rawItems = JSON.parse(itemSource);
+        } else if (Array.isArray(itemSource)) {
+            rawItems = itemSource;
         }
     } catch {
         rawItems = [];
     }
 
-    const sellerTaxMode = order.taxMode || order.seller?.taxMode || "TAX_INCLUSIVE";
-    const pTaxRate = cleanNumericPrice(order.productTaxRate, 5.0);
-    const dTaxRate = cleanNumericPrice(order.deliveryTaxRate, 18.0);
+    let sellerTaxMode = order.taxMode || order.rawOrder?.taxMode || order.seller?.taxMode;
+    const pTaxRate = cleanNumericPrice(order.productTaxRate || order.rawOrder?.productTaxRate, 5.0);
+    const dTaxRate = cleanNumericPrice(order.deliveryTaxRate || order.rawOrder?.deliveryTaxRate, 18.0);
 
     let dCharge = 0;
     if (typeof order.deliveryCharge === "number") {
         dCharge = order.deliveryCharge;
+    } else if (typeof order.rawOrder?.deliveryCharge === "number") {
+        dCharge = order.rawOrder.deliveryCharge;
     } else if (order.deliveryFee !== undefined && order.deliveryFee !== null) {
         dCharge = cleanNumericPrice(order.deliveryFee, 0);
     } else if (typeof order.seller?.deliveryCharge === "number") {
@@ -333,6 +337,7 @@ export function getOrderBreakdown(order: any): TaxCalculationResult {
 
     let couponDiscount = cleanNumericPrice(
         order.discount ||
+        order.rawOrder?.discount ||
         order.couponDiscount ||
         order.productDiscount ||
         order.appliedCoupon?.discountAmount ||
@@ -394,6 +399,23 @@ export function getOrderBreakdown(order: any): TaxCalculationResult {
 
     if (couponDiscount === 0 && order.appliedCoupon?.discountPercentage && totalItemGross > 0) {
         couponDiscount = round2((totalItemGross * order.appliedCoupon.discountPercentage) / 100);
+    }
+
+    // Intelligent auto-detection: If taxMode was not explicitly supplied, compare with stored total
+    if (!sellerTaxMode) {
+        const storedTotal = cleanNumericPrice(order.totalAmount || order.grandTotal || order.total, 0);
+        if (storedTotal > 0) {
+            const netProd = Math.max(0, totalItemGross - couponDiscount);
+            const exclEst = round2(round2(netProd * (1 + pTaxRate / 100)) + round2(dCharge * (1 + dTaxRate / 100)));
+            const inclEst = round2(netProd + dCharge);
+            if (Math.abs(storedTotal - exclEst) < Math.abs(storedTotal - inclEst)) {
+                sellerTaxMode = "TAX_EXCLUSIVE";
+            } else {
+                sellerTaxMode = "TAX_INCLUSIVE";
+            }
+        } else {
+            sellerTaxMode = "TAX_INCLUSIVE";
+        }
     }
 
     return calculateOrderTax({
