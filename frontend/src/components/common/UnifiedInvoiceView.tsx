@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
-import { ArrowLeft, Download, Printer, Phone, Mail } from "lucide-react";
+import React, { useState } from "react";
+import { ArrowLeft, Download, Printer, Phone, Mail, Loader2 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { getOrderBreakdown, TaxCalculationResult } from "@/lib/tax-calculator";
 
@@ -11,6 +11,8 @@ interface UnifiedInvoiceViewProps {
 }
 
 export const UnifiedInvoiceView: React.FC<UnifiedInvoiceViewProps> = ({ order, isSellerView = false }) => {
+  const [isDownloading, setIsDownloading] = useState(false);
+
   // Authoritative Single Engine Calculation matching checkout/cart
   const taxCalc: TaxCalculationResult = getOrderBreakdown(order);
 
@@ -68,29 +70,104 @@ export const UnifiedInvoiceView: React.FC<UnifiedInvoiceViewProps> = ({ order, i
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://dev.neocloudbites.com";
   const qrVerificationUrl = `${baseUrl}${isSellerView ? "/seller" : ""}/invoice/order/${order.id || rawCleanId}`;
 
+  // Direct PDF Download (no print preview dialog, downloads .pdf directly)
+  const handleDownloadPdf = async () => {
+    const element = document.getElementById("invoice-sheet");
+    if (!element || isDownloading) return;
+
+    try {
+      setIsDownloading(true);
+      const html2canvas = (await import("html2canvas")).default;
+      const { jsPDF } = await import("jspdf");
+
+      const canvas = await html2canvas(element, {
+        scale: 2, // 2x DPI for crisp 300dpi-equivalent resolution
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#FFFFFF",
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+      });
+
+      const pdfPageWidth = pdf.internal.pageSize.getWidth();
+      const pdfPageHeight = pdf.internal.pageSize.getHeight();
+
+      // Small printable margin (8mm)
+      const margin = 8;
+      const contentWidth = pdfPageWidth - margin * 2;
+      const contentHeight = (canvas.height * contentWidth) / canvas.width;
+
+      if (contentHeight <= pdfPageHeight - margin * 2) {
+        pdf.addImage(imgData, "PNG", margin, margin, contentWidth, contentHeight, undefined, "FAST");
+      } else {
+        // Multi-page slicing if the invoice exceeds a single page
+        let heightLeft = contentHeight;
+        let position = margin;
+        pdf.addImage(imgData, "PNG", margin, position, contentWidth, contentHeight, undefined, "FAST");
+        heightLeft -= (pdfPageHeight - margin * 2);
+
+        while (heightLeft > 0) {
+          position = position - (pdfPageHeight - margin * 2);
+          pdf.addPage();
+          pdf.addImage(imgData, "PNG", margin, position, contentWidth, contentHeight, undefined, "FAST");
+          heightLeft -= (pdfPageHeight - margin * 2);
+        }
+      }
+
+      pdf.save(`Invoice_${shortId}.pdf`);
+    } catch (err) {
+      console.error("Direct PDF download failed, falling back to print dialog:", err);
+      window.print();
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
     <div style={{ backgroundColor: "#F8FAFC", minHeight: "100vh", padding: "24px 16px 40px", fontFamily: "var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif)" }}>
       {/* Print Stylesheet */}
       <style jsx global>{`
         @media print {
-          body {
+          html, body {
             background-color: #ffffff !important;
             margin: 0 !important;
             padding: 0 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
-          .invoice-no-print {
+          .invoice-no-print,
+          .chatbot-widget-root,
+          div[style*="z-index: 9999"],
+          div[style*="z-index: 99999"],
+          [class*="chatbot" i],
+          [id*="chatbot" i] {
             display: none !important;
+            visibility: hidden !important;
           }
           .invoice-card-container {
             box-shadow: none !important;
             border: none !important;
             padding: 0 !important;
             max-width: 100% !important;
+            width: 100% !important;
             margin: 0 !important;
           }
+          .invoice-table-wrapper {
+            overflow: visible !important;
+            border: 1px solid #e5e7eb !important;
+          }
+          .invoice-table-wrapper table {
+            width: 100% !important;
+            table-layout: fixed !important;
+          }
           @page {
-            size: A4;
-            margin: 10mm;
+            size: portrait;
+            margin: 8mm;
           }
         }
       `}</style>
@@ -113,6 +190,7 @@ export const UnifiedInvoiceView: React.FC<UnifiedInvoiceViewProps> = ({ order, i
             fontWeight: 600,
             cursor: "pointer",
             boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+            transition: "all 0.15s ease",
           }}
         >
           <ArrowLeft size={16} />
@@ -120,9 +198,12 @@ export const UnifiedInvoiceView: React.FC<UnifiedInvoiceViewProps> = ({ order, i
         </button>
 
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          {/* Direct PDF Download Button */}
           <button
             type="button"
-            onClick={() => window.print()}
+            disabled={isDownloading}
+            onClick={handleDownloadPdf}
+            title="Download PDF directly to your device"
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -130,20 +211,33 @@ export const UnifiedInvoiceView: React.FC<UnifiedInvoiceViewProps> = ({ order, i
               padding: "8px 18px",
               borderRadius: "8px",
               border: "1px solid #D1D5DB",
-              backgroundColor: "#FFFFFF",
+              backgroundColor: isDownloading ? "#F3F4F6" : "#FFFFFF",
               color: "#374151",
               fontSize: "0.85rem",
               fontWeight: 600,
-              cursor: "pointer",
+              cursor: isDownloading ? "wait" : "pointer",
               boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+              transition: "all 0.15s ease",
             }}
           >
-            <Download size={16} />
-            <span>Download PDF</span>
+            {isDownloading ? (
+              <>
+                <Loader2 className="animate-spin" size={16} color="#DC2626" />
+                <span>Downloading PDF...</span>
+              </>
+            ) : (
+              <>
+                <Download size={16} />
+                <span>Download PDF</span>
+              </>
+            )}
           </button>
+
+          {/* Print Invoice Button (For physical printing) */}
           <button
             type="button"
             onClick={() => window.print()}
+            title="Print invoice on physical printer"
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -157,6 +251,7 @@ export const UnifiedInvoiceView: React.FC<UnifiedInvoiceViewProps> = ({ order, i
               fontWeight: 600,
               cursor: "pointer",
               boxShadow: "0 1px 3px rgba(220,38,38,0.3)",
+              transition: "all 0.15s ease",
             }}
           >
             <Printer size={16} />
@@ -165,8 +260,9 @@ export const UnifiedInvoiceView: React.FC<UnifiedInvoiceViewProps> = ({ order, i
         </div>
       </div>
 
-      {/* Main Invoice Card */}
+      {/* Main Invoice Card (Captured directly for PDF) */}
       <div
+        id="invoice-sheet"
         className="invoice-card-container"
         style={{
           backgroundColor: "#FFFFFF",
@@ -182,7 +278,7 @@ export const UnifiedInvoiceView: React.FC<UnifiedInvoiceViewProps> = ({ order, i
         <div style={{ height: "4px", background: "linear-gradient(90deg, #F97316 0%, #DC2626 50%, #EAB308 100%)", width: "100%" }} />
 
         {/* Card Body */}
-        <div style={{ padding: "32px 36px 28px" }}>
+        <div style={{ padding: "32px 34px 28px" }}>
           {/* Header Row: Left (Logo + Brand + Seller) | Right (Invoice No + Date + Order ID + QR) */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "20px", flexWrap: "wrap" }}>
             {/* Left Column */}
@@ -332,108 +428,108 @@ export const UnifiedInvoiceView: React.FC<UnifiedInvoiceViewProps> = ({ order, i
             </span>
           </div>
 
-          {/* Products Table matching reference image */}
-          <div style={{ overflowX: "auto", border: "1px solid #E5E7EB", borderRadius: "8px" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.82rem" }}>
+          {/* Products Table - Fixed 100% width, never cut off, zero scrollbar */}
+          <div className="invoice-table-wrapper" style={{ border: "1px solid #E5E7EB", borderRadius: "8px", overflow: "hidden", width: "100%" }}>
+            <table style={{ width: "100%", tableLayout: "fixed", borderCollapse: "collapse", textAlign: "left", fontSize: "0.8rem" }}>
               <thead>
-                <tr style={{ backgroundColor: "#E5E7EB", color: "#374151", fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.04em" }}>
-                  <th style={{ textAlign: "center", width: "38px", padding: "10px 8px" }}>#</th>
-                  <th style={{ textAlign: "left", padding: "10px 10px", minWidth: "150px" }}>PRODUCT</th>
-                  <th style={{ textAlign: "center", width: "45px", padding: "10px 8px" }}>QTY</th>
-                  <th style={{ textAlign: "right", width: "75px", padding: "10px 8px" }}>PRICE</th>
-                  <th style={{ textAlign: "right", width: "85px", padding: "10px 8px" }}>GROSS AMT</th>
-                  <th style={{ textAlign: "right", width: "75px", padding: "10px 8px" }}>DISCOUNT</th>
-                  <th style={{ textAlign: "right", width: "85px", padding: "10px 8px" }}>TAXABLE VAL</th>
-                  <th style={{ textAlign: "right", width: "70px", padding: "10px 8px" }}>CGST</th>
-                  <th style={{ textAlign: "right", width: "70px", padding: "10px 8px" }}>SGST</th>
-                  <th style={{ textAlign: "right", width: "85px", padding: "10px 10px" }}>TOTAL</th>
+                <tr style={{ backgroundColor: "#E5E7EB", color: "#374151", fontSize: "0.71rem", fontWeight: 700, letterSpacing: "0.03em" }}>
+                  <th style={{ textAlign: "center", width: "4%", padding: "9px 4px" }}>#</th>
+                  <th style={{ textAlign: "left", width: "25%", padding: "9px 8px" }}>PRODUCT</th>
+                  <th style={{ textAlign: "center", width: "5%", padding: "9px 4px" }}>QTY</th>
+                  <th style={{ textAlign: "right", width: "10%", padding: "9px 6px" }}>PRICE</th>
+                  <th style={{ textAlign: "right", width: "10%", padding: "9px 6px" }}>GROSS AMT</th>
+                  <th style={{ textAlign: "right", width: "9%", padding: "9px 6px" }}>DISCOUNT</th>
+                  <th style={{ textAlign: "right", width: "11%", padding: "9px 6px" }}>TAXABLE VAL</th>
+                  <th style={{ textAlign: "right", width: "8%", padding: "9px 6px" }}>CGST</th>
+                  <th style={{ textAlign: "right", width: "8%", padding: "9px 6px" }}>SGST</th>
+                  <th style={{ textAlign: "right", width: "10%", padding: "9px 8px" }}>TOTAL</th>
                 </tr>
               </thead>
               <tbody>
                 {taxCalc.items.map((it, idx) => (
                   <tr key={it.id || idx} style={{ borderBottom: "1px solid #F3F4F6", backgroundColor: "#FFFFFF" }}>
-                    <td style={{ textAlign: "center", padding: "10px 8px", color: "#9CA3AF" }}>{idx + 1}</td>
-                    <td style={{ padding: "10px 10px" }}>
-                      <div style={{ fontWeight: 700, color: "#111827" }}>{it.name}</div>
+                    <td style={{ textAlign: "center", padding: "9px 4px", color: "#9CA3AF" }}>{idx + 1}</td>
+                    <td style={{ padding: "9px 8px", wordBreak: "break-word" }}>
+                      <div style={{ fontWeight: 700, color: "#111827", lineHeight: "1.3" }}>{it.name}</div>
                       {it.selectedAddons && it.selectedAddons.length > 0 && (
-                        <div style={{ fontSize: "0.72rem", color: "#6B7280", marginTop: "2px" }}>
+                        <div style={{ fontSize: "0.71rem", color: "#6B7280", marginTop: "2px", lineHeight: "1.2" }}>
                           Add-ons: {it.selectedAddons.map((a: any) => `${a.name} (x${a.quantity || 1})`).join(", ")}
                         </div>
                       )}
-                      {it.sku && <div style={{ fontSize: "0.72rem", color: "#6B7280" }}>SKU: {it.sku}</div>}
+                      {it.sku && <div style={{ fontSize: "0.71rem", color: "#6B7280" }}>SKU: {it.sku}</div>}
                     </td>
-                    <td style={{ textAlign: "center", padding: "10px 8px", fontWeight: 700, color: "#111827" }}>{it.quantity}</td>
-                    <td style={{ textAlign: "right", padding: "10px 8px", color: "#374151" }}>₹{it.unitPrice.toFixed(2)}</td>
-                    <td style={{ textAlign: "right", padding: "10px 8px", color: "#374151" }}>₹{it.grossAmount.toFixed(2)}</td>
-                    <td style={{ textAlign: "right", padding: "10px 8px", color: it.discountAmount > 0 ? "#059669" : "#6B7280", fontWeight: it.discountAmount > 0 ? 600 : 400 }}>
+                    <td style={{ textAlign: "center", padding: "9px 4px", fontWeight: 700, color: "#111827" }}>{it.quantity}</td>
+                    <td style={{ textAlign: "right", padding: "9px 6px", color: "#374151", whiteSpace: "nowrap" }}>₹{it.unitPrice.toFixed(2)}</td>
+                    <td style={{ textAlign: "right", padding: "9px 6px", color: "#374151", whiteSpace: "nowrap" }}>₹{it.grossAmount.toFixed(2)}</td>
+                    <td style={{ textAlign: "right", padding: "9px 6px", color: it.discountAmount > 0 ? "#059669" : "#6B7280", fontWeight: it.discountAmount > 0 ? 600 : 400, whiteSpace: "nowrap" }}>
                       {it.discountAmount > 0 ? `-₹${it.discountAmount.toFixed(2)}` : "—"}
                     </td>
-                    <td style={{ textAlign: "right", padding: "10px 8px", color: "#111827" }}>₹{it.taxableValue.toFixed(2)}</td>
-                    <td style={{ textAlign: "right", padding: "10px 8px", fontSize: "0.78rem" }}>
+                    <td style={{ textAlign: "right", padding: "9px 6px", color: "#111827", whiteSpace: "nowrap" }}>₹{it.taxableValue.toFixed(2)}</td>
+                    <td style={{ textAlign: "right", padding: "9px 6px", fontSize: "0.78rem" }}>
                       <div style={{ fontSize: "0.68rem", color: "#9CA3AF" }}>{it.cgstRate}%</div>
-                      <div style={{ color: "#374151" }}>₹{it.cgstAmount.toFixed(2)}</div>
+                      <div style={{ color: "#374151", whiteSpace: "nowrap" }}>₹{it.cgstAmount.toFixed(2)}</div>
                     </td>
-                    <td style={{ textAlign: "right", padding: "10px 8px", fontSize: "0.78rem" }}>
+                    <td style={{ textAlign: "right", padding: "9px 6px", fontSize: "0.78rem" }}>
                       <div style={{ fontSize: "0.68rem", color: "#9CA3AF" }}>{it.sgstRate}%</div>
-                      <div style={{ color: "#374151" }}>₹{it.sgstAmount.toFixed(2)}</div>
+                      <div style={{ color: "#374151", whiteSpace: "nowrap" }}>₹{it.sgstAmount.toFixed(2)}</div>
                     </td>
-                    <td style={{ textAlign: "right", padding: "10px 10px", fontWeight: 700, color: "#111827" }}>₹{it.totalAmount.toFixed(2)}</td>
+                    <td style={{ textAlign: "right", padding: "9px 8px", fontWeight: 700, color: "#111827", whiteSpace: "nowrap" }}>₹{it.totalAmount.toFixed(2)}</td>
                   </tr>
                 ))}
 
                 {/* Shipping and charges row */}
                 <tr style={{ borderBottom: "1px solid #F3F4F6", backgroundColor: "#FFFFFF" }}>
-                  <td style={{ textAlign: "center", padding: "10px 8px", color: "#9CA3AF" }}>—</td>
-                  <td colSpan={5} style={{ padding: "10px 10px", fontStyle: "italic", color: "#4B5563", fontSize: "0.8rem" }}>
+                  <td style={{ textAlign: "center", padding: "9px 4px", color: "#9CA3AF" }}>—</td>
+                  <td colSpan={5} style={{ padding: "9px 8px", fontStyle: "italic", color: "#4B5563", fontSize: "0.79rem" }}>
                     Shipping and charges : ₹{taxCalc.deliveryTaxable.toFixed(2)} | shipping gst {taxCalc.deliveryTaxRate}% : ₹{taxCalc.deliveryGst.toFixed(2)}
                   </td>
-                  <td style={{ textAlign: "right", padding: "10px 8px", color: "#111827" }}>₹{taxCalc.deliveryTaxable.toFixed(2)}</td>
-                  <td style={{ textAlign: "right", padding: "10px 8px", color: "#374151", fontSize: "0.78rem" }}>
+                  <td style={{ textAlign: "right", padding: "9px 6px", color: "#111827", whiteSpace: "nowrap" }}>₹{taxCalc.deliveryTaxable.toFixed(2)}</td>
+                  <td style={{ textAlign: "right", padding: "9px 6px", color: "#374151", fontSize: "0.78rem" }}>
                     <div style={{ fontSize: "0.68rem", color: "#9CA3AF" }}>{(taxCalc.deliveryTaxRate / 2).toFixed(1)}%</div>
-                    <div>₹{(taxCalc.deliveryGst / 2).toFixed(2)}</div>
+                    <div style={{ whiteSpace: "nowrap" }}>₹{(taxCalc.deliveryGst / 2).toFixed(2)}</div>
                   </td>
-                  <td style={{ textAlign: "right", padding: "10px 8px", color: "#374151", fontSize: "0.78rem" }}>
+                  <td style={{ textAlign: "right", padding: "9px 6px", color: "#374151", fontSize: "0.78rem" }}>
                     <div style={{ fontSize: "0.68rem", color: "#9CA3AF" }}>{(taxCalc.deliveryTaxRate / 2).toFixed(1)}%</div>
-                    <div>₹{(taxCalc.deliveryGst / 2).toFixed(2)}</div>
+                    <div style={{ whiteSpace: "nowrap" }}>₹{(taxCalc.deliveryGst / 2).toFixed(2)}</div>
                   </td>
-                  <td style={{ textAlign: "right", padding: "10px 10px", fontWeight: 700, color: "#111827" }}>₹{taxCalc.deliveryTotal.toFixed(2)}</td>
+                  <td style={{ textAlign: "right", padding: "9px 8px", fontWeight: 700, color: "#111827", whiteSpace: "nowrap" }}>₹{taxCalc.deliveryTotal.toFixed(2)}</td>
                 </tr>
 
                 {/* Coupon discount row if applied */}
                 {taxCalc.productDiscount > 0 && (
                   <tr style={{ borderBottom: "1px solid #F3F4F6", backgroundColor: "#F0FDF4" }}>
-                    <td style={{ textAlign: "center", padding: "10px 8px", color: "#9CA3AF" }}>—</td>
-                    <td colSpan={4} style={{ padding: "10px 10px", color: "#059669", fontWeight: 600, fontSize: "0.8rem" }}>
+                    <td style={{ textAlign: "center", padding: "9px 4px", color: "#9CA3AF" }}>—</td>
+                    <td colSpan={4} style={{ padding: "9px 8px", color: "#059669", fontWeight: 600, fontSize: "0.79rem" }}>
                       🏷️ Coupon Discount {order.appliedCoupon?.code ? `(${order.appliedCoupon.code} applied)` : "(OFFER applied)"}
                     </td>
-                    <td style={{ textAlign: "right", padding: "10px 8px", color: "#059669", fontWeight: 700 }}>
+                    <td style={{ textAlign: "right", padding: "9px 6px", color: "#059669", fontWeight: 700, whiteSpace: "nowrap" }}>
                       -₹{taxCalc.productDiscount.toFixed(2)}
                     </td>
-                    <td colSpan={4} style={{ padding: "10px 8px" }}></td>
+                    <td colSpan={4} style={{ padding: "9px 6px" }}></td>
                   </tr>
                 )}
 
                 {/* Summary / Total row */}
-                <tr style={{ backgroundColor: "#E5E7EB", fontWeight: 700, color: "#111827", fontSize: "0.82rem" }}>
-                  <td style={{ textAlign: "center", padding: "11px 8px", color: "#6B7280" }}>{taxCalc.items.length}</td>
-                  <td style={{ padding: "11px 10px" }}>TOTAL QTY:</td>
-                  <td style={{ textAlign: "center", padding: "11px 8px" }}>{totalQuantity}</td>
-                  <td style={{ textAlign: "right", padding: "11px 8px", color: "#6B7280" }}>—</td>
-                  <td style={{ textAlign: "right", padding: "11px 8px" }}>₹{taxCalc.productGross.toFixed(2)}</td>
-                  <td style={{ textAlign: "right", padding: "11px 8px", color: taxCalc.productDiscount > 0 ? "#059669" : "#6B7280" }}>
+                <tr style={{ backgroundColor: "#E5E7EB", fontWeight: 700, color: "#111827", fontSize: "0.8rem" }}>
+                  <td style={{ textAlign: "center", padding: "10px 4px", color: "#6B7280" }}>{taxCalc.items.length}</td>
+                  <td style={{ padding: "10px 8px" }}>TOTAL QTY:</td>
+                  <td style={{ textAlign: "center", padding: "10px 4px" }}>{totalQuantity}</td>
+                  <td style={{ textAlign: "right", padding: "10px 6px", color: "#6B7280" }}>—</td>
+                  <td style={{ textAlign: "right", padding: "10px 6px", whiteSpace: "nowrap" }}>₹{taxCalc.productGross.toFixed(2)}</td>
+                  <td style={{ textAlign: "right", padding: "10px 6px", color: taxCalc.productDiscount > 0 ? "#059669" : "#6B7280", whiteSpace: "nowrap" }}>
                     {taxCalc.productDiscount > 0 ? `-₹${taxCalc.productDiscount.toFixed(2)}` : "—"}
                   </td>
-                  <td style={{ textAlign: "right", padding: "11px 8px" }}>₹{(taxCalc.productTaxable + taxCalc.deliveryTaxable).toFixed(2)}</td>
-                  <td style={{ textAlign: "right", padding: "11px 8px" }}>₹{(taxCalc.productCgst + taxCalc.deliveryCgst).toFixed(2)}</td>
-                  <td style={{ textAlign: "right", padding: "11px 8px" }}>₹{(taxCalc.productSgst + taxCalc.deliverySgst).toFixed(2)}</td>
-                  <td style={{ textAlign: "right", padding: "11px 10px", fontSize: "0.94rem", fontWeight: 800 }}>₹{taxCalc.grandTotal.toFixed(2)}</td>
+                  <td style={{ textAlign: "right", padding: "10px 6px", whiteSpace: "nowrap" }}>₹{(taxCalc.productTaxable + taxCalc.deliveryTaxable).toFixed(2)}</td>
+                  <td style={{ textAlign: "right", padding: "10px 6px", whiteSpace: "nowrap" }}>₹{(taxCalc.productCgst + taxCalc.deliveryCgst).toFixed(2)}</td>
+                  <td style={{ textAlign: "right", padding: "10px 6px", whiteSpace: "nowrap" }}>₹{(taxCalc.productSgst + taxCalc.deliverySgst).toFixed(2)}</td>
+                  <td style={{ textAlign: "right", padding: "10px 8px", fontSize: "0.92rem", fontWeight: 800, whiteSpace: "nowrap" }}>₹{taxCalc.grandTotal.toFixed(2)}</td>
                 </tr>
               </tbody>
             </table>
           </div>
 
           {/* Computer Generated Disclaimer */}
-          <div style={{ textAlign: "center", fontSize: "0.76rem", color: "#9CA3AF", marginTop: "28px", marginBottom: "24px" }}>
+          <div style={{ textAlign: "center", fontSize: "0.76rem", color: "#9CA3AF", marginTop: "26px", marginBottom: "22px" }}>
             This is a computer-generated invoice and does not require a physical signature
           </div>
 
