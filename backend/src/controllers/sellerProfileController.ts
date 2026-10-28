@@ -5,6 +5,7 @@ import { uploadImage } from "@/lib/upload";
 import { revalidateTag } from "next/cache";
 import bcrypt from "bcryptjs";
 import { validateKitchenName } from "@/lib/kitchen-validation";
+import { validateUpiId } from "@/lib/upi-validation";
 import { emitSellerStatusChanged } from "@/lib/realtime-events";
 import { sendPasswordChangedEmail } from "@/lib/emailService";
 import { triggerOpportunisticNotificationChecks } from "@/lib/subscriptionNotificationService";
@@ -274,7 +275,15 @@ export const updateSellerProfile = async (req: Request) => {
         profileUpdateData.addressLocality = infoAddress.trim();
     }
     if (upiId !== undefined) {
-        profileUpdateData.upiId = upiId ? (typeof upiId === "string" ? upiId.trim() : null) : null;
+        if (upiId && typeof upiId === "string" && upiId.trim()) {
+            const upiCheck = validateUpiId(upiId);
+            if (!upiCheck.isValid) {
+                throw new ApiError(upiCheck.error || "Please enter a valid UPI ID (e.g. cloudbites@okhdfcbank or 9876543210@paytm).", 400);
+            }
+            profileUpdateData.upiId = upiCheck.normalizedUpi || upiCheck.cleanUpi;
+        } else {
+            profileUpdateData.upiId = null;
+        }
     }
     if (foodType !== undefined && typeof foodType === "string" && foodType.trim()) {
         profileUpdateData.foodType = foodType.trim().toUpperCase();

@@ -2,6 +2,7 @@ import { getAuthSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { successResponse, errorResponse } from "@/lib/api-response";
 import { ApiError } from "@/lib/api-error";
+import { validateUpiId } from "@/lib/upi-validation";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,7 @@ export async function GET() {
         const hasBannerImage = Boolean(sellerProfile.bannerImageUrl && sellerProfile.bannerImageUrl.trim() !== "");
         const hasDeliveryRadius = Boolean(sellerProfile.deliveryRadiusReviewed);
         const hasOperatingHours = Boolean(sellerProfile.operatingHoursReviewed);
-        const hasUpi = Boolean(sellerProfile.upiId && sellerProfile.upiId.trim().includes("@"));
+        const hasUpi = Boolean(sellerProfile.upiId && validateUpiId(sellerProfile.upiId).isValid);
         const hasDeliveryPerson = deliveryPersonsCount > 0;
         const hasMenuItems = foodItemsCount > 0;
 
@@ -122,10 +123,11 @@ export async function POST(req: Request) {
 
         if (body.step === "upi_payment" || body.upiId !== undefined) {
             const cleanUpi = String(body.upiId || "").trim();
-            if (!cleanUpi || !cleanUpi.includes("@")) {
-                throw new ApiError("Please enter a valid UPI ID (e.g. yourname@okhdfcbank)", 400);
+            const validation = validateUpiId(cleanUpi);
+            if (!validation.isValid) {
+                throw new ApiError(validation.error || "Please enter a valid UPI ID (e.g. cloudbites@okhdfcbank or 9876543210@paytm)", 400);
             }
-            updateData.upiId = cleanUpi;
+            updateData.upiId = validation.normalizedUpi || validation.cleanUpi || cleanUpi;
         }
 
         if (body.isReadinessCompleted !== undefined) {
@@ -148,7 +150,7 @@ export async function POST(req: Request) {
         const hasBannerImage = Boolean(updated.bannerImageUrl && updated.bannerImageUrl.trim() !== "");
         const hasDeliveryRadius = Boolean(updated.deliveryRadiusReviewed);
         const hasOperatingHours = Boolean(updated.operatingHoursReviewed);
-        const hasUpi = Boolean(updated.upiId && updated.upiId.trim().includes("@"));
+        const hasUpi = Boolean(updated.upiId && validateUpiId(updated.upiId).isValid);
         const hasDeliveryPerson = deliveryPersonsCount > 0;
         const hasMenuItems = foodItemsCount > 0;
 

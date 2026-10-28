@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { successResponse, errorResponse } from "@/lib/api-response";
 import { ApiError } from "@/lib/api-error";
 import { getCategoryExpiries } from "@/lib/subscription";
+import { validateUpiId } from "@/lib/upi-validation";
 
 export const dynamic = "force-dynamic";
 
@@ -95,7 +96,7 @@ export async function GET() {
         const hasBannerImage = Boolean(sellerProfile.bannerImageUrl && sellerProfile.bannerImageUrl.trim() !== "");
         const hasDeliveryRadius = Boolean(sellerProfile.deliveryRadiusReviewed);
         const hasOperatingHours = Boolean(sellerProfile.operatingHoursReviewed);
-        const hasUpi = Boolean(sellerProfile.upiId && sellerProfile.upiId.trim().includes("@"));
+        const hasUpi = Boolean(sellerProfile.upiId && validateUpiId(sellerProfile.upiId).isValid);
         const hasDeliveryPerson = deliveryPersonsCount > 0;
         const hasMenuItems = foodItemsCount > 0;
 
