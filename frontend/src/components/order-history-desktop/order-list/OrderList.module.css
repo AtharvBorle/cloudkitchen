@@ -177,6 +177,31 @@
   background-color: #f8fafc;
 }
 
+.invoiceBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #fff7ed;
+  border: 1.5px solid #fed7aa;
+  border-radius: 12px;
+  color: #c2410c;
+  font-size: 0.88rem;
+  font-weight: 700;
+  padding: 9px 18px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.invoiceBtn:hover {
+  background-color: #ffedd5;
+  border-color: #fb923c;
+  color: #9a3412;
+  transform: translateY(-1px);
+}
+
+
 .reorderBtn {
   background-color: #f97316;
   border: none;

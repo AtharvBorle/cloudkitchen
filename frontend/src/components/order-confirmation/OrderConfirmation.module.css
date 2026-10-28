@@ -903,3 +903,52 @@
     padding: 14px 20px;
   }
 }
+
+
+.invoiceHeaderBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #fff7ed;
+  border: 1.5px solid #fed7aa;
+  border-radius: 8px;
+  color: #c2410c;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 6px 14px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.invoiceHeaderBtn:hover {
+  background-color: #ffedd5;
+  border-color: #fb923c;
+  color: #9a3412;
+}
+
+.invoiceBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: #fff7ed;
+  border: 1.5px solid #fed7aa;
+  border-radius: 9999px;
+  color: #c2410c;
+  font-size: 0.98rem;
+  font-weight: 700;
+  padding: 16px 28px;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(234, 88, 12, 0.12);
+  transition: all 0.2s ease;
+}
+
+.invoiceBtn:hover {
+  background-color: #ffedd5;
+  border-color: #fb923c;
+  color: #9a3412;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(234, 88, 12, 0.2);
+}

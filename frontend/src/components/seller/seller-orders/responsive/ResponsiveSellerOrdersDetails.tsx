@@ -15,7 +15,9 @@ import {
   Clock,
   Check,
   Loader2,
+  Receipt,
 } from "lucide-react";
+import { OrderTaxBreakdown } from "@/components/common/OrderTaxBreakdown";
 import { getRemainingSeconds } from "../SellerOrders";
 import { fetchApi } from "@/lib/fetch-api";
 import styles from "./ResponsiveSellerOrdersDetails.module.css";
@@ -56,6 +58,7 @@ export interface ResponsiveSellerOrdersDetailsProps {
   createdAt?: string;
   cancelledBy?: string | null;
   cancellationReason?: string | null;
+  rawOrder?: any;
   onBack?: () => void;
   onCallRider?: () => void;
   onStatusChange?: (newStatus: OrderTimelineStep) => Promise<void> | void;
@@ -84,6 +87,7 @@ export const ResponsiveSellerOrdersDetails: React.FC<
   createdAt,
   cancelledBy,
   cancellationReason,
+  rawOrder,
   onBack,
   onCallRider,
   onStatusChange,
@@ -776,34 +780,13 @@ export const ResponsiveSellerOrdersDetails: React.FC<
 
             <div className={styles.cardDivider} />
 
-            {/* Price breakdown */}
-            {subtotal && (
-              <div className={styles.itemRow} style={{ color: "#64748B", fontSize: "0.88rem" }}>
-                <span>Subtotal</span>
-                <span style={{ fontWeight: 600, color: "#0F172A" }}>{subtotal}</span>
-              </div>
-            )}
-            <div className={styles.itemRow} style={{ color: "#64748B", fontSize: "0.88rem" }}>
-              <span>Service Fee &amp; Delivery</span>
-              <span style={{ color: "#F97316", fontWeight: 600 }}>{deliveryFee || "Free"}</span>
-            </div>
-            {discount && (
-              <div className={styles.itemRow} style={{ color: "#16A34A", fontSize: "0.88rem", fontWeight: 600 }}>
-                <span>Discount / Coupon</span>
-                <span>-{discount}</span>
-              </div>
-            )}
-
-            <div className={styles.cardDivider} />
-
-            {/* Total Row */}
-            <div className={styles.totalRow}>
-              <div className={styles.totalLeft}>
-                <span className={styles.totalLabel}>Grand Total</span>
-                <span className={styles.paymentBadge}>{paymentMethod}</span>
-              </div>
-              <span className={styles.totalPrice}>{total}</span>
-            </div>
+            {/* Complete GST Price Breakdown */}
+            <OrderTaxBreakdown
+              order={rawOrder || { id: orderId, items, subtotal, deliveryFee, discount, total, paymentMethod }}
+              paymentMethod={paymentMethod}
+              orderId={orderId}
+              showInvoiceButton={true}
+            />
           </section>
 
           {/* 5. Bottom Action Buttons */}
