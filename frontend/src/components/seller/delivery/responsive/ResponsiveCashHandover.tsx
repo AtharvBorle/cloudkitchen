@@ -31,6 +31,7 @@ export interface ResponsiveCashHandoverProps {
   totalCash?: string;
   ordersCount?: number;
   orders?: CashOrderLine[];
+  showReportDiscrepancy?: boolean;
   onConfirmReceipt?: () => void;
   onReportDiscrepancy?: () => void;
   onBack?: () => void;
@@ -44,6 +45,7 @@ export const ResponsiveCashHandover: React.FC<ResponsiveCashHandoverProps> = ({
   totalCash = "₹0",
   ordersCount = 0,
   orders = DEFAULT_ORDERS,
+  showReportDiscrepancy = false,
   onConfirmReceipt,
   onReportDiscrepancy,
   onBack,
@@ -326,41 +328,46 @@ export const ResponsiveCashHandover: React.FC<ResponsiveCashHandoverProps> = ({
           </button>
 
           {/* Report Discrepancy & Export Actions */}
-          <div style={{ display: "flex", gap: "8px", width: "100%" }}>
-            <button
-              type="button"
-              className={styles.reportBtn}
-              onClick={handleReport}
-              style={{ flex: 1 }}
-            >
-              Report discrepancy
-            </button>
-            {orders.length > 0 && (
-              <button
-                type="button"
-                onClick={handleExportCsv}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "6px",
-                  padding: "12px 14px",
-                  backgroundColor: "#FFFFFF",
-                  color: "#475569",
-                  border: "1px solid #CBD5E1",
-                  borderRadius: "10px",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  transition: "all 0.15s ease",
-                }}
-                title="Download Handover CSV"
-              >
-                <Download size={15} />
-                <span>CSV</span>
-              </button>
-            )}
-          </div>
+          {(showReportDiscrepancy || orders.length > 0) && (
+            <div style={{ display: "flex", gap: "8px", width: "100%" }}>
+              {showReportDiscrepancy && (
+                <button
+                  type="button"
+                  className={styles.reportBtn}
+                  onClick={handleReport}
+                  style={{ flex: 1 }}
+                >
+                  Report discrepancy
+                </button>
+              )}
+              {orders.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleExportCsv}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
+                    padding: "12px 14px",
+                    backgroundColor: "#FFFFFF",
+                    color: "#475569",
+                    border: "1px solid #CBD5E1",
+                    borderRadius: "10px",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                    width: showReportDiscrepancy ? "auto" : "100%",
+                  }}
+                  title="Download Handover CSV"
+                >
+                  <Download size={15} />
+                  <span>{showReportDiscrepancy ? "CSV" : "Download Handover CSV"}</span>
+                </button>
+              )}
+            </div>
+          )}
         </main>
 
         {/* Report Discrepancy Modal */}
