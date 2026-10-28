@@ -699,7 +699,7 @@ export default function OrderConfirmation({ orderIdProp }: OrderConfirmationProp
                   </div>
                   <h2 className={styles.cardTitle}>Order Summary ({orderData.items.length} items)</h2>
                 </div>
-                {orderData.status === "DELIVERED" && (
+                {orderData.status === "DELIVERED" ? (
                   <a
                     href={'/invoice/order/' + orderData.orderId}
                     target="_blank"
@@ -710,6 +710,16 @@ export default function OrderConfirmation({ orderIdProp }: OrderConfirmationProp
                     <Receipt size={16} />
                     <span>Invoice</span>
                   </a>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className={styles.invoiceHeaderBtnDisabled}
+                    title="Invoice available after order delivery"
+                  >
+                    <Receipt size={16} />
+                    <span>Invoice (On Delivery)</span>
+                  </button>
                 )}
               </div>
 
@@ -959,7 +969,7 @@ export default function OrderConfirmation({ orderIdProp }: OrderConfirmationProp
           </Link>
 
           {/* Download Tax Invoice CTA */}
-          {orderData.status === "DELIVERED" && (
+          {orderData.status === "DELIVERED" ? (
             <a
               href={'/invoice/order/' + orderData.orderId}
               target="_blank"
@@ -970,6 +980,16 @@ export default function OrderConfirmation({ orderIdProp }: OrderConfirmationProp
               <Receipt size={18} />
               <span>Download Invoice</span>
             </a>
+          ) : (
+            <button
+              type="button"
+              disabled
+              className={styles.invoiceBtnDisabled}
+              title="Invoice available after order delivery"
+            >
+              <Receipt size={18} />
+              <span>Download Invoice (Available after delivery)</span>
+            </button>
           )}
 
           {/* Secondary Continue Exploring Button */}

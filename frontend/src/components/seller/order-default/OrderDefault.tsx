@@ -533,18 +533,29 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
               <h1 className={styles.orderTitle}>Order {activeOrderData.orderId}</h1>
               <p className={styles.orderSubtitle}>{activeOrderData.placedTime}</p>
             </div>
-            {activeOrderData.rawStatus !== "CANCELLED" && (
+            {isDelivered ? (
               <a
                 href={'/invoice/order/' + (activeOrderData.id || (rawOrderId ? rawOrderId.replace(/^#/, '') : ''))}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={styles.headerInvoiceBtn}
-                title="Download Official GST Tax Invoice"
+                title="Download Invoice"
                 style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: "8px", padding: "8px 16px", borderRadius: "10px", backgroundColor: "#FFF7ED", border: "1.5px solid #FDBA74", color: "#C2410C", fontWeight: 700, fontSize: "0.88rem", textDecoration: "none" }}
               >
                 <Receipt size={16} />
                 <span>Download Invoice</span>
               </a>
+            ) : (
+              <button
+                type="button"
+                disabled
+                className={styles.headerInvoiceBtnDisabled}
+                title="Invoice available after order delivery"
+                style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: "8px", padding: "8px 16px", borderRadius: "10px", backgroundColor: "#F1F5F9", border: "1.5px solid #CBD5E1", color: "#94A3B8", fontWeight: 600, fontSize: "0.88rem", cursor: "not-allowed", opacity: 0.75 }}
+              >
+                <Receipt size={16} />
+                <span>Download Invoice (On Delivery)</span>
+              </button>
             )}
           </div>
 
@@ -694,7 +705,7 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
                     isPaid={activeOrderData.status === "Completed"}
                     paymentMethod={activeOrderData.paymentMethod}
                     orderId={activeOrderData.id}
-                    showInvoiceButton={false}
+                    showInvoiceButton={true}
                   />
                 </div>
               </div>
