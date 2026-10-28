@@ -149,6 +149,56 @@
   margin: 0;
 }
 
+/* Main Tab Switcher (Dishes vs Add-on Inventory) */
+.tabBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background-color: #FFFFFF;
+  border-bottom: 1px solid #EEF0F4;
+  position: sticky;
+  top: 56px;
+  z-index: 45;
+}
+
+.tabBtn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  background-color: #F1F5F9;
+  color: #64748B;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+}
+
+.tabBtn:hover {
+  background-color: #E2E8F0;
+  color: #0F172A;
+}
+
+.tabBtnActive {
+  background-color: #FFF7ED;
+  color: #EA580C;
+  border-color: #FED7AA;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(234, 88, 12, 0.12);
+}
+
+.tabBtnActive:hover {
+  background-color: #FFF7ED;
+  color: #EA580C;
+}
+
 /* Top Controls Section (Search & Filter Pills) */
 .controlsSection {
   display: flex;

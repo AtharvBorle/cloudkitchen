@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
 import { fetchApi } from "@/lib/fetch-api";
+import { validateUpiId } from "@/lib/upi-validation";
 import { compressImage } from "@/lib/image-compression";
 import styles from "./SellerReadinessChecklist.module.css";
 
@@ -141,6 +142,12 @@ export default function SellerReadinessChecklist({
 
   // Modal 5: UPI ID state
   const [upiId, setUpiId] = useState<string>("");
+
+  // Real-time UPI ID validation
+  const upiValidation = useMemo(() => {
+    if (!upiId || !upiId.trim()) return { isValid: false, error: "" };
+    return validateUpiId(upiId);
+  }, [upiId]);
 
   // Modal 6: Delivery Person state
   const [riderForm, setRiderForm] = useState({
@@ -354,12 +361,13 @@ export default function SellerReadinessChecklist({
   // 5. Submit UPI ID
   const handleSubmitUpi = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanUpi = upiId.trim();
-    if (!cleanUpi || !cleanUpi.includes("@")) {
-      setErrorMessage("Please enter a valid UPI ID with '@' (e.g. chefkitchen@okhdfcbank)");
+    const validation = validateUpiId(upiId);
+    if (!validation.isValid) {
+      setErrorMessage(validation.error || "Please enter a valid UPI ID (e.g. cloudbites@okhdfcbank or 9876543210@paytm)");
       return;
     }
 
+    const cleanUpi = validation.normalizedUpi || validation.cleanUpi || upiId.trim();
     setIsSubmitting(true);
     setErrorMessage("");
     try {
@@ -373,8 +381,9 @@ export default function SellerReadinessChecklist({
       });
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.message || "Failed to save UPI ID");
+        throw new Error(err.message || err.error || "Failed to save UPI ID");
       }
+      setUpiId(cleanUpi);
       setActiveModal(null);
       await loadReadiness();
     } catch (err: any) {
@@ -648,7 +657,7 @@ export default function SellerReadinessChecklist({
                       📍 Set to: <strong>{item.value} km radius</strong>
                     </span>
                   )}
-                  {isDone && item.id === "upi_payment" && item.value && (
+                  {isDone && item.id === "upi_payment" && item.value && validateUpiId(item.value).isValid && (
                     <span className={styles.stepPreviewValue}>
                       💳 UPI ID: <strong>{item.value}</strong>
                     </span>
@@ -1054,21 +1063,46 @@ export default function SellerReadinessChecklist({
 
             <form onSubmit={handleSubmitUpi}>
               <div className={styles.formGroup}>
-                <label className={styles.formLabel}>Your Business UPI ID</label>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <label className={styles.formLabel}>Your Business UPI ID</label>
+                  <span style={{ fontSize: "0.75rem", color: upiId.length > 50 ? "#ef4444" : "#94a3b8" }}>
+                    {upiId.length}/50
+                  </span>
+                </div>
                 <input
                   type="text"
                   placeholder="e.g. cloudbites@okhdfcbank or 9876543210@paytm"
                   value={upiId}
-                  onChange={(e) => setUpiId(e.target.value)}
+                  maxLength={50}
+                  autoComplete="off"
+                  spellCheck={false}
+                  onChange={(e) => {
+                    setUpiId(e.target.value.trim().toLowerCase());
+                    if (errorMessage) setErrorMessage("");
+                  }}
                   className={styles.formInput}
+                  style={
+                    upiId.trim() && !upiValidation.isValid
+                      ? { borderColor: "#fca5a5" }
+                      : upiValidation.isValid
+                      ? { borderColor: "#86efac" }
+                      : undefined
+                  }
                   required
                 />
                 <span style={{ fontSize: "0.78rem", color: "#64748b" }}>
                   This UPI ID will receive customer counter payments, QR scan payments, and settlement transfers.
                 </span>
+
+                {/* Real-time Inline validation hint when invalid */}
+                {upiId.trim() && !upiValidation.isValid && (
+                  <span style={{ fontSize: "0.78rem", color: "#ef4444", fontWeight: 500, marginTop: "4px", display: "block" }}>
+                    {upiValidation.error}
+                  </span>
+                )}
               </div>
 
-              {upiId && upiId.includes("@") && (
+              {upiValidation.isValid && (
                 <div
                   style={{
                     display: "flex",
@@ -1077,13 +1111,13 @@ export default function SellerReadinessChecklist({
                     gap: "8px",
                     padding: "16px",
                     backgroundColor: "#f8fafc",
-                    border: "1px solid #e2e8f0",
+                    border: "1px solid #bbf7d0",
                     borderRadius: "12px",
                     marginBottom: "16px",
                   }}
                 >
                   <QRCodeCanvas
-                    value={`upi://pay?pa=${encodeURIComponent(upiId)}&pn=CloudKitchen&cu=INR`}
+                    value={`upi://pay?pa=${encodeURIComponent(upiValidation.normalizedUpi || upiId.trim())}&pn=CloudKitchen&cu=INR`}
                     size={120}
                   />
                   <span style={{ fontSize: "0.8rem", color: "#16a34a", fontWeight: 700 }}>
@@ -1102,7 +1136,16 @@ export default function SellerReadinessChecklist({
                 <button type="button" onClick={() => setActiveModal(null)} className={styles.cancelBtn}>
                   Cancel
                 </button>
-                <button type="submit" disabled={isSubmitting} className={styles.saveBtn}>
+                <button
+                  type="submit"
+                  disabled={isSubmitting || !upiValidation.isValid}
+                  className={styles.saveBtn}
+                  style={
+                    !upiValidation.isValid
+                      ? { opacity: 0.6, cursor: "not-allowed" }
+                      : undefined
+                  }
+                >
                   {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
                   <span>Save UPI ID</span>
                 </button>

@@ -6,6 +6,7 @@ import Topbar, { TopbarProps } from "../nav/Topbar";
 import { useSellerProfile, isGenericFallbackName, computeInitials } from "@/hooks/useSellerProfile";
 import { useRoomModule } from "@/context/RoomModuleContext";
 import { fetchApi } from "@/lib/fetch-api";
+import { validateUpiId } from "@/lib/upi-validation";
 import {
   Sparkles,
   CheckCircle2,
@@ -220,7 +221,7 @@ export default function MainCanvas({
       onSave(payload);
     }
 
-    if (payload.upiId && payload.upiId.trim().includes("@")) {
+    if (payload.upiId && validateUpiId(payload.upiId).isValid) {
       setSavedUpiId(payload.upiId.trim());
       setIsEditingUpi(false);
     }
@@ -1535,6 +1536,7 @@ export default function MainCanvas({
                       readOnly={Boolean(savedUpiId && !isEditingUpi)}
                       value={formData.upiId || ""}
                       onChange={(e) => handleChange("upiId", e.target.value)}
+                      maxLength={50}
                       placeholder="e.g. merchant@okhdfcbank, 9876543210@paytm, store@ybl"
                       style={{
                         width: "100%",
@@ -1542,7 +1544,7 @@ export default function MainCanvas({
                         padding: "0 14px",
                         borderRadius: "8px",
                         border:
-                          formData.upiId && !formData.upiId.includes("@")
+                          formData.upiId && !validateUpiId(formData.upiId).isValid
                             ? "1.5px solid #FCA5A5"
                             : savedUpiId && !isEditingUpi
                             ? "1px solid #CBD5E1"
