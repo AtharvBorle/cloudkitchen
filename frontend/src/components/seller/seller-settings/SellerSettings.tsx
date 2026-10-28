@@ -874,23 +874,7 @@ export const SellerSettings: React.FC<SellerSettingsProps> = ({
                   </label>
                 </div>
 
-                {/* Cash On Delivery */}
-                <div className={styles.settingItem}>
-                  <div className={styles.settingInfo}>
-                    <p className={styles.settingLabel}>Cash On Delivery (COD)</p>
-                    <p className={styles.settingSubtext}>
-                      Permit riders to collect cash payments on doorstep
-                    </p>
-                  </div>
-                  <label className={styles.toggleSwitch}>
-                    <input
-                      type="checkbox"
-                      checked={settings.allowCod}
-                      onChange={() => handleToggle("allowCod")}
-                    />
-                    <span className={styles.toggleSlider} />
-                  </label>
-                </div>
+                
 
                 {/* Delivery Radius */}
                 <div className={styles.settingItem} style={{ flexDirection: "column", alignItems: "flex-start", gap: "10px" }}>

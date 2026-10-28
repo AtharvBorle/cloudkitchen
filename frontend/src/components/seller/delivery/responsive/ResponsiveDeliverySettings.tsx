@@ -12,7 +12,7 @@ export interface DeliverySettingsData {
   deliveryFee: string;
   enableFreeDelivery: boolean;
   freeDeliveryMinOrder: string;
-  enableCod: boolean;
+  enableCod?: boolean;
 }
 
 export interface ResponsiveDeliverySettingsProps {
@@ -41,7 +41,6 @@ export const ResponsiveDeliverySettings: React.FC<
   const [freeDeliveryMinOrder, setFreeDeliveryMinOrder] = useState(
     initialSettings?.freeDeliveryMinOrder ?? (seller.freeDeliveryThreshold !== undefined ? `₹${seller.freeDeliveryThreshold}` : "₹500")
   );
-  const [enableCod, setEnableCod] = useState(initialSettings?.enableCod ?? true);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -55,9 +54,6 @@ export const ResponsiveDeliverySettings: React.FC<
           }
           if (parsed.freeDeliveryMinOrder !== undefined && initialSettings?.freeDeliveryMinOrder === undefined) {
             setFreeDeliveryMinOrder(parsed.freeDeliveryMinOrder);
-          }
-          if (parsed.enableCod !== undefined && initialSettings?.enableCod === undefined) {
-            setEnableCod(parsed.enableCod);
           }
         }
       } catch {}
@@ -106,7 +102,6 @@ export const ResponsiveDeliverySettings: React.FC<
       deliveryFee: formattedFee,
       enableFreeDelivery,
       freeDeliveryMinOrder,
-      enableCod,
     };
 
     if (typeof window !== "undefined") {
@@ -246,26 +241,7 @@ export const ResponsiveDeliverySettings: React.FC<
             )}
           </div>
 
-          {/* 4. COD Settings Card */}
-          <div className={styles.settingCard}>
-            <div className={styles.cardHeaderRow}>
-              <span className={styles.settingTitleUpper}>COD SETTINGS</span>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={enableCod}
-                className={`${styles.toggleSwitch} ${
-                  enableCod ? styles.toggleSwitchActive : ""
-                }`}
-                onClick={() => setEnableCod((prev) => !prev)}
-              >
-                <span className={styles.toggleThumb} />
-              </button>
-            </div>
-            <div className={styles.codInfoBox}>
-              Riders collect cash upon delivery and settle in the Delivery &amp; COD ledger.
-            </div>
-          </div>
+          
 
           {/* Save Settings Button */}
           <button type="submit" className={styles.saveButton} disabled={isSaving}>

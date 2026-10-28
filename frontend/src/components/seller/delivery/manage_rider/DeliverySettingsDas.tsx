@@ -56,7 +56,6 @@ export default function DeliverySettingsDas({
   const [freeDeliveryMinOrder, setFreeDeliveryMinOrder] = useState<number>(() => {
     return seller.freeDeliveryThreshold !== undefined ? seller.freeDeliveryThreshold : 500;
   });
-  const [enableCod, setEnableCod] = useState<boolean>(true);
 
   // Sync state when seller profile loads or updates
   useEffect(() => {
@@ -75,7 +74,6 @@ export default function DeliverySettingsDas({
           const num = parseFloat(String(parsed.freeDeliveryMinOrder).replace(/[^0-9.]/g, ""));
           if (!isNaN(num)) setFreeDeliveryMinOrder(num);
         }
-        if (parsed.enableCod !== undefined) setEnableCod(Boolean(parsed.enableCod));
       }
     } catch {}
     if (seller.enableFreeDelivery !== undefined) {
@@ -106,7 +104,6 @@ export default function DeliverySettingsDas({
       deliveryCharge: parsedDeliveryFee,
       enableFreeDelivery,
       freeDeliveryMinOrder: `₹${parsedMinOrder}`,
-      enableCod,
     };
 
     try {
@@ -457,73 +454,7 @@ export default function DeliverySettingsDas({
               )}
             </div>
 
-            {/* Card 4: Cash On Delivery (COD) */}
-            <div
-              style={{
-                backgroundColor: "#FFFFFF",
-                border: "1.5px solid #E2E8F0",
-                borderRadius: "14px",
-                padding: "22px 24px",
-                boxShadow: "0 1px 4px rgba(0, 0, 0, 0.03)",
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
-                <div>
-                  <h2 style={{ fontSize: "16px", fontWeight: 700, color: "#0F172A", margin: 0 }}>
-                    Cash On Delivery (COD)
-                  </h2>
-                  <p style={{ fontSize: "13px", color: "#64748B", margin: "4px 0 0 0" }}>
-                    Allow customers to pay cash when their order is delivered to their doorstep.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={enableCod}
-                  onClick={() => setEnableCod((prev) => !prev)}
-                  style={{
-                    width: "48px",
-                    height: "26px",
-                    borderRadius: "13px",
-                    backgroundColor: enableCod ? "#EA580C" : "#CBD5E1",
-                    border: "none",
-                    cursor: "pointer",
-                    position: "relative",
-                    transition: "background-color 0.2s ease",
-                    padding: 0,
-                    outline: "none",
-                    flexShrink: 0,
-                  }}
-                >
-                  <span
-                    style={{
-                      width: "20px",
-                      height: "20px",
-                      borderRadius: "50%",
-                      backgroundColor: "#FFFFFF",
-                      position: "absolute",
-                      top: "3px",
-                      left: enableCod ? "25px" : "3px",
-                      transition: "left 0.2s ease",
-                      boxShadow: "0 1px 3px rgba(0, 0, 0, 0.2)",
-                    }}
-                  />
-                </button>
-              </div>
-              <div
-                style={{
-                  backgroundColor: "#F8FAFC",
-                  border: "1px solid #E2E8F0",
-                  borderRadius: "8px",
-                  padding: "10px 14px",
-                  fontSize: "12.5px",
-                  color: "#475569",
-                  lineHeight: 1.5,
-                }}
-              >
-                Riders collect cash from customers upon delivery and settle the outstanding balance in the Delivery &amp; COD Cash Collection log.
-              </div>
-            </div>
+            
 
             {/* Bottom Actions */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "12px", marginTop: "12px" }}>
