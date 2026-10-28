@@ -70,7 +70,7 @@ export const revertCouponUsageFloorZero = async (
  * 5. Emits real-time SSE events so dashboards update instantly.
  */
 export const cancelExpiredOrder = async (order: any): Promise<any> => {
-    if (!order || order.status === "CANCELLED" || order.status === "DELIVERED") {
+    if (!order || order.status !== "PENDING") {
         return order;
     }
 
@@ -80,7 +80,7 @@ export const cancelExpiredOrder = async (order: any): Promise<any> => {
             const claim = await tx.order.updateMany({
                 where: {
                     id: order.id,
-                    status: { notIn: ["CANCELLED", "DELIVERED"] }
+                    status: "PENDING"
                 },
                 data: { 
                     status: "CANCELLED",
