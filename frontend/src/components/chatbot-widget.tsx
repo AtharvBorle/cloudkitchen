@@ -1825,7 +1825,7 @@ Details: Category request submitted via chatbot assistant.`;
                                 }}
                                 onMouseEnter={(e) => {
                                     e.currentTarget.style.backgroundColor = "#FFF5F1";
-                                    e.currentTarget.style.borderColor = "#FCA5A5";
+                                    e.currentTarget.style.borderColor = "#FF6B00";
                                     e.currentTarget.style.transform = "scale(1.06)";
                                 }}
                                 onMouseLeave={(e) => {
@@ -1835,25 +1835,21 @@ Details: Category request submitted via chatbot assistant.`;
                                 }}
                                 title="Clear chat"
                             >
-                                <svg
-                                    width="19"
-                                    height="19"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="#EF4444"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                >
-                                    {/* Dustpan */}
-                                    <path d="M4 17h8l-1.5-6h-5L4 17z" />
-                                    <path d="M8 11V5.5a1 1 0 0 1 1-1h0.5" />
-                                    {/* Broom */}
-                                    <path d="M19.5 3.5l-5.5 6.5" />
-                                    <path d="M13 11l3 2.5" />
-                                    <path d="M12 12.5l1.8 6 3.7-1.1-1.7-6" />
-                                    <path d="M14 18l.8-2.5" />
-                                </svg>
+                                <img
+                                    src="/images/broom-dustpan-orange.png"
+                                    alt="Clear chat"
+                                    width={20}
+                                    height={20}
+                                    draggable={false}
+                                    style={{
+                                        width: "20px",
+                                        height: "20px",
+                                        objectFit: "contain",
+                                        pointerEvents: "none",
+                                        userSelect: "none",
+                                        display: "block"
+                                    }}
+                                />
                             </button>
                             <button
                                 onClick={() => toggleOpen(false)}
