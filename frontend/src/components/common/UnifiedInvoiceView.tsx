@@ -85,6 +85,25 @@ export const UnifiedInvoiceView: React.FC<UnifiedInvoiceViewProps> = ({ order, i
         useCORS: true,
         logging: false,
         backgroundColor: "#FFFFFF",
+        windowWidth: 1024,
+        onclone: (clonedDoc) => {
+          const sheet = clonedDoc.getElementById("invoice-sheet");
+          if (sheet) {
+            sheet.style.width = "860px";
+            sheet.style.maxWidth = "860px";
+            sheet.style.minWidth = "860px";
+            const tableWrapper = sheet.querySelector(".invoice-table-wrapper");
+            if (tableWrapper) {
+              tableWrapper.style.overflow = "visible";
+              tableWrapper.style.width = "100%";
+            }
+            const table = sheet.querySelector(".invoice-table-wrapper table");
+            if (table) {
+              table.style.minWidth = "100%";
+              table.style.width = "100%";
+            }
+          }
+        },
       });
 
       const imgData = canvas.toDataURL("image/png");
@@ -129,7 +148,7 @@ export const UnifiedInvoiceView: React.FC<UnifiedInvoiceViewProps> = ({ order, i
   };
 
   return (
-    <div style={{ backgroundColor: "#F8FAFC", minHeight: "100vh", padding: "24px 16px 40px", fontFamily: "var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif)" }}>
+    <div className="invoice-page-wrapper" style={{ backgroundColor: "#F8FAFC", minHeight: "100vh", padding: "24px 16px 40px", fontFamily: "var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif)" }}>
       {/* Print Stylesheet */}
       <style jsx global>{`
         @media print {
@@ -170,13 +189,37 @@ export const UnifiedInvoiceView: React.FC<UnifiedInvoiceViewProps> = ({ order, i
             margin: 8mm;
           }
         }
+
+        @media screen and (max-width: 768px) {
+          .invoice-page-wrapper {
+            padding: 12px 8px 30px !important;
+          }
+          .invoice-card-body {
+            padding: 18px 14px 20px !important;
+          }
+          .invoice-scroll-hint {
+            display: inline-flex !important;
+          }
+          .invoice-header-meta {
+            margin-top: 12px !important;
+            margin-left: 0 !important;
+            width: 100% !important;
+            justify-content: space-between !important;
+          }
+        }
       `}</style>
 
       {/* Top Action Bar (Hidden in Print) */}
       <div className="invoice-no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", maxWidth: "860px", margin: "0 auto 16px auto", flexWrap: "wrap", gap: "10px" }}>
         <button
           type="button"
-          onClick={() => window.close()}
+          onClick={() => {
+            if (window.history.length > 1) {
+              window.history.back();
+            } else {
+              window.close();
+            }
+          }}
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -278,7 +321,7 @@ export const UnifiedInvoiceView: React.FC<UnifiedInvoiceViewProps> = ({ order, i
         <div style={{ height: "4px", background: "linear-gradient(90deg, #F97316 0%, #DC2626 50%, #EAB308 100%)", width: "100%" }} />
 
         {/* Card Body */}
-        <div style={{ padding: "32px 34px 28px" }}>
+        <div className="invoice-card-body" style={{ padding: "32px 34px 28px" }}>
           {/* Header Row: Left (Logo + Brand + Seller) | Right (Invoice No + Date + Order ID + QR) */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "20px", flexWrap: "wrap" }}>
             {/* Left Column */}
@@ -351,7 +394,7 @@ export const UnifiedInvoiceView: React.FC<UnifiedInvoiceViewProps> = ({ order, i
             </div>
 
             {/* Right Column: Invoice Meta + QR Code */}
-            <div style={{ display: "flex", alignItems: "flex-start", gap: "14px", marginLeft: "auto" }}>
+            <div className="invoice-header-meta" style={{ display: "flex", alignItems: "flex-start", gap: "14px", marginLeft: "auto" }}>
               <div style={{ textAlign: "right" }}>
                 <div style={{ fontWeight: 800, fontSize: "1.25rem", color: "#0F172A", letterSpacing: "0.02em" }}>
                   {invoiceNo}
@@ -419,30 +462,54 @@ export const UnifiedInvoiceView: React.FC<UnifiedInvoiceViewProps> = ({ order, i
           </div>
 
           {/* Product Details Header */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "24px", marginBottom: "8px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "24px", marginBottom: "8px", flexWrap: "wrap", gap: "6px" }}>
             <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "#0F172A", margin: 0 }}>
               Product Details
             </h3>
-            <span style={{ fontSize: "0.78rem", color: "#64748B", fontWeight: 500 }}>
-              Currency: INR (₹)
-            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span className="invoice-scroll-hint" style={{ fontSize: "0.72rem", color: "#EA580C", fontWeight: 600, display: "none", alignItems: "center", gap: "4px" }}>
+                <span>&larr; Scroll table horizontally &rarr;</span>
+              </span>
+              <span style={{ fontSize: "0.78rem", color: "#64748B", fontWeight: 500 }}>
+                Currency: INR (₹)
+              </span>
+            </div>
           </div>
 
-          {/* Products Table - Fixed 100% width, never cut off, zero scrollbar */}
-          <div className="invoice-table-wrapper" style={{ border: "1px solid #E5E7EB", borderRadius: "8px", overflow: "hidden", width: "100%" }}>
-            <table style={{ width: "100%", tableLayout: "fixed", borderCollapse: "collapse", textAlign: "left", fontSize: "0.8rem" }}>
+          {/* Products Table - Responsive scroll wrapper */}
+          <div
+            className="invoice-table-wrapper"
+            style={{
+              border: "1px solid #E5E7EB",
+              borderRadius: "8px",
+              overflowX: "auto",
+              WebkitOverflowScrolling: "touch",
+              width: "100%",
+              backgroundColor: "#FFFFFF",
+            }}
+          >
+            <table
+              style={{
+                width: "100%",
+                minWidth: "740px",
+                tableLayout: "fixed",
+                borderCollapse: "collapse",
+                textAlign: "left",
+                fontSize: "0.8rem",
+              }}
+            >
               <thead>
                 <tr style={{ backgroundColor: "#E5E7EB", color: "#374151", fontSize: "0.71rem", fontWeight: 700, letterSpacing: "0.03em" }}>
-                  <th style={{ textAlign: "center", width: "4%", padding: "9px 4px" }}>#</th>
-                  <th style={{ textAlign: "left", width: "25%", padding: "9px 8px" }}>PRODUCT</th>
-                  <th style={{ textAlign: "center", width: "5%", padding: "9px 4px" }}>QTY</th>
-                  <th style={{ textAlign: "right", width: "10%", padding: "9px 6px" }}>PRICE</th>
-                  <th style={{ textAlign: "right", width: "10%", padding: "9px 6px" }}>GROSS AMT</th>
-                  <th style={{ textAlign: "right", width: "9%", padding: "9px 6px" }}>DISCOUNT</th>
-                  <th style={{ textAlign: "right", width: "11%", padding: "9px 6px" }}>TAXABLE VAL</th>
-                  <th style={{ textAlign: "right", width: "8%", padding: "9px 6px" }}>CGST</th>
-                  <th style={{ textAlign: "right", width: "8%", padding: "9px 6px" }}>SGST</th>
-                  <th style={{ textAlign: "right", width: "10%", padding: "9px 8px" }}>TOTAL</th>
+                  <th style={{ textAlign: "center", width: "4%", minWidth: "28px", padding: "9px 4px" }}>#</th>
+                  <th style={{ textAlign: "left", width: "25%", minWidth: "150px", padding: "9px 8px" }}>PRODUCT</th>
+                  <th style={{ textAlign: "center", width: "5%", minWidth: "38px", padding: "9px 4px" }}>QTY</th>
+                  <th style={{ textAlign: "right", width: "10%", minWidth: "70px", padding: "9px 6px" }}>PRICE</th>
+                  <th style={{ textAlign: "right", width: "10%", minWidth: "78px", padding: "9px 6px" }}>GROSS AMT</th>
+                  <th style={{ textAlign: "right", width: "9%", minWidth: "70px", padding: "9px 6px" }}>DISCOUNT</th>
+                  <th style={{ textAlign: "right", width: "11%", minWidth: "82px", padding: "9px 6px" }}>TAXABLE VAL</th>
+                  <th style={{ textAlign: "right", width: "8%", minWidth: "64px", padding: "9px 6px" }}>CGST</th>
+                  <th style={{ textAlign: "right", width: "8%", minWidth: "64px", padding: "9px 6px" }}>SGST</th>
+                  <th style={{ textAlign: "right", width: "10%", minWidth: "76px", padding: "9px 8px" }}>TOTAL</th>
                 </tr>
               </thead>
               <tbody>
