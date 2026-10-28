@@ -290,7 +290,6 @@ export default function CustomerOrderInvoicePage({ params }: { params: Promise<{
                                     <td style={{ textAlign: 'center', borderRight: '1px solid #E2E8F0', color: '#475569' }}>{idx + 1}</td>
                                     <td style={{ borderRight: '1px solid #E2E8F0' }}>
                                         <div style={{ fontWeight: '700', color: '#0F172A' }}>{it.name}</div>
-                                        <div style={{ fontSize: '0.72rem', color: '#64748B' }}>SAC: {it.hsn || '996331'}</div>
                                         {it.sku && (
                                             <div style={{ fontSize: '0.72rem', color: '#64748B' }}>SKU: {it.sku}</div>
                                         )}

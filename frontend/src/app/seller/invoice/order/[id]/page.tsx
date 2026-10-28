@@ -297,7 +297,6 @@ export default function SellerOrderInvoicePage({ params }: { params: Promise<{ i
                         <thead>
                             <tr style={{ borderBottom: '2px solid #000000', backgroundColor: '#FFFFFF' }}>
                                 <th style={{ textAlign: 'left', minWidth: '190px', borderRight: '1px solid #000000', color: '#000000', fontWeight: '800' }}>Product</th>
-                                <th style={{ textAlign: 'center', width: '70px', borderRight: '1px solid #000000', color: '#000000', fontWeight: '800' }}>SAC</th>
                                 <th style={{ textAlign: 'center', width: '50px', borderRight: '1px solid #000000', color: '#000000', fontWeight: '800' }}>Qty</th>
                                 <th style={{ textAlign: 'right', width: '85px', borderRight: '1px solid #000000', color: '#000000', fontWeight: '800' }}>Gross Amt</th>
                                 <th style={{ textAlign: 'right', width: '85px', borderRight: '1px solid #000000', color: '#000000', fontWeight: '800' }}>Discount</th>
@@ -320,7 +319,6 @@ export default function SellerOrderInvoicePage({ params }: { params: Promise<{ i
                                             <div>Price: ₹{it.unitPrice.toFixed(2)}</div>
                                         </div>
                                     </td>
-                                    <td style={{ textAlign: 'center', borderRight: '1px solid #000000' }}>{it.hsn || '996331'}</td>
                                     <td style={{ textAlign: 'center', fontWeight: '700', borderRight: '1px solid #000000' }}>{it.quantity}</td>
                                     <td style={{ textAlign: 'right', borderRight: '1px solid #000000' }}>₹{it.grossAmount.toFixed(2)}</td>
                                     <td style={{ textAlign: 'right', borderRight: '1px solid #000000', fontSize: '0.78rem' }}>
@@ -341,7 +339,7 @@ export default function SellerOrderInvoicePage({ params }: { params: Promise<{ i
 
                             {/* Shipping and charges row */}
                             <tr style={{ borderBottom: '1px solid #000000' }}>
-                                <td colSpan={8} style={{ textAlign: 'right', fontWeight: '600', paddingRight: '16px', borderRight: '1px solid #000000' }}>
+                                <td colSpan={7} style={{ textAlign: 'right', fontWeight: '600', paddingRight: '16px', borderRight: '1px solid #000000' }}>
                                     Shipping and charges : ₹{taxCalc.deliveryTaxable.toFixed(2)} | shipping gst {taxCalc.deliveryTaxRate}% : ₹{taxCalc.deliveryGst.toFixed(2)}
                                 </td>
                                 <td style={{ textAlign: 'right', fontWeight: '800' }}>
@@ -352,7 +350,7 @@ export default function SellerOrderInvoicePage({ params }: { params: Promise<{ i
                             {/* Coupon Discount row if applied */}
                             {taxCalc.productDiscount > 0 && (
                                 <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#F8FAFC' }}>
-                                    <td colSpan={8} style={{ textAlign: 'right', fontWeight: '600', color: '#166534', paddingRight: '16px', borderRight: '1px solid #000000' }}>
+                                    <td colSpan={7} style={{ textAlign: 'right', fontWeight: '600', color: '#166534', paddingRight: '16px', borderRight: '1px solid #000000' }}>
                                         Coupon Discount {order.appliedCoupon?.code ? `(${order.appliedCoupon.code})` : ""} :
                                     </td>
                                     <td style={{ textAlign: 'right', fontWeight: '800', color: '#166534' }}>
@@ -363,7 +361,7 @@ export default function SellerOrderInvoicePage({ params }: { params: Promise<{ i
 
                             {/* Grand Total Row */}
                             <tr style={{ fontWeight: '900' }}>
-                                <td colSpan={3} style={{ textAlign: 'left', borderRight: '1px solid #000000', padding: '10px' }}>
+                                <td colSpan={2} style={{ textAlign: 'left', borderRight: '1px solid #000000', padding: '10px' }}>
                                     TOTAL QTY: {totalQuantity}
                                 </td>
                                 <td colSpan={5} style={{ textAlign: 'right', paddingRight: '16px', borderRight: '1px solid #000000', letterSpacing: '0.02em' }}>
