@@ -15,7 +15,7 @@ export interface TaxCalculatorItem {
 export interface TaxBreakdownItem {
     id: string;
     name: string;
-    hsn: string;
+    hsn?: string;
     sku?: string;
     quantity: number;
     unitPrice: number;
@@ -197,7 +197,7 @@ export function calculateOrderTax(params: CalculateTaxParams): TaxCalculationRes
         return {
             id: String(t.raw.id || t.raw.foodItemId || `item-${index + 1}`),
             name: t.raw.name || "Food Item",
-            hsn: t.raw.hsn || "996331", // Restaurant services standard SAC code
+            hsn: t.raw.hsn || undefined,
             sku: t.raw.sku,
             quantity: Math.max(1, Number(t.raw.quantity) || 1),
             unitPrice: Number(t.raw.price) || 0,
@@ -366,7 +366,7 @@ export function getOrderBreakdown(order: any): TaxCalculationResult {
             discountAmount: cleanNumericPrice(it.discountAmount, 0),
             addonsTotal: cleanNumericPrice(it.addonsTotal || it.addonsSubtotal, 0),
             selectedAddons: it.selectedAddons || it.addons || [],
-            hsn: it.hsn || "996331",
+            hsn: it.hsn || undefined,
             sku: it.sku,
         };
     });
@@ -392,7 +392,6 @@ export function getOrderBreakdown(order: any): TaxCalculationResult {
                 discountAmount: 0,
                 addonsTotal: 0,
                 selectedAddons: [],
-                hsn: "996331",
             });
         }
     }
