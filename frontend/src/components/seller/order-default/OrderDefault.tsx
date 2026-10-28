@@ -535,7 +535,7 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
             </div>
             {isDelivered ? (
               <a
-                href={'/invoice/order/' + (activeOrderData.id || (rawOrderId ? rawOrderId.replace(/^#/, '') : ''))}
+                href={'/invoice/order/' + (activeOrderData.id || (rawOrderId ? rawOrderId.replace(/^#/, '') : '')) + '?type=seller'}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={styles.headerInvoiceBtn}
@@ -701,7 +701,16 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
                 {/* Price Calculation Summary with Complete GST Breakdown */}
                 <div className={styles.priceSummary}>
                   <OrderTaxBreakdown
-                    order={activeOrderData.rawOrder || activeOrderData}
+                    order={{
+                      ...(activeOrderData.rawOrder || {}),
+                      ...activeOrderData,
+                      items: activeOrderData.rawOrder?.items || activeOrderData.items,
+                      subtotal: activeOrderData.subtotal,
+                      deliveryFee: activeOrderData.deliveryFee,
+                      discount: activeOrderData.discount,
+                      totalAmount: activeOrderData.grandTotal || activeOrderData.total,
+                      taxBreakdown: activeOrderData.rawOrder?.taxBreakdown || activeOrderData.taxBreakdown,
+                    }}
                     isPaid={activeOrderData.status === "Completed"}
                     paymentMethod={activeOrderData.paymentMethod}
                     orderId={activeOrderData.id}
