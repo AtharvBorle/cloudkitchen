@@ -961,23 +961,20 @@
   color: #c2410c;
 }
 
-@keyframes sidebarHighlightPulse {
+@keyframes sidebarLinePulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.5), 0 4px 24px rgba(0, 0, 0, 0.04);
     border-color: #ea580c;
   }
-  30% {
-    box-shadow: 0 0 0 5px rgba(234, 88, 12, 0.35), 0 10px 32px rgba(234, 88, 12, 0.18);
+  70% {
     border-color: #ea580c;
   }
   100% {
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
     border-color: #e2e8f0;
   }
 }
 
 .trackingSidebarHighlighted {
-  animation: sidebarHighlightPulse 1.5s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  animation: sidebarLinePulse 1.6s ease-out !important;
   border-color: #ea580c !important;
 }
 
@@ -1005,7 +1002,7 @@
 .trackingSidebar {
   background: #ffffff;
   border-radius: 20px;
-  border: 1px solid #e2e8f0;
+  border: 1.5px solid #e2e8f0;
   padding: 24px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
   display: flex;
@@ -1013,6 +1010,7 @@
   gap: 20px;
   position: sticky;
   top: 96px;
+  transition: border-color 0.25s ease;
 }
 
 .sidebarHeaderRow {
