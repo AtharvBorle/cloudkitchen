@@ -942,12 +942,15 @@ export const SettingsCanvas: React.FC<SettingsCanvasProps> = ({
             isLocationPinned: Boolean(formData.latitude && formData.longitude),
             deliveryRadiusKm: formData.deliveryRadiusKm || 5,
             deliveryCharge: formData.deliveryCharge !== undefined ? formData.deliveryCharge : 50,
+        freeDeliveryThreshold: formData.freeDeliveryMinOrder !== undefined ? formData.freeDeliveryMinOrder : 500,
+            freeDeliveryThreshold: formData.freeDeliveryMinOrder !== undefined ? formData.freeDeliveryMinOrder : 500,
           }),
         });
       }
       updateCachedProfile({
         deliveryRadiusKm: formData.deliveryRadiusKm || 5,
         deliveryCharge: formData.deliveryCharge !== undefined ? formData.deliveryCharge : 50,
+        freeDeliveryThreshold: formData.freeDeliveryMinOrder !== undefined ? formData.freeDeliveryMinOrder : 500,
       });
       try {
         const existingSettings = JSON.parse(localStorage.getItem("seller_delivery_settings") || "{}");

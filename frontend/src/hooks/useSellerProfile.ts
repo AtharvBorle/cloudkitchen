@@ -22,6 +22,8 @@ export interface SellerProfileData {
   deliveryRadiusKm?: number;
   taxMode?: "TAX_INCLUSIVE" | "TAX_EXCLUSIVE";
   deliveryCharge?: number;
+  enableFreeDelivery?: boolean;
+  freeDeliveryThreshold?: number;
   bannerImageUrl?: string;
   cardImageUrl?: string;
   kitchenImages?: string[];
@@ -326,6 +328,8 @@ export function useSellerProfile() {
             deliveryRadiusKm: rawDeliveryRadiusKm,
             taxMode: profile?.taxMode || "TAX_INCLUSIVE",
             deliveryCharge: profile?.deliveryCharge !== undefined ? Number(profile.deliveryCharge) : 50,
+            enableFreeDelivery: typeof profile?.enableFreeDelivery === "boolean" ? profile.enableFreeDelivery : false,
+            freeDeliveryThreshold: profile?.freeDeliveryThreshold !== null && profile?.freeDeliveryThreshold !== undefined ? Number(profile.freeDeliveryThreshold) : 500,
             bannerImageUrl: rawBannerImageUrl,
             cardImageUrl: rawCardImageUrl,
             kitchenImages: rawKitchenImages,
@@ -357,6 +361,8 @@ export function useSellerProfile() {
               deliveryRadiusKm: rawDeliveryRadiusKm,
               taxMode: profile?.taxMode || "TAX_INCLUSIVE",
               deliveryCharge: profile?.deliveryCharge !== undefined ? Number(profile.deliveryCharge) : 50,
+            enableFreeDelivery: typeof profile?.enableFreeDelivery === "boolean" ? profile.enableFreeDelivery : false,
+            freeDeliveryThreshold: profile?.freeDeliveryThreshold !== null && profile?.freeDeliveryThreshold !== undefined ? Number(profile.freeDeliveryThreshold) : 500,
               bannerImageUrl: rawBannerImageUrl,
               cardImageUrl: rawCardImageUrl,
               kitchenImages: rawKitchenImages,
