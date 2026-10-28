@@ -23,6 +23,7 @@ import {
   ChevronRight,
   Check,
   ShieldCheck,
+  Receipt,
 } from "lucide-react";
 import ConsoleSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
@@ -1468,6 +1469,30 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
                                 </button>
                               )}
 
+                              {order.status === "Completed" || order.rawStatus === "DELIVERED" ? (
+                                <a
+                                  href={'/invoice/order/' + order.id}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className={styles.invoiceBtn}
+                                  onClick={(e) => e.stopPropagation()}
+                                  title="Download Invoice"
+                                >
+                                  <Receipt size={12} />
+                                  <span>Invoice</span>
+                                </a>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled
+                                  className={styles.invoiceBtnDisabled}
+                                  onClick={(e) => e.stopPropagation()}
+                                  title="Invoice available after order delivery"
+                                >
+                                  <Receipt size={12} />
+                                  <span>Invoice</span>
+                                </button>
+                              )}
                               <button
                                 type="button"
                                 className={styles.detailsBtn}

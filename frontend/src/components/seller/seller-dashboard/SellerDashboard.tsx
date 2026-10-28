@@ -19,6 +19,7 @@ import {
   Search,
   Clock,
   RotateCcw,
+  Receipt,
 } from "lucide-react";
 import { SellerCalendarModal, formatDateToYMD } from "./SellerCalendarModal";
 import SellerReadinessChecklist from "../readiness/SellerReadinessChecklist";
@@ -40,6 +41,7 @@ export interface OrderItem {
   items: string;
   total: string;
   status: "Preparing" | "Pending" | "Out for Delivery" | "Completed" | "Cancelled";
+  rawStatus?: string;
   createdAt?: string;
 }
 
@@ -311,6 +313,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                 items: itemsSummary || "1x Food Item",
                 total: `₹${o.totalAmount || 0}`,
                 status: statusVal,
+                rawStatus: s,
                 createdAt: o.createdAt,
               };
             });
@@ -888,12 +891,13 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                         <th>DATE & TIME</th>
                         <th>TOTAL</th>
                         <th>STATUS</th>
+                        <th style={{ textAlign: "right" }}>INVOICE</th>
                       </tr>
                     </thead>
                     <tbody>
                       {displayedOrders.length === 0 ? (
                         <tr>
-                          <td colSpan={isRoomEnabled ? 7 : 6} style={{ textAlign: "center", padding: "40px 16px", color: "#64748B" }}>
+                          <td colSpan={isRoomEnabled ? 8 : 7} style={{ textAlign: "center", padding: "40px 16px", color: "#64748B" }}>
                             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
                               <Search size={28} color="#94A3B8" />
                               <p style={{ margin: 0, fontWeight: 600, color: "#1E293B", fontSize: "14px" }}>
@@ -980,6 +984,30 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                                     <span className={styles.statusDot} />
                                     <span className={styles.statusLabel}>{order.status}</span>
                                   </div>
+                                )}
+                              </td>
+                              <td style={{ textAlign: "right" }}>
+                                {order.status === "Completed" || order.rawStatus === "DELIVERED" ? (
+                                  <a
+                                    href={'/invoice/order/' + order.id}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={styles.invoiceBtn}
+                                    title="Download Invoice"
+                                  >
+                                    <Receipt size={13} />
+                                    <span>Download Invoice</span>
+                                  </a>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    disabled
+                                    className={styles.invoiceBtnDisabled}
+                                    title="Invoice available after order delivery"
+                                  >
+                                    <Receipt size={13} />
+                                    <span>Download Invoice</span>
+                                  </button>
                                 )}
                               </td>
                             </tr>

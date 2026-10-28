@@ -32,6 +32,7 @@ export const getSellerOrders = async () => {
     const orders = await db.order.findMany({
         where: { sellerId: sellerProfile.id },
         include: {
+            seller: true,
             user: {
                 select: {
                     id: true,
@@ -58,7 +59,30 @@ export const getSellerOrders = async () => {
         orderBy: { createdAt: 'desc' }
     });
 
-    return { orders };
+    const couponIds = Array.from(new Set(orders.map(o => o.appliedCouponId).filter(Boolean))) as string[];
+    const couponsMap: Record<string, any> = {};
+    if (couponIds.length > 0) {
+        const coupons = await db.coupon.findMany({
+            where: { id: { in: couponIds } },
+            select: {
+                id: true,
+                code: true,
+                discountPercentage: true,
+                discountAmount: true,
+                discountType: true
+            }
+        });
+        coupons.forEach(c => {
+            couponsMap[c.id] = c;
+        });
+    }
+
+    const enrichedOrders = orders.map(o => ({
+        ...o,
+        appliedCoupon: o.appliedCouponId ? couponsMap[o.appliedCouponId] : null
+    }));
+
+    return { orders: enrichedOrders };
 };
 
 export const getSellerOrderById = async (orderId: string) => {
@@ -91,6 +115,7 @@ export const getSellerOrderById = async (orderId: string) => {
             ]
         },
         include: {
+            seller: true,
             user: {
                 select: {
                     id: true,

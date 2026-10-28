@@ -2041,7 +2041,7 @@ export default function MyOrdersView() {
                             </button>
                           )}
 
-                          {isDelivered && (
+                          {isDelivered ? (
                             <a
                               href={'/invoice/order/' + order.id}
                               target="_blank"
@@ -2053,6 +2053,17 @@ export default function MyOrdersView() {
                               <Receipt size={14} />
                               <span>Invoice</span>
                             </a>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled
+                              className={styles.invoiceBtnDisabled}
+                              onClick={(e) => e.stopPropagation()}
+                              title="Invoice available after order delivery"
+                            >
+                              <Receipt size={14} />
+                              <span>Invoice</span>
+                            </button>
                           )}
                           <button
                             type="button"
