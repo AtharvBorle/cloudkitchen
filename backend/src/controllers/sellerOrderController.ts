@@ -102,17 +102,26 @@ export const getSellerOrderById = async (orderId: string) => {
         throw new ApiError("Seller profile not found. Please complete seller registration.", 404);
     }
 
-    const cleanId = orderId.replace("#NCR-", "").replace("#ncr-", "").replace("#", "").trim();
+    const cleanId = orderId
+        .replace(/^#(?:ncr|ord)-?/i, "")
+        .replace(/^(?:ncr|ord)-?/i, "")
+        .replace(/^#/, "")
+        .trim();
+
+    const orConditions: any[] = [{ id: orderId }];
+    if (cleanId) {
+        orConditions.push(
+            { id: cleanId },
+            { id: { startsWith: cleanId } },
+            { id: { mode: 'insensitive', equals: cleanId } },
+            { id: { mode: 'insensitive', startsWith: cleanId } }
+        );
+    }
 
     const order = await db.order.findFirst({
         where: {
             sellerId: sellerProfile.id,
-            OR: [
-                { id: orderId },
-                { id: cleanId },
-                { id: { startsWith: cleanId } },
-                { id: { mode: 'insensitive', equals: cleanId } }
-            ]
+            OR: orConditions
         },
         include: {
             seller: true,

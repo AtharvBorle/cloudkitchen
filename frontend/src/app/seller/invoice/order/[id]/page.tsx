@@ -23,7 +23,7 @@ export default function SellerOrderInvoicePage({ params }: { params: Promise<{ i
                 }
                 const resData = await res.json();
                 if (res.ok) {
-                    const fetchedOrder = resData.data || resData;
+                    const fetchedOrder = resData.data?.order || resData.order || resData.data || resData;
                     const st = (fetchedOrder?.status || "").toUpperCase();
                     const isDeliveredOrCompleted = st === "DELIVERED" || st === "COMPLETED";
                     if (st === "CANCELLED" || st === "REJECTED") {

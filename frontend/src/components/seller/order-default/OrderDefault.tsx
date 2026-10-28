@@ -161,7 +161,14 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
           const detailRes = await fetchApi(`/api/seller/orders/${rawOrderId}`);
           if (detailRes.ok) {
             const detailData = await detailRes.json();
-            target = detailData.data || detailData;
+            const candidate =
+              detailData?.data?.order ||
+              detailData?.order ||
+              detailData?.data ||
+              detailData;
+            if (candidate && (candidate.id || candidate.orderNumber || candidate.items || candidate.totalAmount !== undefined)) {
+              target = candidate;
+            }
           }
         } catch {}
       }
@@ -187,12 +194,13 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
                 );
               });
             }
-            if (!target) target = list[0];
+            if (!target && !rawOrderId) target = list[0];
           }
         }
       }
 
-          if (target) {
+          if (target && target.id) {
+
             let parsedItems: any[] = [];
             try {
               parsedItems = typeof target.items === "string" ? JSON.parse(target.items) : target.items;
@@ -280,6 +288,8 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
               seller: target.seller,
               taxCalc: calc,
             });
+          } else {
+            setOrder(null);
           }
     } catch (err) {
       console.error("Failed to load seller order details:", err);
@@ -415,10 +425,20 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
   const isDelivered = rawStatus === "DELIVERED" || rawStatus === "COMPLETED";
   const isOut = rawStatus === "OUT_FOR_DELIVERY" || rawStatus === "ON_THE_WAY";
   const isPreparing = rawStatus === "PREPARING";
-  const remainingSec = order?.createdAt ? getRemainingSeconds(order.createdAt, now) : 0;
-  const isExpired = (rawStatus === "PENDING" || !rawStatus || order?.status === "Pending") && remainingSec <= 0;
+  const isPendingOrder = Boolean(
+    order &&
+    order.id &&
+    (rawStatus === "PENDING" || order.status === "Pending") &&
+    rawStatus !== "CANCELLED" &&
+    order.status !== "Cancelled" &&
+    !isDelivered &&
+    !isOut &&
+    !isPreparing
+  );
+  const remainingSec = order?.createdAt ? getRemainingSeconds(order.createdAt, now) : 300;
+  const isExpired = isPendingOrder && remainingSec <= 0;
   const isCancelled = rawStatus === "CANCELLED" || order?.status === "Cancelled" || isExpired;
-  const isPending = (rawStatus === "PENDING" || !rawStatus || order?.status === "Pending") && !isCancelled;
+  const isPending = isPendingOrder && !isCancelled;
   const isCancelledByUser = isCancelled && (
     order?.cancelledBy === "USER" ||
     (Boolean(order?.cancellationReason) && /cancelled by (customer|user|you)/i.test(order?.cancellationReason!))
@@ -623,7 +643,7 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
                     ? (activeOrderData.cancellationReason
                         ? `The customer cancelled this order prior to preparation. Reason: ${activeOrderData.cancellationReason}`
                         : "The customer cancelled this order prior to food preparation.")
-                    : "This order was rejected/cancelled or acceptance window elapsed."}
+                    : (activeOrderData.cancellationReason || "This order was rejected/cancelled or acceptance window elapsed.")}
                 </div>
               </div>
             </div>
