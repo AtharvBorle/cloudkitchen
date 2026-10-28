@@ -1825,7 +1825,7 @@ Details: Category request submitted via chatbot assistant.`;
                                 }}
                                 onMouseEnter={(e) => {
                                     e.currentTarget.style.backgroundColor = "#FFF5F1";
-                                    e.currentTarget.style.borderColor = "#FCA5A5";
+                                    e.currentTarget.style.borderColor = "#FF6B00";
                                     e.currentTarget.style.transform = "scale(1.06)";
                                 }}
                                 onMouseLeave={(e) => {
@@ -1833,13 +1833,23 @@ Details: Category request submitted via chatbot assistant.`;
                                     e.currentTarget.style.borderColor = "#FCDFD7";
                                     e.currentTarget.style.transform = "scale(1)";
                                 }}
-                                title="Menu / Reset"
+                                title="Clear chat"
                             >
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2.8" strokeLinecap="round">
-                                    <line x1="4" y1="6" x2="20" y2="6" />
-                                    <line x1="4" y1="12" x2="20" y2="12" />
-                                    <line x1="4" y1="18" x2="20" y2="18" />
-                                </svg>
+                                <img
+                                    src="/images/broom-dustpan-orange.png"
+                                    alt="Clear chat"
+                                    width={20}
+                                    height={20}
+                                    draggable={false}
+                                    style={{
+                                        width: "20px",
+                                        height: "20px",
+                                        objectFit: "contain",
+                                        pointerEvents: "none",
+                                        userSelect: "none",
+                                        display: "block"
+                                    }}
+                                />
                             </button>
                             <button
                                 onClick={() => toggleOpen(false)}
