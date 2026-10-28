@@ -109,7 +109,7 @@ export const OrderList: React.FC<OrderListProps> = ({
               <p className={styles.deliveryText}>{order.deliveryAddress}</p>
 
               <div className={styles.actionsGroup}>
-                {order.status === "DELIVERED" && (
+                {order.status === "DELIVERED" ? (
                   <a
                     href={'/invoice/order/' + order.id}
                     target="_blank"
@@ -120,6 +120,16 @@ export const OrderList: React.FC<OrderListProps> = ({
                     <Receipt size={14} />
                     <span>Invoice</span>
                   </a>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className={styles.invoiceBtnDisabled}
+                    title="Invoice available after order delivery"
+                  >
+                    <Receipt size={14} />
+                    <span>Invoice</span>
+                  </button>
                 )}
 
                 {order.hasViewDetails !== false && (

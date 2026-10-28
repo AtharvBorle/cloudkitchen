@@ -78,7 +78,7 @@ export const OrderTaxBreakdown: React.FC<OrderTaxBreakdownProps> = ({
   const effectivePaid = isPaid !== undefined ? isPaid : Boolean(order?.isPaid);
   const effectiveMethod = paymentMethod || order?.paymentMethod || (effectivePaid ? "ONLINE" : "COD");
   const isCod = effectiveMethod === "COD" || effectiveMethod === "Cash on Delivery";
-  const isDelivered = (order?.status || "").toUpperCase() === "DELIVERED" || (order?.rawStatus || "").toUpperCase() === "DELIVERED";
+  const isDelivered = (order?.status || "").toUpperCase() === "DELIVERED" || (order?.rawStatus || "").toUpperCase() === "DELIVERED" || (order?.status === "Completed");
   const canShowInvoice = showInvoiceButton && targetOrderId && isDelivered;
 
   return (
@@ -186,43 +186,70 @@ export const OrderTaxBreakdown: React.FC<OrderTaxBreakdownProps> = ({
       </div>
 
       {/* Download Invoice Button */}
-      {canShowInvoice && (
+      {showInvoiceButton && targetOrderId && (
         <div style={{ marginTop: "10px" }}>
-          <a
-            href={`/invoice/order/${targetOrderId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              width: "100%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "8px",
-              padding: "9px 16px",
-              borderRadius: "8px",
-              backgroundColor: "#FFF7ED",
-              border: "1.5px solid #FDBA74",
-              color: "#C2410C",
-              fontSize: "0.88rem",
-              fontWeight: 700,
-              textDecoration: "none",
-              transition: "all 0.15s ease",
-              boxShadow: "0 1px 3px rgba(234, 88, 12, 0.08)",
-              cursor: "pointer",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "#FFEDD5";
-              e.currentTarget.style.borderColor = "#FB923C";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "#FFF7ED";
-              e.currentTarget.style.borderColor = "#FDBA74";
-            }}
-            title="Download Invoice"
-          >
-            <Receipt size={16} color="#EA580C" />
-            <span>Download Invoice</span>
-          </a>
+          {isDelivered ? (
+            <a
+              href={`/invoice/order/${targetOrderId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+                padding: "9px 16px",
+                borderRadius: "8px",
+                backgroundColor: "#FFF7ED",
+                border: "1.5px solid #FDBA74",
+                color: "#C2410C",
+                fontSize: "0.88rem",
+                fontWeight: 700,
+                textDecoration: "none",
+                transition: "all 0.15s ease",
+                boxShadow: "0 1px 3px rgba(234, 88, 12, 0.08)",
+                cursor: "pointer",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = "#FFEDD5";
+                e.currentTarget.style.borderColor = "#FB923C";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "#FFF7ED";
+                e.currentTarget.style.borderColor = "#FDBA74";
+              }}
+              title="Download Invoice"
+            >
+              <Receipt size={16} color="#EA580C" />
+              <span>Download Invoice</span>
+            </a>
+          ) : (
+            <button
+              type="button"
+              disabled
+              style={{
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+                padding: "9px 16px",
+                borderRadius: "8px",
+                backgroundColor: "#F1F5F9",
+                border: "1.5px solid #CBD5E1",
+                color: "#94A3B8",
+                fontSize: "0.88rem",
+                fontWeight: 600,
+                cursor: "not-allowed",
+                opacity: 0.75,
+              }}
+              title="Invoice available after order delivery"
+            >
+              <Receipt size={16} color="#94A3B8" />
+              <span>Download Invoice (Available after delivery)</span>
+            </button>
+          )}
         </div>
       )}
     </div>
