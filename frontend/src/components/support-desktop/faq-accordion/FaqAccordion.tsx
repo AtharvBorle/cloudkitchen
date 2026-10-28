@@ -16,7 +16,7 @@ const FAQ_CATEGORIES = [
   { id: "all", label: "All Questions" },
   { id: "orders", label: "Food & Orders" },
   { id: "subscriptions", label: "Subscriptions" },
-  { id: "rooms", label: "Room Bookings" },
+  // { id: "rooms", label: "Room Bookings" },
   { id: "payments", label: "Payments & COD" },
   { id: "general", label: "General & Account" },
 ];
@@ -43,6 +43,7 @@ export const FAQ_DATA: FAQItem[] = [
     answer:
       "Visit Settings > My Subscriptions from your profile menu. Choose your active plan and tap 'Change Plan' to upgrade between Daily, Weekly, or Monthly tiers using UPI, Credit/Debit Card, or Net Banking.",
   },
+  /*
   {
     id: "4",
     category: "rooms",
@@ -50,6 +51,7 @@ export const FAQ_DATA: FAQItem[] = [
     answer:
       "Navigate to the Rooms tab or My Orders to review your active PG and room stay reservations. You can extend your stay duration, check check-in instructions, and view verified property amenities.",
   },
+  */
   {
     id: "5",
     category: "orders",
