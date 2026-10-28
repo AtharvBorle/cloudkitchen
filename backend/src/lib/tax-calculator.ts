@@ -58,6 +58,17 @@ export interface CalculateTaxParams {
     eligibleItemIds?: string[];
 }
 
+export function cleanNumericPrice(val: any, defaultVal = 0): number {
+    if (typeof val === "number") return isNaN(val) ? defaultVal : val;
+    if (!val) return defaultVal;
+    const s = String(val).trim().toLowerCase();
+    if (s === "free" || s === "null" || s === "undefined") return 0;
+    const cleaned = s.replace(/[^0-9.-]/g, "").trim();
+    if (!cleaned) return defaultVal;
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? defaultVal : num;
+}
+
 export function round2(num: number): number {
     return Math.round((num + Number.EPSILON) * 100) / 100;
 }
@@ -97,8 +108,17 @@ export function calculateOrderTax(params: CalculateTaxParams): TaxCalculationRes
 
     let totalEligibleGross = 0;
     const tempItems: TempItem[] = items.map((it) => {
-        const qty = Math.max(1, Number(it.quantity) || 1);
-        const price = Math.max(0, Number(it.price) || 0);
+        const qty = Math.max(1, cleanNumericPrice(it.quantity || (it as any).qty, 1));
+        let price = cleanNumericPrice(it.price || (it as any).unitPrice, 0);
+        if (price === 0) {
+            const totalVal = cleanNumericPrice((it as any).total || (it as any).lineTotal, 0);
+            if (totalVal > 0) price = Math.round((totalVal / qty) * 100) / 100;
+        }
+        if (price === 0) {
+            const base = cleanNumericPrice((it as any).basePrice, 0);
+            const addons = cleanNumericPrice((it as any).addonsTotal || (it as any).addonsSubtotal, 0);
+            if (base + addons > 0) price = base + addons;
+        }
         const gross = round2(price * qty);
 
         let directDisc = 0;
