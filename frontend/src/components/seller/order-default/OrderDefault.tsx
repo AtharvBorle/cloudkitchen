@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Check, Clock, Bike, PackageCheck, AlertCircle, Package, XCircle, X, Receipt } from "lucide-react";
 import { OrderTaxBreakdown } from "@/components/common/OrderTaxBreakdown";
+import { getOrderBreakdown } from "@/lib/tax-calculator";
 import ConsoleSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
@@ -230,13 +231,7 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
               ? new Date(target.updatedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
               : timeStr;
 
-            const calculatedSubtotal = Array.isArray(parsedItems)
-              ? parsedItems.reduce((sum: number, it: any) => sum + (Number(it.price) || 0) * (Number(it.quantity || it.qty) || 1), 0)
-              : 0;
-
-            const totalNum = target.totalAmount !== undefined && target.totalAmount !== null ? Number(target.totalAmount) : calculatedSubtotal;
-            const subtotalNum = calculatedSubtotal > 0 ? calculatedSubtotal : totalNum;
-            const discountNum = Math.max(0, subtotalNum - totalNum);
+            const calc = getOrderBreakdown(target);
 
             setOrder({
               id: target.id,
@@ -252,13 +247,13 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
               deliveryAddress: formatOrderDeliveryAddress(target.deliveryAddress, target.room?.title),
               roomAssigned: formatOrderDeliveryAddress(target.deliveryAddress, target.room?.title),
               items: formattedItems,
-              subtotal: `₹${subtotalNum}`,
-              discount: discountNum > 0 ? `₹${discountNum}` : undefined,
-              deliveryFee: "₹0",
+              subtotal: `₹${calc.productGross.toFixed(2)}`,
+              discount: calc.productDiscount > 0 ? `₹${calc.productDiscount.toFixed(2)}` : undefined,
+              deliveryFee: `₹${calc.deliveryGross.toFixed(2)}`,
               serviceFee: "Free",
-              taxes: "₹0",
-              total: `₹${totalNum}`,
-              grandTotal: `₹${totalNum}`,
+              taxes: `₹${(calc.productGst + calc.deliveryGst).toFixed(2)}`,
+              total: `₹${calc.grandTotal.toFixed(2)}`,
+              grandTotal: `₹${calc.grandTotal.toFixed(2)}`,
               paymentMethod: `${target.paymentMethod || "COD"} (${target.isPaid ? "Paid" : "Unpaid"})`,
               deliveryPersonName: target.deliveryPerson?.name,
               cancelledBy: target.cancelledBy || ((Boolean(target.refund?.reason) && /cancelled by (customer|user|you)/i.test(target.refund.reason)) ? "USER" : null),
@@ -535,7 +530,7 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
             </div>
             {isDelivered ? (
               <a
-                href={'/invoice/order/' + (activeOrderData.id || (rawOrderId ? rawOrderId.replace(/^#/, '') : '')) + '?type=seller'}
+                href={'/seller/invoice/order/' + (activeOrderData.id || (rawOrderId ? rawOrderId.replace(/^#/, '') : ''))}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={styles.headerInvoiceBtn}

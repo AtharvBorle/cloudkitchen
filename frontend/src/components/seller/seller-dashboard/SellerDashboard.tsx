@@ -989,7 +989,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                               <td style={{ textAlign: "right" }}>
                                 {order.status === "Completed" || order.rawStatus === "DELIVERED" ? (
                                   <a
-                                    href={'/invoice/order/' + order.id + '?type=seller'}
+                                    href={'/seller/invoice/order/' + order.id}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className={styles.invoiceBtn}

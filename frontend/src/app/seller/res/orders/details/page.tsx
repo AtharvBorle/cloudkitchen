@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import ResponsiveSellerOrdersDetails from "@/components/seller/seller-orders/responsive/ResponsiveSellerOrdersDetails";
 import { formatOrderDeliveryAddress } from "@/components/seller/seller-orders/SellerOrders";
 import { fetchApi } from "@/lib/fetch-api";
+import { getOrderBreakdown } from "@/lib/tax-calculator";
 
 function DetailsContent() {
   const router = useRouter();
@@ -151,13 +152,7 @@ function DetailsContent() {
     }
   };
 
-  const calculatedSubtotal = Array.isArray(parsedItems)
-    ? parsedItems.reduce((sum: number, it: any) => sum + (Number(it.price) || 0) * (Number(it.quantity || it.qty) || 1), 0)
-    : 0;
-
-  const totalNum = order?.totalAmount !== undefined && order?.totalAmount !== null ? Number(order.totalAmount) : calculatedSubtotal;
-  const subtotalNum = calculatedSubtotal > 0 ? calculatedSubtotal : totalNum;
-  const discountNum = Math.max(0, subtotalNum - totalNum);
+  const calc = getOrderBreakdown(order);
 
   if (loading) {
     return (
@@ -211,10 +206,10 @@ function DetailsContent() {
       riderPhone={order?.deliveryPerson?.phone || ""}
       riderEta={order?.deliveryPerson ? "Assigned" : ""}
       items={formattedItems || []}
-      subtotal={`₹${subtotalNum}`}
-      deliveryFee="Free"
-      discount={discountNum > 0 ? `₹${discountNum}` : undefined}
-      total={`₹${totalNum}`}
+      subtotal={`₹${calc.productGross.toFixed(2)}`}
+      deliveryFee={calc.deliveryGross > 0 ? `₹${calc.deliveryGross.toFixed(2)}` : "Free"}
+      discount={calc.productDiscount > 0 ? `₹${calc.productDiscount.toFixed(2)}` : undefined}
+      total={`₹${calc.grandTotal.toFixed(2)}`}
       paymentMethod={`${order?.paymentMethod || "COD"} (${order?.isPaid ? "Paid" : "Unpaid"})`}
       initialStatus={order ? mapStatusToStep(order.status) : "Order Placed"}
       createdAt={order?.createdAt}
