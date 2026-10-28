@@ -58,28 +58,49 @@ function DetailsContent() {
   useEffect(() => {
     async function loadOrder() {
       try {
-        const res = await fetchApi("/api/seller/orders");
-        if (res.ok) {
-          const ordersData = await res.json();
-          const list = ordersData.data?.orders || ordersData.orders || ordersData.data || [];
-          if (Array.isArray(list)) {
-            const rawTarget = cleanId.trim().toLowerCase();
-            const target = rawTarget.replace(/^(?:ord|ncr)-/i, "").trim();
-            const found = list.find((o: any) => {
-              const oId = (o.id || "").toLowerCase();
-              return (
-                oId === rawTarget ||
-                oId === target ||
-                oId.startsWith(target) ||
-                oId.endsWith(target) ||
-                `#${oId.slice(0, 6)}` === rawId.toLowerCase() ||
-                oId.slice(0, 6) === target
-              );
-            });
-            if (found) {
-              setOrder(found);
+        let found: any = null;
+        if (cleanId) {
+          try {
+            const detailRes = await fetchApi(`/api/seller/orders/${cleanId}`);
+            if (detailRes.ok) {
+              const detailData = await detailRes.json();
+              const candidate =
+                detailData?.data?.order ||
+                detailData?.order ||
+                detailData?.data ||
+                detailData;
+              if (candidate && (candidate.id || candidate.orderNumber || candidate.items || candidate.totalAmount !== undefined)) {
+                found = candidate;
+              }
+            }
+          } catch {}
+        }
+
+        if (!found) {
+          const res = await fetchApi("/api/seller/orders");
+          if (res.ok) {
+            const ordersData = await res.json();
+            const list = ordersData.data?.orders || ordersData.orders || ordersData.data || [];
+            if (Array.isArray(list)) {
+              const rawTarget = cleanId.trim().toLowerCase();
+              const target = rawTarget.replace(/^(?:ord|ncr)-/i, "").trim();
+              found = list.find((o: any) => {
+                const oId = (o.id || "").toLowerCase();
+                return (
+                  oId === rawTarget ||
+                  oId === target ||
+                  oId.startsWith(target) ||
+                  oId.endsWith(target) ||
+                  `#${oId.slice(0, 6)}` === rawId.toLowerCase() ||
+                  oId.slice(0, 6) === target
+                );
+              });
             }
           }
+        }
+
+        if (found) {
+          setOrder(found);
         }
       } catch (err) {
         console.error("Failed to load seller order details:", err);

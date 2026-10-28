@@ -242,8 +242,11 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
   // Background auto-cancel detector: cancels expired pending orders when timer hits 0
   useEffect(() => {
     orderList.forEach((order) => {
-      const isPending = order.status === "Pending" || order.rawStatus === "PENDING";
-      if (isPending) {
+      const isPending =
+        (order.status === "Pending" || order.rawStatus === "PENDING") &&
+        order.status !== "Cancelled" &&
+        order.rawStatus !== "CANCELLED";
+      if (isPending && order.id && order.createdAt) {
         const remainingSec = getRemainingSeconds(order.createdAt, now);
         if (remainingSec <= 0 && !autoCancelledRef.current.has(order.id)) {
           autoCancelledRef.current.add(order.id);
@@ -702,13 +705,15 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
             else if (s === "OUT_FOR_DELIVERY" || s === "ON_THE_WAY") statusVal = "Out for Delivery";
             else if (s === "DELIVERED" || s === "COMPLETED") statusVal = "Completed";
             else if (s === "CANCELLED") statusVal = "Cancelled";
-            else {
-              const remainingSec = getRemainingSeconds(o.createdAt, Date.now());
+            else if (s === "PENDING") {
+              const remainingSec = o.createdAt ? getRemainingSeconds(o.createdAt, Date.now()) : 300;
               if (remainingSec <= 0) {
                 statusVal = "Cancelled";
               } else {
                 statusVal = "Pending";
               }
+            } else {
+              statusVal = "Pending";
             }
 
             const orderDateStr = formatOrderDate(o.createdAt);
