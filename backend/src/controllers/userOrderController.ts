@@ -831,6 +831,10 @@ export const createOrder = async (req: Request) => {
         productTaxRate,
         deliveryTaxRate,
         deliveryCharge: sellerDeliveryCharge,
+        enableFreeDelivery: Boolean((sellerProfile as any).enableFreeDelivery),
+        freeDeliveryThreshold: typeof (sellerProfile as any).freeDeliveryThreshold === "number"
+            ? (sellerProfile as any).freeDeliveryThreshold
+            : 500.0,
         orderCouponDiscount: effectiveCouponDiscount,
     });
 
@@ -903,7 +907,7 @@ export const createOrder = async (req: Request) => {
                 taxMode: sellerTaxMode,
                 productTaxRate: productTaxRate,
                 deliveryTaxRate: deliveryTaxRate,
-                deliveryCharge: sellerDeliveryCharge,
+                deliveryCharge: taxCalculation.deliveryGross,
                 taxBreakdown: JSON.stringify(taxCalculation),
             }
         });

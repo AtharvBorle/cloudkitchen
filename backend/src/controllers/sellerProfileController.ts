@@ -86,6 +86,8 @@ export const updateSellerProfile = async (req: Request) => {
     let isReadinessCompleted: boolean | undefined;
     let taxMode: string | undefined;
     let deliveryCharge: number | undefined;
+    let enableFreeDelivery: boolean | undefined;
+    let freeDeliveryThreshold: number | undefined;
 
     if (contentType.includes("multipart/form-data")) {
         const formData = await req.formData();
@@ -123,6 +125,15 @@ export const updateSellerProfile = async (req: Request) => {
         if (rawDeliveryCharge !== null && rawDeliveryCharge !== undefined && rawDeliveryCharge !== "") {
             const parsed = parseFloat(String(rawDeliveryCharge).replace(/[^0-9.]/g, ""));
             if (!isNaN(parsed) && parsed >= 0) deliveryCharge = parsed;
+        }
+        const rawEnableFree = formData.get("enableFreeDelivery");
+        if (rawEnableFree !== null && rawEnableFree !== undefined) {
+            enableFreeDelivery = rawEnableFree === "true" || rawEnableFree === "1";
+        }
+        const rawFreeThreshold = formData.get("freeDeliveryThreshold") || formData.get("freeDeliveryMinOrder");
+        if (rawFreeThreshold !== null && rawFreeThreshold !== undefined && rawFreeThreshold !== "") {
+            const parsed = parseFloat(String(rawFreeThreshold).replace(/[^0-9.]/g, ""));
+            if (!isNaN(parsed) && parsed >= 0) freeDeliveryThreshold = parsed;
         }
         bannerImageFile = formData.get("bannerImageFile") as File | null;
         cardImageFile = (formData.get("cardImageFile") || formData.get("kitchenImageFile") || formData.get("cardGridImageFile")) as File | null;
@@ -173,6 +184,14 @@ export const updateSellerProfile = async (req: Request) => {
         if (rawCharge !== undefined && rawCharge !== null && rawCharge !== "") {
             const parsed = parseFloat(String(rawCharge).replace(/[^0-9.]/g, ""));
             if (!isNaN(parsed) && parsed >= 0) deliveryCharge = parsed;
+        }
+        if (body.enableFreeDelivery !== undefined) {
+            enableFreeDelivery = Boolean(body.enableFreeDelivery);
+        }
+        const rawFreeThreshold = body.freeDeliveryThreshold !== undefined ? body.freeDeliveryThreshold : body.freeDeliveryMinOrder;
+        if (rawFreeThreshold !== undefined && rawFreeThreshold !== null && rawFreeThreshold !== "") {
+            const parsed = parseFloat(String(rawFreeThreshold).replace(/[^0-9.]/g, ""));
+            if (!isNaN(parsed) && parsed >= 0) freeDeliveryThreshold = parsed;
         }
         if (body.removeCardImage) removeCardImage = true;
         if (body.removeBannerImage) removeBannerImage = true;
@@ -292,6 +311,12 @@ export const updateSellerProfile = async (req: Request) => {
     }
     if (deliveryCharge !== undefined && !isNaN(deliveryCharge)) {
         profileUpdateData.deliveryCharge = deliveryCharge;
+    }
+    if (enableFreeDelivery !== undefined) {
+        profileUpdateData.enableFreeDelivery = enableFreeDelivery;
+    }
+    if (freeDeliveryThreshold !== undefined && !isNaN(freeDeliveryThreshold)) {
+        profileUpdateData.freeDeliveryThreshold = freeDeliveryThreshold;
     }
 
     const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB

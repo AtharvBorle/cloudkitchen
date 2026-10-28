@@ -57,6 +57,8 @@ export interface CalculateTaxParams {
     productTaxRate?: number;
     deliveryTaxRate?: number;
     deliveryCharge?: number;
+    enableFreeDelivery?: boolean;
+    freeDeliveryThreshold?: number;
     orderCouponDiscount?: number;
     eligibleItemIds?: string[];
 }
@@ -88,9 +90,27 @@ export function calculateOrderTax(params: CalculateTaxParams): TaxCalculationRes
         ? params.deliveryTaxRate
         : 18.0;
 
-    const rawDeliveryCharge = typeof params.deliveryCharge === "number" && !isNaN(params.deliveryCharge)
+    let rawDeliveryCharge = typeof params.deliveryCharge === "number" && !isNaN(params.deliveryCharge)
         ? Math.max(0, params.deliveryCharge)
         : 0.0;
+
+    // Check Free Delivery Threshold if configured
+    const isFreeDeliveryEnabled = Boolean(params.enableFreeDelivery);
+    const thresholdAmount = typeof params.freeDeliveryThreshold === "number" && !isNaN(params.freeDeliveryThreshold)
+        ? params.freeDeliveryThreshold
+        : 0;
+
+    if (isFreeDeliveryEnabled && thresholdAmount > 0) {
+        const itemsSubtotal = (params.items || []).reduce((acc, it) => {
+            const qty = Math.max(1, Number(it.quantity) || 1);
+            const price = Number(it.price) || 0;
+            return acc + (qty * price);
+        }, 0);
+
+        if (itemsSubtotal >= thresholdAmount) {
+            rawDeliveryCharge = 0.0;
+        }
+    }
 
     const items = params.items || [];
     const cgstRate = round2(productTaxRate / 2);
@@ -423,6 +443,14 @@ export function getOrderBreakdown(order: any): TaxCalculationResult {
         productTaxRate: pTaxRate,
         deliveryTaxRate: dTaxRate,
         deliveryCharge: dCharge,
+        enableFreeDelivery: order.enableFreeDelivery !== undefined
+            ? Boolean(order.enableFreeDelivery)
+            : Boolean(order.seller?.enableFreeDelivery || order.rawOrder?.seller?.enableFreeDelivery),
+        freeDeliveryThreshold: typeof order.freeDeliveryThreshold === "number"
+            ? order.freeDeliveryThreshold
+            : (typeof order.seller?.freeDeliveryThreshold === "number"
+                ? order.seller.freeDeliveryThreshold
+                : (typeof order.rawOrder?.seller?.freeDeliveryThreshold === "number" ? order.rawOrder.seller.freeDeliveryThreshold : undefined)),
         orderCouponDiscount: couponDiscount,
     });
 }

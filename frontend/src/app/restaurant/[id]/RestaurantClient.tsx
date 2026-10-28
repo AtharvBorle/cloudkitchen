@@ -533,7 +533,13 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
               rating: computedSellerRating,
               reviewsCount: computedReviewsText,
               deliveryTime: liveData.deliveryTime || prev.deliveryTime || "25-35 min",
-              deliveryFeeText: liveData.deliveryFeeText || prev.deliveryFeeText || "Free Delivery",
+              deliveryFeeText: liveData.deliveryFeeText || (
+                liveData.enableFreeDelivery && liveData.freeDeliveryThreshold
+                  ? `Free Delivery above ₹${liveData.freeDeliveryThreshold}`
+                  : (typeof liveData.deliveryCharge === "number"
+                      ? (liveData.deliveryCharge === 0 ? "Free Delivery" : `₹${liveData.deliveryCharge} Delivery`)
+                      : (prev.deliveryFeeText || "Free Delivery"))
+              ),
               dietType: computedDietType,
               offerText: liveData.offerText || "",
               chefName: liveData.chefName || liveData.businessName || prev.chefName || "Executive Chef",
