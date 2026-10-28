@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, Suspense } from "react";
 import ResponsiveMenu, {
   ResponsiveDishItem,
 } from "@/components/seller/seller-menu/responsive/ResponsiveMenu";
@@ -132,11 +132,13 @@ export default function ResponsiveMenuPage() {
   };
 
   return (
-    <ResponsiveMenu
-      dishes={mappedDishes}
-      onStockChange={handleStockChange}
-      onToggleAvailability={handleToggleAvailability}
-    />
+    <Suspense fallback={<div style={{ padding: "32px", textAlign: "center", color: "#6b7280" }}>Loading menu...</div>}>
+      <ResponsiveMenu
+        dishes={mappedDishes}
+        onStockChange={handleStockChange}
+        onToggleAvailability={handleToggleAvailability}
+      />
+    </Suspense>
   );
 }
 
