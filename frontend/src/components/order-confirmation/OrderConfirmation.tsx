@@ -701,7 +701,7 @@ export default function OrderConfirmation({ orderIdProp }: OrderConfirmationProp
                 </div>
                 {orderData.status === "DELIVERED" ? (
                   <a
-                    href={'/invoice/order/' + orderData.orderId}
+                    href={'/invoice/order/' + orderData.orderId + '?type=user'}
                     target="_blank"
                     rel="noopener noreferrer"
                     className={styles.invoiceHeaderBtn}
@@ -971,7 +971,7 @@ export default function OrderConfirmation({ orderIdProp }: OrderConfirmationProp
           {/* Download Tax Invoice CTA */}
           {orderData.status === "DELIVERED" ? (
             <a
-              href={'/invoice/order/' + orderData.orderId}
+              href={'/invoice/order/' + orderData.orderId + '?type=user'}
               target="_blank"
               rel="noopener noreferrer"
               className={styles.invoiceBtn}

@@ -535,7 +535,7 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
             </div>
             {isDelivered ? (
               <a
-                href={'/invoice/order/' + (activeOrderData.id || (rawOrderId ? rawOrderId.replace(/^#/, '') : ''))}
+                href={'/invoice/order/' + (activeOrderData.id || (rawOrderId ? rawOrderId.replace(/^#/, '') : '')) + '?type=seller'}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={styles.headerInvoiceBtn}

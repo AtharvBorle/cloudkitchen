@@ -147,6 +147,11 @@ export const OrderTaxBreakdown: React.FC<OrderTaxBreakdownProps> = ({
   const effectiveMethod = paymentMethod || order?.paymentMethod || (effectivePaid ? "ONLINE" : "COD");
   const isCod = effectiveMethod === "COD" || effectiveMethod === "Cash on Delivery";
   const isDelivered = (order?.status || "").toUpperCase() === "DELIVERED" || (order?.rawStatus || "").toUpperCase() === "DELIVERED" || (order?.status === "Completed");
+  const isSellerView = Boolean(
+    order?.sellerView ||
+    order?.isSeller ||
+    (typeof window !== "undefined" && window.location.pathname.startsWith("/seller"))
+  );
   const canShowInvoice = showInvoiceButton && targetOrderId && isDelivered;
 
   return (
@@ -258,7 +263,7 @@ export const OrderTaxBreakdown: React.FC<OrderTaxBreakdownProps> = ({
         <div style={{ marginTop: "10px" }}>
           {isDelivered ? (
             <a
-              href={`/invoice/order/${targetOrderId}`}
+              href={`/invoice/order/${targetOrderId}?type=${isSellerView ? "seller" : "user"}`}
               target="_blank"
               rel="noopener noreferrer"
               style={{

@@ -274,8 +274,7 @@ export async function middleware(request: NextRequest) {
     pathname === "/subscriptions" ||
     pathname === "/payment-methods-desktop" ||
     pathname === "/delivery-addresses-desktop" ||
-    pathname === "/notifications-desktop" ||
-    pathname.startsWith("/invoice");
+    pathname === "/notifications-desktop";
 
   const isUserProtectedRoute = isUserCheckoutRoute || isUserAccountRoute;
 
