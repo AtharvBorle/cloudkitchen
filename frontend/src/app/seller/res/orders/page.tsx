@@ -140,7 +140,7 @@ function ResponsiveSellerOrdersContent() {
 
       return {
         id: o.id,
-        orderNumber: `#${o.id.slice(0, 6).toUpperCase()}`,
+        orderNumber: o.id,
         timeAgo: timeAgoStr,
         customerName: o.user?.name || "Customer",
         itemsText: `${itemCount} items • ₹${o.totalAmount || 0}`,

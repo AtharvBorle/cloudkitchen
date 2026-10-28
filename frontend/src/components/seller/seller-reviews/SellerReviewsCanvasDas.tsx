@@ -338,7 +338,7 @@ export default function SellerReviewsCanvasDas({
             const mapped: ReviewItem[] = rawList.map((r: any) => ({
               id: r.id,
               customerName: r.user?.name || "Customer",
-              orderId: r.orderId ? r.orderId.slice(-8) : (r.id ? r.id.slice(-8) : "N/A"),
+              orderId: r.orderId || r.id || "N/A",
               date: new Date(r.createdAt).toLocaleDateString("en-GB", {
                 day: "numeric",
                 month: "long",

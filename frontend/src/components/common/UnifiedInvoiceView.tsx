@@ -44,7 +44,7 @@ export const UnifiedInvoiceView: React.FC<UnifiedInvoiceViewProps> = ({ order, i
     .replace(/^(?:ncr|ord)-?/i, "")
     .replace(/^#/, "")
     .trim();
-  const shortId = rawCleanId.slice(0, 8).toUpperCase();
+  const shortId = rawCleanId.length > 20 ? rawCleanId.slice(0, 8).toUpperCase() : rawCleanId;
   const invoiceNo = `INV-${shortId}`;
   const totalQuantity = taxCalc.items.reduce((acc, it) => acc + (Number(it.quantity) || 1), 0);
 

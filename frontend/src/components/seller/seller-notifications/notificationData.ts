@@ -113,7 +113,7 @@ export function createSampleAlert(category: NotificationCategory): SellerNotific
         id: randomId,
         category: "orders",
         settingKey: "orderAlerts",
-        title: `New Incoming Order #ORD-${ordNum}`,
+        title: `New Incoming Order #${ordNum}`,
         message: `New paid order received for ₹${amount}. Ready for kitchen dispatch.`,
         details: "Auto-accepted and queued for preparation.",
         timestamp: now,
@@ -121,7 +121,7 @@ export function createSampleAlert(category: NotificationCategory): SellerNotific
         isRead: false,
         severity: "success",
         actionLabel: "View Order",
-        actionHref: `/seller/orders/details?orderId=ORD-${ordNum}`,
+        actionHref: `/seller/orders/details?orderId=${ordNum}`,
       };
     }
     case "stock": {

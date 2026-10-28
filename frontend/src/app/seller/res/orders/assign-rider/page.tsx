@@ -85,7 +85,7 @@ function AssignRiderContent() {
 
   return (
     <ResponsiveAssignRider
-      orderId={order ? `#${order.id.slice(0, 6)}` : rawId}
+      orderId={order ? `#${order.id.replace(/^#/, "")}` : rawId}
       itemCount={itemCount}
       orderTotal={order ? `₹${order.totalAmount}` : "₹0"}
       deliveryArea={order?.deliveryAddress?.split(",")[0] || "—"}

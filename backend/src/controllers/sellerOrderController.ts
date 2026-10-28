@@ -192,7 +192,7 @@ export const updateSellerOrder = async (req: Request, orderId: string) => {
     }
 
     const { status, isPaid, deliveryPersonId } = await req.json();
-    const cleanId = orderId.replace("#NCR-", "").replace("#ncr-", "").replace("#", "").trim();
+    const cleanId = orderId.replace(/^#(?:ncr|ord)-?/i, "").replace(/^(?:ncr|ord)-?/i, "").replace("#", "").trim();
 
     const existingOrder = await db.order.findFirst({
         where: {

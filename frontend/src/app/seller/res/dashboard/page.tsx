@@ -106,7 +106,7 @@ export default function ResponsiveSellerDashboardPage() {
           } catch {
             itemsText = "Kitchen Items";
           }
-          const orderId = o.id || payload.orderId || `ORD-${Date.now().toString().slice(-4)}`;
+          const orderId = o.id || payload.orderId || "";
           const customerPhone = o.customerPhone || o.user?.phone || "";
           const cleanedAddr = formatOrderDeliveryAddress(o.deliveryAddress, o.room?.title);
           const address = cleanedAddr !== "N/A" ? cleanedAddr : "";
@@ -114,7 +114,7 @@ export default function ResponsiveSellerDashboardPage() {
             id: `notif-order-${orderId}`,
             category: "orders",
             settingKey: "orderAlerts",
-            title: `New Incoming Order #${orderId.slice(0, 8)}`,
+            title: `New Incoming Order #${orderId.replace(/^#/, "")}`,
             message: `${itemsText || "1x Food Item"}. Total: ₹${o.totalAmount || 0}.`,
             details: `Customer: ${o.user?.name || "Customer"}${customerPhone ? ` • Phone: ${customerPhone}` : ""}${address ? ` • Address: ${address}` : ""}`,
             severity: "success",
@@ -167,7 +167,7 @@ export default function ResponsiveSellerDashboardPage() {
 
       return {
         id: o.id,
-        orderNumber: `#${o.id.slice(0, 6).toUpperCase()}`,
+        orderNumber: o.id,
         customerName: o.user?.name || o.customerName || "Customer",
         amount: `₹${o.totalAmount || 0}`,
         timeAgo: timeAgoStr,

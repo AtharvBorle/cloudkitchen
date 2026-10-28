@@ -142,7 +142,7 @@ export const ResponsiveSellerOrdersDetails: React.FC<
       if (onStatusChange) {
         await onStatusChange(targetStep);
       } else {
-        const cleanId = (orderId || "").replace("#NCR-", "").replace("#ncr-", "").replace("#", "").trim();
+        const cleanId = (orderId || "").replace(/^#(?:ncr|ord)-?/i, "").replace(/^(?:ncr|ord)-?/i, "").replace(/^#/, "").trim();
         if (cleanId) {
           let backendStatus = "PENDING";
           if (targetStep === "Preparing") backendStatus = "PREPARING";

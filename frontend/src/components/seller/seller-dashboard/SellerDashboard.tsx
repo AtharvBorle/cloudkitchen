@@ -307,7 +307,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
 
               return {
                 id: o.id,
-                orderId: `#NCR-${o.id.slice(0, 4).toUpperCase()}`,
+                orderId: o.id,
                 customer: o.user?.name || o.customerName || "Customer",
                 roomNo: formatOrderDeliveryAddress(o.deliveryAddress, o.room?.title),
                 items: itemsSummary || "1x Food Item",
@@ -348,7 +348,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
           } catch {
             itemsText = "Kitchen Items";
           }
-          const orderId = o.id || payload.orderId || `ORD-${Date.now().toString().slice(-4)}`;
+          const orderId = o.id || payload.orderId || "";
           const customerPhone = o.customerPhone || o.user?.phone || "";
           const cleanedAddr = formatOrderDeliveryAddress(o.deliveryAddress, o.room?.title);
           const address = cleanedAddr !== "N/A" ? cleanedAddr : "";
@@ -356,7 +356,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
             id: `notif-order-${orderId}`,
             category: "orders",
             settingKey: "orderAlerts",
-            title: `New Incoming Order #${orderId.slice(0, 8)}`,
+            title: `New Incoming Order #${orderId.replace(/^#/, "")}`,
             message: `${itemsText || "1x Food Item"}. Total: ₹${o.totalAmount || 0}.`,
             details: `Customer: ${o.user?.name || "Customer"}${customerPhone ? ` • Phone: ${customerPhone}` : ""}${address ? ` • Address: ${address}` : ""}`,
             severity: "success",
@@ -394,7 +394,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
 
               return {
                 id: o.id,
-                orderId: `#NCR-${o.id.slice(0, 4).toUpperCase()}`,
+                orderId: o.id,
                 customer: o.user?.name || o.customerName || "Customer",
                 roomNo: formatOrderDeliveryAddress(o.deliveryAddress, o.room?.title),
                 items: itemsSummary || "1x Food Item",
