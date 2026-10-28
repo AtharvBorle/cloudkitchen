@@ -50,8 +50,12 @@ export default function DeliverySettingsDas({
   const [deliveryFee, setDeliveryFee] = useState<number>(() => {
     return seller.deliveryCharge !== undefined ? seller.deliveryCharge : 50;
   });
-  const [enableFreeDelivery, setEnableFreeDelivery] = useState<boolean>(true);
-  const [freeDeliveryMinOrder, setFreeDeliveryMinOrder] = useState<number>(500);
+  const [enableFreeDelivery, setEnableFreeDelivery] = useState<boolean>(() => {
+    return seller.enableFreeDelivery !== undefined ? seller.enableFreeDelivery : false;
+  });
+  const [freeDeliveryMinOrder, setFreeDeliveryMinOrder] = useState<number>(() => {
+    return seller.freeDeliveryThreshold !== undefined ? seller.freeDeliveryThreshold : 500;
+  });
   const [enableCod, setEnableCod] = useState<boolean>(true);
 
   // Sync state when seller profile loads or updates
@@ -74,7 +78,13 @@ export default function DeliverySettingsDas({
         if (parsed.enableCod !== undefined) setEnableCod(Boolean(parsed.enableCod));
       }
     } catch {}
-  }, [seller.deliveryRadiusKm, seller.deliveryCharge]);
+    if (seller.enableFreeDelivery !== undefined) {
+      setEnableFreeDelivery(seller.enableFreeDelivery);
+    }
+    if (seller.freeDeliveryThreshold !== undefined) {
+      setFreeDeliveryMinOrder(seller.freeDeliveryThreshold);
+    }
+  }, [seller.deliveryRadiusKm, seller.deliveryCharge, seller.enableFreeDelivery, seller.freeDeliveryThreshold]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -113,6 +123,8 @@ export default function DeliverySettingsDas({
         body: JSON.stringify({
           deliveryRadiusKm,
           deliveryCharge: parsedDeliveryFee,
+          enableFreeDelivery,
+          freeDeliveryThreshold: parsedMinOrder,
         }),
       });
 
@@ -123,6 +135,8 @@ export default function DeliverySettingsDas({
       updateCachedProfile({
         deliveryRadiusKm,
         deliveryCharge: parsedDeliveryFee,
+        enableFreeDelivery,
+        freeDeliveryThreshold: parsedMinOrder,
       });
 
       showToast("Delivery settings saved successfully!");

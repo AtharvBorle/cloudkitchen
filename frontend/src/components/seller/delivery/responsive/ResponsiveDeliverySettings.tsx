@@ -36,10 +36,10 @@ export const ResponsiveDeliverySettings: React.FC<
     return initialSettings?.deliveryFee ?? `₹${fee}`;
   });
   const [enableFreeDelivery, setEnableFreeDelivery] = useState(
-    initialSettings?.enableFreeDelivery ?? true
+    initialSettings?.enableFreeDelivery ?? seller.enableFreeDelivery ?? false
   );
   const [freeDeliveryMinOrder, setFreeDeliveryMinOrder] = useState(
-    initialSettings?.freeDeliveryMinOrder ?? "₹500"
+    initialSettings?.freeDeliveryMinOrder ?? (seller.freeDeliveryThreshold !== undefined ? `₹${seller.freeDeliveryThreshold}` : "₹500")
   );
   const [enableCod, setEnableCod] = useState(initialSettings?.enableCod ?? true);
   const [isSaving, setIsSaving] = useState(false);
@@ -68,7 +68,13 @@ export const ResponsiveDeliverySettings: React.FC<
     if (seller.deliveryCharge !== undefined && initialSettings?.deliveryFee === undefined) {
       setDeliveryFee(`₹${seller.deliveryCharge}`);
     }
-  }, [seller.deliveryRadiusKm, seller.deliveryCharge, initialSettings]);
+    if (seller.enableFreeDelivery !== undefined && initialSettings?.enableFreeDelivery === undefined) {
+      setEnableFreeDelivery(seller.enableFreeDelivery);
+    }
+    if (seller.freeDeliveryThreshold !== undefined && initialSettings?.freeDeliveryMinOrder === undefined) {
+      setFreeDeliveryMinOrder(`₹${seller.freeDeliveryThreshold}`);
+    }
+  }, [seller.deliveryRadiusKm, seller.deliveryCharge, seller.enableFreeDelivery, seller.freeDeliveryThreshold, initialSettings]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -116,9 +122,19 @@ export const ResponsiveDeliverySettings: React.FC<
       await fetchApi("/api/seller/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ deliveryRadiusKm, deliveryCharge: parsedFee }),
+        body: JSON.stringify({
+          deliveryRadiusKm,
+          deliveryCharge: parsedFee,
+          enableFreeDelivery,
+          freeDeliveryThreshold: parseFloat(String(freeDeliveryMinOrder).replace(/[^0-9.]/g, "")) || 500,
+        }),
       });
-      updateCachedProfile({ deliveryRadiusKm, deliveryCharge: parsedFee });
+      updateCachedProfile({
+        deliveryRadiusKm,
+        deliveryCharge: parsedFee,
+        enableFreeDelivery,
+        freeDeliveryThreshold: parseFloat(String(freeDeliveryMinOrder).replace(/[^0-9.]/g, "")) || 500,
+      });
     } catch (err) {
       console.error("Failed to persist delivery radius and fee:", err);
     }

@@ -1809,6 +1809,10 @@ export const UserCart: React.FC<UserCartProps> = ({
     const sellerDeliveryCharge = typeof sellerDetails?.deliveryCharge === "number"
       ? sellerDetails.deliveryCharge
       : 50.0;
+    const enableFreeDelivery = Boolean(sellerDetails?.enableFreeDelivery);
+    const freeDeliveryThreshold = typeof sellerDetails?.freeDeliveryThreshold === "number"
+      ? sellerDetails.freeDeliveryThreshold
+      : (typeof sellerDetails?.freeDeliveryMinOrder === "number" ? sellerDetails.freeDeliveryMinOrder : 500.0);
 
     return calculateOrderTax({
       items: cartItems.map(it => ({
@@ -1822,6 +1826,8 @@ export const UserCart: React.FC<UserCartProps> = ({
       productTaxRate: platformTaxRates.productTaxRate,
       deliveryTaxRate: platformTaxRates.deliveryTaxRate,
       deliveryCharge: sellerDeliveryCharge,
+      enableFreeDelivery,
+      freeDeliveryThreshold,
       orderCouponDiscount: discountAmount,
       eligibleItemIds: couponCategoryDetails?.matchingItems ? couponCategoryDetails.matchingItems.map(it => it.foodItemId || it.id) : undefined,
     });
@@ -2709,6 +2715,28 @@ export const UserCart: React.FC<UserCartProps> = ({
                   </span>
                 </div>
 
+                {Boolean(sellerDetails?.enableFreeDelivery) && (
+                  <div style={{
+                    backgroundColor: taxCalc.deliveryGross === 0 ? "#F0FDF4" : "#FEF3C7",
+                    border: `1px solid ${taxCalc.deliveryGross === 0 ? "#BBF7D0" : "#FDE68A"}`,
+                    color: taxCalc.deliveryGross === 0 ? "#15803D" : "#B45309",
+                    padding: "6px 10px",
+                    borderRadius: "6px",
+                    fontSize: "0.78rem",
+                    fontWeight: 600,
+                    margin: "4px 0 8px 0",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px"
+                  }}>
+                    {taxCalc.deliveryGross === 0 ? (
+                      <span>🎉 Free delivery applied on orders above ₹{sellerDetails.freeDeliveryThreshold ?? 500}!</span>
+                    ) : (
+                      <span>🚚 Add ₹{Math.max(0, (sellerDetails.freeDeliveryThreshold ?? 500) - taxCalc.itemsSubtotal).toFixed(0)} more to get FREE delivery!</span>
+                    )}
+                  </div>
+                )}
+
                 {discountAmount > 0 && (
                   <>
                     {couponCategoryDetails?.isCategory && couponCategoryDetails.categoryName ? (
@@ -2790,7 +2818,7 @@ export const UserCart: React.FC<UserCartProps> = ({
                   <span>₹{taxCalc.productSgst.toFixed(2)}</span>
                 </div>
 
-                {taxCalc.deliveryTotal > 0 && (
+                {taxCalc.deliveryTotal > 0 ? (
                   <>
                     <div className={styles.pricingRow}>
                       <span className={styles.pricingLabel}>Delivery Charges:</span>
@@ -2801,6 +2829,11 @@ export const UserCart: React.FC<UserCartProps> = ({
                       <span>₹{taxCalc.deliveryGst.toFixed(2)}</span>
                     </div>
                   </>
+                ) : (
+                  <div className={styles.pricingRow}>
+                    <span className={styles.pricingLabel}>Delivery Charges:</span>
+                    <span className={styles.pricingValue} style={{ color: "#16A34A", fontWeight: 700 }}>FREE</span>
+                  </div>
                 )}
 
                 <div style={{ margin: "6px 0", display: "flex", justifyContent: "flex-end" }}>

@@ -51,6 +51,8 @@ model SellerProfile {
   operatingHours             String?          @default("[]")
   taxMode                    String           @default("TAX_INCLUSIVE")
   deliveryCharge             Float            @default(50.0)
+  enableFreeDelivery         Boolean          @default(false)
+  freeDeliveryThreshold      Float?           @default(500.0)
   isReadinessCompleted       Boolean          @default(false)
   kitchenImages              String           @default("[]")
   cuisineImages              String           @default("[]")
