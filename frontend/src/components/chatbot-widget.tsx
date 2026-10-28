@@ -1833,12 +1833,26 @@ Details: Category request submitted via chatbot assistant.`;
                                     e.currentTarget.style.borderColor = "#FCDFD7";
                                     e.currentTarget.style.transform = "scale(1)";
                                 }}
-                                title="Menu / Reset"
+                                title="Clear chat"
                             >
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2.8" strokeLinecap="round">
-                                    <line x1="4" y1="6" x2="20" y2="6" />
-                                    <line x1="4" y1="12" x2="20" y2="12" />
-                                    <line x1="4" y1="18" x2="20" y2="18" />
+                                <svg
+                                    width="19"
+                                    height="19"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="#EF4444"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                >
+                                    {/* Dustpan */}
+                                    <path d="M4 17h8l-1.5-6h-5L4 17z" />
+                                    <path d="M8 11V5.5a1 1 0 0 1 1-1h0.5" />
+                                    {/* Broom */}
+                                    <path d="M19.5 3.5l-5.5 6.5" />
+                                    <path d="M13 11l3 2.5" />
+                                    <path d="M12 12.5l1.8 6 3.7-1.1-1.7-6" />
+                                    <path d="M14 18l.8-2.5" />
                                 </svg>
                             </button>
                             <button
