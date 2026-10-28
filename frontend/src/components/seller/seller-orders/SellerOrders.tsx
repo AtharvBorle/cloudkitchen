@@ -1471,7 +1471,7 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
 
                               {order.status === "Completed" || order.rawStatus === "DELIVERED" ? (
                                 <a
-                                  href={'/invoice/order/' + order.id + '?type=seller'}
+                                  href={'/seller/invoice/order/' + order.id}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className={styles.invoiceBtn}

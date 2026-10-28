@@ -36,6 +36,7 @@ import {
   Receipt,
 } from "lucide-react";
 import { OrderTaxBreakdown } from "@/components/common/OrderTaxBreakdown";
+import { getOrderBreakdown } from "@/lib/tax-calculator";
 import { useCart, CartItem } from "@/context/CartContext";
 import { fetchApi } from "@/lib/fetch-api";
 import { useRealtimeStream } from "@/hooks/useRealtimeStream";
@@ -289,13 +290,12 @@ function parseOrderFromDb(o: any): OrderItemData {
     o.seller?.user?.name ||
     "Chef Anjali's Gourmet Kitchen";
 
-  const parsedItemTotal = parsedItems.reduce((acc, it) => acc + (Number(it.price) || 0) * (Number(it.quantity) || Number(it.qty) || 1), 0);
-  const totalAmountNum = o.totalAmount !== undefined && o.totalAmount !== null && !isNaN(Number(o.totalAmount)) ? Number(o.totalAmount) : undefined;
-  const itemTotal = parsedItemTotal > 0 ? parsedItemTotal : (totalAmountNum !== undefined ? totalAmountNum : 0);
-  const totalPaid = totalAmountNum !== undefined ? totalAmountNum : itemTotal;
-  const deliveryFee = 0;
+  const calc = getOrderBreakdown(o);
+  const itemTotal = calc.productGross;
+  const deliveryFee = calc.deliveryGross;
   const platformFee = 0;
-  const discount = Math.max(0, itemTotal - totalPaid);
+  const discount = calc.productDiscount;
+  const totalPaid = calc.grandTotal;
   const couponCode = o.appliedCoupon?.code || (o.appliedCouponId ? "COUPON" : undefined);
   const couponDiscountPercentage = o.appliedCoupon?.discountPercentage;
 
@@ -2043,7 +2043,7 @@ export default function MyOrdersView() {
 
                           {isDelivered ? (
                             <a
-                              href={'/invoice/order/' + order.id + '?type=user'}
+                              href={'/invoice/order/' + order.id}
                               target="_blank"
                               rel="noopener noreferrer"
                               className={styles.invoiceBtn}
