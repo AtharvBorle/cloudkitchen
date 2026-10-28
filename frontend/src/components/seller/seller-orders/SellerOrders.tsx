@@ -725,7 +725,7 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
 
             return {
               id: o.id,
-              orderId: `#NCR-${o.id.slice(0, 4).toUpperCase()}`,
+              orderId: o.id,
               customer: o.user?.name || "Customer",
               room: formatOrderDeliveryAddress(o.deliveryAddress, o.room?.title),
               items: itemsSummary || "1x Dish Item",
@@ -790,7 +790,7 @@ export const SellerOrders: React.FC<SellerOrdersProps> = ({
           const orderTimeStr = formatOrderTime(o.createdAt);
           const newRow: OrderRow = {
             id: o.id,
-            orderId: `#NCR-${o.id.slice(0, 4).toUpperCase()}`,
+            orderId: o.id,
             customer: o.user?.name || "Customer",
             room: formatOrderDeliveryAddress(o.deliveryAddress, o.room?.title),
             items: itemsSummary || "1x Dish Item",
