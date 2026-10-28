@@ -360,11 +360,9 @@ export default function CustomerOrderInvoicePage({ params }: { params: Promise<{
                     </table>
                 </div>
 
-                {/* Signature Box */}
-                <div style={{ border: '1px solid #CBD5E1', borderRadius: '4px', padding: '36px 20px 14px', textAlign: 'right', marginTop: '24px' }}>
-                    <span style={{ fontStyle: 'italic', fontSize: '0.88rem', color: '#334155' }}>
-                        Authorized Signature
-                    </span>
+                {/* Computer Generated Invoice Disclaimer */}
+                <div style={{ marginTop: '24px', padding: '14px 18px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', textAlign: 'center', fontSize: '0.82rem', color: '#64748B', fontStyle: 'italic', fontWeight: '500' }}>
+                    * This is a computer-generated invoice and does not require a physical signature.
                 </div>
             </div>
         </div>
