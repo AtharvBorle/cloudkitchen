@@ -59,6 +59,7 @@ export interface ResponsiveSellerOrdersDetailsProps {
   cancelledBy?: string | null;
   cancellationReason?: string | null;
   rawOrder?: any;
+  taxCalc?: any;
   onBack?: () => void;
   onCallRider?: () => void;
   onStatusChange?: (newStatus: OrderTimelineStep) => Promise<void> | void;
@@ -88,6 +89,7 @@ export const ResponsiveSellerOrdersDetails: React.FC<
   cancelledBy,
   cancellationReason,
   rawOrder,
+  taxCalc,
   onBack,
   onCallRider,
   onStatusChange,
@@ -793,6 +795,7 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                 paymentMethod,
                 taxBreakdown: rawOrder?.taxBreakdown,
               }}
+              taxCalc={taxCalc}
               paymentMethod={paymentMethod}
               orderId={orderId}
               showInvoiceButton={true}

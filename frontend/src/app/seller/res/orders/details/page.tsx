@@ -191,6 +191,7 @@ function DetailsContent() {
     <ResponsiveSellerOrdersDetails
       orderId={order ? `#${order.id.slice(0, 6).toUpperCase()}` : rawId}
       rawOrder={order}
+      taxCalc={calc}
       customerName={order?.user?.name || order?.customerName || "Customer"}
       customerPhone={order?.customerPhone || order?.user?.phone || ""}
       deliveryAddress={formatOrderDeliveryAddress(order?.deliveryAddress, order?.room?.title)}
