@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Check, Clock, Bike, PackageCheck, AlertCircle, Package, XCircle, X, Receipt } from "lucide-react";
+import { ArrowLeft, Check, Clock, Bike, PackageCheck, AlertCircle, Package, XCircle, X } from "lucide-react";
 import { OrderTaxBreakdown } from "@/components/common/OrderTaxBreakdown";
 import { getOrderBreakdown } from "@/lib/tax-calculator";
 import ConsoleSidebar from "../sidebar/Sidebar";
@@ -567,30 +567,6 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
               <h1 className={styles.orderTitle}>Order #{activeOrderData.orderId?.replace(/^#/, "")}</h1>
               <p className={styles.orderSubtitle}>{activeOrderData.placedTime}</p>
             </div>
-            {isDelivered ? (
-              <a
-                href={'/seller/invoice/order/' + (activeOrderData.id || (rawOrderId ? rawOrderId.replace(/^#/, '') : ''))}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={styles.headerInvoiceBtn}
-                title="Download Invoice"
-                style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: "8px", padding: "8px 16px", borderRadius: "10px", backgroundColor: "#FFF7ED", border: "1.5px solid #FDBA74", color: "#C2410C", fontWeight: 700, fontSize: "0.88rem", textDecoration: "none" }}
-              >
-                <Receipt size={16} />
-                <span>Download Invoice</span>
-              </a>
-            ) : (
-              <button
-                type="button"
-                disabled
-                className={styles.headerInvoiceBtnDisabled}
-                title="Invoice available after order delivery"
-                style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: "8px", padding: "8px 16px", borderRadius: "10px", backgroundColor: "#F1F5F9", border: "1.5px solid #CBD5E1", color: "#94A3B8", fontWeight: 600, fontSize: "0.88rem", cursor: "not-allowed", opacity: 0.75 }}
-              >
-                <Receipt size={16} />
-                <span>Download Invoice (On Delivery)</span>
-              </button>
-            )}
           </div>
 
           {/* Acceptance Timer Banner for Pending Orders */}
