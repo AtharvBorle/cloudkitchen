@@ -7,6 +7,7 @@ export interface TaxCalculatorItem {
     discountPercentage?: number | null;
     discountAmount?: number | null;
     hsn?: string;
+    sku?: string;
     addonsTotal?: number;
     selectedAddons?: any[];
 }
@@ -15,6 +16,7 @@ export interface TaxBreakdownItem {
     id: string;
     name: string;
     hsn: string;
+    sku?: string;
     quantity: number;
     unitPrice: number;
     grossAmount: number;
@@ -25,6 +27,7 @@ export interface TaxBreakdownItem {
     sgstRate: number;
     sgstAmount: number;
     totalAmount: number;
+    selectedAddons?: any[];
 }
 
 export interface TaxCalculationResult {
@@ -195,6 +198,7 @@ export function calculateOrderTax(params: CalculateTaxParams): TaxCalculationRes
             id: String(t.raw.id || t.raw.foodItemId || `item-${index + 1}`),
             name: t.raw.name || "Food Item",
             hsn: t.raw.hsn || "996331", // Restaurant services standard SAC code
+            sku: t.raw.sku,
             quantity: Math.max(1, Number(t.raw.quantity) || 1),
             unitPrice: Number(t.raw.price) || 0,
             grossAmount: t.gross,
@@ -205,6 +209,7 @@ export function calculateOrderTax(params: CalculateTaxParams): TaxCalculationRes
             sgstRate,
             sgstAmount: sgst,
             totalAmount: total,
+            selectedAddons: t.raw.selectedAddons,
         };
     });
 
@@ -269,3 +274,136 @@ export function calculateOrderTax(params: CalculateTaxParams): TaxCalculationRes
         grandTotal,
     };
 }
+
+/**
+ * Authoritative single engine to calculate order breakdown and invoice math.
+ * Standardizes breakdown calculation across:
+ * - User Checkout & Cart
+ * - Customer Invoices
+ * - Seller Tax Invoices
+ * - User & Seller Order Details & Dashboards
+ */
+export function getOrderBreakdown(order: any): TaxCalculationResult {
+    if (!order) {
+        return calculateOrderTax({ items: [] });
+    }
+
+    // 1. Authoritative check: If order has taxBreakdown stored from checkout, use it directly!
+    if (order.taxBreakdown) {
+        try {
+            const parsed = typeof order.taxBreakdown === "string" ? JSON.parse(order.taxBreakdown) : order.taxBreakdown;
+            if (
+                parsed &&
+                typeof parsed.grandTotal === "number" &&
+                typeof parsed.productGross === "number" &&
+                Array.isArray(parsed.items) &&
+                parsed.items.length > 0
+            ) {
+                return parsed;
+            }
+        } catch {}
+    }
+
+    // 2. Failsafe calculation using order items and fields matching checkout/cart
+    let rawItems: any[] = [];
+    try {
+        if (typeof order.items === "string") {
+            rawItems = JSON.parse(order.items);
+        } else if (Array.isArray(order.items)) {
+            rawItems = order.items;
+        } else if (Array.isArray(order.rawItems)) {
+            rawItems = order.rawItems;
+        }
+    } catch {
+        rawItems = [];
+    }
+
+    const sellerTaxMode = order.taxMode || order.seller?.taxMode || "TAX_INCLUSIVE";
+    const pTaxRate = cleanNumericPrice(order.productTaxRate, 5.0);
+    const dTaxRate = cleanNumericPrice(order.deliveryTaxRate, 18.0);
+
+    let dCharge = 0;
+    if (typeof order.deliveryCharge === "number") {
+        dCharge = order.deliveryCharge;
+    } else if (order.deliveryFee !== undefined && order.deliveryFee !== null) {
+        dCharge = cleanNumericPrice(order.deliveryFee, 0);
+    } else if (typeof order.seller?.deliveryCharge === "number") {
+        dCharge = order.seller.deliveryCharge;
+    }
+
+    let couponDiscount = cleanNumericPrice(
+        order.discount ||
+        order.couponDiscount ||
+        order.productDiscount ||
+        order.appliedCoupon?.discountAmount ||
+        order.billBreakdown?.discount,
+        0
+    );
+
+    const mappedItems: TaxCalculatorItem[] = rawItems.map((it: any) => {
+        const qty = Math.max(1, cleanNumericPrice(it.quantity || it.qty, 1));
+        let price = cleanNumericPrice(it.price || it.unitPrice, 0);
+        if (price === 0) {
+            const totalVal = cleanNumericPrice(it.total || it.lineTotal, 0);
+            if (totalVal > 0) price = Math.round((totalVal / qty) * 100) / 100;
+        }
+        if (price === 0) {
+            const base = cleanNumericPrice(it.basePrice, 0);
+            const addons = cleanNumericPrice(it.addonsTotal || it.addonsSubtotal, 0);
+            if (base + addons > 0) price = base + addons;
+        }
+        return {
+            id: it.id || it.foodItemId,
+            foodItemId: it.foodItemId || it.id,
+            name: it.name || "Food Item",
+            quantity: qty,
+            price: price,
+            discountAmount: cleanNumericPrice(it.discountAmount, 0),
+            addonsTotal: cleanNumericPrice(it.addonsTotal || it.addonsSubtotal, 0),
+            selectedAddons: it.selectedAddons || it.addons || [],
+            hsn: it.hsn || "996331",
+            sku: it.sku,
+        };
+    });
+
+    const totalItemGross = mappedItems.reduce((acc, it) => acc + (it.price * it.quantity), 0);
+    if (totalItemGross === 0) {
+        const fallbackSubtotal = cleanNumericPrice(
+            order.subtotal ||
+            order.billBreakdown?.itemTotal ||
+            order.productGross ||
+            (order.totalAmount !== undefined && order.totalAmount !== null ? order.totalAmount : undefined) ||
+            order.total ||
+            order.grandTotal,
+            0
+        );
+
+        if (fallbackSubtotal > 0) {
+            mappedItems.push({
+                id: "item-1",
+                name: order.dishName || "Ordered Food Item",
+                quantity: 1,
+                price: fallbackSubtotal,
+                discountAmount: 0,
+                addonsTotal: 0,
+                selectedAddons: [],
+                hsn: "996331",
+            });
+        }
+    }
+
+    if (couponDiscount === 0 && order.appliedCoupon?.discountPercentage && totalItemGross > 0) {
+        couponDiscount = round2((totalItemGross * order.appliedCoupon.discountPercentage) / 100);
+    }
+
+    return calculateOrderTax({
+        items: mappedItems,
+        sellerTaxMode,
+        productTaxRate: pTaxRate,
+        deliveryTaxRate: dTaxRate,
+        deliveryCharge: dCharge,
+        orderCouponDiscount: couponDiscount,
+    });
+}
+
+export const getTaxCalculationForOrder = getOrderBreakdown;

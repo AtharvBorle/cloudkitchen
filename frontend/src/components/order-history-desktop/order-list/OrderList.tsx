@@ -111,7 +111,7 @@ export const OrderList: React.FC<OrderListProps> = ({
               <div className={styles.actionsGroup}>
                 {order.status === "DELIVERED" ? (
                   <a
-                    href={'/invoice/order/' + order.id + '?type=user'}
+                    href={'/invoice/order/' + order.id}
                     target="_blank"
                     rel="noopener noreferrer"
                     className={styles.invoiceBtn}

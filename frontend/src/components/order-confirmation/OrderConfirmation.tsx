@@ -28,7 +28,7 @@ import { Footer } from "@/components/explore-desktop/footer";
 import styles from "./OrderConfirmation.module.css";
 
 import { fetchApi } from "@/lib/fetch-api";
-import { getTaxCalculationForOrder } from "@/components/common/OrderTaxBreakdown";
+import { getOrderBreakdown } from "@/lib/tax-calculator";
 import { useRealtimeStream } from "@/hooks/useRealtimeStream";
 
 interface ConfirmedOrderItem {
@@ -177,7 +177,7 @@ export default function OrderConfirmation({ orderIdProp }: OrderConfirmationProp
 
     let parsedTaxBreakdown: any = null;
     try {
-      parsedTaxBreakdown = getTaxCalculationForOrder(rawOrder);
+      parsedTaxBreakdown = getOrderBreakdown(rawOrder);
     } catch {
       if (rawOrder.taxBreakdown) {
         parsedTaxBreakdown = typeof rawOrder.taxBreakdown === "string" ? JSON.parse(rawOrder.taxBreakdown) : rawOrder.taxBreakdown;
@@ -701,7 +701,7 @@ export default function OrderConfirmation({ orderIdProp }: OrderConfirmationProp
                 </div>
                 {orderData.status === "DELIVERED" ? (
                   <a
-                    href={'/invoice/order/' + orderData.orderId + '?type=user'}
+                    href={'/invoice/order/' + orderData.orderId}
                     target="_blank"
                     rel="noopener noreferrer"
                     className={styles.invoiceHeaderBtn}
@@ -971,7 +971,7 @@ export default function OrderConfirmation({ orderIdProp }: OrderConfirmationProp
           {/* Download Tax Invoice CTA */}
           {orderData.status === "DELIVERED" ? (
             <a
-              href={'/invoice/order/' + orderData.orderId + '?type=user'}
+              href={'/invoice/order/' + orderData.orderId}
               target="_blank"
               rel="noopener noreferrer"
               className={styles.invoiceBtn}
