@@ -28,6 +28,7 @@ import { Footer } from "@/components/explore-desktop/footer";
 import styles from "./OrderConfirmation.module.css";
 
 import { fetchApi } from "@/lib/fetch-api";
+import { getTaxCalculationForOrder } from "@/components/common/OrderTaxBreakdown";
 import { useRealtimeStream } from "@/hooks/useRealtimeStream";
 
 interface ConfirmedOrderItem {
@@ -176,10 +177,12 @@ export default function OrderConfirmation({ orderIdProp }: OrderConfirmationProp
 
     let parsedTaxBreakdown: any = null;
     try {
+      parsedTaxBreakdown = getTaxCalculationForOrder(rawOrder);
+    } catch {
       if (rawOrder.taxBreakdown) {
         parsedTaxBreakdown = typeof rawOrder.taxBreakdown === "string" ? JSON.parse(rawOrder.taxBreakdown) : rawOrder.taxBreakdown;
       }
-    } catch {}
+    }
 
     setOrderData({
       orderId: rawOrder.id,
@@ -689,13 +692,25 @@ export default function OrderConfirmation({ orderIdProp }: OrderConfirmationProp
           <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
             {/* Items Summary Card */}
             <section className={styles.card}>
-              <div className={styles.cardHeader}>
+              <div className={styles.cardHeader} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div className={styles.cardTitleGroup}>
                   <div className={styles.cardIconBox}>
                     <ShoppingBag size={20} />
                   </div>
                   <h2 className={styles.cardTitle}>Order Summary ({orderData.items.length} items)</h2>
                 </div>
+                {orderData.status !== "CANCELLED" && (
+                  <a
+                    href={'/invoice/order/' + orderData.orderId}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.invoiceHeaderBtn}
+                    title="Download Official Tax Invoice (GST Compliant)"
+                  >
+                    <Receipt size={16} />
+                    <span>Tax Invoice</span>
+                  </a>
+                )}
               </div>
 
               <div className={styles.itemsList}>
@@ -942,6 +957,20 @@ export default function OrderConfirmation({ orderIdProp }: OrderConfirmationProp
             <span>Track Order in My Orders</span>
             <ArrowRight size={18} />
           </Link>
+
+          {/* Download Tax Invoice CTA */}
+          {orderData.status !== "CANCELLED" && (
+            <a
+              href={'/invoice/order/' + orderData.orderId}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.invoiceBtn}
+              title="Download Official Tax Invoice (GST Compliant)"
+            >
+              <Receipt size={18} />
+              <span>Download Tax Invoice</span>
+            </a>
+          )}
 
           {/* Secondary Continue Exploring Button */}
           <Link href="/food-explore" className={styles.exploreBtn}>

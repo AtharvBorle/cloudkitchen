@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import styles from "./OrderList.module.css";
-import { ShoppingBag, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { ShoppingBag, Loader2, ChevronLeft, ChevronRight, Receipt } from "lucide-react";
 
 export interface OrderItemData {
   id: string;
@@ -109,6 +109,19 @@ export const OrderList: React.FC<OrderListProps> = ({
               <p className={styles.deliveryText}>{order.deliveryAddress}</p>
 
               <div className={styles.actionsGroup}>
+                {order.status !== "CANCELLED" && (
+                  <a
+                    href={'/invoice/order/' + order.id}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.invoiceBtn}
+                    title="Download Tax Invoice"
+                  >
+                    <Receipt size={14} />
+                    <span>Invoice</span>
+                  </a>
+                )}
+
                 {order.hasViewDetails !== false && (
                   <button
                     type="button"
