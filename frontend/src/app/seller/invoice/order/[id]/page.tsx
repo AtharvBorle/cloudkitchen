@@ -375,17 +375,19 @@ export default function SellerOrderInvoicePage({ params }: { params: Promise<{ i
                     </table>
                 </div>
 
-                {/* Footer: Registered Office (Left) | Ordered Through & Authorized Signatory (Right) */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', paddingTop: '10px', fontSize: '0.78rem', color: '#000000', flexWrap: 'wrap', gap: '16px' }}>
+                {/* Footer: Registered Office (Left) | Ordered Through (Right) */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', paddingTop: '14px', fontSize: '0.78rem', color: '#000000', flexWrap: 'wrap', gap: '16px' }}>
                     <div style={{ maxWidth: '450px', lineHeight: '1.4' }}>
                         <strong>Registered Office:</strong> {[sellerName, sellerStreet, sellerCity, sellerPincode].filter(Boolean).join(", ")}.
                     </div>
                     <div style={{ textAlign: 'right', lineHeight: '1.5' }}>
                         <div>Ordered Through <strong>NEOCLOUDBITES</strong></div>
-                        <div style={{ marginTop: '30px', fontStyle: 'italic', color: '#334155' }}>
-                            Authorized Signatory
-                        </div>
                     </div>
+                </div>
+
+                {/* Computer Generated Invoice Disclaimer */}
+                <div style={{ marginTop: '16px', padding: '10px 14px', backgroundColor: '#FAFAFA', border: '1px solid #000000', borderRadius: '4px', textAlign: 'center', fontSize: '0.76rem', color: '#1E293B', fontStyle: 'italic', fontWeight: '500' }}>
+                    * This is a computer-generated invoice and does not require a physical signature.
                 </div>
             </div>
         </div>
