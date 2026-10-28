@@ -1253,12 +1253,15 @@ export const getOrderDetails = async (id: string, allowGuest: boolean = true) =>
     if (!cleanId) {
         throw new ApiError("Order ID is required", 400);
     }
+    const sanitizedId = cleanId.replace(/^#/, "").replace(/^(?:ord|ncr)-/i, "").trim();
 
     const order = await db.order.findFirst({
         where: {
             OR: [
                 { id: cleanId },
-                { id: { equals: cleanId, mode: 'insensitive' } }
+                { id: sanitizedId },
+                { id: { startsWith: sanitizedId, mode: 'insensitive' } },
+                { id: { endsWith: sanitizedId, mode: 'insensitive' } }
             ]
         },
         include: {

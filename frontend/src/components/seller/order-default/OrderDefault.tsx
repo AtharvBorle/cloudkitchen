@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Check, Clock, Bike, PackageCheck, AlertCircle, Package, XCircle, X } from "lucide-react";
+import { ArrowLeft, Check, Clock, Bike, PackageCheck, AlertCircle, Package, XCircle, X, Receipt } from "lucide-react";
+import { OrderTaxBreakdown } from "@/components/common/OrderTaxBreakdown";
 import ConsoleSidebar from "../sidebar/Sidebar";
 import Topbar from "../nav/Topbar";
 import { useSellerProfile } from "@/hooks/useSellerProfile";
@@ -57,6 +58,8 @@ export interface OrderDetailsData {
   deliveryPersonName?: string;
   cancelledBy?: string | null;
   cancellationReason?: string | null;
+  rawOrder?: any;
+  taxBreakdown?: any;
 }
 
 export type OrderDetailData = OrderDetailsData;
@@ -530,6 +533,19 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
               <h1 className={styles.orderTitle}>Order {activeOrderData.orderId}</h1>
               <p className={styles.orderSubtitle}>{activeOrderData.placedTime}</p>
             </div>
+            {activeOrderData.rawStatus !== "CANCELLED" && (
+              <a
+                href={'/invoice/order/' + (activeOrderData.id || (rawOrderId ? rawOrderId.replace(/^#/, '') : ''))}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.headerInvoiceBtn}
+                title="Download Official GST Tax Invoice"
+                style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: "8px", padding: "8px 16px", borderRadius: "10px", backgroundColor: "#FFF7ED", border: "1.5px solid #FDBA74", color: "#C2410C", fontWeight: 700, fontSize: "0.88rem", textDecoration: "none" }}
+              >
+                <Receipt size={16} />
+                <span>Download Invoice</span>
+              </a>
+            )}
           </div>
 
           {/* Acceptance Timer Banner for Pending Orders */}
@@ -671,30 +687,15 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
                   </tbody>
                 </table>
 
-                {/* Price Calculation Summary */}
+                {/* Price Calculation Summary with Complete GST Breakdown */}
                 <div className={styles.priceSummary}>
-                  <div className={styles.priceRow}>
-                    <span className={styles.priceRowLabel}>Subtotal:</span>
-                    <span className={styles.priceRowValue}>{activeOrderData.subtotal}</span>
-                  </div>
-                  <div className={styles.priceRow}>
-                    <span className={styles.priceRowLabel}>Service Fee & Delivery:</span>
-                    <span className={styles.freeBadge}>{activeOrderData.serviceFee || "Free"}</span>
-                  </div>
-                  {activeOrderData.discount && activeOrderData.discount !== "₹0" && (
-                    <div className={styles.priceRow}>
-                      <span className={styles.priceRowLabel}>Discount / Coupon:</span>
-                      <span style={{ color: "#16A34A", fontWeight: "600" }}>-{activeOrderData.discount}</span>
-                    </div>
-                  )}
-                  <div className={styles.priceRow}>
-                    <span className={styles.priceRowLabel}>Payment Mode:</span>
-                    <span className={styles.priceRowValue}>{activeOrderData.paymentMethod}</span>
-                  </div>
-                  <div className={styles.grandTotalRow}>
-                    <span className={styles.grandTotalLabel}>Grand Total:</span>
-                    <span className={styles.grandTotalValue}>{activeOrderData.grandTotal}</span>
-                  </div>
+                  <OrderTaxBreakdown
+                    order={activeOrderData.rawOrder || activeOrderData}
+                    isPaid={activeOrderData.status === "Completed"}
+                    paymentMethod={activeOrderData.paymentMethod}
+                    orderId={activeOrderData.id}
+                    showInvoiceButton={false}
+                  />
                 </div>
               </div>
             </div>

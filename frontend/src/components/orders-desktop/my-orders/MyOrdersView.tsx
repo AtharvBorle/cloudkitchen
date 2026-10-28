@@ -33,7 +33,9 @@ import {
   ShieldCheck,
   ExternalLink,
   Compass,
+  Receipt,
 } from "lucide-react";
+import { OrderTaxBreakdown } from "@/components/common/OrderTaxBreakdown";
 import { useCart, CartItem } from "@/context/CartContext";
 import { fetchApi } from "@/lib/fetch-api";
 import { useRealtimeStream } from "@/hooks/useRealtimeStream";
@@ -82,6 +84,14 @@ export interface OrderItemData {
   rawItems: any[];
   isPaid?: boolean;
   paymentMethod?: string;
+  taxBreakdown?: any;
+  taxMode?: string;
+  productTaxRate?: number;
+  deliveryTaxRate?: number;
+  deliveryCharge?: number;
+  seller?: any;
+  appliedCoupon?: any;
+  rawOrder?: any;
   refund?: {
     id: string;
     status: string;
@@ -328,6 +338,14 @@ function parseOrderFromDb(o: any): OrderItemData {
     review: o.review || null,
     isPaid: !!o.isPaid,
     paymentMethod: o.paymentMethod || "COD",
+    taxBreakdown: o.taxBreakdown,
+    taxMode: o.taxMode || o.seller?.taxMode,
+    productTaxRate: typeof o.productTaxRate === "number" ? o.productTaxRate : undefined,
+    deliveryTaxRate: typeof o.deliveryTaxRate === "number" ? o.deliveryTaxRate : undefined,
+    deliveryCharge: typeof o.deliveryCharge === "number" ? o.deliveryCharge : undefined,
+    seller: o.seller,
+    appliedCoupon: o.appliedCoupon,
+    rawOrder: o,
     refund: o.refund
       ? {
           ...o.refund,
@@ -2023,6 +2041,19 @@ export default function MyOrdersView() {
                             </button>
                           )}
 
+                          {order.rawStatus !== "CANCELLED" && (
+                            <a
+                              href={'/invoice/order/' + order.id}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={styles.invoiceBtn}
+                              onClick={(e) => e.stopPropagation()}
+                              title="Download Tax Invoice"
+                            >
+                              <Receipt size={14} />
+                              <span>Invoice</span>
+                            </a>
+                          )}
                           <button
                             type="button"
                             className={styles.viewDetailsBtn}
@@ -2574,43 +2605,15 @@ export default function MyOrdersView() {
                   )}
                 </div>
 
-                {/* Pricing Summary */}
-                <div className={styles.billSummaryTable}>
-                  <div className={styles.billRow}>
-                    <span>Item Total</span>
-                    <span>₹{selectedOrder.billBreakdown.itemTotal}</span>
-                  </div>
-                  {selectedOrder.billBreakdown.discount !== undefined && selectedOrder.billBreakdown.discount > 0 && (
-                    <div className={styles.billRow} style={{ color: "#16A34A" }}>
-                      <span>
-                        Coupon Discount {selectedOrder.billBreakdown.couponCode ? `(${selectedOrder.billBreakdown.couponCode})` : ""}
-                        {selectedOrder.billBreakdown.couponDiscountPercentage ? ` • ${selectedOrder.billBreakdown.couponDiscountPercentage}% OFF` : ""}
-                      </span>
-                      <span style={{ fontWeight: 600 }}>-₹{selectedOrder.billBreakdown.discount}</span>
-                    </div>
-                  )}
-                  {selectedOrder.billBreakdown.deliveryFee > 0 && (
-                    <div className={styles.billRow}>
-                      <span>Delivery Fee</span>
-                      <span>₹{selectedOrder.billBreakdown.deliveryFee}</span>
-                    </div>
-                  )}
-                  {selectedOrder.billBreakdown.platformFee > 0 && (
-                    <div className={styles.billRow}>
-                      <span>Platform Fee</span>
-                      <span>₹{selectedOrder.billBreakdown.platformFee}</span>
-                    </div>
-                  )}
-                  <div className={styles.billTotalRow}>
-                    <span>
-                      {selectedOrder.isPaid
-                        ? "Total Paid"
-                        : (selectedOrder.paymentMethod === "COD" || selectedOrder.paymentMethod === "Cash on Delivery")
-                        ? "Cash on Delivery (COD)"
-                        : "Total Paid"}
-                    </span>
-                    <span>₹{selectedOrder.billBreakdown.totalPaid}</span>
-                  </div>
+                {/* Pricing Summary with Complete GST Breakdown */}
+                <div style={{ backgroundColor: "#F8FAFC", borderRadius: "12px", padding: "16px", border: "1px solid #E2E8F0" }}>
+                  <OrderTaxBreakdown
+                    order={selectedOrder.rawOrder || selectedOrder}
+                    isPaid={selectedOrder.isPaid}
+                    paymentMethod={selectedOrder.paymentMethod}
+                    orderId={selectedOrder.id}
+                    showInvoiceButton={true}
+                  />
                 </div>
 
                 {/* Bottom CTA Buttons */}
