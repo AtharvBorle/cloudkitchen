@@ -20,8 +20,8 @@ export default function OrderInvoicePage({ params }: { params: Promise<{ id: str
                 const resData = await res.json();
                 if (res.ok) {
                     const fetchedOrder = resData.data || resData;
-                    if (fetchedOrder && (fetchedOrder.status === "CANCELLED" || fetchedOrder.status === "REJECTED")) {
-                        setError("Invoices are not available for cancelled or rejected orders.");
+                    if (fetchedOrder && fetchedOrder.status !== "DELIVERED") {
+                        setError("Invoices are only generated and accessible after the order has been successfully delivered.");
                     } else {
                         setOrder(fetchedOrder);
                     }

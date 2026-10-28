@@ -699,16 +699,16 @@ export default function OrderConfirmation({ orderIdProp }: OrderConfirmationProp
                   </div>
                   <h2 className={styles.cardTitle}>Order Summary ({orderData.items.length} items)</h2>
                 </div>
-                {orderData.status !== "CANCELLED" && (
+                {orderData.status === "DELIVERED" && (
                   <a
                     href={'/invoice/order/' + orderData.orderId}
                     target="_blank"
                     rel="noopener noreferrer"
                     className={styles.invoiceHeaderBtn}
-                    title="Download Official Tax Invoice (GST Compliant)"
+                    title="Download Invoice"
                   >
                     <Receipt size={16} />
-                    <span>Tax Invoice</span>
+                    <span>Invoice</span>
                   </a>
                 )}
               </div>
@@ -959,16 +959,16 @@ export default function OrderConfirmation({ orderIdProp }: OrderConfirmationProp
           </Link>
 
           {/* Download Tax Invoice CTA */}
-          {orderData.status !== "CANCELLED" && (
+          {orderData.status === "DELIVERED" && (
             <a
               href={'/invoice/order/' + orderData.orderId}
               target="_blank"
               rel="noopener noreferrer"
               className={styles.invoiceBtn}
-              title="Download Official Tax Invoice (GST Compliant)"
+              title="Download Invoice"
             >
               <Receipt size={18} />
-              <span>Download Tax Invoice</span>
+              <span>Download Invoice</span>
             </a>
           )}
 

@@ -78,7 +78,8 @@ export const OrderTaxBreakdown: React.FC<OrderTaxBreakdownProps> = ({
   const effectivePaid = isPaid !== undefined ? isPaid : Boolean(order?.isPaid);
   const effectiveMethod = paymentMethod || order?.paymentMethod || (effectivePaid ? "ONLINE" : "COD");
   const isCod = effectiveMethod === "COD" || effectiveMethod === "Cash on Delivery";
-  const canShowInvoice = showInvoiceButton && targetOrderId && order?.status !== "CANCELLED" && order?.rawStatus !== "CANCELLED";
+  const isDelivered = (order?.status || "").toUpperCase() === "DELIVERED" || (order?.rawStatus || "").toUpperCase() === "DELIVERED";
+  const canShowInvoice = showInvoiceButton && targetOrderId && isDelivered;
 
   return (
     <div
@@ -217,10 +218,10 @@ export const OrderTaxBreakdown: React.FC<OrderTaxBreakdownProps> = ({
               e.currentTarget.style.backgroundColor = "#FFF7ED";
               e.currentTarget.style.borderColor = "#FDBA74";
             }}
-            title="View & Download Official Tax Invoice (GST Compliant)"
+            title="Download Invoice"
           >
             <Receipt size={16} color="#EA580C" />
-            <span>Download Tax Invoice</span>
+            <span>Download Invoice</span>
           </a>
         </div>
       )}
