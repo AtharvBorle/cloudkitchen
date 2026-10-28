@@ -911,17 +911,19 @@ export const SellerSupport: React.FC<SellerSupportProps> = ({
                     <Headphones size={32} color="#94A3B8" />
                     <p className={styles.emptyListText}>
                       {tickets.length === 0
-                        ? "No support tickets yet. Click '+ Raise Ticket' to submit your request."
+                        ? "No support tickets yet."
                         : `No tickets found under "${statusFilter}"`}
                     </p>
-                    <button
-                      type="button"
-                      className={styles.raiseTicketEmptyBtn}
-                      onClick={() => setIsCreateModalOpen(true)}
-                    >
-                      <Plus size={15} />
-                      <span>Raise New Ticket</span>
-                    </button>
+                    {tickets.length > 0 && (
+                      <button
+                        type="button"
+                        className={styles.raiseTicketEmptyBtn}
+                        onClick={() => setIsCreateModalOpen(true)}
+                      >
+                        <Plus size={15} />
+                        <span>Raise New Ticket</span>
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
