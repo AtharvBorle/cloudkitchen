@@ -45,7 +45,7 @@ export const UnifiedInvoiceView: React.FC<UnifiedInvoiceViewProps> = ({ order, i
     .replace(/^#/, "")
     .trim();
   const shortId = rawCleanId.length > 20 ? rawCleanId.slice(0, 8).toUpperCase() : rawCleanId;
-  const invoiceNo = `INV-${shortId}`;
+  const invoiceNo = `INV${shortId}`;
   const totalQuantity = taxCalc.items.reduce((acc, it) => acc + (Number(it.quantity) || 1), 0);
 
   // Dynamic Seller Information
@@ -119,7 +119,7 @@ export const UnifiedInvoiceView: React.FC<UnifiedInvoiceViewProps> = ({ order, i
         }
       }
 
-      pdf.save(`Invoice_${shortId}.pdf`);
+      pdf.save(`${invoiceNo}.pdf`);
     } catch (err) {
       console.error("Direct PDF download failed, falling back to print dialog:", err);
       window.print();
