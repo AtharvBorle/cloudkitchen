@@ -2043,7 +2043,7 @@ export default function MyOrdersView() {
 
                           {isDelivered ? (
                             <a
-                              href={'/invoice/order/' + order.id}
+                              href={'/invoice/order/' + order.id + '?type=user'}
                               target="_blank"
                               rel="noopener noreferrer"
                               className={styles.invoiceBtn}

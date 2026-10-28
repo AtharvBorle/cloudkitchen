@@ -782,7 +782,17 @@ export const ResponsiveSellerOrdersDetails: React.FC<
 
             {/* Complete GST Price Breakdown */}
             <OrderTaxBreakdown
-              order={rawOrder || { id: orderId, items, subtotal, deliveryFee, discount, total, paymentMethod }}
+              order={{
+                ...(rawOrder || {}),
+                id: orderId,
+                items: rawOrder?.items || items,
+                subtotal,
+                deliveryFee,
+                discount,
+                total,
+                paymentMethod,
+                taxBreakdown: rawOrder?.taxBreakdown,
+              }}
               paymentMethod={paymentMethod}
               orderId={orderId}
               showInvoiceButton={true}
