@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { performLogout } from "@/lib/logout";
 import { fetchApi } from "@/lib/fetch-api";
+import { validateUpiId } from "@/lib/upi-validation";
 import {
   ChevronLeft,
   Menu as MenuIcon,
@@ -880,13 +881,14 @@ export const ResSellerProfile: React.FC<ResSellerProfileProps> = ({
                   className={styles.input}
                   value={upiId}
                   onChange={(e) => setUpiId(e.target.value)}
+                  maxLength={50}
                   placeholder="e.g. merchant@okhdfcbank, 9876543210@paytm"
                   style={{
                     backgroundColor: savedUpiId && !isEditingUpi ? "#F1F5F9" : "#FFFFFF",
                     color: savedUpiId && !isEditingUpi ? "#334155" : "#0F172A",
                     fontWeight: savedUpiId && !isEditingUpi ? 600 : 400,
                     borderColor:
-                      upiId && !upiId.includes("@")
+                      upiId && !validateUpiId(upiId).isValid
                         ? "#FCA5A5"
                         : savedUpiId && !isEditingUpi
                         ? "#CBD5E1"

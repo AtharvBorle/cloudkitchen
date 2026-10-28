@@ -425,6 +425,21 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.chevronBtn:hover {
+  color: #ea580c;
+  background: #fff7ed;
+}
+
+.chevronBtn:active {
+  transform: scale(0.95);
 }
 
 /* 5-Stage Status Tracker */
@@ -805,6 +820,8 @@
   border-top: 1px solid #f1f5f9;
   box-sizing: border-box;
   flex-wrap: wrap;
+  position: relative;
+  z-index: 2;
 }
 
 .footerLeft {
@@ -821,6 +838,8 @@
   gap: 8px;
   flex-shrink: 0;
   margin-left: auto;
+  position: relative;
+  z-index: 3;
 }
 
 .refundStatusBadge {
@@ -923,13 +942,40 @@
   font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
+  position: relative;
+  pointer-events: auto;
+  user-select: none;
   transition: all 0.2s ease;
 }
 
 .viewDetailsBtn:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
+  background: #fff7ed;
+  border-color: #fdba74;
   color: #ea580c;
+}
+
+.viewDetailsBtn:active {
+  transform: scale(0.96);
+  background: #ffedd5;
+  border-color: #ea580c;
+  color: #c2410c;
+}
+
+@keyframes sidebarLinePulse {
+  0% {
+    border-color: #ea580c;
+  }
+  70% {
+    border-color: #ea580c;
+  }
+  100% {
+    border-color: #e2e8f0;
+  }
+}
+
+.trackingSidebarHighlighted {
+  animation: sidebarLinePulse 1.6s ease-out !important;
+  border-color: #ea580c !important;
 }
 
 /* Backwards compatibility for room bookings */
@@ -956,7 +1002,7 @@
 .trackingSidebar {
   background: #ffffff;
   border-radius: 20px;
-  border: 1px solid #e2e8f0;
+  border: 1.5px solid #e2e8f0;
   padding: 24px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
   display: flex;
@@ -964,6 +1010,7 @@
   gap: 20px;
   position: sticky;
   top: 96px;
+  transition: border-color 0.25s ease;
 }
 
 .sidebarHeaderRow {

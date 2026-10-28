@@ -122,13 +122,13 @@ function ResponsiveSellerOrdersContent() {
         itemsSummary = "Kitchen Items";
       }
 
-      let statusVal: "New" | "Preparing" | "Out" | "Done" | "Cancelled" = "New";
+      let statusVal: "Pending" | "Preparing" | "Out for Delivery" | "Completed" | "Cancelled" = "Pending";
       const s = (o.status || "").toUpperCase();
       if (s === "PREPARING") statusVal = "Preparing";
-      else if (s === "OUT_FOR_DELIVERY" || s === "ON_THE_WAY") statusVal = "Out";
-      else if (s === "DELIVERED" || s === "COMPLETED") statusVal = "Done";
+      else if (s === "OUT_FOR_DELIVERY" || s === "ON_THE_WAY") statusVal = "Out for Delivery";
+      else if (s === "DELIVERED" || s === "COMPLETED") statusVal = "Completed";
       else if (s === "CANCELLED") statusVal = "Cancelled";
-      else statusVal = "New";
+      else statusVal = "Pending";
 
       const timeAgoStr = o.createdAt
         ? new Date(o.createdAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
@@ -143,7 +143,7 @@ function ResponsiveSellerOrdersContent() {
         orderNumber: o.id,
         timeAgo: timeAgoStr,
         customerName: o.user?.name || "Customer",
-        itemsText: `${itemCount} items • ₹${o.totalAmount || 0}`,
+        itemsText: itemsSummary || `${itemCount} items • ₹${o.totalAmount || 0}`,
         priorOrdersCount: 0,
         totalAmount: `₹${o.totalAmount || 0}`,
         rating: 5.0,
@@ -160,6 +160,7 @@ function ResponsiveSellerOrdersContent() {
   return (
     <ResponsiveSellerOrders
       orders={mappedOrders}
+      loading={loading}
       onAccept={handleAcceptOrder}
       onReject={handleRejectOrder}
       onOrderClick={(order) => {

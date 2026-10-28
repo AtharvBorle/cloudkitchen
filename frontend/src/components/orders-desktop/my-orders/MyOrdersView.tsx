@@ -610,8 +610,18 @@ export default function MyOrdersView() {
   const [selectedOrder, setSelectedOrder] = useState<OrderItemData | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<RoomBookingData | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarHighlighted, setIsSidebarHighlighted] = useState(false);
+  const highlightTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [copied, setCopied] = useState(false);
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
+
+  useEffect(() => {
+    return () => {
+      if (highlightTimeoutRef.current) {
+        clearTimeout(highlightTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -621,9 +631,20 @@ export default function MyOrdersView() {
   }, []);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && window.innerWidth <= 960) {
+    if (typeof window === "undefined") return;
+
+    const handleResize = () => {
+      if (window.innerWidth > 960) {
+        setIsSidebarOpen(true);
+      }
+    };
+
+    if (window.innerWidth <= 960) {
       setIsSidebarOpen(false);
     }
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const loadData = useCallback(async (isInitial = false) => {
@@ -875,13 +896,69 @@ export default function MyOrdersView() {
   };
 
   const handleSelectOrder = (order: OrderItemData) => {
-    setSelectedOrder(order);
+    setSelectedOrder({ ...order });
     setIsSidebarOpen(true);
+
+    if (typeof window !== "undefined") {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set("orderId", order.orderId || order.id);
+        window.history.replaceState(null, "", url.toString());
+      } catch {
+        // ignore url errors
+      }
+    }
+
+    setIsSidebarHighlighted(false);
+    if (highlightTimeoutRef.current) {
+      clearTimeout(highlightTimeoutRef.current);
+    }
+    setTimeout(() => {
+      setIsSidebarHighlighted(true);
+      highlightTimeoutRef.current = setTimeout(() => {
+        setIsSidebarHighlighted(false);
+      }, 1600);
+    }, 20);
+
+    setTimeout(() => {
+      const sidebarEl = document.getElementById("my-orders-tracking-sidebar");
+      if (sidebarEl) {
+        sidebarEl.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 50);
   };
 
   const handleSelectBooking = (booking: RoomBookingData) => {
-    setSelectedBooking(booking);
+    setSelectedBooking({ ...booking });
     setIsSidebarOpen(true);
+
+    if (typeof window !== "undefined") {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set("bookingId", booking.bookingRef || booking.id);
+        window.history.replaceState(null, "", url.toString());
+      } catch {
+        // ignore url errors
+      }
+    }
+
+    setIsSidebarHighlighted(false);
+    if (highlightTimeoutRef.current) {
+      clearTimeout(highlightTimeoutRef.current);
+    }
+    setTimeout(() => {
+      setIsSidebarHighlighted(true);
+      highlightTimeoutRef.current = setTimeout(() => {
+        setIsSidebarHighlighted(false);
+      }, 1600);
+    }, 20);
+
+    setTimeout(() => {
+      const sidebarEl = document.getElementById("my-orders-tracking-sidebar");
+      if (sidebarEl) {
+        sidebarEl.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 50);
   };
 
   const handleReorder = async (order: OrderItemData) => {
@@ -1879,6 +1956,8 @@ export default function MyOrdersView() {
                                 e.stopPropagation();
                                 handleSelectOrder(order);
                               }}
+                              title={`View order details for #${order.orderId}`}
+                              aria-label={`View order details for #${order.orderId}`}
                             >
                               <Navigation size={14} strokeWidth={2.5} />
                               <span>View Order</span>
@@ -2072,6 +2151,8 @@ export default function MyOrdersView() {
                               e.stopPropagation();
                               handleSelectOrder(order);
                             }}
+                            title={`View order details for #${order.orderId}`}
+                            aria-label={`View order details for #${order.orderId}`}
                           >
                             <span>View Details</span>
                             <ChevronRight size={14} />
@@ -2221,9 +2302,18 @@ export default function MyOrdersView() {
                             <ExternalLink size={14} />
                             <span>View Room</span>
                           </Link>
-                          <div className={styles.chevronBtn}>
+                          <button
+                            type="button"
+                            className={styles.chevronBtn}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelectBooking(booking);
+                            }}
+                            title={`View booking details for #${booking.bookingRef}`}
+                            aria-label={`View booking details for #${booking.bookingRef}`}
+                          >
                             <ChevronRight size={18} />
-                          </div>
+                          </button>
                         </div>
                       </div>
                     </article>
@@ -2244,7 +2334,10 @@ export default function MyOrdersView() {
               aria-hidden="true"
             />
             {mainCategory === "FOODS" && selectedOrder ? (
-              <aside className={styles.trackingSidebar}>
+              <aside
+                id="my-orders-tracking-sidebar"
+                className={`${styles.trackingSidebar} ${isSidebarHighlighted ? styles.trackingSidebarHighlighted : ""}`}
+              >
                 <div className={styles.mobileSheetHandle} aria-hidden="true" />
 
                 {/* Header with status pill & close */}
@@ -2705,7 +2798,10 @@ export default function MyOrdersView() {
                 </div>
               </aside>
             ) : mainCategory === "ROOMS" && selectedBooking ? (
-              <aside className={styles.trackingSidebar}>
+              <aside
+                id="my-orders-tracking-sidebar"
+                className={`${styles.trackingSidebar} ${isSidebarHighlighted ? styles.trackingSidebarHighlighted : ""}`}
+              >
                 <div className={styles.mobileSheetHandle} aria-hidden="true" />
 
                 {/* Header with status pill & close */}

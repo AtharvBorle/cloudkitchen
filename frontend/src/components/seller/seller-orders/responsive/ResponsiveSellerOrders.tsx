@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -44,7 +44,16 @@ import {
 } from "@/lib/meal-slots";
 import styles from "./ResponsiveSellerOrders.module.css";
 
-export type OrderFilterTab = "New" | "Preparing" | "Out" | "Done" | "Cancelled" | "All";
+export type OrderFilterTab =
+  | "All"
+  | "Pending"
+  | "Preparing"
+  | "Out for Delivery"
+  | "Completed"
+  | "Cancelled"
+  | "New"
+  | "Out"
+  | "Done";
 
 export interface ResponsiveOrderItem {
   id: string;
@@ -57,10 +66,29 @@ export interface ResponsiveOrderItem {
   rating: number;
   deliveredCount: number;
   cancelledCount: number;
-  status: "New" | "Preparing" | "Out" | "Done" | "Cancelled";
+  status:
+    | "Pending"
+    | "Preparing"
+    | "Out for Delivery"
+    | "Completed"
+    | "Cancelled"
+    | "New"
+    | "Out"
+    | "Done";
   createdAt?: string;
   cancelledBy?: string | null;
   cancellationReason?: string | null;
+}
+
+export function normalizeStatus(
+  status: string | undefined
+): "Pending" | "Preparing" | "Out for Delivery" | "Completed" | "Cancelled" {
+  const s = (status || "").toUpperCase();
+  if (s === "PREPARING") return "Preparing";
+  if (s === "OUT_FOR_DELIVERY" || s === "ON_THE_WAY" || s === "OUT" || s === "OUT FOR DELIVERY") return "Out for Delivery";
+  if (s === "DELIVERED" || s === "COMPLETED" || s === "DONE") return "Completed";
+  if (s === "CANCELLED" || s === "CANCELED") return "Cancelled";
+  return "Pending";
 }
 
 import { useSellerProfile, isGenericFallbackName } from "@/hooks/useSellerProfile";
@@ -68,6 +96,7 @@ import { useSellerNotifications } from "@/hooks/useSellerNotifications";
 
 export interface ResponsiveSellerOrdersProps {
   orders?: ResponsiveOrderItem[];
+  loading?: boolean;
   ownerName?: string;
   hasUnreadNotifications?: boolean;
   onAccept?: (orderId: string) => void;
@@ -81,6 +110,7 @@ const EMPTY_ORDERS: ResponsiveOrderItem[] = [];
 
 export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
   orders = EMPTY_ORDERS,
+  loading = false,
   ownerName,
   hasUnreadNotifications,
   onAccept,
@@ -100,7 +130,7 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
       ? ownerName
       : (!isGenericFallbackName(seller.ownerName) ? seller.ownerName : "");
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
-  const [selectedTab, setSelectedTab] = useState<OrderFilterTab>("New");
+  const [selectedTab, setSelectedTab] = useState<OrderFilterTab>("All");
   const [ordersList, setOrdersList] = useState<ResponsiveOrderItem[]>(orders);
   const [now, setNow] = useState(Date.now());
   const autoCancelledRef = useRef<Set<string>>(new Set());
@@ -470,10 +500,11 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
     }
   };
 
-  // Auto-cancel expired New orders in background
+  // Auto-cancel expired Pending orders in background
   useEffect(() => {
     ordersList.forEach((order) => {
-      if (order.status === "New") {
+      const norm = normalizeStatus(order.status);
+      if (norm === "Pending") {
         const sec = getRemainingSeconds(order.createdAt, now);
         if (sec <= 0 && !autoCancelledRef.current.has(order.id)) {
           autoCancelledRef.current.add(order.id);
@@ -495,29 +526,45 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
   }, [ordersList, now, onReject]);
 
   // Filter tab counts
-  const newCount = ordersList.filter((o) => {
-    if (o.status !== "New") return false;
+  const allCount = ordersList.length;
+  const pendingCount = ordersList.filter((o) => {
+    if (normalizeStatus(o.status) !== "Pending") return false;
     return getRemainingSeconds(o.createdAt, now) > 0;
   }).length;
-  const preparingCount = ordersList.filter((o) => o.status === "Preparing").length;
-  const outCount = ordersList.filter((o) => o.status === "Out").length;
-  const doneCount = ordersList.filter((o) => o.status === "Done").length;
+  const preparingCount = ordersList.filter((o) => normalizeStatus(o.status) === "Preparing").length;
+  const outCount = ordersList.filter((o) => normalizeStatus(o.status) === "Out for Delivery").length;
+  const completedCount = ordersList.filter((o) => normalizeStatus(o.status) === "Completed").length;
   const cancelledCount = ordersList.filter((o) => {
-    let eff = o.status;
-    if (eff === "New" && getRemainingSeconds(o.createdAt, now) <= 0) {
-      eff = "Cancelled";
+    const norm = normalizeStatus(o.status);
+    if (norm === "Pending" && getRemainingSeconds(o.createdAt, now) <= 0) {
+      return true;
     }
-    return eff === "Cancelled";
+    return norm === "Cancelled";
   }).length;
 
-  const filteredOrders = ordersList.filter((order) => {
-    let effStatus = order.status;
-    if (effStatus === "New" && getRemainingSeconds(order.createdAt, now) <= 0) {
-      effStatus = "Cancelled";
-    }
-    if (selectedTab === "All") return true;
-    return effStatus === selectedTab;
-  });
+  const getEffectiveStatus = useCallback(
+    (order: ResponsiveOrderItem): "Pending" | "Preparing" | "Out for Delivery" | "Completed" | "Cancelled" => {
+      const norm = normalizeStatus(order.status);
+      if (norm === "Pending" && getRemainingSeconds(order.createdAt, now) <= 0) {
+        return "Cancelled";
+      }
+      return norm;
+    },
+    [now]
+  );
+
+  const filteredOrders = useMemo(() => {
+    return ordersList.filter((order) => {
+      const effStatus = getEffectiveStatus(order);
+      if (selectedTab === "All") return true;
+      if (selectedTab === "Pending" || selectedTab === "New") return effStatus === "Pending";
+      if (selectedTab === "Preparing") return effStatus === "Preparing";
+      if (selectedTab === "Out for Delivery" || selectedTab === "Out") return effStatus === "Out for Delivery";
+      if (selectedTab === "Completed" || selectedTab === "Done") return effStatus === "Completed";
+      if (selectedTab === "Cancelled") return effStatus === "Cancelled";
+      return true;
+    });
+  }, [ordersList, selectedTab, getEffectiveStatus]);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -673,212 +720,253 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
           <>
             {/* Status Filter Tabs (Horizontal scrolling capsule pills) */}
             <div className={styles.filterTabsWrapper} role="tablist" aria-label="Order Status Filters">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={selectedTab === "New"}
-            className={`${styles.filterPill} ${selectedTab === "New" ? styles.filterPillActive : ""}`}
-            onClick={() => setSelectedTab("New")}
-          >
-            <span>New</span>
-            <span className={styles.pillBadge}>{newCount}</span>
-          </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={selectedTab === "All"}
+                className={`${styles.filterPill} ${selectedTab === "All" ? styles.filterPillActive : ""}`}
+                onClick={() => setSelectedTab("All")}
+              >
+                <span>All</span>
+                <span className={styles.pillBadge}>{allCount}</span>
+              </button>
 
-          <button
-            type="button"
-            role="tab"
-            aria-selected={selectedTab === "Preparing"}
-            className={`${styles.filterPill} ${selectedTab === "Preparing" ? styles.filterPillActive : ""}`}
-            onClick={() => setSelectedTab("Preparing")}
-          >
-            <span>Preparing</span>
-            <span className={styles.pillBadge}>{preparingCount}</span>
-          </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={selectedTab === "Pending" || selectedTab === "New"}
+                className={`${styles.filterPill} ${selectedTab === "Pending" || selectedTab === "New" ? styles.filterPillActive : ""}`}
+                onClick={() => setSelectedTab("Pending")}
+              >
+                <span>Pending</span>
+                <span className={styles.pillBadge}>{pendingCount}</span>
+              </button>
 
-          <button
-            type="button"
-            role="tab"
-            aria-selected={selectedTab === "Out"}
-            className={`${styles.filterPill} ${selectedTab === "Out" ? styles.filterPillActive : ""}`}
-            onClick={() => setSelectedTab("Out")}
-          >
-            <span>Out</span>
-            <span className={styles.pillBadge}>{outCount}</span>
-          </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={selectedTab === "Preparing"}
+                className={`${styles.filterPill} ${selectedTab === "Preparing" ? styles.filterPillActive : ""}`}
+                onClick={() => setSelectedTab("Preparing")}
+              >
+                <span>Preparing</span>
+                <span className={styles.pillBadge}>{preparingCount}</span>
+              </button>
 
-          <button
-            type="button"
-            role="tab"
-            aria-selected={selectedTab === "Done"}
-            className={`${styles.filterPill} ${selectedTab === "Done" ? styles.filterPillActive : ""}`}
-            onClick={() => setSelectedTab("Done")}
-          >
-            <span>Done</span>
-            <span className={styles.pillBadge}>{doneCount}</span>
-          </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={selectedTab === "Out for Delivery" || selectedTab === "Out"}
+                className={`${styles.filterPill} ${selectedTab === "Out for Delivery" || selectedTab === "Out" ? styles.filterPillActive : ""}`}
+                onClick={() => setSelectedTab("Out for Delivery")}
+              >
+                <span>Out for Delivery</span>
+                <span className={styles.pillBadge}>{outCount}</span>
+              </button>
 
-          <button
-            type="button"
-            role="tab"
-            aria-selected={selectedTab === "Cancelled"}
-            className={`${styles.filterPill} ${selectedTab === "Cancelled" ? styles.filterPillActive : ""}`}
-            onClick={() => setSelectedTab("Cancelled")}
-          >
-            <span>Cancelled</span>
-            <span className={styles.pillBadge}>{cancelledCount}</span>
-          </button>
-        </div>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={selectedTab === "Completed" || selectedTab === "Done"}
+                className={`${styles.filterPill} ${selectedTab === "Completed" || selectedTab === "Done" ? styles.filterPillActive : ""}`}
+                onClick={() => setSelectedTab("Completed")}
+              >
+                <span>Completed</span>
+                <span className={styles.pillBadge}>{completedCount}</span>
+              </button>
+
+              <button
+                type="button"
+                role="tab"
+                aria-selected={selectedTab === "Cancelled"}
+                className={`${styles.filterPill} ${selectedTab === "Cancelled" ? styles.filterPillActive : ""}`}
+                onClick={() => setSelectedTab("Cancelled")}
+              >
+                <span>Cancelled</span>
+                <span className={styles.pillBadge}>{cancelledCount}</span>
+              </button>
+            </div>
 
         {/* Orders Content Area */}
         <main className={styles.contentArea}>
-          {filteredOrders.length > 0 ? (
+          {loading && ordersList.length === 0 ? (
+            <div className={styles.loadingContainer}>
+              <Loader2 size={32} style={{ animation: "spin 1s linear infinite" }} />
+              <p>Loading orders...</p>
+            </div>
+          ) : filteredOrders.length > 0 ? (
             <>
               <div className={styles.ordersList}>
-                {paginatedOrders.map((order) => (
-                  <article
-                    key={order.id}
-                    className={styles.orderCard}
-                    onClick={() => handleCardClick(order)}
-                  >
-                    {/* Top Meta Line: #1234 • ⏱️ 04:32 > */}
-                    <div className={styles.cardTopRow}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <span className={styles.orderMetaText}>{order.orderNumber}</span>
-                        {order.status === "New" ? (
+                {paginatedOrders.map((order: ResponsiveOrderItem) => {
+                  const effStatus = getEffectiveStatus(order);
+                  return (
+                    <article
+                      key={order.id}
+                      className={styles.orderCard}
+                      onClick={() => handleCardClick(order)}
+                    >
+                      {/* Top Meta Line: #NCR-XXXX • ⏱️ 04:32 > */}
+                      <div className={styles.cardTopRow}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <span className={styles.orderMetaText}>{order.orderNumber}</span>
+                          {effStatus === "Pending" ? (
+                            (() => {
+                              const sec = getRemainingSeconds(order.createdAt, now);
+                              const mm = String(Math.floor(sec / 60)).padStart(2, "0");
+                              const ss = String(sec % 60).padStart(2, "0");
+                              const isUrgent = sec <= 60;
+                              return sec > 0 ? (
+                                <span
+                                  className={`${styles.timerBadge} ${isUrgent ? styles.timerBadgeUrgent : ""}`}
+                                  title={`Accept order within ${mm}:${ss}`}
+                                >
+                                  <Clock size={12} style={{ display: "inline", verticalAlign: "middle", marginRight: "3px" }} />
+                                  {mm}:{ss}
+                                </span>
+                              ) : null;
+                            })()
+                          ) : (
+                            <span className={styles.orderMetaText}>• {order.timeAgo}</span>
+                          )}
+                        </div>
+                        <ChevronRight size={18} className={styles.chevronIcon} />
+                      </div>
+
+                      {/* Customer Info & Items */}
+                      <div className={styles.customerSection}>
+                        <h2 className={styles.customerName}>{order.customerName}</h2>
+                        <p className={styles.itemsLine}>{order.itemsText}</p>
+                      </div>
+
+                      {/* Total Amount */}
+                      <div className={styles.secondaryInfoRow}>
+                        <span className={styles.totalAmountText}>{order.totalAmount}</span>
+                      </div>
+
+                      {/* Customer Status badge */}
+                      <div
+                        className={styles.customerStatsRow}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push("/seller/res/orders/reliability");
+                        }}
+                        title="View Customer Reliability Score"
+                        style={{ cursor: "pointer" }}
+                      >
+                        {effStatus === "Cancelled" ? (
                           (() => {
-                            const sec = getRemainingSeconds(order.createdAt, now);
-                            const mm = String(Math.floor(sec / 60)).padStart(2, "0");
-                            const ss = String(sec % 60).padStart(2, "0");
-                            const isUrgent = sec <= 60;
-                            return sec > 0 ? (
-                              <span
-                                className={`${styles.timerBadge} ${isUrgent ? styles.timerBadgeUrgent : ""}`}
-                                title={`Accept order within ${mm}:${ss}`}
-                              >
-                                <Clock size={12} style={{ display: "inline", verticalAlign: "middle", marginRight: "3px" }} />
-                                {mm}:{ss}
-                              </span>
-                            ) : (
-                              (() => {
-                                const isUserCancelled =
-                                  order.cancelledBy === "USER" ||
-                                  (Boolean(order.cancellationReason) && /cancelled by (customer|user|you)/i.test(order.cancellationReason || ""));
-                                return (
-                                  <span className={styles.cancelledBadge}>
-                                    {isUserCancelled ? "Cancelled by User" : "Cancelled"}
+                            const isUserCancelled =
+                              order.cancelledBy === "USER" ||
+                              (Boolean(order.cancellationReason) && /cancelled by (customer|user|you)/i.test(order.cancellationReason || ""));
+                            return (
+                              <div className={styles.cancelledStat}>
+                                <span className={styles.statDotRed} />
+                                <span>{isUserCancelled ? "Cancelled by User" : "Cancelled"}</span>
+                                {isUserCancelled && order.cancellationReason && (
+                                  <span style={{ marginLeft: "6px", fontSize: "0.74rem", color: "#B91C1C", fontWeight: 500 }}>
+                                    ({order.cancellationReason})
                                   </span>
-                                );
-                              })()
+                                )}
+                              </div>
                             );
                           })()
+                        ) : effStatus === "Preparing" ? (
+                          <div className={styles.preparingStat}>
+                            <span className={styles.statDotBlue} />
+                            <span>Preparing</span>
+                          </div>
+                        ) : effStatus === "Out for Delivery" ? (
+                          <div className={styles.outStat}>
+                            <span className={styles.statDotPurple} />
+                            <span>Out for Delivery</span>
+                          </div>
+                        ) : effStatus === "Pending" ? (
+                          <div className={styles.pendingStat}>
+                            <span className={styles.statDotAmber} />
+                            <span>Pending</span>
+                          </div>
                         ) : (
-                          <span className={styles.orderMetaText}>• {order.timeAgo}</span>
+                          <div className={styles.deliveredStat}>
+                            <span className={styles.statDotGreen} />
+                            <span>Completed</span>
+                          </div>
                         )}
                       </div>
-                      <ChevronRight size={18} className={styles.chevronIcon} />
-                    </div>
 
-                    {/* Customer Info & Items */}
-                    <div className={styles.customerSection}>
-                      <h2 className={styles.customerName}>{order.customerName}</h2>
-                      <p className={styles.itemsLine}>{order.itemsText}</p>
-                    </div>
-
-                    {/* Total Amount */}
-                    <div className={styles.secondaryInfoRow}>
-                      <span className={styles.totalAmountText}>{order.totalAmount}</span>
-                    </div>
-
-                    {/* Customer Status: Delivered or Cancelled (Click to view Reliability Modal) */}
-                    <div
-                      className={styles.customerStatsRow}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        router.push("/seller/res/orders/reliability");
-                      }}
-                      title="View Customer Reliability Score"
-                      style={{ cursor: "pointer" }}
-                    >
-                      {order.status === "Cancelled" || (order.status === "New" && getRemainingSeconds(order.createdAt, now) <= 0) ? (
-                        (() => {
-                          const isUserCancelled =
-                            order.cancelledBy === "USER" ||
-                            (Boolean(order.cancellationReason) && /cancelled by (customer|user|you)/i.test(order.cancellationReason || ""));
-                          return (
-                            <div className={styles.cancelledStat}>
-                              <span className={styles.statDotRed} />
-                              <span>{isUserCancelled ? "Cancelled by User" : "Cancelled"}</span>
-                              {isUserCancelled && order.cancellationReason && (
-                                <span style={{ marginLeft: "6px", fontSize: "0.74rem", color: "#B91C1C", fontWeight: 500 }}>
-                                  ({order.cancellationReason})
-                                </span>
-                              )}
-                            </div>
-                          );
-                        })()
-                      ) : (
-                        <div className={styles.deliveredStat}>
-                          <span className={styles.statDotGreen} />
-                          <span>Delivered</span>
+                      {/* Action Buttons */}
+                      {effStatus === "Pending" && getRemainingSeconds(order.createdAt, now) > 0 && (
+                        <div className={styles.actionsRow}>
+                          <button
+                            type="button"
+                            className={styles.acceptButton}
+                            onClick={(e) => handleAcceptOrder(order.id, e)}
+                          >
+                            Accept
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.rejectButton}
+                            onClick={(e) => handleOpenReject(order, e)}
+                          >
+                            Reject
+                          </button>
                         </div>
                       )}
-                    </div>
 
-                    {/* Action Buttons */}
-                    {order.status === "New" && getRemainingSeconds(order.createdAt, now) > 0 && (
-                      <div className={styles.actionsRow}>
-                        <button
-                          type="button"
-                          className={styles.acceptButton}
-                          onClick={(e) => handleAcceptOrder(order.id, e)}
-                        >
-                          Accept
-                        </button>
-                        <button
-                          type="button"
-                          className={styles.rejectButton}
-                          onClick={(e) => handleOpenReject(order, e)}
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    )}
+                      {effStatus === "Preparing" && (
+                        <div className={styles.actionsRow}>
+                          <button
+                            type="button"
+                            className={styles.acceptButton}
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              try {
+                                await fetchApi(`/api/seller/orders/${order.id}`, {
+                                  method: "PATCH",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ status: "OUT_FOR_DELIVERY" }),
+                                });
+                                setOrdersList((prev) =>
+                                  prev.map((o) => (o.id === order.id ? { ...o, status: "Out for Delivery" as const } : o))
+                                );
+                              } catch (err) {
+                                console.error(err);
+                              }
+                            }}
+                          >
+                            Ready for Delivery
+                          </button>
+                        </div>
+                      )}
 
-                    {order.status === "Preparing" && (
-                      <div className={styles.actionsRow}>
-                        <button
-                          type="button"
-                          className={styles.acceptButton}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setOrdersList((prev) =>
-                              prev.map((o) => (o.id === order.id ? { ...o, status: "Out" as const } : o))
-                            );
-                          }}
-                        >
-                          Ready for Delivery
-                        </button>
-                      </div>
-                    )}
-
-                    {order.status === "Out" && (
-                      <div className={styles.actionsRow}>
-                        <button
-                          type="button"
-                          className={styles.acceptButton}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setOrdersList((prev) =>
-                              prev.map((o) => (o.id === order.id ? { ...o, status: "Done" as const } : o))
-                            );
-                          }}
-                        >
-                          Mark Delivered
-                        </button>
-                      </div>
-                    )}
-                  </article>
-                ))}
+                      {effStatus === "Out for Delivery" && (
+                        <div className={styles.actionsRow}>
+                          <button
+                            type="button"
+                            className={styles.acceptButton}
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              try {
+                                await fetchApi(`/api/seller/orders/${order.id}`, {
+                                  method: "PATCH",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ status: "DELIVERED", isPaid: true }),
+                                });
+                                setOrdersList((prev) =>
+                                  prev.map((o) => (o.id === order.id ? { ...o, status: "Completed" as const } : o))
+                                );
+                              } catch (err) {
+                                console.error(err);
+                              }
+                            }}
+                          >
+                            Mark Delivered
+                          </button>
+                        </div>
+                      )}
+                    </article>
+                  );
+                })}
               </div>
 
               {/* Pagination Controls */}
@@ -897,9 +985,13 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
               <div className={styles.emptyIcon}>
                 <PackageCheck size={26} />
               </div>
-              <h3 className={styles.emptyTitle}>No {selectedTab} Orders</h3>
+              <h3 className={styles.emptyTitle}>
+                {selectedTab === "All" ? "No Orders" : `No ${selectedTab} Orders`}
+              </h3>
               <p className={styles.emptySubtitle}>
-                There are currently no orders in {selectedTab.toLowerCase()} status.
+                {selectedTab === "All"
+                  ? "There are currently no orders in your kitchen."
+                  : `There are currently no orders in ${selectedTab.toLowerCase()} status.`}
               </p>
             </div>
           )}
