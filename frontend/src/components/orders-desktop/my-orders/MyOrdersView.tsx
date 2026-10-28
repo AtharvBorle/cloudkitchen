@@ -2041,14 +2041,14 @@ export default function MyOrdersView() {
                             </button>
                           )}
 
-                          {order.rawStatus !== "CANCELLED" && (
+                          {isDelivered && (
                             <a
                               href={'/invoice/order/' + order.id}
                               target="_blank"
                               rel="noopener noreferrer"
                               className={styles.invoiceBtn}
                               onClick={(e) => e.stopPropagation()}
-                              title="Download Tax Invoice"
+                              title="Download Invoice"
                             >
                               <Receipt size={14} />
                               <span>Invoice</span>

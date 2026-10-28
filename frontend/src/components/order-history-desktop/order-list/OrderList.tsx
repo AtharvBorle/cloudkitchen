@@ -109,13 +109,13 @@ export const OrderList: React.FC<OrderListProps> = ({
               <p className={styles.deliveryText}>{order.deliveryAddress}</p>
 
               <div className={styles.actionsGroup}>
-                {order.status !== "CANCELLED" && (
+                {order.status === "DELIVERED" && (
                   <a
                     href={'/invoice/order/' + order.id}
                     target="_blank"
                     rel="noopener noreferrer"
                     className={styles.invoiceBtn}
-                    title="Download Tax Invoice"
+                    title="Download Invoice"
                   >
                     <Receipt size={14} />
                     <span>Invoice</span>
