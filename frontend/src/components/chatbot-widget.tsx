@@ -1608,7 +1608,7 @@ Details: Category request submitted via chatbot assistant.`;
                     touchAction: "none"
                   });
 
-    if (!isChatbotEnabled) {
+    if (!isChatbotEnabled || pathname?.includes("/invoice")) {
         return null;
     }
 
