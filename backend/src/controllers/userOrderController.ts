@@ -294,6 +294,7 @@ export const createOrder = async (req: Request) => {
         paymentMethod,
         appliedCouponId,
         addressId,
+        addressType,
         latitude,
         longitude,
         pincode,
@@ -888,6 +889,28 @@ export const createOrder = async (req: Request) => {
             });
         }
 
+        // Resolve address type: from request payload, saved address, or address string
+        let resolvedAddressType = addressType;
+        if (!resolvedAddressType && addressId) {
+            const savedAddress = await tx.address.findFirst({ where: { id: addressId, userId: session.user.id } });
+            if (savedAddress?.type) {
+                resolvedAddressType = savedAddress.type;
+            }
+        }
+        if (!resolvedAddressType && deliveryAddress) {
+            const bracketMatch = deliveryAddress.match(/^\[(Home|Workplace|Work|Other)\]/i);
+            if (bracketMatch) {
+                resolvedAddressType = bracketMatch[1];
+            }
+        }
+        if (resolvedAddressType && (resolvedAddressType.toUpperCase() === "WORK" || resolvedAddressType.toUpperCase() === "WORKPLACE")) {
+            resolvedAddressType = "Workplace";
+        } else if (resolvedAddressType && resolvedAddressType.toUpperCase() === "OTHER") {
+            resolvedAddressType = "Other";
+        } else {
+            resolvedAddressType = "Home";
+        }
+
         // C. Create Order with authoritative snapshot items
         const createdOrder = await tx.order.create({
             data: {
@@ -897,6 +920,7 @@ export const createOrder = async (req: Request) => {
                 status: "PENDING",
                 items: JSON.stringify(itemsWithAuthoritativeSnapshots),
                 deliveryAddress: deliveryAddress || dbUser.city || "Delivery Address",
+                addressType: resolvedAddressType,
                 customerPhone: customerPhone || dbUser.phone || "N/A",
                 paymentMethod: isOnlinePayment ? "ONLINE" : "COD",
                 totalAmount: finalStoredTotal,
@@ -1340,8 +1364,24 @@ export const getOrderDetails = async (id: string, allowGuest: boolean = true) =>
     }
 
     const enriched = await enrichOrderWithEta(order);
+    let finalAddressType = (enriched as any).addressType;
+    if (!finalAddressType && enriched.deliveryAddress) {
+        const bracketMatch = enriched.deliveryAddress.match(/^\[(Home|Workplace|Work|Other)\]/i);
+        if (bracketMatch) {
+            finalAddressType = bracketMatch[1];
+        }
+    }
+    if (finalAddressType && (finalAddressType.toUpperCase() === "WORK" || finalAddressType.toUpperCase() === "WORKPLACE")) {
+        finalAddressType = "Workplace";
+    } else if (finalAddressType && finalAddressType.toUpperCase() === "OTHER") {
+        finalAddressType = "Other";
+    } else if (!finalAddressType) {
+        finalAddressType = "Home";
+    }
+
     return {
         ...enriched,
+        addressType: finalAddressType,
         appliedCoupon
     };
 };

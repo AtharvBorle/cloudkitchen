@@ -957,6 +957,8 @@ function CheckoutContent() {
                         })),
                         totalAmount: finalTotalAmount,
                         deliveryAddress: finalAddressText,
+                        addressId: addressId,
+                        addressType: selectedAddress?.type === "Work" ? "Workplace" : (selectedAddress?.type || "Home"),
                         customerPhone: phone,
                         paymentMethod: paymentMethod,
                         appliedCouponId: appliedCoupon ? appliedCoupon.id : null

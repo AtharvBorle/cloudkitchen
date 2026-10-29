@@ -86,6 +86,8 @@ export interface PendingOrderTransaction {
   sellerId: string;
   orderItems: any[];
   deliveryAddress: string;
+  addressType?: string;
+  addressId?: string | null;
   customerPhone: string;
   appliedCouponId?: string | null;
   checkoutItems: CheckoutSummaryItem[];
@@ -141,6 +143,7 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
   // Saved Addresses State
   const [savedAddresses, setSavedAddresses] = useState<SavedAddressItem[]>([]);
   const [selectedSavedAddressId, setSelectedSavedAddressId] = useState<string | null>(null);
+  const [selectedAddressType, setSelectedAddressType] = useState<string>("Home");
   const [loadingAddresses, setLoadingAddresses] = useState<boolean>(true);
   const [addressMode, setAddressMode] = useState<"saved" | "manual">("saved");
 
@@ -203,6 +206,7 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
             const defaultItem = sortedMapped.find((m) => m.isDefault) || sortedMapped[0];
             if (defaultItem) {
               setSelectedSavedAddressId(defaultItem.id);
+              setSelectedAddressType(defaultItem.type || "Home");
               const formatted = `${defaultItem.houseNumber ? defaultItem.houseNumber + ", " : ""}${defaultItem.street}${defaultItem.landmark ? ", Near " + defaultItem.landmark : ""}`;
               setStreetAddress(formatted);
               setCity(defaultItem.city || "Pune");
@@ -230,6 +234,7 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
 
   const selectSavedAddress = (addr: SavedAddressItem) => {
     setSelectedSavedAddressId(addr.id);
+    setSelectedAddressType(addr.type || "Home");
     const formatted = `${addr.houseNumber ? addr.houseNumber + ", " : ""}${addr.street}${addr.landmark ? ", Near " + addr.landmark : ""}`;
     setStreetAddress(formatted);
     setCity(addr.city || "Pune");
@@ -251,6 +256,7 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
   const handleSwitchToManualAddress = () => {
     setAddressMode("manual");
     setSelectedSavedAddressId(null);
+    setSelectedAddressType("Home");
     setStreetAddress("");
     setCity("");
     setPostalCode("");
@@ -1615,7 +1621,14 @@ const loadRazorpayScript = (): Promise<boolean> => {
         variant: ci.variantName || (ci.selectedAddons && ci.selectedAddons.length > 0 ? ci.selectedAddons.map((a: any) => `${a.name}${a.quantity && a.quantity > 1 ? ` ×${a.quantity}` : ""}`).join(", ") : ""),
       }));
 
-      const fullDeliveryAddress = `${streetAddress}, ${city} - ${postalCode}${
+      const rawType = selectedAddressType || "Home";
+      const normalizedType = (rawType.toUpperCase().includes("WORK") || rawType.toUpperCase().includes("OFFICE"))
+        ? "Workplace"
+        : rawType.toUpperCase().includes("OTHER")
+        ? "Other"
+        : "Home";
+
+      const fullDeliveryAddress = `[${normalizedType}] ${streetAddress}, ${city} - ${postalCode}${
         deliveryInstructions ? ` (Note: ${deliveryInstructions})` : ""
       }`;
 
@@ -1631,6 +1644,8 @@ const loadRazorpayScript = (): Promise<boolean> => {
           sellerId: sellerId || "seller",
           orderItems,
           deliveryAddress: fullDeliveryAddress,
+          addressType: normalizedType,
+          addressId: addressMode === "saved" ? selectedSavedAddressId : undefined,
           customerPhone: phoneNumber,
           appliedCouponId: isPromoApplied ? promoCode : null,
           checkoutItems,
@@ -1658,6 +1673,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
             sellerId: sellerId || "seller",
             items: orderItems,
             deliveryAddress: fullDeliveryAddress,
+            addressType: normalizedType,
             ...locationPayload,
           }),
         });
@@ -1723,6 +1739,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
                   items: orderItems,
                   totalAmount: grandTotal,
                   deliveryAddress: fullDeliveryAddress,
+                  addressType: normalizedType,
                   customerPhone: phoneNumber,
                   paymentMethod: "ONLINE",
                   appliedCouponId: isPromoApplied && appliedCoupon ? appliedCoupon.id : (isPromoApplied ? promoCode : null),
@@ -1755,6 +1772,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
                   streetAddress: streetAddress.trim(),
                   city: city.trim() || "Pune",
                   pincode: postalCode.trim() || "",
+                  addressType: normalizedType,
                 },
                 paymentMethod: "Pay Online (Paid via Razorpay)",
                 items: checkoutItems.map((item) => ({
@@ -1886,6 +1904,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
           items: orderItems,
           totalAmount: grandTotal,
           deliveryAddress: fullDeliveryAddress,
+          addressType: normalizedType,
           customerPhone: phoneNumber,
           paymentMethod: grandTotal === 0 ? (paymentMethod === "UPI" ? "ONLINE" : "COD") : "COD",
           appliedCouponId: isPromoApplied && appliedCoupon ? appliedCoupon.id : (isPromoApplied ? promoCode : null),
@@ -1927,6 +1946,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
           streetAddress: streetAddress.trim(),
           city: city.trim() || "Pune",
           pincode: postalCode.trim() || "",
+          addressType: normalizedType,
         },
         paymentMethod: isCodPayment ? "Cash on Delivery" : "Online Payment",
         isPaid: !isCodPayment,
@@ -2878,6 +2898,44 @@ const loadRazorpayScript = (): Promise<boolean> => {
                           placeholder="Leave at door, ring bell, gate passcode..."
                           className={styles.fieldInput}
                         />
+                      </div>
+                    </div>
+
+                    {/* Row 5: Address Type */}
+                    <div className={styles.fieldGroup}>
+                      <label className={styles.fieldLabel}>
+                        Address Type
+                      </label>
+                      <div style={{ display: "flex", gap: "10px", marginTop: "4px" }}>
+                        {(["Home", "Workplace", "Other"] as const).map((t) => {
+                          const isSelected = (selectedAddressType || "Home").toUpperCase() === t.toUpperCase() || (t === "Workplace" && (selectedAddressType || "").toUpperCase() === "WORK");
+                          return (
+                            <button
+                              key={t}
+                              type="button"
+                              onClick={() => setSelectedAddressType(t)}
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "6px",
+                                padding: "8px 16px",
+                                borderRadius: "8px",
+                                border: isSelected ? "2px solid #FF6B00" : "1px solid #E2E8F0",
+                                backgroundColor: isSelected ? "#FFF7ED" : "#FFFFFF",
+                                color: isSelected ? "#EA580C" : "#475569",
+                                fontWeight: isSelected ? 700 : 500,
+                                fontSize: "0.85rem",
+                                cursor: "pointer",
+                                transition: "all 0.15s ease",
+                              }}
+                            >
+                              {t === "Home" && <Home size={15} />}
+                              {t === "Workplace" && <Briefcase size={15} />}
+                              {t === "Other" && <Navigation size={15} />}
+                              <span>{t}</span>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
