@@ -231,6 +231,11 @@ export const updateSellerOrder = async (req: Request, orderId: string) => {
         throw new ApiError(`Invalid status '${status}'. Must be one of: ${validStatuses.join(", ")}`, 400);
     }
 
+    // Enforce delivery partner assignment before marking OUT_FOR_DELIVERY
+    if (status === "OUT_FOR_DELIVERY" && !existingOrder.deliveryPersonId && !deliveryPersonId) {
+        throw new ApiError("Please assign a delivery partner before marking this order as out for delivery.", 400);
+    }
+
     // Check 5-minute acceptance window: if seller attempts to accept an expired pending order, auto-cancel and reject
     if (existingOrder.status === "PENDING" && status && status !== "CANCELLED") {
         if (isOrderExpired(existingOrder.createdAt)) {

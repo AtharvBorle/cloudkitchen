@@ -43,6 +43,7 @@ export interface TaxCalculationResult {
     productCgst: number;
     productSgst: number;
     productTotal: number;
+    itemsSubtotal?: number;
     deliveryGross: number;
     deliveryTaxable: number;
     deliveryGst: number;
@@ -287,6 +288,7 @@ export function calculateOrderTax(params: CalculateTaxParams): TaxCalculationRes
         productCgst,
         productSgst,
         productTotal,
+        itemsSubtotal: productGross,
         deliveryGross,
         deliveryTaxable,
         deliveryGst,

@@ -980,9 +980,16 @@ const loadRazorpayScript = (): Promise<boolean> => {
       ? sellerDetails.deliveryCharge
       : 50.0;
     const enableFreeDelivery = Boolean(sellerDetails?.enableFreeDelivery);
-    const freeDeliveryThreshold = typeof sellerDetails?.freeDeliveryThreshold === "number"
-      ? sellerDetails.freeDeliveryThreshold
-      : (typeof sellerDetails?.freeDeliveryMinOrder === "number" ? sellerDetails.freeDeliveryMinOrder : 500.0);
+    const rawThreshold = sellerDetails?.freeDeliveryThreshold ?? sellerDetails?.freeDeliveryMinOrder;
+    let freeDeliveryThreshold = 500.0;
+    if (typeof rawThreshold === "number" && !isNaN(rawThreshold) && rawThreshold > 0) {
+      freeDeliveryThreshold = rawThreshold;
+    } else if (typeof rawThreshold === "string") {
+      const parsed = parseFloat(rawThreshold.replace(/[^0-9.]/g, ""));
+      if (!isNaN(parsed) && parsed > 0) {
+        freeDeliveryThreshold = parsed;
+      }
+    }
 
     return calculateOrderTax({
       items: checkoutItems.map(it => ({
@@ -3104,27 +3111,41 @@ const loadRazorpayScript = (): Promise<boolean> => {
                     </span>
                   </div>
 
-                  {Boolean(sellerDetails?.enableFreeDelivery) && (
-                    <div style={{
-                      backgroundColor: taxCalc.deliveryGross === 0 ? "#F0FDF4" : "#FEF3C7",
-                      border: `1px solid ${taxCalc.deliveryGross === 0 ? "#BBF7D0" : "#FDE68A"}`,
-                      color: taxCalc.deliveryGross === 0 ? "#15803D" : "#B45309",
-                      padding: "6px 10px",
-                      borderRadius: "6px",
-                      fontSize: "0.78rem",
-                      fontWeight: 600,
-                      margin: "4px 0 8px 0",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px"
-                    }}>
-                      {taxCalc.deliveryGross === 0 ? (
-                        <span>🎉 Free delivery applied on orders above ₹{sellerDetails.freeDeliveryThreshold ?? 500}!</span>
-                      ) : (
-                        <span>🚚 Add ₹{Math.max(0, (sellerDetails.freeDeliveryThreshold ?? 500) - taxCalc.itemsSubtotal).toFixed(0)} more to get FREE delivery!</span>
-                      )}
-                    </div>
-                  )}
+                    {Boolean(sellerDetails?.enableFreeDelivery) && (() => {
+                      const freeThreshold = (() => {
+                        const raw = sellerDetails?.freeDeliveryThreshold ?? sellerDetails?.freeDeliveryMinOrder;
+                        if (typeof raw === "number" && !isNaN(raw) && raw > 0) return raw;
+                        if (typeof raw === "string") {
+                          const parsed = parseFloat(raw.replace(/[^0-9.]/g, ""));
+                          if (!isNaN(parsed) && parsed > 0) return parsed;
+                        }
+                        return 500;
+                      })();
+                      const currentSubtotal = Number(taxCalc?.itemsSubtotal ?? taxCalc?.productGross ?? subtotal ?? 0) || 0;
+                      const amountNeeded = Math.max(0, freeThreshold - currentSubtotal);
+
+                      return (
+                        <div style={{
+                          backgroundColor: taxCalc.deliveryGross === 0 ? "#F0FDF4" : "#FEF3C7",
+                          border: `1px solid ${taxCalc.deliveryGross === 0 ? "#BBF7D0" : "#FDE68A"}`,
+                          color: taxCalc.deliveryGross === 0 ? "#15803D" : "#B45309",
+                          padding: "6px 10px",
+                          borderRadius: "6px",
+                          fontSize: "0.78rem",
+                          fontWeight: 600,
+                          margin: "4px 0 8px 0",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px"
+                        }}>
+                          {taxCalc.deliveryGross === 0 ? (
+                            <span>🎉 Free delivery applied on orders above ₹{freeThreshold}!</span>
+                          ) : (
+                            <span>🚚 Add ₹{amountNeeded.toFixed(0)} more to get FREE delivery!</span>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                   {isPromoApplied && discountAmount > 0 && (
                     <>

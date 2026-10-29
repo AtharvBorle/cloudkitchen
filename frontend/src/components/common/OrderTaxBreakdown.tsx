@@ -37,9 +37,11 @@ export const OrderTaxBreakdown: React.FC<OrderTaxBreakdownProps> = ({
   const rawTargetId = order?.id || orderId || order?.orderId || "";
   const targetOrderId = typeof rawTargetId === "string" ? rawTargetId.replace(/^#/, "").trim() : rawTargetId;
   const effectivePaid = isPaid !== undefined ? isPaid : Boolean(order?.isPaid);
-  const effectiveMethod = paymentMethod || order?.paymentMethod || (effectivePaid ? "ONLINE" : "COD");
-  const isCod = effectiveMethod === "COD" || effectiveMethod === "Cash on Delivery";
+  const rawMethod = paymentMethod || order?.paymentMethod || (effectivePaid ? "ONLINE" : "COD");
+  const methodUpper = String(rawMethod).toUpperCase();
+  const isCod = methodUpper.includes("COD") || methodUpper.includes("CASH");
   const isDelivered = (order?.status || "").toUpperCase() === "DELIVERED" || (order?.rawStatus || "").toUpperCase() === "DELIVERED" || (order?.status === "Completed");
+  const isPaidConfirmed = effectivePaid || (!isCod && (methodUpper.includes("ONLINE") || methodUpper.includes("PAID") || methodUpper.includes("UPI") || methodUpper.includes("CARD"))) || (isCod && (isDelivered || effectivePaid));
   const isSellerView = Boolean(
     order?.sellerView ||
     order?.isSeller ||
@@ -143,11 +145,15 @@ export const OrderTaxBreakdown: React.FC<OrderTaxBreakdownProps> = ({
               fontWeight: 700,
               padding: "2px 7px",
               borderRadius: "6px",
-              backgroundColor: calc.grandTotal === 0 ? "#DCFCE7" : isCod ? "#FEF3C7" : "#ECFDF5",
-              color: calc.grandTotal === 0 ? "#15803D" : isCod ? "#B45309" : "#047857",
+              backgroundColor: calc.grandTotal === 0 ? "#DCFCE7" : (isCod && !isPaidConfirmed) ? "#FEF3C7" : isPaidConfirmed ? "#ECFDF5" : "#FEF3C7",
+              color: calc.grandTotal === 0 ? "#15803D" : (isCod && !isPaidConfirmed) ? "#B45309" : isPaidConfirmed ? "#047857" : "#B45309",
             }}
           >
-            {calc.grandTotal === 0 ? "FREE" : isCod ? "CASH ON DELIVERY" : "PAID"}
+            {calc.grandTotal === 0
+              ? "FREE"
+              : isCod
+              ? (isPaidConfirmed ? "PAID (COD)" : "CASH ON DELIVERY")
+              : (isPaidConfirmed ? "PAID" : "PENDING")}
           </span>
         </div>
         <span style={{ fontSize: "1.08rem", fontWeight: 800, color: "#EA580C" }}>

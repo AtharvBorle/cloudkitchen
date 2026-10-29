@@ -20,6 +20,8 @@ import {
   AlertCircle,
   Inbox,
   Search,
+  Trash2,
+  CheckCheck,
 } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import {
@@ -48,7 +50,7 @@ const TABS: TabItem[] = [
 
 import { useSellerProfile } from "@/hooks/useSellerProfile";
 import { useSellerNotifications } from "@/hooks/useSellerNotifications";
-import { formatNotificationTime } from "../notificationData";
+import { formatNotificationTime, formatNotificationMessage } from "../notificationData";
 
 export interface ResponsiveSellerNotificationsProps {
   ownerName?: string;
@@ -164,6 +166,11 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
   const handleMarkAllRead = () => {
     markAllAsRead();
     showToast("All notifications marked as read");
+  };
+
+  const handleClearAll = () => {
+    clearAllNotifications();
+    showToast("All notifications cleared");
   };
 
   const handleToggleRead = (id: string, e: React.MouseEvent) => {
@@ -407,6 +414,18 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
                 Mark all read
               </button>
             )}
+            {notifications.length > 0 && (
+              <button
+                type="button"
+                className={styles.headerClearBtn}
+                onClick={handleClearAll}
+                title="Clear all notifications"
+                aria-label="Clear all notifications"
+              >
+                <Trash2 size={13} />
+                <span>Clear all</span>
+              </button>
+            )}
           </div>
         </header>
 
@@ -480,6 +499,39 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
             );
           })}
         </div>
+
+
+        {/* Available Notification Management Bar */}
+        {notifications.length > 0 && (
+          <div className={styles.managementBar}>
+            <span className={styles.managementCount}>
+              {filteredNotifications.length} {filteredNotifications.length === 1 ? "notification" : "notifications"}
+            </span>
+            <div className={styles.managementActions}>
+              {unreadCount > 0 && (
+                <button
+                  type="button"
+                  className={styles.manageTextBtn}
+                  onClick={handleMarkAllRead}
+                  title="Mark all notifications as read"
+                >
+                  <CheckCheck size={13} />
+                  <span>Mark all read</span>
+                </button>
+              )}
+              <button
+                type="button"
+                className={styles.manageClearBtn}
+                onClick={handleClearAll}
+                title="Clear all notifications"
+                aria-label="Clear all notifications"
+              >
+                <Trash2 size={13} />
+                <span>Clear All</span>
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Notification List */}
         <main className={styles.contentArea}>
@@ -572,7 +624,7 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
                       </h4>
                     </div>
 
-                    <p className={styles.cardMessage}>{notif.message}</p>
+                    <p className={styles.cardMessage}>{formatNotificationMessage(notif.message)}</p>
 
                     {(isExpanded || notif.details) && (
                       <div className={styles.cardDetails}>
