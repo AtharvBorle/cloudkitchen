@@ -139,6 +139,22 @@ export const ResponsiveSellerOrdersDetails: React.FC<
   const handleUpdateStatus = async (targetStep: OrderTimelineStep) => {
     if (updatingStatus || currentStatus === targetStep || currentStatus === "Cancelled") return;
 
+    const orderProgression: OrderTimelineStep[] = ["Order Placed", "Preparing", "On the way", "Delivered"];
+    const currentIndex = orderProgression.indexOf(currentStatus);
+    const targetIndex = orderProgression.indexOf(targetStep);
+
+    // Guard: Prevent reverting to an earlier stage in the order lifecycle
+    if (targetIndex < currentIndex) {
+      showToast("Cannot revert order to a previous stage.");
+      return;
+    }
+
+    // Guard: Enforce sequential progression through the lifecycle
+    if (targetIndex > currentIndex + 1) {
+      showToast(`Please complete the ${orderProgression[currentIndex + 1]} stage first.`);
+      return;
+    }
+
     try {
       setUpdatingStatus(true);
       if (onStatusChange) {
@@ -456,7 +472,7 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                       type="button"
                       className={styles.stepBtn}
                       onClick={() => handleUpdateStatus("Order Placed")}
-                      disabled={updatingStatus || currentStatus === "Delivered"}
+                      disabled={true}
                       title="Step 1: Order Placed"
                       aria-label="Step 1: Order Placed"
                     >
@@ -502,10 +518,12 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                       type="button"
                       className={styles.stepBtn}
                       onClick={() => handleUpdateStatus("Preparing")}
-                      disabled={updatingStatus || currentStatus === "Delivered"}
+                      disabled={updatingStatus || currentStatus !== "Order Placed"}
                       title={
                         currentStatus === "Order Placed"
                           ? "Tap to Accept & Start Cooking"
+                          : getStepStatus("Preparing") === "completed"
+                          ? "Step 2: Preparing (Completed)"
                           : "Step 2: Preparing"
                       }
                       aria-label="Step 2: Preparing"
@@ -556,10 +574,12 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                       type="button"
                       className={styles.stepBtn}
                       onClick={() => handleUpdateStatus("On the way")}
-                      disabled={updatingStatus || currentStatus === "Delivered"}
+                      disabled={updatingStatus || currentStatus !== "Preparing"}
                       title={
                         currentStatus === "Preparing"
                           ? "Tap to Mark Out for Delivery"
+                          : getStepStatus("On the way") === "completed"
+                          ? "Step 3: On the way (Completed)"
                           : "Step 3: On the way"
                       }
                       aria-label="Step 3: On the way"
@@ -608,10 +628,12 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                       type="button"
                       className={styles.stepBtn}
                       onClick={() => handleUpdateStatus("Delivered")}
-                      disabled={updatingStatus || currentStatus === "Delivered"}
+                      disabled={updatingStatus || currentStatus !== "On the way"}
                       title={
                         currentStatus === "On the way"
                           ? "Tap to Mark as Delivered"
+                          : currentStatus === "Delivered"
+                          ? "Step 4: Delivered (Completed)"
                           : "Step 4: Delivered"
                       }
                       aria-label="Step 4: Delivered"
