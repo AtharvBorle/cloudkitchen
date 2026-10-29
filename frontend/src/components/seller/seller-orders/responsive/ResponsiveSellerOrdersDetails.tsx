@@ -100,6 +100,7 @@ export const ResponsiveSellerOrdersDetails: React.FC<
   const [currentStatus, setCurrentStatus] = useState<OrderTimelineStep>(initialStatus);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const cleanOrderId = (orderId || "").replace(/^#(?:ncr|ord)-?/i, "").replace(/^(?:ncr|ord)-?/i, "").replace(/^#/, "").trim();
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
@@ -158,7 +159,7 @@ export const ResponsiveSellerOrdersDetails: React.FC<
     // Guard: Prevent advancing to "On the way" without assigned delivery partner
     if (targetStep === "On the way" && !riderName) {
       showToast("Please assign a delivery partner before marking order out for delivery.");
-      router.push(`/seller/orders/assign-rider?orderId=${encodeURIComponent(orderId)}`);
+      router.push(`/seller/orders/assign-rider?orderId=${encodeURIComponent(cleanOrderId || orderId)}`);
       return;
     }
 
@@ -689,35 +690,42 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                 )}
 
                 {currentStatus === "Preparing" && (
-                  <div className={styles.preparingActionBox}>
+                  !riderName ? (
                     <button
                       type="button"
-                      className={riderName ? styles.secondaryActionBtn : styles.advanceStepBtn}
+                      className={styles.advanceStepBtn}
                       onClick={() =>
-                        router.push(`/seller/orders/assign-rider?orderId=${encodeURIComponent(orderId)}`)
+                        router.push(`/seller/orders/assign-rider?orderId=${encodeURIComponent(cleanOrderId || orderId)}`)
                       }
+                      title="Assign Delivery Rider"
                     >
-                      <UserCheck size={16} />
-                      <span>{riderName ? "Reassign Delivery Partner" : "Assign Delivery Partner →"}</span>
+                      <Bike size={16} />
+                      <span>Assign Delivery Rider</span>
                     </button>
+                  ) : (
+                    <div className={styles.preparingActionBox}>
+                      <button
+                        type="button"
+                        className={styles.advanceStepBtn}
+                        onClick={() => handleUpdateStatus("On the way")}
+                        disabled={updatingStatus}
+                      >
+                        {updatingStatus ? <Loader2 size={16} className={styles.spin} /> : <Bike size={16} />}
+                        <span>Mark Out for Delivery (On the way)</span>
+                      </button>
 
-                    <button
-                      type="button"
-                      className={riderName ? styles.advanceStepBtn : styles.secondaryActionBtn}
-                      onClick={() => {
-                        if (!riderName) {
-                          showToast("Please assign a delivery partner before marking order out for delivery.");
-                          router.push(`/seller/orders/assign-rider?orderId=${encodeURIComponent(orderId)}`);
-                          return;
+                      <button
+                        type="button"
+                        className={styles.secondaryActionBtn}
+                        onClick={() =>
+                          router.push(`/seller/orders/assign-rider?orderId=${encodeURIComponent(cleanOrderId || orderId)}`)
                         }
-                        handleUpdateStatus("On the way");
-                      }}
-                      disabled={updatingStatus}
-                    >
-                      {updatingStatus ? <Loader2 size={16} className={styles.spin} /> : <Bike size={16} />}
-                      <span>Mark Out for Delivery (On the way)</span>
-                    </button>
-                  </div>
+                      >
+                        <UserCheck size={16} />
+                        <span>Reassign Delivery Partner</span>
+                      </button>
+                    </div>
+                  )
                 )}
 
                 {currentStatus === "On the way" && (
@@ -780,7 +788,7 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                   type="button"
                   className={styles.riderCardAssignBtn}
                   onClick={() =>
-                    router.push(`/seller/orders/assign-rider?orderId=${encodeURIComponent(orderId)}`)
+                    router.push(`/seller/orders/assign-rider?orderId=${encodeURIComponent(cleanOrderId || orderId)}`)
                   }
                   title="Assign a delivery partner"
                 >
@@ -884,7 +892,7 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                 disabled={currentStatus === "Delivered"}
                 onClick={() => {
                   if (currentStatus !== "Delivered") {
-                    router.push(`/seller/orders/assign-rider?orderId=${encodeURIComponent(orderId)}`);
+                    router.push(`/seller/orders/assign-rider?orderId=${encodeURIComponent(cleanOrderId || orderId)}`);
                   }
                 }}
                 title={
