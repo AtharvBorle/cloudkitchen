@@ -730,18 +730,23 @@ export const OrderDefault: React.FC<OrderDefaultProps> = ({
 
             {/* Right Column: Order Delivery Lifecycle & Action Buttons */}
             <div className={styles.rightCard}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <h3 className={styles.cardTitle} style={{ margin: 0 }}>Order Delivery Lifecycle</h3>
+              <div className={styles.lifecycleHeader}>
+                <h3 className={styles.lifecycleTitle}>Order Delivery Lifecycle</h3>
                 {isCancelled ? (
-                  <span style={{ fontSize: "0.75rem", color: "#DC2626", fontWeight: "700", backgroundColor: "#FEF2F2", padding: "3px 9px", borderRadius: "6px", border: "1px solid #FECACA" }}>
-                    • {isCancelledByUser ? "Cancelled by User" : "Cancelled"}
+                  <span className={`${styles.statusBadge} ${styles.statusBadgeCancelled}`}>
+                    <span className={`${styles.statusDot} ${styles.statusDotRed}`} />
+                    <span>{isCancelledByUser ? "Cancelled by User" : "Cancelled"}</span>
                   </span>
                 ) : isDelivered ? (
-                  <span style={{ fontSize: "0.75rem", color: "#10B981", fontWeight: "700", backgroundColor: "#ECFDF5", padding: "3px 9px", borderRadius: "6px", border: "1px solid #A7F3D0" }}>
-                    • Completed
+                  <span className={`${styles.statusBadge} ${styles.statusBadgeCompleted}`}>
+                    <span className={`${styles.statusDot} ${styles.statusDotGreen}`} />
+                    <span>Completed</span>
                   </span>
                 ) : (
-                  <span style={{ fontSize: "0.75rem", color: "#10B981", fontWeight: "700" }}>• Live</span>
+                  <span className={`${styles.statusBadge} ${styles.statusBadgeLive}`}>
+                    <span className={`${styles.statusDot} ${styles.statusDotGreen}`} />
+                    <span>Live</span>
+                  </span>
                 )}
               </div>
 

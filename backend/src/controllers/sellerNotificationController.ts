@@ -48,6 +48,20 @@ function calculateTimeAgo(date: Date): string {
     return date.toLocaleDateString("en-IN", { month: "short", day: "numeric" });
 }
 
+function cleanNotificationMessage(rawText?: string | null): string {
+    if (!rawText) return "";
+    let clean = String(rawText);
+    clean = clean.replace(/data:[a-zA-Z0-9+.-]+\/[a-zA-Z0-9+.-]+;base64,[^\s\r\n]*/gi, "");
+    clean = clean.replace(/\[Attachment:\s*([^|\]\r\n]+)(?:\|[^\s\]\r\n]*)?\]?/gi, "📎 Attachment: $1");
+    clean = clean.replace(/📎 Attachment:\s*([^|]+)\|.*$/gi, "📎 Attachment: $1");
+    clean = clean.replace(/\[Attachment:\s*([^|\]\r\n]+)[^\]]*\]/gi, "📎 Attachment: $1");
+    clean = clean.replace(/\s+/g, " ").trim();
+    if (clean.length > 150) {
+        return clean.slice(0, 147) + "...";
+    }
+    return clean;
+}
+
 export const getAuthenticatedSeller = async () => {
     const session = await getAuthSession();
     if (!session?.user) {
@@ -402,7 +416,7 @@ export const getSellerNotifications = async (req: Request) => {
                 id: `ticket-${ticket.id}`,
                 category: "system",
                 title: `Support: ${ticket.title}`,
-                message: lastMsg ? lastMsg.message.slice(0, 150) : ticket.description.slice(0, 150),
+                message: cleanNotificationMessage(lastMsg ? lastMsg.message : ticket.description),
                 details: `Category: ${ticket.category} • Status: ${ticket.status}`,
                 timestamp: ticket.updatedAt.toISOString(),
                 timeAgo: calculateTimeAgo(ticket.updatedAt),

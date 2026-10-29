@@ -16,6 +16,9 @@ import {
   Check,
   Loader2,
   Receipt,
+  UserCheck,
+  UserPlus,
+  Wallet,
 } from "lucide-react";
 import { OrderTaxBreakdown } from "@/components/common/OrderTaxBreakdown";
 import { getRemainingSeconds } from "../SellerOrders";
@@ -54,6 +57,7 @@ export interface ResponsiveSellerOrdersDetailsProps {
   discount?: string;
   total?: string;
   paymentMethod?: string;
+  isPaid?: boolean;
   initialStatus?: OrderTimelineStep;
   createdAt?: string;
   cancelledBy?: string | null;
@@ -84,6 +88,7 @@ export const ResponsiveSellerOrdersDetails: React.FC<
   discount,
   total = "₹0",
   paymentMethod = "COD",
+  isPaid,
   initialStatus = "Order Placed",
   createdAt,
   cancelledBy,
@@ -98,7 +103,13 @@ export const ResponsiveSellerOrdersDetails: React.FC<
   const [currentStatus, setCurrentStatus] = useState<OrderTimelineStep>(initialStatus);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const cleanOrderId = (orderId || "").replace(/^#(?:ncr|ord)-?/i, "").replace(/^(?:ncr|ord)-?/i, "").replace(/^#/, "").trim();
   const [now, setNow] = useState(Date.now());
+  const normalizedMethod = String(paymentMethod || rawOrder?.paymentMethod || "").toUpperCase();
+  const isCod = normalizedMethod.includes("COD") || normalizedMethod.includes("CASH");
+  const isDelivered = currentStatus === "Delivered";
+  const [cashCollected, setCashCollected] = useState(false);
+  const isOrderPaid = isDelivered || cashCollected || (isPaid !== undefined ? isPaid : Boolean(rawOrder?.isPaid)) || (!isCod && (normalizedMethod.includes("ONLINE") || normalizedMethod.includes("PAID") || normalizedMethod.includes("UPI") || normalizedMethod.includes("CARD")));
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -137,6 +148,29 @@ export const ResponsiveSellerOrdersDetails: React.FC<
   const handleUpdateStatus = async (targetStep: OrderTimelineStep) => {
     if (updatingStatus || currentStatus === targetStep || currentStatus === "Cancelled") return;
 
+    const orderProgression: OrderTimelineStep[] = ["Order Placed", "Preparing", "On the way", "Delivered"];
+    const currentIndex = orderProgression.indexOf(currentStatus);
+    const targetIndex = orderProgression.indexOf(targetStep);
+
+    // Guard: Prevent reverting to an earlier stage in the order lifecycle
+    if (targetIndex < currentIndex) {
+      showToast("Cannot revert order to a previous stage.");
+      return;
+    }
+
+    // Guard: Enforce sequential progression through the lifecycle
+    if (targetIndex > currentIndex + 1) {
+      showToast(`Please complete the ${orderProgression[currentIndex + 1]} stage first.`);
+      return;
+    }
+
+    // Guard: Prevent advancing to "On the way" without assigned delivery partner
+    if (targetStep === "On the way" && !riderName) {
+      showToast("Please assign a delivery partner before marking order out for delivery.");
+      router.push(`/seller/orders/assign-rider?orderId=${encodeURIComponent(cleanOrderId || orderId)}`);
+      return;
+    }
+
     try {
       setUpdatingStatus(true);
       if (onStatusChange) {
@@ -167,6 +201,7 @@ export const ResponsiveSellerOrdersDetails: React.FC<
 
       setCurrentStatus(targetStep);
       if (targetStep === "Delivered") {
+        setCashCollected(true);
         showToast("🎉 Order marked as Delivered successfully!");
       } else if (targetStep === "On the way") {
         showToast("🛵 Order marked Out for Delivery!");
@@ -454,7 +489,7 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                       type="button"
                       className={styles.stepBtn}
                       onClick={() => handleUpdateStatus("Order Placed")}
-                      disabled={updatingStatus || currentStatus === "Delivered"}
+                      disabled={true}
                       title="Step 1: Order Placed"
                       aria-label="Step 1: Order Placed"
                     >
@@ -500,10 +535,12 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                       type="button"
                       className={styles.stepBtn}
                       onClick={() => handleUpdateStatus("Preparing")}
-                      disabled={updatingStatus || currentStatus === "Delivered"}
+                      disabled={updatingStatus || currentStatus !== "Order Placed"}
                       title={
                         currentStatus === "Order Placed"
                           ? "Tap to Accept & Start Cooking"
+                          : getStepStatus("Preparing") === "completed"
+                          ? "Step 2: Preparing (Completed)"
                           : "Step 2: Preparing"
                       }
                       aria-label="Step 2: Preparing"
@@ -554,10 +591,12 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                       type="button"
                       className={styles.stepBtn}
                       onClick={() => handleUpdateStatus("On the way")}
-                      disabled={updatingStatus || currentStatus === "Delivered"}
+                      disabled={updatingStatus || currentStatus !== "Preparing"}
                       title={
                         currentStatus === "Preparing"
                           ? "Tap to Mark Out for Delivery"
+                          : getStepStatus("On the way") === "completed"
+                          ? "Step 3: On the way (Completed)"
                           : "Step 3: On the way"
                       }
                       aria-label="Step 3: On the way"
@@ -606,10 +645,12 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                       type="button"
                       className={styles.stepBtn}
                       onClick={() => handleUpdateStatus("Delivered")}
-                      disabled={updatingStatus || currentStatus === "Delivered"}
+                      disabled={updatingStatus || currentStatus !== "On the way"}
                       title={
                         currentStatus === "On the way"
                           ? "Tap to Mark as Delivered"
+                          : currentStatus === "Delivered"
+                          ? "Step 4: Delivered (Completed)"
                           : "Step 4: Delivered"
                       }
                       aria-label="Step 4: Delivered"
@@ -658,27 +699,81 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                 )}
 
                 {currentStatus === "Preparing" && (
-                  <button
-                    type="button"
-                    className={styles.advanceStepBtn}
-                    onClick={() => handleUpdateStatus("On the way")}
-                    disabled={updatingStatus}
-                  >
-                    {updatingStatus ? <Loader2 size={16} className={styles.spin} /> : <Bike size={16} />}
-                    <span>Mark Out for Delivery (On the way)</span>
-                  </button>
+                  !riderName ? (
+                    <button
+                      type="button"
+                      className={styles.advanceStepBtn}
+                      onClick={() =>
+                        router.push(`/seller/orders/assign-rider?orderId=${encodeURIComponent(cleanOrderId || orderId)}`)
+                      }
+                      title="Assign Delivery Rider"
+                    >
+                      <Bike size={16} />
+                      <span>Assign Delivery Rider</span>
+                    </button>
+                  ) : (
+                    <div className={styles.preparingActionBox}>
+                      <button
+                        type="button"
+                        className={styles.advanceStepBtn}
+                        onClick={() => handleUpdateStatus("On the way")}
+                        disabled={updatingStatus}
+                      >
+                        {updatingStatus ? <Loader2 size={16} className={styles.spin} /> : <Bike size={16} />}
+                        <span>Mark Out for Delivery (On the way)</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className={styles.secondaryActionBtn}
+                        onClick={() =>
+                          router.push(`/seller/orders/assign-rider?orderId=${encodeURIComponent(cleanOrderId || orderId)}`)
+                        }
+                      >
+                        <UserCheck size={16} />
+                        <span>Reassign Delivery Partner</span>
+                      </button>
+                    </div>
+                  )
                 )}
 
                 {currentStatus === "On the way" && (
-                  <button
-                    type="button"
-                    className={`${styles.advanceStepBtn} ${styles.advanceStepBtnGreen}`}
-                    onClick={() => handleUpdateStatus("Delivered")}
-                    disabled={updatingStatus}
-                  >
-                    {updatingStatus ? <Loader2 size={16} className={styles.spin} /> : <CheckCircle2 size={16} />}
-                    <span>Mark as Delivered &amp; Complete ✓</span>
-                  </button>
+                  <div className={styles.deliveryActionContainer}>
+                    {isCod && !isOrderPaid ? (
+                      <div className={styles.codPaymentNotice}>
+                        <div className={styles.codPaymentNoticeHeader}>
+                          <Wallet size={16} color="#B45309" />
+                          <span className={styles.codPaymentNoticeTitle}>Cash Collection on Delivery</span>
+                        </div>
+                        <p className={styles.codPaymentNoticeText}>
+                          Payment method is <strong>Cash on Delivery (COD)</strong>. Please collect <strong>{total || `₹${taxCalc?.grandTotal?.toFixed(2) || "0.00"}`}</strong> in cash from the customer before completing delivery.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className={styles.prepaidPaymentNotice}>
+                        <CheckCircle2 size={15} color="#15803D" />
+                        <span>Prepaid Order — Payment confirmed. No cash collection required.</span>
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      className={`${styles.advanceStepBtn} ${styles.advanceStepBtnGreen}`}
+                      onClick={() => handleUpdateStatus("Delivered")}
+                      disabled={updatingStatus}
+                    >
+                      {updatingStatus ? (
+                        <Loader2 size={16} className={styles.spin} />
+                      ) : (
+                        <CheckCircle2 size={16} />
+                      )}
+                      <span>
+                        {isCod && !isOrderPaid
+                          ? `Collect Cash (${total || `₹${taxCalc?.grandTotal?.toFixed(2) || "0.00"}`}) &amp; Mark Delivered ✓`
+                          : "Mark as Delivered &amp; Complete ✓"}
+                      </span>
+                    </button>
+                  </div>
                 )}
 
                 {currentStatus === "Delivered" && (
@@ -688,7 +783,9 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                       <span className={styles.completedNoticeTitle}>Order Successfully Delivered</span>
                     </div>
                     <p className={styles.completedNoticeText}>
-                      All preparation, courier dispatch, and customer delivery stages have concluded.
+                      {isCod
+                        ? `Delivery concluded and Cash on Delivery payment of ${total || `₹${taxCalc?.grandTotal?.toFixed(2) || "0.00"}`} has been collected and confirmed.`
+                        : "All preparation, courier dispatch, and customer delivery stages have concluded with confirmed online payment."}
                     </p>
                   </div>
                 )}
@@ -724,7 +821,19 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                 </div>
               </div>
 
-              {riderPhone && (
+              {!riderName && currentStatus !== "Order Placed" && currentStatus !== "Delivered" && !isCancelled ? (
+                <button
+                  type="button"
+                  className={styles.riderCardAssignBtn}
+                  onClick={() =>
+                    router.push(`/seller/orders/assign-rider?orderId=${encodeURIComponent(cleanOrderId || orderId)}`)
+                  }
+                  title="Assign a delivery partner"
+                >
+                  <UserPlus size={14} />
+                  <span>Assign</span>
+                </button>
+              ) : riderPhone ? (
                 <a
                   href={`tel:${riderPhone}`}
                   className={styles.riderCallBtn}
@@ -738,7 +847,7 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                 >
                   <Phone size={18} />
                 </a>
-              )}
+              ) : null}
             </section>
           )}
 
@@ -792,11 +901,14 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                 deliveryFee,
                 discount,
                 total,
-                paymentMethod,
+                paymentMethod: isCod ? "COD" : "ONLINE",
+                isPaid: isOrderPaid,
+                status: currentStatus === "Delivered" ? "DELIVERED" : currentStatus,
                 taxBreakdown: rawOrder?.taxBreakdown,
               }}
               taxCalc={taxCalc}
-              paymentMethod={paymentMethod}
+              isPaid={isOrderPaid}
+              paymentMethod={isCod ? "COD" : "ONLINE"}
               orderId={orderId}
               showInvoiceButton={true}
             />
@@ -821,7 +933,7 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                 disabled={currentStatus === "Delivered"}
                 onClick={() => {
                   if (currentStatus !== "Delivered") {
-                    router.push(`/seller/orders/assign-rider?orderId=${encodeURIComponent(orderId)}`);
+                    router.push(`/seller/orders/assign-rider?orderId=${encodeURIComponent(cleanOrderId || orderId)}`);
                   }
                 }}
                 title={
