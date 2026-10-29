@@ -140,23 +140,50 @@
 .headerRight {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .headerTextBtn {
   background: none;
   border: none;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
   color: #EA580C;
   cursor: pointer;
-  padding: 6px 8px;
+  padding: 5px 6px;
   border-radius: 6px;
   font-family: inherit;
+  white-space: nowrap;
 }
 
 .headerTextBtn:active {
   background-color: #FFF7ED;
+}
+
+.headerClearBtn {
+  background: none;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748B;
+  cursor: pointer;
+  padding: 5px 6px;
+  border-radius: 6px;
+  font-family: inherit;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.headerClearBtn:hover {
+  color: #EF4444;
+}
+
+.headerClearBtn:active {
+  background-color: #FEF2F2;
+  color: #DC2626;
 }
 
 /* Settings Notice Banner */

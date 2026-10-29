@@ -20,6 +20,7 @@ import {
   AlertCircle,
   Inbox,
   Search,
+  Trash2,
 } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import {
@@ -164,6 +165,11 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
   const handleMarkAllRead = () => {
     markAllAsRead();
     showToast("All notifications marked as read");
+  };
+
+  const handleClearAll = () => {
+    clearAllNotifications();
+    showToast("All notifications cleared");
   };
 
   const handleToggleRead = (id: string, e: React.MouseEvent) => {
@@ -405,6 +411,18 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
                 onClick={handleMarkAllRead}
               >
                 Mark all read
+              </button>
+            )}
+            {notifications.length > 0 && (
+              <button
+                type="button"
+                className={styles.headerClearBtn}
+                onClick={handleClearAll}
+                title="Clear all notifications"
+                aria-label="Clear all notifications"
+              >
+                <Trash2 size={13} />
+                <span>Clear all</span>
               </button>
             )}
           </div>
