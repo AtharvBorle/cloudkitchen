@@ -986,27 +986,6 @@ export default function RiderCanvas({
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => router.push("/seller/delivery/settings")}
-            style={{
-              backgroundColor: "#FFF7ED",
-              border: "1.5px solid #FED7AA",
-              borderRadius: "8px",
-              padding: "8px 16px",
-              fontSize: "13px",
-              fontWeight: 600,
-              color: "#C2410C",
-              cursor: "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-              transition: "all 0.15s ease",
-            }}
-          >
-            <span>Configure Delivery Charges &amp; Rates</span>
-            <ArrowRight size={14} />
-          </button>
         </div>
 
         {/* Historical Date Active Banner */}

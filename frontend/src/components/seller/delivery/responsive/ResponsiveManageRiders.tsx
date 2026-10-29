@@ -631,27 +631,6 @@ export const ResponsiveManageRiders: React.FC<ResponsiveManageRidersProps> = ({
               + Add Delivery Agent
             </button>
 
-            <button
-              type="button"
-              onClick={handleInvite}
-              style={{
-                width: "100%",
-                height: "44px",
-                backgroundColor: "#FFFFFF",
-                color: "#F97316",
-                border: "1.5px solid #FFEDD5",
-                borderRadius: "14px",
-                fontSize: "14px",
-                fontWeight: 700,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontFamily: "inherit",
-              }}
-            >
-              Share Onboarding Link
-            </button>
           </div>
         </main>
 
