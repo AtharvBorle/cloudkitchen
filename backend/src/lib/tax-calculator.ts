@@ -42,7 +42,7 @@ export interface TaxCalculationResult {
     productCgst: number;
     productSgst: number;
     productTotal: number;
-    itemsSubtotal?: number;
+    itemsSubtotal: number;
     deliveryGross: number;
     deliveryTaxable: number;
     deliveryGst: number;
