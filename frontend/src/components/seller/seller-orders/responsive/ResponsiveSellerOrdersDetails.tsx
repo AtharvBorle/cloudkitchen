@@ -18,6 +18,7 @@ import {
   Receipt,
   UserCheck,
   UserPlus,
+  Wallet,
 } from "lucide-react";
 import { OrderTaxBreakdown } from "@/components/common/OrderTaxBreakdown";
 import { getRemainingSeconds } from "../SellerOrders";
@@ -56,6 +57,7 @@ export interface ResponsiveSellerOrdersDetailsProps {
   discount?: string;
   total?: string;
   paymentMethod?: string;
+  isPaid?: boolean;
   initialStatus?: OrderTimelineStep;
   createdAt?: string;
   cancelledBy?: string | null;
@@ -86,6 +88,7 @@ export const ResponsiveSellerOrdersDetails: React.FC<
   discount,
   total = "₹0",
   paymentMethod = "COD",
+  isPaid,
   initialStatus = "Order Placed",
   createdAt,
   cancelledBy,
@@ -102,6 +105,11 @@ export const ResponsiveSellerOrdersDetails: React.FC<
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const cleanOrderId = (orderId || "").replace(/^#(?:ncr|ord)-?/i, "").replace(/^(?:ncr|ord)-?/i, "").replace(/^#/, "").trim();
   const [now, setNow] = useState(Date.now());
+  const normalizedMethod = String(paymentMethod || rawOrder?.paymentMethod || "").toUpperCase();
+  const isCod = normalizedMethod.includes("COD") || normalizedMethod.includes("CASH");
+  const isDelivered = currentStatus === "Delivered";
+  const [cashCollected, setCashCollected] = useState(false);
+  const isOrderPaid = isDelivered || cashCollected || (isPaid !== undefined ? isPaid : Boolean(rawOrder?.isPaid)) || (!isCod && (normalizedMethod.includes("ONLINE") || normalizedMethod.includes("PAID") || normalizedMethod.includes("UPI") || normalizedMethod.includes("CARD")));
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -193,6 +201,7 @@ export const ResponsiveSellerOrdersDetails: React.FC<
 
       setCurrentStatus(targetStep);
       if (targetStep === "Delivered") {
+        setCashCollected(true);
         showToast("🎉 Order marked as Delivered successfully!");
       } else if (targetStep === "On the way") {
         showToast("🛵 Order marked Out for Delivery!");
@@ -729,15 +738,42 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                 )}
 
                 {currentStatus === "On the way" && (
-                  <button
-                    type="button"
-                    className={`${styles.advanceStepBtn} ${styles.advanceStepBtnGreen}`}
-                    onClick={() => handleUpdateStatus("Delivered")}
-                    disabled={updatingStatus}
-                  >
-                    {updatingStatus ? <Loader2 size={16} className={styles.spin} /> : <CheckCircle2 size={16} />}
-                    <span>Mark as Delivered &amp; Complete ✓</span>
-                  </button>
+                  <div className={styles.deliveryActionContainer}>
+                    {isCod && !isOrderPaid ? (
+                      <div className={styles.codPaymentNotice}>
+                        <div className={styles.codPaymentNoticeHeader}>
+                          <Wallet size={16} color="#B45309" />
+                          <span className={styles.codPaymentNoticeTitle}>Cash Collection on Delivery</span>
+                        </div>
+                        <p className={styles.codPaymentNoticeText}>
+                          Payment method is <strong>Cash on Delivery (COD)</strong>. Please collect <strong>{total || `₹${taxCalc?.grandTotal?.toFixed(2) || "0.00"}`}</strong> in cash from the customer before completing delivery.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className={styles.prepaidPaymentNotice}>
+                        <CheckCircle2 size={15} color="#15803D" />
+                        <span>Prepaid Order — Payment confirmed. No cash collection required.</span>
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      className={`${styles.advanceStepBtn} ${styles.advanceStepBtnGreen}`}
+                      onClick={() => handleUpdateStatus("Delivered")}
+                      disabled={updatingStatus}
+                    >
+                      {updatingStatus ? (
+                        <Loader2 size={16} className={styles.spin} />
+                      ) : (
+                        <CheckCircle2 size={16} />
+                      )}
+                      <span>
+                        {isCod && !isOrderPaid
+                          ? `Collect Cash (${total || `₹${taxCalc?.grandTotal?.toFixed(2) || "0.00"}`}) &amp; Mark Delivered ✓`
+                          : "Mark as Delivered &amp; Complete ✓"}
+                      </span>
+                    </button>
+                  </div>
                 )}
 
                 {currentStatus === "Delivered" && (
@@ -747,7 +783,9 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                       <span className={styles.completedNoticeTitle}>Order Successfully Delivered</span>
                     </div>
                     <p className={styles.completedNoticeText}>
-                      All preparation, courier dispatch, and customer delivery stages have concluded.
+                      {isCod
+                        ? `Delivery concluded and Cash on Delivery payment of ${total || `₹${taxCalc?.grandTotal?.toFixed(2) || "0.00"}`} has been collected and confirmed.`
+                        : "All preparation, courier dispatch, and customer delivery stages have concluded with confirmed online payment."}
                     </p>
                   </div>
                 )}
@@ -863,11 +901,14 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                 deliveryFee,
                 discount,
                 total,
-                paymentMethod,
+                paymentMethod: isCod ? "COD" : "ONLINE",
+                isPaid: isOrderPaid,
+                status: currentStatus === "Delivered" ? "DELIVERED" : currentStatus,
                 taxBreakdown: rawOrder?.taxBreakdown,
               }}
               taxCalc={taxCalc}
-              paymentMethod={paymentMethod}
+              isPaid={isOrderPaid}
+              paymentMethod={isCod ? "COD" : "ONLINE"}
               orderId={orderId}
               showInvoiceButton={true}
             />
