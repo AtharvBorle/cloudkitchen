@@ -36,13 +36,6 @@ export const FAQ_DATA: FAQItem[] = [
     answer:
       "For Cash on Delivery orders, delivery partners collect payment upon arrival. Settled balances are reconciled daily and credited directly to your registered bank account or wallet within 24-48 business hours.",
   },
-  {
-    id: "3",
-    category: "subscriptions",
-    question: "How to upgrade my plan?",
-    answer:
-      "Visit Settings > My Subscriptions from your profile menu. Choose your active plan and tap 'Change Plan' to upgrade between Daily, Weekly, or Monthly tiers using UPI, Credit/Debit Card, or Net Banking.",
-  },
   /*
   {
     id: "4",
@@ -58,13 +51,6 @@ export const FAQ_DATA: FAQItem[] = [
     question: "What are the delivery zones?",
     answer:
       "Delivery zones cover all prime localities within a 12 km operational radius around our cloud kitchen hubs. Meals are packed fresh and delivered hot within 30 to 45 minutes.",
-  },
-  {
-    id: "6",
-    category: "subscriptions",
-    question: "Can I pause or skip a daily subscription meal?",
-    answer:
-      "Yes! You can pause daily meal deliveries up to 2 hours before the scheduled lunch or dinner delivery slot right from the My Subscriptions dashboard.",
   },
   {
     id: "7",
@@ -186,7 +172,9 @@ export const FaqAccordion: React.FC<FaqAccordionProps> = ({ onContactSupport }) 
       ) : (
         <div className={styles.emptyState}>
           <p className={styles.emptyText}>
-            No help articles found matching &ldquo;{searchQuery}&rdquo;
+            {searchQuery
+              ? `No help articles found matching “${searchQuery}”`
+              : "No help articles available under this category at this time."}
           </p>
         </div>
       )}

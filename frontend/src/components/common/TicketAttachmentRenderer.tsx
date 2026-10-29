@@ -8,9 +8,33 @@ export interface ExtractedAttachment {
   url: string;
   isImage: boolean;
   isText?: boolean;
+  isDoc?: boolean;
+}
+
+export function isDocFile(name: string = "", url: string = "", type: string = ""): boolean {
+  const lowerName = (name || "").toLowerCase();
+  const lowerType = (type || "").toLowerCase();
+  const lowerUrl = (url || "").toLowerCase();
+
+  if (lowerType.includes("wordprocessingml") || lowerType.includes("msword") || lowerType.includes("officedocument.word")) {
+    return true;
+  }
+  if (/\.(docx?|rtf|odt|dotx?)$/i.test(lowerName)) {
+    return true;
+  }
+  if (
+    lowerUrl.startsWith("data:application/vnd.openxmlformats-officedocument.wordprocessingml") ||
+    lowerUrl.startsWith("data:application/msword") ||
+    /\.(docx?|rtf|odt)(\?|$)/i.test(lowerUrl)
+  ) {
+    return true;
+  }
+  return false;
 }
 
 export function isImageFile(name: string = "", url: string = "", type: string = ""): boolean {
+  if (isDocFile(name, url, type)) return false;
+  if (isPdfFile(name, url, type)) return false;
   if (type && type.toLowerCase().startsWith("image/")) return true;
   if (/\.(png|jpe?g|gif|webp|svg|bmp|ico|avif)$/i.test(name)) return true;
   if (url.startsWith("data:image/")) return true;
@@ -53,6 +77,157 @@ export function decodeDataUrlToText(dataUrl: string): string {
   }
 }
 
+export async function extractDocxText(dataUrlOrUrl: string): Promise<string | null> {
+  try {
+    let bytes: Uint8Array;
+    if (dataUrlOrUrl.startsWith("data:")) {
+      const commaIdx = dataUrlOrUrl.indexOf(",");
+      if (commaIdx === -1) return null;
+      const rawBase64 = dataUrlOrUrl.slice(commaIdx + 1);
+      const binStr = atob(rawBase64);
+      bytes = new Uint8Array(binStr.length);
+      for (let i = 0; i < binStr.length; i++) {
+        bytes[i] = binStr.charCodeAt(i);
+      }
+    } else {
+      const res = await fetch(dataUrlOrUrl);
+      const buf = await res.arrayBuffer();
+      bytes = new Uint8Array(buf);
+    }
+
+    // 1. Try finding Central Directory End (0x50, 0x4B, 0x05, 0x06)
+    let xmlStr = "";
+    let eocdOffset = -1;
+    for (let i = bytes.length - 22; i >= 0; i--) {
+      if (bytes[i] === 0x50 && bytes[i + 1] === 0x4B && bytes[i + 2] === 0x05 && bytes[i + 3] === 0x06) {
+        eocdOffset = i;
+        break;
+      }
+    }
+
+    if (eocdOffset !== -1) {
+      const cdOffset =
+        bytes[eocdOffset + 16] |
+        (bytes[eocdOffset + 17] << 8) |
+        (bytes[eocdOffset + 18] << 16) |
+        (bytes[eocdOffset + 19] << 24);
+      const cdCount = bytes[eocdOffset + 10] | (bytes[eocdOffset + 11] << 8);
+      let curr = cdOffset;
+      for (let c = 0; c < cdCount && curr + 46 < bytes.length; c++) {
+        if (bytes[curr] === 0x50 && bytes[curr + 1] === 0x4B && bytes[curr + 2] === 0x01 && bytes[curr + 3] === 0x02) {
+          const method = bytes[curr + 10] | (bytes[curr + 11] << 8);
+          const compSize =
+            bytes[curr + 20] |
+            (bytes[curr + 21] << 8) |
+            (bytes[curr + 22] << 16) |
+            (bytes[curr + 23] << 24);
+          const fnLen = bytes[curr + 28] | (bytes[curr + 29] << 8);
+          const extraLen = bytes[curr + 30] | (bytes[curr + 31] << 8);
+          const commentLen = bytes[curr + 32] | (bytes[curr + 33] << 8);
+          const localHeaderOffset =
+            bytes[curr + 42] |
+            (bytes[curr + 43] << 8) |
+            (bytes[curr + 44] << 16) |
+            (bytes[curr + 45] << 24);
+          const filename = new TextDecoder().decode(bytes.slice(curr + 46, curr + 46 + fnLen));
+
+          if (filename === "word/document.xml") {
+            const localFnLen = bytes[localHeaderOffset + 26] | (bytes[localHeaderOffset + 27] << 8);
+            const localExtraLen = bytes[localHeaderOffset + 28] | (bytes[localHeaderOffset + 29] << 8);
+            const dataStart = localHeaderOffset + 30 + localFnLen + localExtraLen;
+            const fileData = bytes.slice(dataStart, dataStart + compSize);
+
+            if (method === 0) {
+              xmlStr = new TextDecoder().decode(fileData);
+            } else if (method === 8 && typeof DecompressionStream !== "undefined") {
+              const ds = new DecompressionStream("deflate-raw");
+              const writer = ds.writable.getWriter();
+              writer.write(fileData);
+              writer.close();
+              const response = new Response(ds.readable);
+              xmlStr = await response.text();
+            }
+            break;
+          }
+          curr += 46 + fnLen + extraLen + commentLen;
+        } else {
+          break;
+        }
+      }
+    }
+
+    // 2. Fallback: Local file header scan if central directory wasn't found
+    if (!xmlStr) {
+      let offset = 0;
+      while (offset + 30 < bytes.length) {
+        if (bytes[offset] === 0x50 && bytes[offset + 1] === 0x4B && bytes[offset + 2] === 0x03 && bytes[offset + 3] === 0x04) {
+          const compMethod = bytes[offset + 8] | (bytes[offset + 9] << 8);
+          const compSize =
+            bytes[offset + 18] |
+            (bytes[offset + 19] << 8) |
+            (bytes[offset + 20] << 16) |
+            (bytes[offset + 21] << 24);
+          const fnLen = bytes[offset + 26] | (bytes[offset + 27] << 8);
+          const extraLen = bytes[offset + 28] | (bytes[offset + 29] << 8);
+          const filename = new TextDecoder().decode(bytes.slice(offset + 30, offset + 30 + fnLen));
+          const dataStart = offset + 30 + fnLen + extraLen;
+
+          if (filename === "word/document.xml" && compSize > 0) {
+            const fileData = bytes.slice(dataStart, dataStart + compSize);
+            if (compMethod === 0) {
+              xmlStr = new TextDecoder().decode(fileData);
+            } else if (compMethod === 8 && typeof DecompressionStream !== "undefined") {
+              const ds = new DecompressionStream("deflate-raw");
+              const writer = ds.writable.getWriter();
+              writer.write(fileData);
+              writer.close();
+              const response = new Response(ds.readable);
+              xmlStr = await response.text();
+            }
+            break;
+          }
+          offset = dataStart + (compSize > 0 ? compSize : 1);
+        } else {
+          offset++;
+        }
+      }
+    }
+
+    if (xmlStr) {
+      const decodeXml = (s: string) =>
+        s
+          .replace(/&amp;/g, "&")
+          .replace(/&lt;/g, "<")
+          .replace(/&gt;/g, ">")
+          .replace(/&quot;/g, '"')
+          .replace(/&apos;/g, "'");
+
+      const pRegex = /<w:p(?:\s[^>]*)?>([\s\S]*?)<\/w:p>/g;
+      const paragraphs: string[] = [];
+      let pMatch: RegExpExecArray | null;
+      while ((pMatch = pRegex.exec(xmlStr)) !== null) {
+        const tRegex = /<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>/g;
+        let pText = "";
+        let tMatch: RegExpExecArray | null;
+        while ((tMatch = tRegex.exec(pMatch[1])) !== null) {
+          pText += decodeXml(tMatch[1]);
+        }
+        if (pText.trim()) {
+          paragraphs.push(pText.trim());
+        }
+      }
+      if (paragraphs.length > 0) {
+        return paragraphs.join("\n\n");
+      }
+    }
+
+    return null;
+  } catch (err) {
+    console.error("Error extracting text from DOCX:", err);
+    return null;
+  }
+}
+
 /**
  * Parses markdown images, data URLs, and image links out of a message string.
  */
@@ -80,6 +255,7 @@ export function extractAttachments(text: string): {
         url,
         isImage: isImageFile(name, url, type),
         isText: isTextFile(name, url, type),
+        isDoc: isDocFile(name, url, type),
       });
     }
   }
@@ -97,6 +273,7 @@ export function extractAttachments(text: string): {
         url,
         isImage: isImageFile(name, url),
         isText: isTextFile(name, url),
+        isDoc: isDocFile(name, url),
       });
     }
   }
@@ -143,6 +320,8 @@ export const TicketAttachmentRenderer: React.FC<TicketAttachmentRendererProps> =
   const [activeModalAttachment, setActiveModalAttachment] = useState<ExtractedAttachment | null>(null);
   const [textContent, setTextContent] = useState<string>("");
   const [loadingText, setLoadingText] = useState<boolean>(false);
+  const [docContent, setDocContent] = useState<string>("");
+  const [loadingDoc, setLoadingDoc] = useState<boolean>(false);
   const [copiedText, setCopiedText] = useState<boolean>(false);
 
   const { cleanText, attachments } = extractAttachments(content);
@@ -151,6 +330,8 @@ export const TicketAttachmentRenderer: React.FC<TicketAttachmentRendererProps> =
     if (!activeModalAttachment) {
       setTextContent("");
       setLoadingText(false);
+      setDocContent("");
+      setLoadingDoc(false);
       setCopiedText(false);
       return;
     }
@@ -185,6 +366,19 @@ export const TicketAttachmentRenderer: React.FC<TicketAttachmentRendererProps> =
         .finally(() => {
           setLoadingText(false);
         });
+    } else if (isDocFile(name, url)) {
+      setLoadingDoc(true);
+      extractDocxText(url)
+        .then((txt) => {
+          setDocContent(txt || "");
+        })
+        .catch((err) => {
+          console.error("Error reading DOCX attachment:", err);
+          setDocContent("");
+        })
+        .finally(() => {
+          setLoadingDoc(false);
+        });
     }
   }, [activeModalAttachment]);
 
@@ -193,7 +387,7 @@ export const TicketAttachmentRenderer: React.FC<TicketAttachmentRendererProps> =
     try {
       const link = document.createElement("a");
       link.href = url;
-      link.download = filename || (isTextFile(filename, url) ? "document.txt" : "downloaded-image.png");
+      link.download = filename || (isDocFile(filename, url) ? "document.docx" : isTextFile(filename, url) ? "document.txt" : "downloaded-image.png");
       document.body.appendChild(link);
       link.click();
       if (link.parentNode) link.parentNode.removeChild(link);
@@ -443,8 +637,8 @@ export const TicketAttachmentRenderer: React.FC<TicketAttachmentRendererProps> =
           <div
             style={{
               position: "relative",
-              width: isTextFile(activeModalAttachment.name, activeModalAttachment.url) ? "100%" : "auto",
-              maxWidth: isTextFile(activeModalAttachment.name, activeModalAttachment.url) ? "780px" : "92vw",
+              width: (isTextFile(activeModalAttachment.name, activeModalAttachment.url) || isDocFile(activeModalAttachment.name, activeModalAttachment.url)) ? "100%" : "auto",
+              maxWidth: (isTextFile(activeModalAttachment.name, activeModalAttachment.url) || isDocFile(activeModalAttachment.name, activeModalAttachment.url)) ? "780px" : "92vw",
               maxHeight: "92vh",
               backgroundColor: "#1E293B",
               borderRadius: "16px",
@@ -470,7 +664,7 @@ export const TicketAttachmentRenderer: React.FC<TicketAttachmentRendererProps> =
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
-                {isTextFile(activeModalAttachment.name, activeModalAttachment.url) ? (
+                {isTextFile(activeModalAttachment.name, activeModalAttachment.url) || isDocFile(activeModalAttachment.name, activeModalAttachment.url) ? (
                   <FileText size={18} color="#FF5500" style={{ flexShrink: 0 }} />
                 ) : (
                   <ImageIcon size={18} color="#FF5500" style={{ flexShrink: 0 }} />
@@ -480,12 +674,14 @@ export const TicketAttachmentRenderer: React.FC<TicketAttachmentRendererProps> =
                 </span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
-                {isTextFile(activeModalAttachment.name, activeModalAttachment.url) && textContent && (
+                {((isTextFile(activeModalAttachment.name, activeModalAttachment.url) && textContent) ||
+                  (isDocFile(activeModalAttachment.name, activeModalAttachment.url) && docContent)) && (
                   <button
                     type="button"
                     onClick={() => {
+                      const textToCopy = isDocFile(activeModalAttachment.name, activeModalAttachment.url) ? docContent : textContent;
                       if (typeof navigator !== "undefined" && navigator.clipboard) {
-                        navigator.clipboard.writeText(textContent);
+                        navigator.clipboard.writeText(textToCopy);
                         setCopiedText(true);
                         setTimeout(() => setCopiedText(false), 2000);
                       }
@@ -507,7 +703,7 @@ export const TicketAttachmentRenderer: React.FC<TicketAttachmentRendererProps> =
                     title="Copy full text content"
                   >
                     {copiedText ? <Check size={14} /> : <Copy size={14} />}
-                    <span>{copiedText ? "Copied!" : "Copy"}</span>
+                    <span>{copiedText ? "Copied!" : "Copy Text"}</span>
                   </button>
                 )}
                 <button
@@ -583,6 +779,117 @@ export const TicketAttachmentRenderer: React.FC<TicketAttachmentRendererProps> =
                   >
                     {textContent || "(Empty file content)"}
                   </pre>
+                )}
+              </div>
+            ) : isDocFile(activeModalAttachment.name, activeModalAttachment.url) ? (
+              <div
+                style={{
+                  width: "100%",
+                  maxHeight: "72vh",
+                  backgroundColor: "#0F172A",
+                  borderRadius: "8px",
+                  border: "1px solid #334155",
+                  padding: "18px 20px",
+                  overflow: "auto",
+                  boxSizing: "border-box",
+                }}
+              >
+                {loadingDoc ? (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 0", color: "#94A3B8", gap: "8px" }}>
+                    <Loader2 size={18} className="animate-spin" />
+                    <span>Loading document preview...</span>
+                  </div>
+                ) : docContent ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        paddingBottom: "10px",
+                        borderBottom: "1px solid #334155",
+                        color: "#94A3B8",
+                        fontSize: "0.8rem",
+                      }}
+                    >
+                      <FileText size={16} color="#38BDF8" />
+                      <span>Document Content Preview ({activeModalAttachment.name})</span>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                      {docContent.split("\n\n").map((para, pIdx) => (
+                        <p
+                          key={pIdx}
+                          style={{
+                            margin: 0,
+                            color: "#F8FAFC",
+                            fontSize: "0.92rem",
+                            lineHeight: "1.7",
+                            fontFamily: "var(--font-inter), system-ui, -apple-system, sans-serif",
+                            whiteSpace: "pre-wrap",
+                            wordBreak: "break-word",
+                            userSelect: "text",
+                          }}
+                        >
+                          {para}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      padding: "36px 16px",
+                      textAlign: "center",
+                      gap: "14px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "56px",
+                        height: "56px",
+                        borderRadius: "14px",
+                        backgroundColor: "#1E3A8A",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <FileText size={30} color="#60A5FA" />
+                    </div>
+                    <div>
+                      <div style={{ color: "#F8FAFC", fontWeight: 700, fontSize: "15px", marginBottom: "4px" }}>
+                        {activeModalAttachment.name}
+                      </div>
+                      <div style={{ color: "#94A3B8", fontSize: "13px" }}>
+                        Word Document ready to view and download
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => handleDownload(e, activeModalAttachment.url, activeModalAttachment.name)}
+                      style={{
+                        backgroundColor: "#FF5500",
+                        color: "#FFFFFF",
+                        border: "none",
+                        borderRadius: "8px",
+                        padding: "10px 18px",
+                        fontWeight: 700,
+                        fontSize: "13px",
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        boxShadow: "0 4px 12px rgba(255, 85, 0, 0.25)",
+                      }}
+                    >
+                      <Download size={16} />
+                      <span>Download &amp; Open Document</span>
+                    </button>
+                  </div>
                 )}
               </div>
             ) : isPdfFile(activeModalAttachment.name, activeModalAttachment.url) ? (
