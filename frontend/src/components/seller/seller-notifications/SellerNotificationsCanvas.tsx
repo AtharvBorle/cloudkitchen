@@ -24,6 +24,7 @@ import {
   SellerNotificationItem,
   NotificationCategory,
   formatNotificationTime,
+  formatNotificationMessage,
 } from "./notificationData";
 import { useSellerNotifications } from "@/hooks/useSellerNotifications";
 import styles from "./SellerNotificationsCanvas.module.css";
@@ -554,7 +555,7 @@ export const SellerNotificationsCanvas: React.FC<SellerNotificationsCanvasProps>
                   </div>
 
                   {/* Message */}
-                  <p className={styles.cardMessage}>{item.message}</p>
+                  <p className={styles.cardMessage}>{formatNotificationMessage(item.message)}</p>
 
                   {/* Detailed Briefing / Action Context */}
                   {item.details && (

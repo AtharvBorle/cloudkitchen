@@ -25,7 +25,7 @@ import {
 import styles from "./Topbar.module.css";
 import { useSellerProfile, computeInitials, isGenericFallbackName, toggleSellerOnlineStatus } from "@/hooks/useSellerProfile";
 import { useSellerNotifications, broadcastShopTimingAlert } from "@/hooks/useSellerNotifications";
-import { NotificationCategory, formatNotificationTime } from "../seller-notifications/notificationData";
+import { NotificationCategory, formatNotificationTime, formatNotificationMessage } from "../seller-notifications/notificationData";
 
 export interface TopbarProps {
   title?: string;
@@ -739,7 +739,7 @@ export default function Topbar({
                             </div>
                           </div>
 
-                          <p className={styles.itemMessage}>{item.message}</p>
+                          <p className={styles.itemMessage}>{formatNotificationMessage(item.message)}</p>
 
                           <div className={styles.itemFooter}>
                             <span className={`${styles.itemTag} ${getTagColorClass(tagInfo.color)}`}>

@@ -153,6 +153,10 @@ function ResponsiveSellerOrdersContent() {
         createdAt: o.createdAt,
         cancelledBy: o.cancelledBy || (isCancelledByUser ? "USER" : null),
         cancellationReason: o.cancellationReason || o.refund?.reason || null,
+        deliveryPersonId: o.deliveryPersonId || o.deliveryPerson?.id || null,
+        deliveryPersonName: o.deliveryPerson?.name || null,
+        riderName: o.deliveryPerson?.name || null,
+        riderPhone: o.deliveryPerson?.phone || null,
       };
     });
   }, [orders]);
