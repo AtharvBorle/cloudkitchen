@@ -36,6 +36,7 @@ export interface TaxCalculationResult {
     deliveryTaxRate: number;
     items: TaxBreakdownItem[];
     productGross: number;
+    itemsSubtotal: number;
     productDiscount: number;
     productTaxable: number;
     productGst: number;
@@ -279,6 +280,7 @@ export function calculateOrderTax(params: CalculateTaxParams): TaxCalculationRes
         deliveryTaxRate,
         items: breakdownItems,
         productGross,
+        itemsSubtotal: productGross,
         productDiscount,
         productTaxable,
         productGst,
@@ -321,6 +323,9 @@ export function getOrderBreakdown(order: any): TaxCalculationResult {
             ) {
                 if (typeof parsed.productGross !== "number") {
                     parsed.productGross = round2(parsed.items.reduce((acc: number, it: any) => acc + (Number(it.grossAmount) || 0), 0));
+                }
+                if (typeof parsed.itemsSubtotal !== "number") {
+                    parsed.itemsSubtotal = parsed.productGross;
                 }
                 return parsed;
             }

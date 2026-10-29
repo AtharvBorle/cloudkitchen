@@ -65,7 +65,7 @@ const TICKET_CATEGORIES = [
   "Operations",
   "Billing & Payouts",
   "Technical",
-  "Meal Subscriptions",
+  // "Meal Subscriptions",
   "Feature Request",
   "General",
 ];

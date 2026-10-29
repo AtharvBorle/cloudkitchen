@@ -61,10 +61,31 @@ export const UnifiedInvoiceView: React.FC<UnifiedInvoiceViewProps> = ({ order, i
 
   // Dynamic Customer Information
   const customerName = order.user?.name || order.customerName || "Customer";
-  const customerAddress = order.deliveryAddress?.split(" | Loc:")[0] || order.deliveryAddress || "Standard Delivery Location";
+  const rawCustomerAddress = order.deliveryAddress?.split(" | Loc:")[0] || order.deliveryAddress || "Standard Delivery Location";
+  const customerAddress = rawCustomerAddress.replace(/^\[[^\]]+\]\s*/i, "").trim() || "Standard Delivery Location";
   const customerEmail = order.user?.email || "";
   const customerPhone = order.customerPhone || order.user?.phone || "";
-  const addressType = order.addressType || (customerAddress.toLowerCase().includes("home") ? "Home" : "Workplace / Other");
+  const rawType =
+    order.addressType ||
+    (order.deliveryAddress?.match(/^\[(Home|Workplace|Work|Other)\]/i)?.[1]) ||
+    "";
+  let addressType = "Home";
+  if (rawType) {
+    const upper = rawType.toUpperCase();
+    if (upper.includes("WORK") || upper.includes("OFFICE")) {
+      addressType = "Workplace";
+    } else if (upper.includes("OTHER")) {
+      addressType = "Other";
+    } else {
+      addressType = "Home";
+    }
+  } else {
+    if (customerAddress.toLowerCase().includes("work") || customerAddress.toLowerCase().includes("office")) {
+      addressType = "Workplace";
+    } else {
+      addressType = "Home";
+    }
+  }
 
   // Verification URL for QR code
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://dev.neocloudbites.com";
@@ -92,12 +113,12 @@ export const UnifiedInvoiceView: React.FC<UnifiedInvoiceViewProps> = ({ order, i
             sheet.style.width = "860px";
             sheet.style.maxWidth = "860px";
             sheet.style.minWidth = "860px";
-            const tableWrapper = sheet.querySelector(".invoice-table-wrapper");
+            const tableWrapper = sheet.querySelector(".invoice-table-wrapper") as HTMLElement | null;
             if (tableWrapper) {
               tableWrapper.style.overflow = "visible";
               tableWrapper.style.width = "100%";
             }
-            const table = sheet.querySelector(".invoice-table-wrapper table");
+            const table = sheet.querySelector(".invoice-table-wrapper table") as HTMLElement | null;
             if (table) {
               table.style.minWidth = "100%";
               table.style.width = "100%";
