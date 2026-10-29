@@ -802,38 +802,42 @@ export const ResponsiveSellerOrdersDetails: React.FC<
             />
           </section>
 
-          {/* 5. Bottom Action Buttons */}
-          <div className={styles.bottomActions}>
-            <button
-              type="button"
-              className={`${styles.callRiderButton} ${isCancelled ? styles.callRiderButtonDisabled : ""}`}
-              disabled={isCancelled}
-              onClick={handleCallRider}
-              title={isCancelled ? "Order cancelled - rider calls disabled" : undefined}
-            >
-              Call Rider
-            </button>
+          {/* 5. Bottom Action Buttons (Only displayed after order is accepted and applicable) */}
+          {currentStatus !== "Order Placed" && !isCancelled && (
+            <div className={styles.bottomActions}>
+              {Boolean(riderPhone || riderName) && currentStatus !== "Delivered" && (
+                <button
+                  type="button"
+                  className={styles.callRiderButton}
+                  onClick={handleCallRider}
+                >
+                  Call Rider
+                </button>
+              )}
 
-            <button
-              type="button"
-              className={`${styles.assignRiderButton} ${isCancelled || currentStatus === "Delivered" ? styles.assignRiderButtonDisabled : ""}`}
-              disabled={isCancelled || currentStatus === "Delivered"}
-              onClick={() => {
-                if (!isCancelled && currentStatus !== "Delivered") {
-                  router.push(`/seller/orders/assign-rider?orderId=${encodeURIComponent(orderId)}`);
+              <button
+                type="button"
+                className={`${styles.assignRiderButton} ${currentStatus === "Delivered" ? styles.assignRiderButtonDisabled : ""}`}
+                disabled={currentStatus === "Delivered"}
+                onClick={() => {
+                  if (currentStatus !== "Delivered") {
+                    router.push(`/seller/orders/assign-rider?orderId=${encodeURIComponent(orderId)}`);
+                  }
+                }}
+                title={
+                  currentStatus === "Delivered"
+                    ? "Order completed and delivered"
+                    : undefined
                 }
-              }}
-              title={
-                isCancelled
-                  ? "Order cancelled - rider assignment disabled"
-                  : currentStatus === "Delivered"
-                  ? "Order completed and delivered"
-                  : undefined
-              }
-            >
-              {currentStatus === "Delivered" ? "Order Delivered ✓" : "Assign / Reassign Rider →"}
-            </button>
-          </div>
+              >
+                {currentStatus === "Delivered"
+                  ? "Order Delivered ✓"
+                  : riderName
+                  ? "Reassign Rider →"
+                  : "Assign Delivery Rider →"}
+              </button>
+            </div>
+          )}
         </main>
 
         {/* Toast Notification */}
