@@ -382,6 +382,8 @@
   color: #334155;
   margin: 0;
   line-height: 1.45;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .cardDetails {
@@ -393,6 +395,8 @@
   margin-top: 4px;
   line-height: 1.45;
   border: 1px solid #F1F5F9;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 /* Card Action Footer */

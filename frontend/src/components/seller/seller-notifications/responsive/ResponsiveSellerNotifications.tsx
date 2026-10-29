@@ -48,7 +48,7 @@ const TABS: TabItem[] = [
 
 import { useSellerProfile } from "@/hooks/useSellerProfile";
 import { useSellerNotifications } from "@/hooks/useSellerNotifications";
-import { formatNotificationTime } from "../notificationData";
+import { formatNotificationTime, formatNotificationMessage } from "../notificationData";
 
 export interface ResponsiveSellerNotificationsProps {
   ownerName?: string;
@@ -572,7 +572,7 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
                       </h4>
                     </div>
 
-                    <p className={styles.cardMessage}>{notif.message}</p>
+                    <p className={styles.cardMessage}>{formatNotificationMessage(notif.message)}</p>
 
                     {(isExpanded || notif.details) && (
                       <div className={styles.cardDetails}>
