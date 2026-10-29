@@ -1933,7 +1933,7 @@ export default function MyOrdersView() {
                             </div>
                           </div>
 
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+                          <div className={styles.activeOrderActionsRow}>
                             {(order.rawStatus === "PENDING" || order.rawStatus === "PLACED") && (
                               <button
                                 type="button"
@@ -1951,16 +1951,15 @@ export default function MyOrdersView() {
                             <button
                               type="button"
                               className={styles.trackLiveBtn}
-                              style={{ marginBottom: (order.rawStatus === "PENDING" || order.rawStatus === "PLACED") ? "14px" : undefined }}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleSelectOrder(order);
                               }}
-                              title={`View order details for #${order.orderId}`}
-                              aria-label={`View order details for #${order.orderId}`}
+                              title={`Track order details for #${order.orderId}`}
+                              aria-label={`Track order details for #${order.orderId}`}
                             >
                               <Navigation size={14} strokeWidth={2.5} />
-                              <span>View Order</span>
+                              <span>Track Order</span>
                             </button>
                           </div>
                         </div>
