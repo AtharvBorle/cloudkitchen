@@ -155,6 +155,13 @@ export const ResponsiveSellerOrdersDetails: React.FC<
       return;
     }
 
+    // Guard: Prevent advancing to "On the way" without assigned delivery partner
+    if (targetStep === "On the way" && !riderName) {
+      showToast("Please assign a delivery partner before marking order out for delivery.");
+      router.push(`/seller/orders/assign-rider?orderId=${encodeURIComponent(orderId)}`);
+      return;
+    }
+
     try {
       setUpdatingStatus(true);
       if (onStatusChange) {
@@ -697,7 +704,14 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                     <button
                       type="button"
                       className={riderName ? styles.advanceStepBtn : styles.secondaryActionBtn}
-                      onClick={() => handleUpdateStatus("On the way")}
+                      onClick={() => {
+                        if (!riderName) {
+                          showToast("Please assign a delivery partner before marking order out for delivery.");
+                          router.push(`/seller/orders/assign-rider?orderId=${encodeURIComponent(orderId)}`);
+                          return;
+                        }
+                        handleUpdateStatus("On the way");
+                      }}
                       disabled={updatingStatus}
                     >
                       {updatingStatus ? <Loader2 size={16} className={styles.spin} /> : <Bike size={16} />}

@@ -78,6 +78,10 @@ export interface ResponsiveOrderItem {
   createdAt?: string;
   cancelledBy?: string | null;
   cancellationReason?: string | null;
+  deliveryPersonId?: string | null;
+  deliveryPersonName?: string | null;
+  riderName?: string | null;
+  riderPhone?: string | null;
 }
 
 export function normalizeStatus(
@@ -915,27 +919,42 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
 
                       {effStatus === "Preparing" && (
                         <div className={styles.actionsRow}>
-                          <button
-                            type="button"
-                            className={styles.acceptButton}
-                            onClick={async (e) => {
-                              e.stopPropagation();
-                              try {
-                                await fetchApi(`/api/seller/orders/${order.id}`, {
-                                  method: "PATCH",
-                                  headers: { "Content-Type": "application/json" },
-                                  body: JSON.stringify({ status: "OUT_FOR_DELIVERY" }),
-                                });
-                                setOrdersList((prev) =>
-                                  prev.map((o) => (o.id === order.id ? { ...o, status: "Out for Delivery" as const } : o))
-                                );
-                              } catch (err) {
-                                console.error(err);
-                              }
-                            }}
-                          >
-                            Ready for Delivery
-                          </button>
+                          {!order.deliveryPersonId && !order.riderName && !order.deliveryPersonName ? (
+                            <button
+                              type="button"
+                              className={styles.acceptButton}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(`/seller/orders/assign-rider?orderId=${encodeURIComponent(order.id)}`);
+                              }}
+                              title="Assign Delivery Partner"
+                            >
+                              <Bike size={16} style={{ display: "inline-block", verticalAlign: "middle", marginRight: "6px" }} />
+                              Assign Rider
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className={styles.acceptButton}
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                try {
+                                  await fetchApi(`/api/seller/orders/${order.id}`, {
+                                    method: "PATCH",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ status: "OUT_FOR_DELIVERY" }),
+                                  });
+                                  setOrdersList((prev) =>
+                                    prev.map((o) => (o.id === order.id ? { ...o, status: "Out for Delivery" as const } : o))
+                                  );
+                                } catch (err) {
+                                  console.error(err);
+                                }
+                              }}
+                            >
+                              Ready for Delivery
+                            </button>
+                          )}
                         </div>
                       )}
 
