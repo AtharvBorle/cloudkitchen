@@ -615,7 +615,7 @@ export const UnifiedInvoiceView: React.FC<UnifiedInvoiceViewProps> = ({ order, i
             }}
           >
             <div>
-              <strong>NeoCloudBites</strong> Pvt. Ltd. • Support: help@neocloudbites.com
+              <strong>NeoCloudBites</strong> Pvt. Ltd. • Support: hello@neocloudbites.com
             </div>
             <div>
               Page 1 of 1 • System Generated on {formattedDateOnly}
