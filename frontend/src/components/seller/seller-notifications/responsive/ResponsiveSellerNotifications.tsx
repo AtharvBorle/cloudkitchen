@@ -21,6 +21,7 @@ import {
   Inbox,
   Search,
   Trash2,
+  CheckCheck,
 } from "lucide-react";
 import ResponsiveNavMenu from "../../nav/ResponsiveNavMenu";
 import {
@@ -498,6 +499,39 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
             );
           })}
         </div>
+
+
+        {/* Available Notification Management Bar */}
+        {notifications.length > 0 && (
+          <div className={styles.managementBar}>
+            <span className={styles.managementCount}>
+              {filteredNotifications.length} {filteredNotifications.length === 1 ? "notification" : "notifications"}
+            </span>
+            <div className={styles.managementActions}>
+              {unreadCount > 0 && (
+                <button
+                  type="button"
+                  className={styles.manageTextBtn}
+                  onClick={handleMarkAllRead}
+                  title="Mark all notifications as read"
+                >
+                  <CheckCheck size={13} />
+                  <span>Mark all read</span>
+                </button>
+              )}
+              <button
+                type="button"
+                className={styles.manageClearBtn}
+                onClick={handleClearAll}
+                title="Clear all notifications"
+                aria-label="Clear all notifications"
+              >
+                <Trash2 size={13} />
+                <span>Clear All</span>
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Notification List */}
         <main className={styles.contentArea}>

@@ -268,6 +268,74 @@
   color: #FFFFFF;
 }
 
+
+/* Management Bar */
+.managementBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 16px 10px 16px;
+  box-sizing: border-box;
+}
+
+.managementCount {
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748B;
+}
+
+.managementActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.manageTextBtn {
+  background: none;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: #EA580C;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  font-family: inherit;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.manageTextBtn:active {
+  background-color: #FFF7ED;
+}
+
+.manageClearBtn {
+  background: none;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748B;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  font-family: inherit;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.manageClearBtn:hover {
+  color: #EF4444;
+}
+
+.manageClearBtn:active {
+  background-color: #FEF2F2;
+  color: #DC2626;
+}
+
 /* Notification List */
 .contentArea {
   padding: 0 16px;
