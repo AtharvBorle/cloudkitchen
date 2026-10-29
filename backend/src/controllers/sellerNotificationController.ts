@@ -51,9 +51,10 @@ function calculateTimeAgo(date: Date): string {
 function cleanNotificationMessage(rawText?: string | null): string {
     if (!rawText) return "";
     let clean = String(rawText);
-    clean = clean.replace(/data:[a-zA-Z0-9+.-]+\/[a-zA-Z0-9+.-]+;base64,[A-Za-z0-9+/=.]*/gi, "");
-    clean = clean.replace(/\[Attachment:\s*([^|\]\r\n]+)[^\]]*\]?/gi, "[Attachment: $1]");
-    clean = clean.replace(/\[Attachment:\s*([^|\]\r\n]+)\|.*$/gi, "[Attachment: $1]");
+    clean = clean.replace(/data:[a-zA-Z0-9+.-]+\/[a-zA-Z0-9+.-]+;base64,[^\s\r\n]*/gi, "");
+    clean = clean.replace(/\[Attachment:\s*([^|\]\r\n]+)(?:\|[^\s\]\r\n]*)?\]?/gi, "📎 Attachment: $1");
+    clean = clean.replace(/📎 Attachment:\s*([^|]+)\|.*$/gi, "📎 Attachment: $1");
+    clean = clean.replace(/\[Attachment:\s*([^|\]\r\n]+)[^\]]*\]/gi, "📎 Attachment: $1");
     clean = clean.replace(/\s+/g, " ").trim();
     if (clean.length > 150) {
         return clean.slice(0, 147) + "...";
