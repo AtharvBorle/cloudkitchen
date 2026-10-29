@@ -20,7 +20,7 @@ import {
     Phone,
     Zap,
     Utensils,
-    ArrowLeft
+    ArrowDown
 } from "lucide-react";
 import { fetchApi } from "@/lib/fetch-api";
 import { TicketAttachmentRenderer } from "@/components/common/TicketAttachmentRenderer";
@@ -382,9 +382,25 @@ export default function ChatbotWidget() {
     }, []);
 
     const messageEndRef = useRef<HTMLDivElement>(null);
+    const chatBodyRef = useRef<HTMLDivElement>(null);
+    const [isScrolledUp, setIsScrolledUp] = useState(false);
 
     const scrollToBottom = () => {
+        if (chatBodyRef.current) {
+            chatBodyRef.current.scrollTo({
+                top: chatBodyRef.current.scrollHeight,
+                behavior: "smooth"
+            });
+        }
         messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        setIsScrolledUp(false);
+    };
+
+    const handleChatScroll = () => {
+        if (!chatBodyRef.current) return;
+        const { scrollTop, scrollHeight, clientHeight } = chatBodyRef.current;
+        const away = scrollHeight - scrollTop - clientHeight > 40;
+        setIsScrolledUp(away);
     };
 
     useEffect(() => {
@@ -1777,9 +1793,9 @@ Details: Category request submitted via chatbot assistant.`;
                         </div>
 
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", pointerEvents: "auto" }}>
-                            {history.length > 0 && (
+                            {(isScrolledUp || history.length > 0) && (
                                 <button
-                                    onClick={handleGoBack}
+                                    onClick={scrollToBottom}
                                     style={{
                                         width: "32px",
                                         height: "32px",
@@ -1795,15 +1811,16 @@ Details: Category request submitted via chatbot assistant.`;
                                     }}
                                     onMouseEnter={(e) => {
                                         e.currentTarget.style.backgroundColor = "#FEECE5";
-                                        e.currentTarget.style.color = "#EF4444";
+                                        e.currentTarget.style.color = "#FF6B00";
                                     }}
                                     onMouseLeave={(e) => {
                                         e.currentTarget.style.backgroundColor = "#FFFFFF";
                                         e.currentTarget.style.color = "#64748B";
                                     }}
-                                    title="Go back"
+                                    title="Scroll to bottom"
+                                    aria-label="Scroll to bottom"
                                 >
-                                    <ArrowLeft size={16} />
+                                    <ArrowDown size={16} />
                                 </button>
                             )}
                             <button
@@ -1891,15 +1908,19 @@ Details: Category request submitted via chatbot assistant.`;
                 </div>
 
                     {/* Chat Messages Body */}
-                    <div style={{
-                        flex: 1,
-                        padding: "16px 18px",
-                        overflowY: "auto",
-                        backgroundColor: "#FFFDFB",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "14px"
-                    }}>
+                    <div
+                        ref={chatBodyRef}
+                        onScroll={handleChatScroll}
+                        style={{
+                            flex: 1,
+                            padding: "16px 18px",
+                            overflowY: "auto",
+                            backgroundColor: "#FFFDFB",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "14px"
+                        }}
+                    >
                         {/* Centered Date Header */}
                         <div style={{
                             textAlign: "center",
