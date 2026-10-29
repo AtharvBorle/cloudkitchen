@@ -3542,7 +3542,7 @@ function FoodExploreContent() {
             border-bottom-right-radius: 28px !important;
             border-bottom: none !important;
             box-shadow: 0 10px 24px -4px rgba(0, 0, 0, 0.05), 0 4px 12px -2px rgba(0, 0, 0, 0.02) !important;
-            overflow: hidden !important;
+            overflow: visible !important;
             width: 100% !important;
             margin: 0 !important;
             background-color: #FFFFFF !important;
@@ -3553,6 +3553,7 @@ function FoodExploreContent() {
             padding-bottom: 12px !important;
             width: 100% !important;
             box-sizing: border-box !important;
+            overflow: visible !important;
           }
           .food-explore-desktop-hero,
           .food-explore-desktop-categories,
