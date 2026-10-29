@@ -170,6 +170,7 @@ model Order {
   status               String                @default("PENDING")
   items                String                @default("[]")
   deliveryAddress      String                @default("Pickup")
+  addressType          String?               @default("Home")
   customerPhone        String                @default("")
   paymentMethod        String
   totalAmount          Float

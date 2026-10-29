@@ -171,7 +171,22 @@ export const getSellerOrderById = async (orderId: string) => {
         });
     }
 
-    return { order: { ...order, appliedCoupon } };
+    let finalAddressType = (order as any).addressType;
+    if (!finalAddressType && order.deliveryAddress) {
+        const bracketMatch = order.deliveryAddress.match(/^\[(Home|Workplace|Work|Other)\]/i);
+        if (bracketMatch) {
+            finalAddressType = bracketMatch[1];
+        }
+    }
+    if (finalAddressType && (finalAddressType.toUpperCase() === "WORK" || finalAddressType.toUpperCase() === "WORKPLACE")) {
+        finalAddressType = "Workplace";
+    } else if (finalAddressType && finalAddressType.toUpperCase() === "OTHER") {
+        finalAddressType = "Other";
+    } else if (!finalAddressType) {
+        finalAddressType = "Home";
+    }
+
+    return { order: { ...order, addressType: finalAddressType, appliedCoupon } };
 };
 
 export const updateSellerOrder = async (req: Request, orderId: string) => {
