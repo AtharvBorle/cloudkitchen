@@ -892,3 +892,72 @@
     transform: translate(-50%, 0);
   }
 }
+
+/* Preparing State Actions Group */
+.preparingActionBox {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.secondaryActionBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1.5px solid #FED7AA;
+  background-color: #FFF7ED;
+  color: #EA580C;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: inherit;
+  touch-action: manipulation;
+}
+
+.secondaryActionBtn:hover:not(:disabled) {
+  background-color: #FFEDD5;
+  border-color: #FB923C;
+}
+
+.secondaryActionBtn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.secondaryActionBtn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.riderCardAssignBtn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 14px;
+  background-color: #FFF7ED;
+  color: #EA580C;
+  border: 1.5px solid #FED7AA;
+  border-radius: 20px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  touch-action: manipulation;
+  flex-shrink: 0;
+}
+
+.riderCardAssignBtn:hover {
+  background-color: #FFEDD5;
+  border-color: #EA580C;
+  transform: scale(1.03);
+}
+
+.riderCardAssignBtn:active {
+  transform: scale(0.97);
+}

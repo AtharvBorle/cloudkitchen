@@ -16,6 +16,8 @@ import {
   Check,
   Loader2,
   Receipt,
+  UserCheck,
+  UserPlus,
 } from "lucide-react";
 import { OrderTaxBreakdown } from "@/components/common/OrderTaxBreakdown";
 import { getRemainingSeconds } from "../SellerOrders";
@@ -658,15 +660,28 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                 )}
 
                 {currentStatus === "Preparing" && (
-                  <button
-                    type="button"
-                    className={styles.advanceStepBtn}
-                    onClick={() => handleUpdateStatus("On the way")}
-                    disabled={updatingStatus}
-                  >
-                    {updatingStatus ? <Loader2 size={16} className={styles.spin} /> : <Bike size={16} />}
-                    <span>Mark Out for Delivery (On the way)</span>
-                  </button>
+                  <div className={styles.preparingActionBox}>
+                    <button
+                      type="button"
+                      className={riderName ? styles.secondaryActionBtn : styles.advanceStepBtn}
+                      onClick={() =>
+                        router.push(`/seller/orders/assign-rider?orderId=${encodeURIComponent(orderId)}`)
+                      }
+                    >
+                      <UserCheck size={16} />
+                      <span>{riderName ? "Reassign Delivery Partner" : "Assign Delivery Partner →"}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={riderName ? styles.advanceStepBtn : styles.secondaryActionBtn}
+                      onClick={() => handleUpdateStatus("On the way")}
+                      disabled={updatingStatus}
+                    >
+                      {updatingStatus ? <Loader2 size={16} className={styles.spin} /> : <Bike size={16} />}
+                      <span>Mark Out for Delivery (On the way)</span>
+                    </button>
+                  </div>
                 )}
 
                 {currentStatus === "On the way" && (
@@ -724,7 +739,19 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                 </div>
               </div>
 
-              {riderPhone && (
+              {!riderName && currentStatus !== "Order Placed" && currentStatus !== "Delivered" && !isCancelled ? (
+                <button
+                  type="button"
+                  className={styles.riderCardAssignBtn}
+                  onClick={() =>
+                    router.push(`/seller/orders/assign-rider?orderId=${encodeURIComponent(orderId)}`)
+                  }
+                  title="Assign a delivery partner"
+                >
+                  <UserPlus size={14} />
+                  <span>Assign</span>
+                </button>
+              ) : riderPhone ? (
                 <a
                   href={`tel:${riderPhone}`}
                   className={styles.riderCallBtn}
@@ -738,7 +765,7 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                 >
                   <Phone size={18} />
                 </a>
-              )}
+              ) : null}
             </section>
           )}
 
