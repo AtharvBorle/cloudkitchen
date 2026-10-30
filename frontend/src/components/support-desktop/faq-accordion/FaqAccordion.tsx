@@ -15,7 +15,7 @@ export interface FAQItem {
 const FAQ_CATEGORIES = [
   { id: "all", label: "All Questions" },
   { id: "orders", label: "Food & Orders" },
-  { id: "subscriptions", label: "Subscriptions" },
+  // { id: "subscriptions", label: "Subscriptions" },
   // { id: "rooms", label: "Room Bookings" },
   { id: "payments", label: "Payments & COD" },
   { id: "general", label: "General & Account" },
