@@ -37,6 +37,7 @@ import {
   ChevronRight,
   ChevronLeft,
   ArrowUp,
+  ArrowDown,
   Store,
   Sparkles,
   ShoppingBag,
@@ -120,6 +121,15 @@ const NoodleBowlIcon = ({ size = 22, color = "#5C4033" }: { size?: number; color
     <path d="M8.5 18.5h7" />
   </svg>
 );
+
+const SORT_OPTIONS = [
+  { value: "", label: "Relevance", icon: Sparkles },
+  { value: "popular", label: "Most Popular", icon: Flame },
+  { value: "rating", label: "Top Rated", icon: Star },
+  { value: "price_asc", label: "Price: Low to High", icon: ArrowDown },
+  { value: "price_desc", label: "Price: High to Low", icon: ArrowUp },
+  { value: "fastest", label: "Fastest Delivery", icon: Zap },
+];
 
 const FALLBACK_CATEGORY_ICONS = [
   CookingPot,
@@ -288,6 +298,24 @@ function FoodExploreContent() {
   const [openOnly, setOpenOnly] = useState(false);
   const [activeTab, setActiveTab] = useState<"dishes" | "kitchens">("dishes");
   const categoryScrollRef = React.useRef<HTMLDivElement>(null);
+  const [mobileSortOpen, setMobileSortOpen] = useState(false);
+  const mobileSortRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (mobileSortRef.current && !mobileSortRef.current.contains(e.target as Node)) {
+        setMobileSortOpen(false);
+      }
+    };
+    if (mobileSortOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("touchstart", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [mobileSortOpen]);
 
 
   // Popover & Modal state
@@ -2148,30 +2176,80 @@ function FoodExploreContent() {
               {filteredFoodItems.length} top-rated dishes delivering fast in {defaultAddress?.area || defaultAddress?.city || "Kothrud"}
             </p>
           </div>
-          <div className="mobile-sort-container">
-            <select
-              value={sortBy}
-              onChange={(e) => {
-                const val = e.target.value;
-                setSortBy(val);
-                if (typeof window !== "undefined") {
-                  const params = new URLSearchParams(window.location.search);
-                  if (val) params.set("sort", val);
-                  else params.delete("sort");
-                  const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
-                  router.replace(newUrl, { scroll: false });
-                }
-              }}
-              className="mobile-sort-select"
+          <div className="mobile-sort-container" ref={mobileSortRef}>
+            <button
+              type="button"
+              className={`mobile-sort-trigger-btn ${mobileSortOpen ? "open" : ""}`}
+              onClick={() => setMobileSortOpen((prev) => !prev)}
+              aria-haspopup="listbox"
+              aria-expanded={mobileSortOpen}
             >
-              <option value="">Relevance</option>
-              <option value="rating">Top Rated</option>
-              <option value="popular">Most Popular</option>
-              <option value="price_asc">Price: Low to High</option>
-              <option value="price_desc">Price: High to Low</option>
-              <option value="fastest">Fastest Delivery</option>
-            </select>
-            <ChevronDown size={13} className="mobile-sort-arrow" strokeWidth={2.2} />
+              <span className="mobile-sort-trigger-content">
+                {(() => {
+                  const currentOpt = SORT_OPTIONS.find((o) => o.value === sortBy) || SORT_OPTIONS[0];
+                  const IconComp = currentOpt.icon;
+                  return (
+                    <>
+                      <IconComp
+                        size={13}
+                        className="mobile-sort-trigger-icon"
+                        color={sortBy ? "#EA580C" : "#D97706"}
+                        fill={sortBy === "rating" ? "#EA580C" : "none"}
+                      />
+                      <span>{currentOpt.label}</span>
+                    </>
+                  );
+                })()}
+              </span>
+              <ChevronDown
+                size={14}
+                className={`mobile-sort-arrow-animated ${mobileSortOpen ? "open" : ""}`}
+                strokeWidth={2.4}
+              />
+            </button>
+
+            {mobileSortOpen && (
+              <div className="mobile-sort-dropdown-menu" role="listbox">
+                {SORT_OPTIONS.map((opt) => {
+                  const isSelected = sortBy === opt.value;
+                  const IconComp = opt.icon;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      role="option"
+                      aria-selected={isSelected}
+                      className={`mobile-sort-dropdown-item ${isSelected ? "selected" : ""}`}
+                      onClick={() => {
+                        const val = opt.value;
+                        setSortBy(val);
+                        setMobileSortOpen(false);
+                        if (typeof window !== "undefined") {
+                          const params = new URLSearchParams(window.location.search);
+                          if (val) params.set("sort", val);
+                          else params.delete("sort");
+                          const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
+                          router.replace(newUrl, { scroll: false });
+                        }
+                      }}
+                    >
+                      <div className="mobile-sort-item-left">
+                        <IconComp
+                          size={14}
+                          className="mobile-sort-item-icon"
+                          color={isSelected ? "#EA580C" : "#64748B"}
+                          fill={opt.value === "rating" && isSelected ? "#EA580C" : "none"}
+                        />
+                        <span>{opt.label}</span>
+                      </div>
+                      {isSelected && (
+                        <Check size={14} color="#EA580C" strokeWidth={2.8} />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
@@ -3930,25 +4008,107 @@ function FoodExploreContent() {
           position: relative;
           flex-shrink: 0;
         }
-        .mobile-sort-select {
+        .mobile-sort-trigger-btn {
           appearance: none;
-          background-color: #EEF2FF;
-          border: 1px solid #E0E7FF;
+          background: linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%);
+          border: 1.5px solid #FED7AA;
           border-radius: 9999px;
-          padding: 6px 28px 6px 14px;
+          padding: 6px 14px;
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
           font-size: 0.78rem;
           font-weight: 700;
           color: #1E293B;
           cursor: pointer;
           outline: none;
+          box-shadow: 0 2px 6px rgba(234, 88, 12, 0.08);
+          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .mobile-sort-arrow {
+        .mobile-sort-trigger-btn:hover {
+          border-color: #EA580C;
+          box-shadow: 0 4px 12px rgba(234, 88, 12, 0.16);
+        }
+        .mobile-sort-trigger-btn:active {
+          transform: scale(0.96);
+        }
+        .mobile-sort-trigger-btn.open {
+          border-color: #EA580C;
+          background: #FFF7ED;
+          box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.18), 0 4px 12px rgba(234, 88, 12, 0.15);
+        }
+        .mobile-sort-trigger-content {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .mobile-sort-arrow-animated {
+          color: #EA580C;
+          transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .mobile-sort-arrow-animated.open {
+          transform: rotate(180deg);
+        }
+        .mobile-sort-dropdown-menu {
           position: absolute;
-          right: 10px;
-          top: 50%;
-          transform: translateY(-50%);
-          pointer-events: none;
-          color: #1E293B;
+          right: 0;
+          top: calc(100% + 8px);
+          z-index: 100;
+          min-width: 195px;
+          background: #FFFFFF;
+          border: 1.5px solid #FFEDD5;
+          border-radius: 16px;
+          padding: 6px;
+          box-shadow: 0 16px 36px -6px rgba(234, 88, 12, 0.18), 0 6px 16px -2px rgba(0, 0, 0, 0.06);
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          transform-origin: top right;
+          animation: mobileSortPop 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes mobileSortPop {
+          0% {
+            opacity: 0;
+            transform: translateY(-6px) scale(0.94);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        .mobile-sort-dropdown-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          width: 100%;
+          border: none;
+          background: transparent;
+          border-radius: 10px;
+          padding: 8px 10px;
+          font-size: 0.8rem;
+          font-weight: 600;
+          color: #334155;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          text-align: left;
+        }
+        .mobile-sort-dropdown-item:hover {
+          background-color: #FFF7ED;
+          color: #EA580C;
+          transform: translateX(2px);
+        }
+        .mobile-sort-dropdown-item:active {
+          transform: scale(0.97);
+        }
+        .mobile-sort-dropdown-item.selected {
+          background-color: #FFF7ED;
+          color: #EA580C;
+          font-weight: 700;
+        }
+        .mobile-sort-item-left {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
         }
 
         /* Mobile Dish Card Details */
