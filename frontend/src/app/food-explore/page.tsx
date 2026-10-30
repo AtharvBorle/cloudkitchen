@@ -27,6 +27,7 @@ import {
   Soup,
   IceCream,
   IceCream2,
+  IceCreamBowl,
   Pizza,
   Sandwich,
   Flame,
@@ -111,6 +112,34 @@ const CrossedKnifeSpoonIcon = ({ size = 26, color = "#FFFFFF" }: { size?: number
   </svg>
 );
 
+const PoheIcon = ({ size = 24, color = "#5C4033" }: { size?: number; color?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 13h18c-.8 4.2-4.5 7.5-9 7.5S3.8 17.2 3 13Z" />
+    <path d="M4 13c1.2-3 4-5 8-5s6.8 2 8 5" />
+    <circle cx="8" cy="11.5" r="0.8" fill={color} />
+    <circle cx="12" cy="10.5" r="0.8" fill={color} />
+    <circle cx="16" cy="11.5" r="0.8" fill={color} />
+    <path d="M9 5c0 1.2-.8 2-1.5 2" />
+    <path d="M12 4c0 1.2-.8 2-1.5 2" />
+    <path d="M15 5c0 1.2-.8 2-1.5 2" />
+  </svg>
+);
+
+const SabudanaIcon = ({ size = 24, color = "#5C4033" }: { size?: number; color?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 13.5h18c-.8 4-4.5 7-9 7s-8.2-3-9-7Z" />
+    <circle cx="6.5" cy="11" r="1.6" />
+    <circle cx="10.2" cy="9.2" r="1.6" />
+    <circle cx="13.8" cy="9.2" r="1.6" />
+    <circle cx="17.5" cy="11" r="1.6" />
+    <circle cx="8.5" cy="12.5" r="1.4" />
+    <circle cx="12" cy="12" r="1.4" />
+    <circle cx="15.5" cy="12.5" r="1.4" />
+    <path d="M10 4.5c0 1.2-.8 2-1.2 2.2" />
+    <path d="M14 4c0 1.2-.8 2-1.2 2.2" />
+  </svg>
+);
+
 const NoodleBowlIcon = ({ size = 22, color = "#5C4033" }: { size?: number; color?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <path d="M7 5l11-2" />
@@ -173,8 +202,28 @@ function getCategoryIcon(name: string, isSelected: boolean) {
     return <CupSoda size={size} color={color} strokeWidth={1.8} />;
   }
 
-  // 4. Breakfast, Morning, Poha, Pohe, Sabudana, Shira, Upma, Egg
-  if (lower.includes("breakfast") || lower.includes("egg") || lower.includes("omelet") || lower.includes("pohe") || lower.includes("poha") || lower.includes("upma") || lower.includes("shira") || lower.includes("sabudana")) {
+  // 4a. Pohe / Poha (Flattened rice with onions, peanuts, mustard seeds)
+  if (lower.includes("pohe") || lower.includes("poha")) {
+    return <PoheIcon size={size} color={color} />;
+  }
+
+  // 4b. Sabudana (Tapioca pearls sago khichdi / vada)
+  if (lower.includes("sabudana") || lower.includes("sago")) {
+    return <SabudanaIcon size={size} color={color} />;
+  }
+
+  // 4c. Shira / Sheera / Halwa / Kesari (Sweet semolina halwa / dessert)
+  if (lower.includes("shira") || lower.includes("sheera") || lower.includes("halwa") || lower.includes("kesari")) {
+    return <IceCreamBowl size={size} color={color} strokeWidth={1.8} />;
+  }
+
+  // 4d. Upma (Savory semolina breakfast porridge with vegetables)
+  if (lower.includes("upma") || lower.includes("sanjha") || lower.includes("rava")) {
+    return <Soup size={size} color={color} strokeWidth={1.8} />;
+  }
+
+  // 4e. General Breakfast, Morning, Egg, Omelet
+  if (lower.includes("breakfast") || lower.includes("morning") || lower.includes("egg") || lower.includes("omelet")) {
     return <EggFried size={size} color={color} strokeWidth={1.8} />;
   }
 
