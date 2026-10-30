@@ -2,8 +2,7 @@
   min-height: 100vh;
   width: 100%;
   background-color: #F8FAFC;
-  display: flex;
-  justify-content: center;
+  display: block;
   font-family: var(--font-poppins), 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
   color: #0F172A;
   box-sizing: border-box;
@@ -12,24 +11,45 @@
 
 .mobileContainer {
   width: 100%;
-  max-width: 480px;
+  max-width: 100%;
   min-height: 100vh;
   background-color: #F8FAFC;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
   position: relative;
-  box-shadow: 0 0 40px rgba(0, 0, 0, 0.04);
+  box-shadow: none;
+  border-radius: 0;
   padding-bottom: 32px;
   overflow-x: hidden;
 }
 
-@media (max-width: 768px) {
+@media (min-width: 1025px) {
+  .screenWrapper {
+    display: flex;
+    justify-content: center;
+  }
+
+  .mobileContainer {
+    max-width: 480px;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.04);
+  }
+}
+
+@media (max-width: 1024px) {
+  .screenWrapper {
+    display: block;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+  }
+
   .mobileContainer {
     max-width: 100%;
     width: 100%;
     box-shadow: none;
     border-radius: 0;
+    min-height: 100vh;
   }
 }
 
@@ -222,6 +242,10 @@
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
   background-color: #F8FAFC;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .pillsContainer::-webkit-scrollbar {
@@ -275,6 +299,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 4px 16px 10px 16px;
+  width: 100%;
+  max-width: 100%;
   box-sizing: border-box;
 }
 
@@ -359,6 +385,7 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
   transition: all 0.15s ease;
   position: relative;
+  width: 100%;
   max-width: 100%;
   box-sizing: border-box;
   overflow: hidden;
@@ -628,5 +655,54 @@
   to {
     opacity: 1;
     transform: translate(-50%, 0);
+  }
+}
+
+.searchBarContainer {
+  margin: 10px 16px 2px 16px;
+  display: flex;
+  align-items: center;
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 8px 12px;
+  gap: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  width: calc(100% - 32px);
+  max-width: calc(100% - 32px);
+  box-sizing: border-box;
+}
+
+.searchBarInput {
+  border: none;
+  background-color: transparent;
+  outline: none;
+  font-size: 13px;
+  color: #1E293B;
+  width: 100%;
+  font-family: inherit;
+}
+
+.searchBarClearBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: #94A3B8;
+  display: flex;
+  align-items: center;
+}
+
+@media (max-width: 400px) {
+  .pageTitle {
+    font-size: 14.5px;
+  }
+  .headerTextBtn {
+    font-size: 11px;
+    padding: 4px 5px;
+  }
+  .headerClearBtn {
+    font-size: 11px;
+    padding: 4px 5px;
   }
 }
