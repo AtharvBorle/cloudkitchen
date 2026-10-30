@@ -692,12 +692,17 @@ export default function OrderConfirmation({ orderIdProp }: OrderConfirmationProp
           <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
             {/* Items Summary Card */}
             <section className={styles.card}>
-              <div className={styles.cardHeader} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div className={styles.cardHeader}>
                 <div className={styles.cardTitleGroup}>
                   <div className={styles.cardIconBox}>
-                    <ShoppingBag size={20} />
+                    <ShoppingBag size={18} />
                   </div>
-                  <h2 className={styles.cardTitle}>Order Summary ({orderData.items.length} items)</h2>
+                  <h2 className={styles.cardTitle}>
+                    <span>Order Summary</span>{" "}
+                    <span className={styles.cardTitleCount}>
+                      ({orderData.items.length} {orderData.items.length === 1 ? "item" : "items"})
+                    </span>
+                  </h2>
                 </div>
                 {orderData.status === "DELIVERED" ? (
                   <a
@@ -707,7 +712,7 @@ export default function OrderConfirmation({ orderIdProp }: OrderConfirmationProp
                     className={styles.invoiceHeaderBtn}
                     title="Download Invoice"
                   >
-                    <Receipt size={16} />
+                    <Receipt size={15} />
                     <span>Invoice</span>
                   </a>
                 ) : (
@@ -717,8 +722,9 @@ export default function OrderConfirmation({ orderIdProp }: OrderConfirmationProp
                     className={styles.invoiceHeaderBtnDisabled}
                     title="Invoice available after order delivery"
                   >
-                    <Receipt size={16} />
-                    <span>Invoice (On Delivery)</span>
+                    <Receipt size={15} />
+                    <span className={styles.invoiceBtnFullText}>Invoice (On Delivery)</span>
+                    <span className={styles.invoiceBtnShortText}>Invoice</span>
                   </button>
                 )}
               </div>
