@@ -3565,9 +3565,15 @@ function FoodExploreContent() {
         <div className="mobile-filter-drawer-backdrop" onClick={() => setIsMobileFilterOpen(false)}>
           <div className="mobile-filter-drawer-content" onClick={(e) => e.stopPropagation()}>
             <div className="mobile-drawer-header">
-              <div className="mobile-drawer-handle" />
               <div className="mobile-drawer-title-row">
-                <span className="mobile-drawer-title">Filters & Sorting</span>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span className="mobile-drawer-title">Filters & Sorting</span>
+                  {activeFiltersCount > 0 && (
+                    <span className="mobile-drawer-active-count-badge">
+                      {activeFiltersCount}
+                    </span>
+                  )}
+                </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                   {activeFiltersCount > 0 && (
                     <button
@@ -4384,51 +4390,65 @@ function FoodExploreContent() {
           text-align: center;
         }
 
-        /* Mobile Filter Drawer Modal */
+        /* Mobile Filter Modal (Interactive Centered Popup Dialog) */
         .mobile-filter-drawer-backdrop {
           position: fixed;
           top: 0;
           left: 0;
           right: 0;
           bottom: 0;
-          background-color: rgba(15, 23, 42, 0.55);
-          z-index: 100;
+          background-color: rgba(15, 23, 42, 0.65);
+          z-index: 9999;
           display: flex;
-          align-items: flex-end;
+          align-items: center;
           justify-content: center;
-          backdrop-filter: blur(4px);
-          animation: fadeIn 0.2s ease-out;
+          padding: 16px;
+          backdrop-filter: blur(8px);
+          animation: filterModalFadeIn 0.2s ease-out;
+        }
+        @keyframes filterModalFadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
         .mobile-filter-drawer-content {
           width: 100%;
-          max-width: 500px;
-          max-height: 85vh;
+          max-width: 460px;
+          max-height: min(85vh, 660px);
           background-color: #FFFFFF;
-          border-top-left-radius: 24px;
-          border-top-right-radius: 24px;
+          border-radius: 24px;
+          border: 1.5px solid #FED7AA;
           display: flex;
           flex-direction: column;
           overflow: hidden;
-          box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.16);
-          animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+          box-shadow: 0 24px 60px -12px rgba(15, 23, 42, 0.28), 0 8px 24px -4px rgba(234, 88, 12, 0.12);
+          animation: filterModalPopIn 0.24s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        @keyframes slideUp {
-          from { transform: translateY(100%); }
-          to { transform: translateY(0); }
+        @keyframes filterModalPopIn {
+          0% {
+            opacity: 0;
+            transform: scale(0.92) translateY(10px);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
         }
         .mobile-drawer-header {
-          padding: 12px 18px 14px 18px;
+          padding: 16px 20px;
           border-bottom: 1px solid #F1F5F9;
+          background: linear-gradient(180deg, #FFF7ED 0%, #FFFFFF 100%);
           display: flex;
           flex-direction: column;
-          align-items: center;
-          gap: 10px;
+          gap: 0;
         }
-        .mobile-drawer-handle {
-          width: 40px;
-          height: 4px;
+        .mobile-drawer-active-count-badge {
+          background-color: #EA580C;
+          color: #FFFFFF;
+          font-size: 0.72rem;
+          font-weight: 800;
+          padding: 2px 7px;
           border-radius: 9999px;
-          background-color: #CBD5E1;
+          line-height: 1.2;
         }
         .mobile-drawer-title-row {
           width: 100%;
@@ -4437,9 +4457,10 @@ function FoodExploreContent() {
           justify-content: space-between;
         }
         .mobile-drawer-title {
-          font-size: 1.1rem;
+          font-size: 1.05rem;
           font-weight: 800;
           color: #18181B;
+          letter-spacing: -0.01em;
         }
         .mobile-drawer-clear-btn {
           background: none;
@@ -4448,7 +4469,13 @@ function FoodExploreContent() {
           font-size: 0.82rem;
           font-weight: 700;
           cursor: pointer;
-          padding: 4px 6px;
+          padding: 4px 8px;
+          border-radius: 8px;
+          transition: all 0.15s ease;
+        }
+        .mobile-drawer-clear-btn:hover {
+          background-color: #FFF7ED;
+          color: #C2410C;
         }
         .mobile-drawer-close-btn {
           background: #F1F5F9;
@@ -4461,14 +4488,30 @@ function FoodExploreContent() {
           justify-content: center;
           color: #64748B;
           cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .mobile-drawer-close-btn:hover {
+          background: #E2E8F0;
+          color: #0F172A;
+          transform: scale(1.06);
+        }
+        .mobile-drawer-close-btn:active {
+          transform: scale(0.94);
         }
         .mobile-drawer-body {
-          padding: 16px 18px;
+          padding: 16px 20px;
           overflow-y: auto;
           display: flex;
           flex-direction: column;
-          gap: 20px;
+          gap: 18px;
           flex: 1;
+        }
+        .mobile-drawer-body::-webkit-scrollbar {
+          width: 5px;
+        }
+        .mobile-drawer-body::-webkit-scrollbar-thumb {
+          background: #E2E8F0;
+          border-radius: 9999px;
         }
         .mobile-drawer-section {
           display: flex;
@@ -4476,12 +4519,12 @@ function FoodExploreContent() {
           gap: 10px;
         }
         .mobile-drawer-section-title {
-          font-size: 0.88rem;
+          font-size: 0.78rem;
           font-weight: 800;
-          color: #0F172A;
+          color: #64748B;
           margin: 0;
           text-transform: uppercase;
-          letter-spacing: 0.4px;
+          letter-spacing: 0.6px;
         }
         .mobile-drawer-chips-grid {
           display: flex;
@@ -4492,60 +4535,90 @@ function FoodExploreContent() {
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          padding: 8px 14px;
-          border-radius: 10px;
-          border: 1px solid #E2E8F0;
+          padding: 7px 13px;
+          border-radius: 12px;
+          border: 1.5px solid #E2E8F0;
           background-color: #FFFFFF;
-          color: #475569;
+          color: #334155;
           font-size: 0.82rem;
           font-weight: 600;
           cursor: pointer;
-          transition: all 0.15s ease;
+          transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .mobile-drawer-chip:hover {
+          border-color: #FED7AA;
+          background-color: #FFFDF9;
+          transform: translateY(-1px);
+        }
+        .mobile-drawer-chip:active {
+          transform: scale(0.96);
         }
         .mobile-drawer-chip.active {
-          border: 1.5px solid #FF6B00 !important;
-          background-color: #FFF3EB !important;
-          color: #FF6B00 !important;
+          border-color: #EA580C !important;
+          background: linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%) !important;
+          color: #EA580C !important;
           font-weight: 700 !important;
+          box-shadow: 0 2px 6px rgba(234, 88, 12, 0.12);
         }
         .mobile-drawer-chip-count {
           font-size: 0.74rem;
           color: #94A3B8;
+        }
+        .mobile-drawer-chip.active .mobile-drawer-chip-count {
+          color: #EA580C;
+          opacity: 0.85;
         }
         .mobile-drawer-toggle-row {
           display: flex;
           align-items: center;
           justify-content: space-between;
           padding: 10px 14px;
-          border-radius: 10px;
+          border-radius: 12px;
+          border: 1px solid #F1F5F9;
           background-color: #F8FAFC;
           font-size: 0.86rem;
           font-weight: 600;
           color: #334155;
           cursor: pointer;
+          transition: background-color 0.15s ease;
+        }
+        .mobile-drawer-toggle-row:hover {
+          background-color: #F1F5F9;
         }
         .mobile-drawer-checkbox {
           width: 18px;
           height: 18px;
-          accent-color: #FF6B00;
+          accent-color: #EA580C;
           cursor: pointer;
         }
         .mobile-drawer-footer {
-          padding: 14px 18px 20px 18px;
+          padding: 12px 20px 16px 20px;
           border-top: 1px solid #F1F5F9;
           background-color: #FFFFFF;
         }
         .mobile-drawer-apply-btn {
           width: 100%;
           padding: 12px 18px;
-          border-radius: 12px;
-          background-color: #FF6B00;
+          border-radius: 14px;
+          background: linear-gradient(135deg, #FF6B00 0%, #EA580C 100%);
           color: #FFFFFF;
           border: none;
-          font-size: 0.95rem;
+          font-size: 0.92rem;
           font-weight: 800;
           cursor: pointer;
-          box-shadow: 0 4px 16px rgba(255, 107, 0, 0.3);
+          box-shadow: 0 4px 16px rgba(234, 88, 12, 0.32);
+          transition: all 0.18s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+        }
+        .mobile-drawer-apply-btn:hover {
+          box-shadow: 0 6px 20px rgba(234, 88, 12, 0.42);
+          transform: translateY(-1px);
+        }
+        .mobile-drawer-apply-btn:active {
+          transform: scale(0.98);
         }
         @keyframes foodExploreSearchPopover {
           0% {
