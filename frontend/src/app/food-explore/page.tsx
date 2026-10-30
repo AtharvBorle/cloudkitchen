@@ -40,6 +40,16 @@ import {
   Store,
   Sparkles,
   ShoppingBag,
+  CookingPot,
+  ChefHat,
+  Salad,
+  Cookie,
+  CupSoda,
+  CakeSlice,
+  Popcorn,
+  Drumstick,
+  Apple,
+  Wheat,
 } from "lucide-react";
 import {
   isKitchenMatchingDiet,
@@ -111,20 +121,117 @@ const NoodleBowlIcon = ({ size = 22, color = "#5C4033" }: { size?: number; color
   </svg>
 );
 
+const FALLBACK_CATEGORY_ICONS = [
+  CookingPot,
+  ChefHat,
+  Salad,
+  Soup,
+  Flame,
+  Coffee,
+  CupSoda,
+  UtensilsCrossed,
+  Apple,
+  Sandwich,
+  Cookie,
+  Croissant,
+  Drumstick,
+  Wheat,
+  Utensils,
+];
+
 function getCategoryIcon(name: string, isSelected: boolean) {
   const lower = name.toLowerCase().trim();
   const color = isSelected ? "#FFFFFF" : "#5C4033";
   const size = 24;
-  if (lower === "all" || lower === "all cuisines") return <CrossedKnifeSpoonIcon size={size} color={color} />;
-  if (lower.includes("baker") || lower.includes("cake") || lower.includes("pastr")) return <Croissant size={size} color={color} strokeWidth={1.8} />;
-  if (lower.includes("drink") || lower.includes("beverag") || lower.includes("tea") || lower.includes("coffee") || lower.includes("shake")) return <Coffee size={size} color={color} strokeWidth={1.8} />;
-  if (lower.includes("breakfast") || lower.includes("egg") || lower.includes("pohe") || lower.includes("poha") || lower.includes("upma") || lower.includes("idli") || lower.includes("dosa")) return <EggFried size={size} color={color} strokeWidth={1.8} />;
-  if (lower.includes("chinese") || lower.includes("noodle") || lower.includes("soup") || lower.includes("asian")) return <NoodleBowlIcon size={size} color={color} />;
-  if (lower.includes("dessert") || lower.includes("ice") || lower.includes("sweet")) return <IceCream size={size} color={color} strokeWidth={1.8} />;
-  if (lower.includes("pizza")) return <Pizza size={size} color={color} strokeWidth={1.8} />;
-  if (lower.includes("burger") || lower.includes("sandwich") || lower.includes("snack") || lower.includes("roll")) return <Sandwich size={size} color={color} strokeWidth={1.8} />;
-  if (lower.includes("biryani") || lower.includes("rice") || lower.includes("thali") || lower.includes("meal") || lower.includes("mess")) return <Flame size={size} color={color} strokeWidth={1.8} />;
-  return <Utensils size={size} color={color} strokeWidth={1.8} />;
+
+  if (lower === "all" || lower === "all cuisines") {
+    return <CrossedKnifeSpoonIcon size={size} color={color} />;
+  }
+
+  // 1. Bakery, Cakes, Pastries, Breads
+  if (lower.includes("baker") || lower.includes("cake") || lower.includes("pastr") || lower.includes("bread") || lower.includes("bun") || lower.includes("muffin")) {
+    return <CakeSlice size={size} color={color} strokeWidth={1.8} />;
+  }
+
+  // 2. Cafe, Coffee, Tea, Chai, Brew
+  if (lower.includes("cafe") || lower.includes("coffee") || lower.includes("tea") || lower.includes("chai") || lower.includes("brew") || lower.includes("cappuccino")) {
+    return <Coffee size={size} color={color} strokeWidth={1.8} />;
+  }
+
+  // 3. Cold Drinks, Beverages, Shakes, Juices, Soda, Smoothies
+  if (lower.includes("drink") || lower.includes("beverag") || lower.includes("shake") || lower.includes("juice") || lower.includes("soda") || lower.includes("smoothie") || lower.includes("lassi") || lower.includes("mojito")) {
+    return <CupSoda size={size} color={color} strokeWidth={1.8} />;
+  }
+
+  // 4. Breakfast, Morning, Poha, Pohe, Sabudana, Shira, Upma, Egg
+  if (lower.includes("breakfast") || lower.includes("egg") || lower.includes("omelet") || lower.includes("pohe") || lower.includes("poha") || lower.includes("upma") || lower.includes("shira") || lower.includes("sabudana")) {
+    return <EggFried size={size} color={color} strokeWidth={1.8} />;
+  }
+
+  // 5. South Indian, Dosa, Idli, Uttapam, Vada, Sambhar
+  if (lower.includes("south") || lower.includes("dosa") || lower.includes("idli") || lower.includes("uttapam") || lower.includes("vada") || lower.includes("sambhar") || lower.includes("sambar") || lower.includes("appam")) {
+    return <ChefHat size={size} color={color} strokeWidth={1.8} />;
+  }
+
+  // 6. Homely Food, Home Style, Home Cooked, Mess, Bhojanalay
+  if (lower.includes("homely") || lower.includes("home") || lower.includes("gharguti") || lower.includes("mess") || lower.includes("bhojanalay")) {
+    return <CookingPot size={size} color={color} strokeWidth={1.8} />;
+  }
+
+  // 7. Lunch, Dinner, Complete Meals, Thali, Executive Meal
+  if (lower.includes("lunch") || lower.includes("dinner") || lower.includes("thali") || lower.includes("meal")) {
+    return <UtensilsCrossed size={size} color={color} strokeWidth={1.8} />;
+  }
+
+  // 8. Biryani, Rice, Pulao, Dalrice, Khichdi, Fried Rice
+  if (lower.includes("biryani") || lower.includes("rice") || lower.includes("pulao") || lower.includes("dalrice") || lower.includes("khichdi") || lower.includes("chawal")) {
+    return <Flame size={size} color={color} strokeWidth={1.8} />;
+  }
+
+  // 9. Chinese, Asian, Noodles, Soup, Ramen, Manchurian, Momos
+  if (lower.includes("chinese") || lower.includes("noodle") || lower.includes("soup") || lower.includes("asian") || lower.includes("ramen") || lower.includes("momo") || lower.includes("manchurian") || lower.includes("chowmein")) {
+    return <NoodleBowlIcon size={size} color={color} />;
+  }
+
+  // 10. Pizza, Italian, Pasta, Garlic Bread
+  if (lower.includes("pizza") || lower.includes("italian") || lower.includes("pasta") || lower.includes("lasagna")) {
+    return <Pizza size={size} color={color} strokeWidth={1.8} />;
+  }
+
+  // 11. Burger, Sandwiches, Rolls, Wraps, Frankies
+  if (lower.includes("burger") || lower.includes("sandwich") || lower.includes("roll") || lower.includes("wrap") || lower.includes("frankie") || lower.includes("sub")) {
+    return <Sandwich size={size} color={color} strokeWidth={1.8} />;
+  }
+
+  // 12. Snacks, Street Food, Chaat, Samosa, Kachori, Fast Food, Starters
+  if (lower.includes("snack") || lower.includes("street") || lower.includes("chaat") || lower.includes("fast") || lower.includes("starter") || lower.includes("appetizer") || lower.includes("samosa") || lower.includes("pakora") || lower.includes("bhajiya")) {
+    return <Popcorn size={size} color={color} strokeWidth={1.8} />;
+  }
+
+  // 13. Desserts, Sweets, Ice Cream, Mithai, Halwa, Kulfi
+  if (lower.includes("dessert") || lower.includes("ice") || lower.includes("sweet") || lower.includes("mithai") || lower.includes("halwa") || lower.includes("kulfi") || lower.includes("gulab") || lower.includes("jamun") || lower.includes("rasgulla") || lower.includes("cookie")) {
+    return <IceCream size={size} color={color} strokeWidth={1.8} />;
+  }
+
+  // 14. Salad, Diet, Healthy, Vegan, Organic, Fruits
+  if (lower.includes("salad") || lower.includes("healthy") || lower.includes("diet") || lower.includes("vegan") || lower.includes("fruit") || lower.includes("green") || lower.includes("raw") || lower.includes("sprout")) {
+    return <Salad size={size} color={color} strokeWidth={1.8} />;
+  }
+
+  // 15. Non-Veg, Chicken, Mutton, Fish, Seafood, Meat, Kebab, Tandoor
+  if (lower.includes("chicken") || lower.includes("mutton") || lower.includes("fish") || lower.includes("prawn") || lower.includes("seafood") || lower.includes("meat") || lower.includes("kebab") || lower.includes("tikka") || lower.includes("tandoor") || lower.includes("non-veg") || lower.includes("non veg")) {
+    return <Drumstick size={size} color={color} strokeWidth={1.8} />;
+  }
+
+  // 16. North Indian, Punjabi, Mughlai, Maharashtrian, Gujarati, Curry, Gravy
+  if (lower.includes("punjabi") || lower.includes("north") || lower.includes("mughlai") || lower.includes("marathi") || lower.includes("maharashtrian") || lower.includes("gujarati") || lower.includes("curry") || lower.includes("gravy") || lower.includes("dal")) {
+    return <CookingPot size={size} color={color} strokeWidth={1.8} />;
+  }
+
+  // 17. Deterministic Fallback: Never display identical icons for different categories
+  const hash = Math.abs(lower.split("").reduce((acc, char) => (acc * 31 + char.charCodeAt(0)) | 0, 0));
+  const FallbackIcon = FALLBACK_CATEGORY_ICONS[hash % FALLBACK_CATEGORY_ICONS.length];
+  return <FallbackIcon size={size} color={color} strokeWidth={1.8} />;
 }
 
 function FoodExploreContent() {
