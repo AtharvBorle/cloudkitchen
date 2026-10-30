@@ -14,6 +14,7 @@ import { getKitchenById, isStaticKitchen, KitchenData, FoodCardItem } from "@/co
 import { useCart, generateCartItemId } from "@/context/CartContext";
 import { fetchApi } from "@/lib/fetch-api";
 import { formatMealTimingDisplay } from "@/lib/meal-slots";
+import { isNonVegDish } from "@/lib/dietary-filter";
 import { Footer } from "@/components/explore-desktop/footer";
 import { AddonCustomizationModal } from "@/components/cart/AddonCustomizationModal";
 import styles from "../restaurant.module.css";
@@ -357,7 +358,33 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
               description: a.description || "",
             }));
             const rawFoodItems = liveData.foodItems || [];
-            const liveItems: FoodCardItem[] = rawFoodItems.map((item: any) => {
+
+            const rawFoodType = String(liveData.foodType || "").toUpperCase().replace(/[\s-]/g, "_").trim();
+            const hasNonVegItems = (rawFoodItems || []).some((it: any) => {
+              const itType = String(it.itemType || "").toUpperCase();
+              return itType.includes("NON_VEG") || it.isVeg === false || isNonVegDish(it);
+            });
+            const hasVegItems = (rawFoodItems || []).some((it: any) => {
+              const itType = String(it.itemType || "VEG").toUpperCase();
+              return !itType.includes("NON_VEG") && it.isVeg !== false && !isNonVegDish(it);
+            });
+
+            const isPureVegKitchen =
+              rawFoodType === "PURE_VEG" ||
+              rawFoodType === "VEG" ||
+              rawFoodType === "VEG_ONLY" ||
+              rawFoodType === "PUREVEG" ||
+              (!hasNonVegItems && (rawFoodItems || []).length > 0);
+
+            const liveItems: FoodCardItem[] = rawFoodItems
+              .filter((item: any) => {
+                // If kitchen is labeled 100% Pure Veg, strictly exclude all non-vegetarian dishes
+                if (isPureVegKitchen) {
+                  return !isNonVegDish(item) && item.isVeg !== false && !String(item.itemType || "").toUpperCase().includes("NON_VEG");
+                }
+                return true;
+              })
+              .map((item: any) => {
               let parsedAddons: any[] = [];
               const rawAddons = item.addons || item.variants;
               if (rawAddons) {
@@ -405,7 +432,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
                 rating: itemRatingDisplay,
                 price: `₹${item.price}`,
                 image: item.imageUrl || "/images/places/place-pizza.png",
-                isVeg: item.itemType ? !item.itemType.toUpperCase().includes("NON_VEG") : item.isVeg !== false,
+                isVeg: !isNonVegDish(item) && (item.itemType ? !item.itemType.toUpperCase().includes("NON_VEG") : item.isVeg !== false),
                 category: item.foodCategory?.name || "Popular",
                 addons: parsedAddons.length > 0 ? parsedAddons : kitchenStoreAddons,
                 stockQuantity: item.stockQuantity !== undefined ? item.stockQuantity : -1,
@@ -419,8 +446,8 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
 
             const uniqueCats = Array.from(
               new Set(
-                (rawFoodItems)
-                  .map((it: any) => it.foodCategory?.name)
+                liveItems
+                  .map((it: any) => it.category)
                   .filter(Boolean)
               )
             ) as string[];
@@ -446,22 +473,7 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
               ? `(${computedReviewsCount} review${computedReviewsCount > 1 ? "s" : ""})`
               : "(No ratings yet)";
 
-            const rawFoodType = String(liveData.foodType || "").toUpperCase().replace(/[\s-]/g, "_").trim();
-            const hasNonVegItems = (rawFoodItems || []).some((it: any) => {
-              const itType = String(it.itemType || "").toUpperCase();
-              return itType.includes("NON_VEG") || it.isVeg === false;
-            });
-            const hasVegItems = (rawFoodItems || []).some((it: any) => {
-              const itType = String(it.itemType || "VEG").toUpperCase();
-              return !itType.includes("NON_VEG") && it.isVeg !== false;
-            });
-
-            const isPureVegKitchen =
-              rawFoodType === "PURE_VEG" ||
-              rawFoodType === "VEG" ||
-              rawFoodType === "VEG_ONLY" ||
-              rawFoodType === "PUREVEG" ||
-              (!hasNonVegItems && (rawFoodItems || []).length > 0);
+            // Diet classification computed above
 
             let computedDietType = "Veg & Non-Veg 🍱";
             if (isPureVegKitchen) {
@@ -672,6 +684,15 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
   }, [kitchenId]);
 
   const handleAddItem = (item: FoodCardItem) => {
+    const isPureVeg =
+      kitchenData.dietType?.toLowerCase().includes("pure veg") ||
+      kitchenData.dietType?.includes("🥦");
+
+    if (isPureVeg && (!item.isVeg || isNonVegDish(item))) {
+      alert("This kitchen is 100% Pure Veg. Non-vegetarian dishes cannot be ordered.");
+      return;
+    }
+
     if (kitchenData.isOnline === false) {
       alert("This kitchen is currently closed and not accepting orders.");
       return;
@@ -784,8 +805,14 @@ export default function RestaurantClient({ kitchenId }: RestaurantClientProps) {
     return true;
   };
 
+  const isPureVeg =
+    kitchenData.dietType?.toLowerCase().includes("pure veg") ||
+    kitchenData.dietType?.includes("🥦");
+
   const displayedItems = kitchenData.items.filter((item) => {
-    if (isVegOnly && !item.isVeg) return false;
+    // If the kitchen is labeled 100% Pure Veg, strictly exclude all non-vegetarian dishes
+    if (isPureVeg && (!item.isVeg || isNonVegDish(item))) return false;
+    if (isVegOnly && (!item.isVeg || isNonVegDish(item))) return false;
     if (!isItemMatchingPrice(item)) return false;
     return true;
   });
