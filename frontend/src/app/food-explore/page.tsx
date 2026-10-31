@@ -851,8 +851,8 @@ function FoodExploreContent() {
     sortBy,
   ]);
 
-  // Dishes Pagination (6 items per page as requested)
-  const DISHES_PER_PAGE = 6;
+  // Dishes Pagination (8 items per page as requested)
+  const DISHES_PER_PAGE = 8;
   const [currentPage, setCurrentPage] = useState(1);
 
   // Reset to page 1 whenever any filters change
