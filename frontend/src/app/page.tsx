@@ -217,26 +217,37 @@ export default function Home() {
     setHomeSearchQuery(q);
   };
 
-  // Dynamic Categories without fallback (Food and Mess excluded per requirement)
+  // Dynamic Categories without fallback (Food Categories & Sub Food Categories ONLY - Business Categories Excluded)
   const categoryItems = useMemo(() => {
     if (!homeData.categories || homeData.categories.length === 0) return [];
+    const BUSINESS_CATEGORIES = new Set<string>([
+      "homely food", "homely", "home food", "mess", "daily mess", "student mess",
+      "cafe", "south indian", "lunch(homely food)", "lunch (homely food)",
+      "lunch", "dinner", "food", "rooms", "room", "rent property", "property",
+      "furniture", "bakery"
+    ]);
+
+    const isBusiness = (name?: string | null): boolean => {
+      if (!name) return true;
+      const lower = name.toLowerCase().trim();
+      const clean = lower.replace(/[^a-z0-9]/g, "");
+      return (
+        BUSINESS_CATEGORIES.has(lower) ||
+        BUSINESS_CATEGORIES.has(clean) ||
+        clean === "food" ||
+        clean === "rooms" ||
+        clean === "room" ||
+        clean === "mess" ||
+        clean === "bakery" ||
+        clean.includes("room") ||
+        clean.includes("property") ||
+        lower.includes("homely food") ||
+        lower.includes("lunch(homely")
+      );
+    };
+
     return homeData.categories
-      .filter((c) => {
-        const idLower = (c.id || "").toLowerCase().trim();
-        const nameLower = (c.name || "").toLowerCase().trim();
-        return (
-          idLower !== "food" &&
-          nameLower !== "food" &&
-          idLower !== "mess" &&
-          nameLower !== "mess" &&
-          idLower !== "rooms" &&
-          idLower !== "room" &&
-          nameLower !== "rooms" &&
-          nameLower !== "room" &&
-          !nameLower.includes("room") &&
-          !nameLower.includes("property")
-        );
-      })
+      .filter((c) => !isBusiness(c.id) && !isBusiness(c.name))
       .map((c) => ({
         id: c.id,
         name: c.name,
@@ -246,31 +257,52 @@ export default function Home() {
       }));
   }, [homeData.categories]);
 
-  // Extract available cuisines & categories from DB food categories and subcategories
+  // Extract available cuisines & categories from DB food categories and subcategories (No business categories)
   const availableCuisines = useMemo(() => {
     const set = new Set<string>();
+    const BUSINESS_CATEGORIES = new Set<string>([
+      "homely food", "homely", "home food", "mess", "daily mess", "student mess",
+      "cafe", "south indian", "lunch(homely food)", "lunch (homely food)",
+      "lunch", "dinner", "food", "rooms", "room", "rent property", "property",
+      "furniture", "bakery"
+    ]);
+
+    const isBusiness = (name?: string | null): boolean => {
+      if (!name) return true;
+      const lower = name.toLowerCase().trim();
+      const clean = lower.replace(/[^a-z0-9]/g, "");
+      return (
+        BUSINESS_CATEGORIES.has(lower) ||
+        BUSINESS_CATEGORIES.has(clean) ||
+        clean === "food" ||
+        clean === "rooms" ||
+        clean === "room" ||
+        clean === "mess" ||
+        clean === "bakery" ||
+        clean.includes("room") ||
+        clean.includes("property") ||
+        lower.includes("homely food") ||
+        lower.includes("lunch(homely")
+      );
+    };
 
     (homeData.foodCategories || []).forEach((fc) => {
-      const fcLower = (fc.name || "").toLowerCase().trim();
-      if (fc.name && fcLower !== "food" && fcLower !== "mess") {
-        set.add(fc.name);
+      if (fc.name && !isBusiness(fc.name)) {
+        set.add(fc.name.toLowerCase().trim() === "dalrice" ? "Dal Rice" : (fc.name.trim().charAt(0).toUpperCase() + fc.name.trim().slice(1)));
       }
       (fc.subCategories || []).forEach((sc) => {
-        const scLower = (sc.name || "").toLowerCase().trim();
-        if (sc.name && scLower !== "food" && scLower !== "mess") {
-          set.add(sc.name);
+        if (sc.name && !isBusiness(sc.name)) {
+          set.add(sc.name.trim().split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" "));
         }
       });
     });
 
     (homeData.foodItems || []).forEach((f) => {
-      const catLower = (f.categoryName || "").toLowerCase().trim();
-      if (f.categoryName && catLower !== "food" && catLower !== "mess") {
-        set.add(f.categoryName);
+      if (f.categoryName && !isBusiness(f.categoryName)) {
+        set.add(f.categoryName.toLowerCase().trim() === "dalrice" ? "Dal Rice" : (f.categoryName.trim().charAt(0).toUpperCase() + f.categoryName.trim().slice(1)));
       }
-      const subLower = (f.subCategoryName || "").toLowerCase().trim();
-      if (f.subCategoryName && subLower !== "food" && subLower !== "mess") {
-        set.add(f.subCategoryName);
+      if (f.subCategoryName && !isBusiness(f.subCategoryName)) {
+        set.add(f.subCategoryName.trim().split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" "));
       }
     });
 

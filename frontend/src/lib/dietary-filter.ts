@@ -621,28 +621,27 @@ export const CATEGORY_RULES: Record<string, CategoryRule> = {
 };
 
 export const CATEGORY_ALIASES: Record<string, string[]> = {
-  cake: ["cake", "cakes", "black forest", "pastry", "pastries", "mousse", "cupcake", "brownie", "dessert", "desserts", "sweet", "sweets", "bakery"],
-  pastry: ["pastry", "pastries", "cake", "cakes", "black forest", "brownie", "dessert", "desserts", "bakery"],
-  burger: ["burger", "burgers", "hamburger", "cheeseburger", "veg burger", "crispy burger"],
-  meal: ["meal", "meals", "thali", "thalis", "homemeal", "tiffin", "combo meal"],
-  mess: ["mess", "daily mess", "student mess", "homely mess", "tiffin", "subscription"],
-  thali: ["thali", "thalis", "punjabi thali", "gujarati thali", "maharashtrian thali", "deluxe thali", "special thali", "veg thali", "non veg thali", "jain thali"],
-  biryani: ["biryani", "biryanis", "dum biryani", "hyderabadi", "chicken biryani", "veg biryani", "pulao"],
-  pizza: ["pizza", "pizzas", "margherita", "calzone", "pan pizza", "cheese pizza"],
-  shake: ["shake", "shakes", "milkshake", "thick shake", "smoothie", "cold coffee", "oreo shake", "mango shake", "lassi"],
-  dalrice: ["dalrice", "dal rice", "dal-rice", "dal khichdi", "varan bhat", "dal fry rice", "khichdi"],
-  "dal rice": ["dalrice", "dal rice", "dal-rice", "dal khichdi", "varan bhat", "dal fry rice", "khichdi"],
-  dosa: ["dosa", "dosas", "masala dosa", "plain dosa", "mysore dosa", "paper dosa", "set dosa", "onion dosa", "rava dosa", "south indian", "uttapam"],
-  idli: ["idli", "idlis", "idly", "rava idli", "steamed idli", "button idli", "south indian", "vada", "medu vada"],
-  pohe: ["pohe", "poha", "kanda poha", "batata poha", "indori poha"],
-  poha: ["pohe", "poha", "kanda poha", "batata poha", "indori poha"],
+  cake: ["cake", "cakes", "black forest", "cheesecake", "pastry", "pastries", "mousse", "cupcake", "brownie", "dessert", "desserts", "sweet", "sweets"],
+  pastry: ["pastry", "pastries", "cake", "cakes", "black forest", "brownie", "dessert", "desserts", "cup"],
+  burger: ["burger", "burgers", "hamburger", "cheeseburger", "veg burger", "crispy burger", "chicken burger"],
+  meal: ["meal", "meals", "thali", "thalis", "tiffin", "combo meal", "meal box", "thali plate"],
+  thali: ["thali", "thalis", "punjabi thali", "gujarati thali", "maharashtrian thali", "deluxe thali", "special thali", "veg thali", "non veg thali", "jain thali", "chiken thali"],
+  biryani: ["biryani", "biryanis", "dum biryani", "hyderabadi", "chicken biryani", "veg biryani", "pulao", "chicken dum biryani"],
+  pizza: ["pizza", "pizzas", "margherita", "calzone", "pan pizza", "cheese pizza", "cheese corn", "capsicum pizza", "cheese valcano"],
+  shake: ["shake", "shakes", "milkshake", "thick shake", "smoothie", "cold coffee", "oreo shake", "mango shake", "lassi", "strawberry shake"],
+  dalrice: ["dalrice", "dal rice", "dal-rice", "dal khichdi", "varan bhat", "dal fry rice", "khichdi", "jeera rice", "lemon rice", "plain rice", "rice plate"],
+  "dal rice": ["dalrice", "dal rice", "dal-rice", "dal khichdi", "varan bhat", "dal fry rice", "khichdi", "jeera rice", "lemon rice", "plain rice", "rice plate"],
+  dosa: ["dosa", "dosas", "masala dosa", "plain dosa", "mysore dosa", "paper dosa", "set dosa", "onion dosa", "rava dosa", "uttapam", "cut dosa", "sada dosa", "irani dosa", "cone cheese dosa"],
+  idli: ["idli", "idlis", "idly", "rava idli", "steamed idli", "button idli", "vada", "medu vada", "idli sambar"],
+  pohe: ["pohe", "poha", "kanda poha", "kande pohe", "kanda pohe", "batata poha", "indori poha", "dadape pohe", "dahi pohe", "bhel pohe"],
+  poha: ["pohe", "poha", "kanda poha", "kande pohe", "kanda pohe", "batata poha", "indori poha", "dadape pohe", "dahi pohe", "bhel pohe"],
   sabudana: ["sabudana", "sabudana khichdi", "sabudana vada", "sabudana usal"],
-  shira: ["shira", "sheera", "suji halwa", "sooji halwa", "halwa"],
-  sheera: ["shira", "sheera", "suji halwa", "sooji halwa", "halwa"],
+  shira: ["shira", "sheera", "suji halwa", "sooji halwa", "halwa", "kesari", "kesari shira"],
+  sheera: ["shira", "sheera", "suji halwa", "sooji halwa", "halwa", "kesari", "kesari shira"],
   upma: ["upma", "rava upma", "sooji upma"],
   healthy: ["healthy", "salad", "salads", "bowl", "organic", "diet", "sprouts", "vegetables", "vegetable", "veggies", "boiled", "steamed", "whole wheat", "wrap", "grilled paneer", "quinoa", "protein", "smoothie", "avocado", "keto"],
-  dessert: ["dessert", "desserts", "sweet", "sweets", "cake", "pastry", "shira", "halwa", "brownie", "ice cream", "kheer", "gulab jamun"],
-  desserts: ["dessert", "desserts", "sweet", "sweets", "cake", "pastry", "shira", "halwa", "brownie", "ice cream", "kheer", "gulab jamun"],
+  dessert: ["dessert", "desserts", "sweet", "sweets", "cake", "pastry", "shira", "halwa", "brownie", "ice cream", "kheer", "gulab jamun", "waffle", "cheesecake"],
+  desserts: ["dessert", "desserts", "sweet", "sweets", "cake", "pastry", "shira", "halwa", "brownie", "ice cream", "kheer", "gulab jamun", "waffle", "cheesecake"],
   drinks: ["drinks", "drink", "beverages", "beverage", "tea", "chai", "coffee", "juice", "juices", "shake", "shakes", "milkshake", "smoothie", "cold coffee", "lassi"],
   drink: ["drinks", "drink", "beverages", "beverage", "tea", "chai", "coffee", "juice", "juices", "shake", "shakes", "milkshake", "smoothie", "cold coffee", "lassi"],
   beverages: ["drinks", "drink", "beverages", "beverage", "tea", "chai", "coffee", "juice", "juices", "shake", "shakes", "milkshake", "smoothie", "cold coffee", "lassi"],
@@ -868,6 +867,19 @@ export function isDishMatchingCuisine(
     const plural = target + "s";
     const plurPattern = new RegExp(`\\b${escapeRegex(plural)}\\b`, "i");
     if (plurPattern.test(dishName)) return true;
+  }
+
+  // 5. Category Aliases Match
+  const aliases = CATEGORY_ALIASES[target] || CATEGORY_ALIASES[cleanTarget];
+  if (aliases && aliases.length > 0) {
+    for (const alias of aliases) {
+      if (dishCat && (dishCat === alias || cleanCat === alias.replace(/[^a-z0-9]/g, ""))) return true;
+      if (dishSubCat && (dishSubCat === alias || cleanSubCat === alias.replace(/[^a-z0-9]/g, ""))) return true;
+      if (dishName && alias.length >= 3) {
+        const aliasRegex = new RegExp(`\\b${escapeRegex(alias)}\\b`, "i");
+        if (aliasRegex.test(dishName)) return true;
+      }
+    }
   }
 
   return false;
