@@ -27,6 +27,7 @@ import {
   Soup,
   IceCream,
   IceCream2,
+  IceCreamBowl,
   Pizza,
   Sandwich,
   Flame,
@@ -37,9 +38,20 @@ import {
   ChevronRight,
   ChevronLeft,
   ArrowUp,
+  ArrowDown,
   Store,
   Sparkles,
   ShoppingBag,
+  CookingPot,
+  ChefHat,
+  Salad,
+  Cookie,
+  CupSoda,
+  CakeSlice,
+  Popcorn,
+  Drumstick,
+  Apple,
+  Wheat,
 } from "lucide-react";
 import {
   isKitchenMatchingDiet,
@@ -100,6 +112,34 @@ const CrossedKnifeSpoonIcon = ({ size = 26, color = "#FFFFFF" }: { size?: number
   </svg>
 );
 
+const PoheIcon = ({ size = 24, color = "#5C4033" }: { size?: number; color?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 13h18c-.8 4.2-4.5 7.5-9 7.5S3.8 17.2 3 13Z" />
+    <path d="M4 13c1.2-3 4-5 8-5s6.8 2 8 5" />
+    <circle cx="8" cy="11.5" r="0.8" fill={color} />
+    <circle cx="12" cy="10.5" r="0.8" fill={color} />
+    <circle cx="16" cy="11.5" r="0.8" fill={color} />
+    <path d="M9 5c0 1.2-.8 2-1.5 2" />
+    <path d="M12 4c0 1.2-.8 2-1.5 2" />
+    <path d="M15 5c0 1.2-.8 2-1.5 2" />
+  </svg>
+);
+
+const SabudanaIcon = ({ size = 24, color = "#5C4033" }: { size?: number; color?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 13.5h18c-.8 4-4.5 7-9 7s-8.2-3-9-7Z" />
+    <circle cx="6.5" cy="11" r="1.6" />
+    <circle cx="10.2" cy="9.2" r="1.6" />
+    <circle cx="13.8" cy="9.2" r="1.6" />
+    <circle cx="17.5" cy="11" r="1.6" />
+    <circle cx="8.5" cy="12.5" r="1.4" />
+    <circle cx="12" cy="12" r="1.4" />
+    <circle cx="15.5" cy="12.5" r="1.4" />
+    <path d="M10 4.5c0 1.2-.8 2-1.2 2.2" />
+    <path d="M14 4c0 1.2-.8 2-1.2 2.2" />
+  </svg>
+);
+
 const NoodleBowlIcon = ({ size = 22, color = "#5C4033" }: { size?: number; color?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <path d="M7 5l11-2" />
@@ -111,20 +151,146 @@ const NoodleBowlIcon = ({ size = 22, color = "#5C4033" }: { size?: number; color
   </svg>
 );
 
+const SORT_OPTIONS = [
+  { value: "", label: "Relevance", icon: Sparkles },
+  { value: "popular", label: "Most Popular", icon: Flame },
+  { value: "rating", label: "Top Rated", icon: Star },
+  { value: "price_asc", label: "Price: Low to High", icon: ArrowDown },
+  { value: "price_desc", label: "Price: High to Low", icon: ArrowUp },
+  { value: "fastest", label: "Fastest Delivery", icon: Zap },
+];
+
+const FALLBACK_CATEGORY_ICONS = [
+  CookingPot,
+  ChefHat,
+  Salad,
+  Soup,
+  Flame,
+  Coffee,
+  CupSoda,
+  UtensilsCrossed,
+  Apple,
+  Sandwich,
+  Cookie,
+  Croissant,
+  Drumstick,
+  Wheat,
+  Utensils,
+];
+
 function getCategoryIcon(name: string, isSelected: boolean) {
   const lower = name.toLowerCase().trim();
   const color = isSelected ? "#FFFFFF" : "#5C4033";
   const size = 24;
-  if (lower === "all" || lower === "all cuisines") return <CrossedKnifeSpoonIcon size={size} color={color} />;
-  if (lower.includes("baker") || lower.includes("cake") || lower.includes("pastr")) return <Croissant size={size} color={color} strokeWidth={1.8} />;
-  if (lower.includes("drink") || lower.includes("beverag") || lower.includes("tea") || lower.includes("coffee") || lower.includes("shake")) return <Coffee size={size} color={color} strokeWidth={1.8} />;
-  if (lower.includes("breakfast") || lower.includes("egg") || lower.includes("pohe") || lower.includes("poha") || lower.includes("upma") || lower.includes("idli") || lower.includes("dosa")) return <EggFried size={size} color={color} strokeWidth={1.8} />;
-  if (lower.includes("chinese") || lower.includes("noodle") || lower.includes("soup") || lower.includes("asian")) return <NoodleBowlIcon size={size} color={color} />;
-  if (lower.includes("dessert") || lower.includes("ice") || lower.includes("sweet")) return <IceCream size={size} color={color} strokeWidth={1.8} />;
-  if (lower.includes("pizza")) return <Pizza size={size} color={color} strokeWidth={1.8} />;
-  if (lower.includes("burger") || lower.includes("sandwich") || lower.includes("snack") || lower.includes("roll")) return <Sandwich size={size} color={color} strokeWidth={1.8} />;
-  if (lower.includes("biryani") || lower.includes("rice") || lower.includes("thali") || lower.includes("meal") || lower.includes("mess")) return <Flame size={size} color={color} strokeWidth={1.8} />;
-  return <Utensils size={size} color={color} strokeWidth={1.8} />;
+
+  if (lower === "all" || lower === "all cuisines") {
+    return <CrossedKnifeSpoonIcon size={size} color={color} />;
+  }
+
+  // 1. Bakery, Cakes, Pastries, Breads
+  if (lower.includes("baker") || lower.includes("cake") || lower.includes("pastr") || lower.includes("bread") || lower.includes("bun") || lower.includes("muffin")) {
+    return <CakeSlice size={size} color={color} strokeWidth={1.8} />;
+  }
+
+  // 2. Cafe, Coffee, Tea, Chai, Brew
+  if (lower.includes("cafe") || lower.includes("coffee") || lower.includes("tea") || lower.includes("chai") || lower.includes("brew") || lower.includes("cappuccino")) {
+    return <Coffee size={size} color={color} strokeWidth={1.8} />;
+  }
+
+  // 3. Cold Drinks, Beverages, Shakes, Juices, Soda, Smoothies
+  if (lower.includes("drink") || lower.includes("beverag") || lower.includes("shake") || lower.includes("juice") || lower.includes("soda") || lower.includes("smoothie") || lower.includes("lassi") || lower.includes("mojito")) {
+    return <CupSoda size={size} color={color} strokeWidth={1.8} />;
+  }
+
+  // 4a. Pohe / Poha (Flattened rice with onions, peanuts, mustard seeds)
+  if (lower.includes("pohe") || lower.includes("poha")) {
+    return <PoheIcon size={size} color={color} />;
+  }
+
+  // 4b. Sabudana (Tapioca pearls sago khichdi / vada)
+  if (lower.includes("sabudana") || lower.includes("sago")) {
+    return <SabudanaIcon size={size} color={color} />;
+  }
+
+  // 4c. Shira / Sheera / Halwa / Kesari (Sweet semolina halwa / dessert)
+  if (lower.includes("shira") || lower.includes("sheera") || lower.includes("halwa") || lower.includes("kesari")) {
+    return <IceCreamBowl size={size} color={color} strokeWidth={1.8} />;
+  }
+
+  // 4d. Upma (Savory semolina breakfast porridge with vegetables)
+  if (lower.includes("upma") || lower.includes("sanjha") || lower.includes("rava")) {
+    return <Soup size={size} color={color} strokeWidth={1.8} />;
+  }
+
+  // 4e. General Breakfast, Morning, Egg, Omelet
+  if (lower.includes("breakfast") || lower.includes("morning") || lower.includes("egg") || lower.includes("omelet")) {
+    return <EggFried size={size} color={color} strokeWidth={1.8} />;
+  }
+
+  // 5. South Indian, Dosa, Idli, Uttapam, Vada, Sambhar
+  if (lower.includes("south") || lower.includes("dosa") || lower.includes("idli") || lower.includes("uttapam") || lower.includes("vada") || lower.includes("sambhar") || lower.includes("sambar") || lower.includes("appam")) {
+    return <ChefHat size={size} color={color} strokeWidth={1.8} />;
+  }
+
+  // 6. Homely Food, Home Style, Home Cooked, Mess, Bhojanalay
+  if (lower.includes("homely") || lower.includes("home") || lower.includes("gharguti") || lower.includes("mess") || lower.includes("bhojanalay")) {
+    return <CookingPot size={size} color={color} strokeWidth={1.8} />;
+  }
+
+  // 7. Lunch, Dinner, Complete Meals, Thali, Executive Meal
+  if (lower.includes("lunch") || lower.includes("dinner") || lower.includes("thali") || lower.includes("meal")) {
+    return <UtensilsCrossed size={size} color={color} strokeWidth={1.8} />;
+  }
+
+  // 8. Biryani, Rice, Pulao, Dalrice, Khichdi, Fried Rice
+  if (lower.includes("biryani") || lower.includes("rice") || lower.includes("pulao") || lower.includes("dalrice") || lower.includes("khichdi") || lower.includes("chawal")) {
+    return <Flame size={size} color={color} strokeWidth={1.8} />;
+  }
+
+  // 9. Chinese, Asian, Noodles, Soup, Ramen, Manchurian, Momos
+  if (lower.includes("chinese") || lower.includes("noodle") || lower.includes("soup") || lower.includes("asian") || lower.includes("ramen") || lower.includes("momo") || lower.includes("manchurian") || lower.includes("chowmein")) {
+    return <NoodleBowlIcon size={size} color={color} />;
+  }
+
+  // 10. Pizza, Italian, Pasta, Garlic Bread
+  if (lower.includes("pizza") || lower.includes("italian") || lower.includes("pasta") || lower.includes("lasagna")) {
+    return <Pizza size={size} color={color} strokeWidth={1.8} />;
+  }
+
+  // 11. Burger, Sandwiches, Rolls, Wraps, Frankies
+  if (lower.includes("burger") || lower.includes("sandwich") || lower.includes("roll") || lower.includes("wrap") || lower.includes("frankie") || lower.includes("sub")) {
+    return <Sandwich size={size} color={color} strokeWidth={1.8} />;
+  }
+
+  // 12. Snacks, Street Food, Chaat, Samosa, Kachori, Fast Food, Starters
+  if (lower.includes("snack") || lower.includes("street") || lower.includes("chaat") || lower.includes("fast") || lower.includes("starter") || lower.includes("appetizer") || lower.includes("samosa") || lower.includes("pakora") || lower.includes("bhajiya")) {
+    return <Popcorn size={size} color={color} strokeWidth={1.8} />;
+  }
+
+  // 13. Desserts, Sweets, Ice Cream, Mithai, Halwa, Kulfi
+  if (lower.includes("dessert") || lower.includes("ice") || lower.includes("sweet") || lower.includes("mithai") || lower.includes("halwa") || lower.includes("kulfi") || lower.includes("gulab") || lower.includes("jamun") || lower.includes("rasgulla") || lower.includes("cookie")) {
+    return <IceCream size={size} color={color} strokeWidth={1.8} />;
+  }
+
+  // 14. Salad, Diet, Healthy, Vegan, Organic, Fruits
+  if (lower.includes("salad") || lower.includes("healthy") || lower.includes("diet") || lower.includes("vegan") || lower.includes("fruit") || lower.includes("green") || lower.includes("raw") || lower.includes("sprout")) {
+    return <Salad size={size} color={color} strokeWidth={1.8} />;
+  }
+
+  // 15. Non-Veg, Chicken, Mutton, Fish, Seafood, Meat, Kebab, Tandoor
+  if (lower.includes("chicken") || lower.includes("mutton") || lower.includes("fish") || lower.includes("prawn") || lower.includes("seafood") || lower.includes("meat") || lower.includes("kebab") || lower.includes("tikka") || lower.includes("tandoor") || lower.includes("non-veg") || lower.includes("non veg")) {
+    return <Drumstick size={size} color={color} strokeWidth={1.8} />;
+  }
+
+  // 16. North Indian, Punjabi, Mughlai, Maharashtrian, Gujarati, Curry, Gravy
+  if (lower.includes("punjabi") || lower.includes("north") || lower.includes("mughlai") || lower.includes("marathi") || lower.includes("maharashtrian") || lower.includes("gujarati") || lower.includes("curry") || lower.includes("gravy") || lower.includes("dal")) {
+    return <CookingPot size={size} color={color} strokeWidth={1.8} />;
+  }
+
+  // 17. Deterministic Fallback: Never display identical icons for different categories
+  const hash = Math.abs(lower.split("").reduce((acc, char) => (acc * 31 + char.charCodeAt(0)) | 0, 0));
+  const FallbackIcon = FALLBACK_CATEGORY_ICONS[hash % FALLBACK_CATEGORY_ICONS.length];
+  return <FallbackIcon size={size} color={color} strokeWidth={1.8} />;
 }
 
 function FoodExploreContent() {
@@ -181,6 +347,24 @@ function FoodExploreContent() {
   const [openOnly, setOpenOnly] = useState(false);
   const [activeTab, setActiveTab] = useState<"dishes" | "kitchens">("dishes");
   const categoryScrollRef = React.useRef<HTMLDivElement>(null);
+  const [mobileSortOpen, setMobileSortOpen] = useState(false);
+  const mobileSortRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (mobileSortRef.current && !mobileSortRef.current.contains(e.target as Node)) {
+        setMobileSortOpen(false);
+      }
+    };
+    if (mobileSortOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("touchstart", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [mobileSortOpen]);
 
 
   // Popover & Modal state
@@ -2041,30 +2225,80 @@ function FoodExploreContent() {
               {filteredFoodItems.length} top-rated dishes delivering fast in {defaultAddress?.area || defaultAddress?.city || "Kothrud"}
             </p>
           </div>
-          <div className="mobile-sort-container">
-            <select
-              value={sortBy}
-              onChange={(e) => {
-                const val = e.target.value;
-                setSortBy(val);
-                if (typeof window !== "undefined") {
-                  const params = new URLSearchParams(window.location.search);
-                  if (val) params.set("sort", val);
-                  else params.delete("sort");
-                  const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
-                  router.replace(newUrl, { scroll: false });
-                }
-              }}
-              className="mobile-sort-select"
+          <div className="mobile-sort-container" ref={mobileSortRef}>
+            <button
+              type="button"
+              className={`mobile-sort-trigger-btn ${mobileSortOpen ? "open" : ""}`}
+              onClick={() => setMobileSortOpen((prev) => !prev)}
+              aria-haspopup="listbox"
+              aria-expanded={mobileSortOpen}
             >
-              <option value="">Relevance</option>
-              <option value="rating">Top Rated</option>
-              <option value="popular">Most Popular</option>
-              <option value="price_asc">Price: Low to High</option>
-              <option value="price_desc">Price: High to Low</option>
-              <option value="fastest">Fastest Delivery</option>
-            </select>
-            <ChevronDown size={13} className="mobile-sort-arrow" strokeWidth={2.2} />
+              <span className="mobile-sort-trigger-content">
+                {(() => {
+                  const currentOpt = SORT_OPTIONS.find((o) => o.value === sortBy) || SORT_OPTIONS[0];
+                  const IconComp = currentOpt.icon;
+                  return (
+                    <>
+                      <IconComp
+                        size={13}
+                        className="mobile-sort-trigger-icon"
+                        color={sortBy ? "#EA580C" : "#D97706"}
+                        fill={sortBy === "rating" ? "#EA580C" : "none"}
+                      />
+                      <span>{currentOpt.label}</span>
+                    </>
+                  );
+                })()}
+              </span>
+              <ChevronDown
+                size={14}
+                className={`mobile-sort-arrow-animated ${mobileSortOpen ? "open" : ""}`}
+                strokeWidth={2.4}
+              />
+            </button>
+
+            {mobileSortOpen && (
+              <div className="mobile-sort-dropdown-menu" role="listbox">
+                {SORT_OPTIONS.map((opt) => {
+                  const isSelected = sortBy === opt.value;
+                  const IconComp = opt.icon;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      role="option"
+                      aria-selected={isSelected}
+                      className={`mobile-sort-dropdown-item ${isSelected ? "selected" : ""}`}
+                      onClick={() => {
+                        const val = opt.value;
+                        setSortBy(val);
+                        setMobileSortOpen(false);
+                        if (typeof window !== "undefined") {
+                          const params = new URLSearchParams(window.location.search);
+                          if (val) params.set("sort", val);
+                          else params.delete("sort");
+                          const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
+                          router.replace(newUrl, { scroll: false });
+                        }
+                      }}
+                    >
+                      <div className="mobile-sort-item-left">
+                        <IconComp
+                          size={14}
+                          className="mobile-sort-item-icon"
+                          color={isSelected ? "#EA580C" : "#64748B"}
+                          fill={opt.value === "rating" && isSelected ? "#EA580C" : "none"}
+                        />
+                        <span>{opt.label}</span>
+                      </div>
+                      {isSelected && (
+                        <Check size={14} color="#EA580C" strokeWidth={2.8} />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
@@ -3331,9 +3565,15 @@ function FoodExploreContent() {
         <div className="mobile-filter-drawer-backdrop" onClick={() => setIsMobileFilterOpen(false)}>
           <div className="mobile-filter-drawer-content" onClick={(e) => e.stopPropagation()}>
             <div className="mobile-drawer-header">
-              <div className="mobile-drawer-handle" />
               <div className="mobile-drawer-title-row">
-                <span className="mobile-drawer-title">Filters & Sorting</span>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span className="mobile-drawer-title">Filters & Sorting</span>
+                  {activeFiltersCount > 0 && (
+                    <span className="mobile-drawer-active-count-badge">
+                      {activeFiltersCount}
+                    </span>
+                  )}
+                </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                   {activeFiltersCount > 0 && (
                     <button
@@ -3823,25 +4063,107 @@ function FoodExploreContent() {
           position: relative;
           flex-shrink: 0;
         }
-        .mobile-sort-select {
+        .mobile-sort-trigger-btn {
           appearance: none;
-          background-color: #EEF2FF;
-          border: 1px solid #E0E7FF;
+          background: linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%);
+          border: 1.5px solid #FED7AA;
           border-radius: 9999px;
-          padding: 6px 28px 6px 14px;
+          padding: 6px 14px;
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
           font-size: 0.78rem;
           font-weight: 700;
           color: #1E293B;
           cursor: pointer;
           outline: none;
+          box-shadow: 0 2px 6px rgba(234, 88, 12, 0.08);
+          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .mobile-sort-arrow {
+        .mobile-sort-trigger-btn:hover {
+          border-color: #EA580C;
+          box-shadow: 0 4px 12px rgba(234, 88, 12, 0.16);
+        }
+        .mobile-sort-trigger-btn:active {
+          transform: scale(0.96);
+        }
+        .mobile-sort-trigger-btn.open {
+          border-color: #EA580C;
+          background: #FFF7ED;
+          box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.18), 0 4px 12px rgba(234, 88, 12, 0.15);
+        }
+        .mobile-sort-trigger-content {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .mobile-sort-arrow-animated {
+          color: #EA580C;
+          transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .mobile-sort-arrow-animated.open {
+          transform: rotate(180deg);
+        }
+        .mobile-sort-dropdown-menu {
           position: absolute;
-          right: 10px;
-          top: 50%;
-          transform: translateY(-50%);
-          pointer-events: none;
-          color: #1E293B;
+          right: 0;
+          top: calc(100% + 8px);
+          z-index: 100;
+          min-width: 195px;
+          background: #FFFFFF;
+          border: 1.5px solid #FFEDD5;
+          border-radius: 16px;
+          padding: 6px;
+          box-shadow: 0 16px 36px -6px rgba(234, 88, 12, 0.18), 0 6px 16px -2px rgba(0, 0, 0, 0.06);
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          transform-origin: top right;
+          animation: mobileSortPop 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes mobileSortPop {
+          0% {
+            opacity: 0;
+            transform: translateY(-6px) scale(0.94);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        .mobile-sort-dropdown-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          width: 100%;
+          border: none;
+          background: transparent;
+          border-radius: 10px;
+          padding: 8px 10px;
+          font-size: 0.8rem;
+          font-weight: 600;
+          color: #334155;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          text-align: left;
+        }
+        .mobile-sort-dropdown-item:hover {
+          background-color: #FFF7ED;
+          color: #EA580C;
+          transform: translateX(2px);
+        }
+        .mobile-sort-dropdown-item:active {
+          transform: scale(0.97);
+        }
+        .mobile-sort-dropdown-item.selected {
+          background-color: #FFF7ED;
+          color: #EA580C;
+          font-weight: 700;
+        }
+        .mobile-sort-item-left {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
         }
 
         /* Mobile Dish Card Details */
@@ -4068,51 +4390,65 @@ function FoodExploreContent() {
           text-align: center;
         }
 
-        /* Mobile Filter Drawer Modal */
+        /* Mobile Filter Modal (Interactive Centered Popup Dialog) */
         .mobile-filter-drawer-backdrop {
           position: fixed;
           top: 0;
           left: 0;
           right: 0;
           bottom: 0;
-          background-color: rgba(15, 23, 42, 0.55);
-          z-index: 100;
+          background-color: rgba(15, 23, 42, 0.65);
+          z-index: 9999;
           display: flex;
-          align-items: flex-end;
+          align-items: center;
           justify-content: center;
-          backdrop-filter: blur(4px);
-          animation: fadeIn 0.2s ease-out;
+          padding: 16px;
+          backdrop-filter: blur(8px);
+          animation: filterModalFadeIn 0.2s ease-out;
+        }
+        @keyframes filterModalFadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
         .mobile-filter-drawer-content {
           width: 100%;
-          max-width: 500px;
-          max-height: 85vh;
+          max-width: 460px;
+          max-height: min(85vh, 660px);
           background-color: #FFFFFF;
-          border-top-left-radius: 24px;
-          border-top-right-radius: 24px;
+          border-radius: 24px;
+          border: 1.5px solid #FED7AA;
           display: flex;
           flex-direction: column;
           overflow: hidden;
-          box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.16);
-          animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+          box-shadow: 0 24px 60px -12px rgba(15, 23, 42, 0.28), 0 8px 24px -4px rgba(234, 88, 12, 0.12);
+          animation: filterModalPopIn 0.24s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        @keyframes slideUp {
-          from { transform: translateY(100%); }
-          to { transform: translateY(0); }
+        @keyframes filterModalPopIn {
+          0% {
+            opacity: 0;
+            transform: scale(0.92) translateY(10px);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
         }
         .mobile-drawer-header {
-          padding: 12px 18px 14px 18px;
+          padding: 16px 20px;
           border-bottom: 1px solid #F1F5F9;
+          background: linear-gradient(180deg, #FFF7ED 0%, #FFFFFF 100%);
           display: flex;
           flex-direction: column;
-          align-items: center;
-          gap: 10px;
+          gap: 0;
         }
-        .mobile-drawer-handle {
-          width: 40px;
-          height: 4px;
+        .mobile-drawer-active-count-badge {
+          background-color: #EA580C;
+          color: #FFFFFF;
+          font-size: 0.72rem;
+          font-weight: 800;
+          padding: 2px 7px;
           border-radius: 9999px;
-          background-color: #CBD5E1;
+          line-height: 1.2;
         }
         .mobile-drawer-title-row {
           width: 100%;
@@ -4121,9 +4457,10 @@ function FoodExploreContent() {
           justify-content: space-between;
         }
         .mobile-drawer-title {
-          font-size: 1.1rem;
+          font-size: 1.05rem;
           font-weight: 800;
           color: #18181B;
+          letter-spacing: -0.01em;
         }
         .mobile-drawer-clear-btn {
           background: none;
@@ -4132,7 +4469,13 @@ function FoodExploreContent() {
           font-size: 0.82rem;
           font-weight: 700;
           cursor: pointer;
-          padding: 4px 6px;
+          padding: 4px 8px;
+          border-radius: 8px;
+          transition: all 0.15s ease;
+        }
+        .mobile-drawer-clear-btn:hover {
+          background-color: #FFF7ED;
+          color: #C2410C;
         }
         .mobile-drawer-close-btn {
           background: #F1F5F9;
@@ -4145,14 +4488,30 @@ function FoodExploreContent() {
           justify-content: center;
           color: #64748B;
           cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .mobile-drawer-close-btn:hover {
+          background: #E2E8F0;
+          color: #0F172A;
+          transform: scale(1.06);
+        }
+        .mobile-drawer-close-btn:active {
+          transform: scale(0.94);
         }
         .mobile-drawer-body {
-          padding: 16px 18px;
+          padding: 16px 20px;
           overflow-y: auto;
           display: flex;
           flex-direction: column;
-          gap: 20px;
+          gap: 18px;
           flex: 1;
+        }
+        .mobile-drawer-body::-webkit-scrollbar {
+          width: 5px;
+        }
+        .mobile-drawer-body::-webkit-scrollbar-thumb {
+          background: #E2E8F0;
+          border-radius: 9999px;
         }
         .mobile-drawer-section {
           display: flex;
@@ -4160,12 +4519,12 @@ function FoodExploreContent() {
           gap: 10px;
         }
         .mobile-drawer-section-title {
-          font-size: 0.88rem;
+          font-size: 0.78rem;
           font-weight: 800;
-          color: #0F172A;
+          color: #64748B;
           margin: 0;
           text-transform: uppercase;
-          letter-spacing: 0.4px;
+          letter-spacing: 0.6px;
         }
         .mobile-drawer-chips-grid {
           display: flex;
@@ -4176,60 +4535,90 @@ function FoodExploreContent() {
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          padding: 8px 14px;
-          border-radius: 10px;
-          border: 1px solid #E2E8F0;
+          padding: 7px 13px;
+          border-radius: 12px;
+          border: 1.5px solid #E2E8F0;
           background-color: #FFFFFF;
-          color: #475569;
+          color: #334155;
           font-size: 0.82rem;
           font-weight: 600;
           cursor: pointer;
-          transition: all 0.15s ease;
+          transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .mobile-drawer-chip:hover {
+          border-color: #FED7AA;
+          background-color: #FFFDF9;
+          transform: translateY(-1px);
+        }
+        .mobile-drawer-chip:active {
+          transform: scale(0.96);
         }
         .mobile-drawer-chip.active {
-          border: 1.5px solid #FF6B00 !important;
-          background-color: #FFF3EB !important;
-          color: #FF6B00 !important;
+          border-color: #EA580C !important;
+          background: linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%) !important;
+          color: #EA580C !important;
           font-weight: 700 !important;
+          box-shadow: 0 2px 6px rgba(234, 88, 12, 0.12);
         }
         .mobile-drawer-chip-count {
           font-size: 0.74rem;
           color: #94A3B8;
+        }
+        .mobile-drawer-chip.active .mobile-drawer-chip-count {
+          color: #EA580C;
+          opacity: 0.85;
         }
         .mobile-drawer-toggle-row {
           display: flex;
           align-items: center;
           justify-content: space-between;
           padding: 10px 14px;
-          border-radius: 10px;
+          border-radius: 12px;
+          border: 1px solid #F1F5F9;
           background-color: #F8FAFC;
           font-size: 0.86rem;
           font-weight: 600;
           color: #334155;
           cursor: pointer;
+          transition: background-color 0.15s ease;
+        }
+        .mobile-drawer-toggle-row:hover {
+          background-color: #F1F5F9;
         }
         .mobile-drawer-checkbox {
           width: 18px;
           height: 18px;
-          accent-color: #FF6B00;
+          accent-color: #EA580C;
           cursor: pointer;
         }
         .mobile-drawer-footer {
-          padding: 14px 18px 20px 18px;
+          padding: 12px 20px 16px 20px;
           border-top: 1px solid #F1F5F9;
           background-color: #FFFFFF;
         }
         .mobile-drawer-apply-btn {
           width: 100%;
           padding: 12px 18px;
-          border-radius: 12px;
-          background-color: #FF6B00;
+          border-radius: 14px;
+          background: linear-gradient(135deg, #FF6B00 0%, #EA580C 100%);
           color: #FFFFFF;
           border: none;
-          font-size: 0.95rem;
+          font-size: 0.92rem;
           font-weight: 800;
           cursor: pointer;
-          box-shadow: 0 4px 16px rgba(255, 107, 0, 0.3);
+          box-shadow: 0 4px 16px rgba(234, 88, 12, 0.32);
+          transition: all 0.18s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+        }
+        .mobile-drawer-apply-btn:hover {
+          box-shadow: 0 6px 20px rgba(234, 88, 12, 0.42);
+          transform: translateY(-1px);
+        }
+        .mobile-drawer-apply-btn:active {
+          transform: scale(0.98);
         }
         @keyframes foodExploreSearchPopover {
           0% {

@@ -1,10 +1,13 @@
 "use client";
 
 import React from "react";
+import { isNonVegDish } from "@/lib/dietary-filter";
 
 export interface DietaryTagProps {
   itemType?: string | null;
   isVeg?: boolean;
+  name?: string | null;
+  description?: string | null;
   size?: "xs" | "sm" | "md";
   showLabel?: boolean;
   style?: React.CSSProperties;
@@ -14,6 +17,8 @@ export interface DietaryTagProps {
 export const DietaryTag: React.FC<DietaryTagProps> = ({
   itemType,
   isVeg,
+  name,
+  description,
   size = "sm",
   showLabel = true,
   style,
@@ -23,7 +28,11 @@ export const DietaryTag: React.FC<DietaryTagProps> = ({
   let isVegan = false;
   let isJain = false;
 
-  if (itemType) {
+  const isNameNonVeg = (name || description) ? isNonVegDish({ name, description, itemType }) : false;
+
+  if (isVeg === false || isNameNonVeg) {
+    isNonVeg = true;
+  } else if (itemType) {
     const raw = String(itemType).split(",").map((s) => s.trim().toUpperCase());
     isNonVeg = raw.includes("NON_VEG") || raw.includes("NON-VEG") || raw.includes("NON VEG");
     isVegan = raw.includes("VEGAN");

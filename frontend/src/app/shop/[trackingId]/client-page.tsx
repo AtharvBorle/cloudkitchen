@@ -12,7 +12,7 @@ import { ExploreHeader } from "@/app/explore/layout";
 import { useLocation } from "@/components/location-provider";
 import { Star, MessageSquare, Utensils, MapPin } from "lucide-react";
 import { DietaryTag } from "@/components/common/DietaryTag";
-import { isDishMatchingDiet, resolveDishDietaryTypes } from "@/lib/dietary-filter";
+import { isDishMatchingDiet, resolveDishDietaryTypes, isNonVegDish } from "@/lib/dietary-filter";
 import {
   calculateDistanceKm,
   MAX_DELIVERY_RADIUS_KM,
@@ -534,6 +534,13 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                             const filteredFoodItems = seller.foodItems
                                 .filter((item: any) => isCurrentlyOpen(item))
                                 .filter((item: any) => {
+                                    const sellerFoodType = String(seller?.foodType || "").toUpperCase().replace(/[\s-]/g, "_").trim();
+                                    const hasNonVegDishes = (seller?.foodItems || []).some((it: any) => {
+                                        const itType = String(it.itemType || "").toUpperCase();
+                                        return itType.includes("NON_VEG") || it.isVeg === false || isNonVegDish(it);
+                                    });
+                                    const isPureVegKitchen = sellerFoodType === "PURE_VEG" || sellerFoodType === "VEG" || sellerFoodType === "VEG_ONLY" || (!hasNonVegDishes && (seller?.foodItems || []).length > 0);
+                                    if (isPureVegKitchen && (isNonVegDish(item) || item.isVeg === false || String(item.itemType || "").toUpperCase().includes("NON_VEG"))) return false;
                                     if (foodFilter === "VEG") return isDishMatchingDiet(item, "veg");
                                     if (foodFilter === "NON_VEG") return isDishMatchingDiet(item, "non-veg");
                                     if (foodFilter === "JAIN") return isDishMatchingDiet(item, "jain");
@@ -730,7 +737,7 @@ export default function PublicShopClient({ trackingId }: { trackingId: string })
                                             </div>
                                             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', flex: 1, marginBottom: '6px' }}>{item.description}</p>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '10px', flexWrap: 'wrap' }}>
-                                                <DietaryTag itemType={item.itemType} size="xs" />
+                                                <DietaryTag itemType={item.itemType} isVeg={item.isVeg} name={item.name} description={item.description} size="xs" />
                                             </div>
 
                                             {/* Add-ons available preview */}

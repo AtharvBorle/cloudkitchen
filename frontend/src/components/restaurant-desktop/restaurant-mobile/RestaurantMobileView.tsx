@@ -22,6 +22,7 @@ import {
 import styles from "./RestaurantMobileView.module.css";
 import { MobileSidebar } from "@/components/mobile-sidebar";
 import { DietaryTag } from "@/components/common/DietaryTag";
+import { isNonVegDish } from "@/lib/dietary-filter";
 import { SubscriptionPlans, PlanItem } from "../subscriptionplans";
 import heroPhoto from "../foodherobanner/FoodHeroPhoto.jpg";
 import { KitchenData, FoodCardItem } from "../restaurant-data";
@@ -119,7 +120,11 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
 
   // Filter items by category and isVegOnly
   const itemsToDisplay = baseItems.filter((item) => {
-    const matchesVeg = !isVegOnly || item.isVeg !== false;
+    const isPureVegKitchen =
+      kitchenData.dietType?.toLowerCase().includes("pure veg") ||
+      kitchenData.dietType?.includes("🥦");
+    if (isPureVegKitchen && (!item.isVeg || isNonVegDish(item))) return false;
+    const matchesVeg = !isVegOnly || (item.isVeg !== false && !isNonVegDish(item));
     const matchesCategory =
       activeCategory === "All" ||
       (item.category && item.category.toLowerCase() === activeCategory.toLowerCase());
@@ -697,7 +702,7 @@ export const RestaurantMobileView: React.FC<RestaurantMobileViewProps> = ({
 
                       {/* Dietary Tag below description */}
                       <div style={{ display: "flex", alignItems: "center", gap: "4px", margin: "2px 0 6px 0", flexWrap: "wrap" }}>
-                        <DietaryTag isVeg={item.isVeg !== false} itemType={(item as any).itemType} size="xs" />
+                        <DietaryTag isVeg={item.isVeg !== false} itemType={(item as any).itemType} name={item.title} description={item.description} size="xs" />
                       </div>
 
                       {item.addons && item.addons.length > 0 && (

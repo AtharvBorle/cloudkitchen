@@ -371,17 +371,20 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
 }
 
 .cardIconBox {
   width: 40px;
   height: 40px;
+  min-width: 40px;
   border-radius: 12px;
   background: #fff7ed;
   color: #ea580c;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .cardTitle {
@@ -389,6 +392,25 @@
   font-weight: 700;
   color: #0f172a;
   margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.cardTitleCount {
+  font-weight: 600;
+  color: #64748b;
+  font-size: 0.9em;
+  white-space: nowrap;
+}
+
+.invoiceBtnShortText {
+  display: none;
+}
+
+.invoiceBtnFullText {
+  display: inline;
 }
 
 .estimatedBadge {
@@ -892,6 +914,55 @@
     border-radius: 20px;
   }
 
+  .cardHeader {
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    gap: 8px;
+  }
+
+  .cardTitleGroup {
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .cardIconBox {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    border-radius: 10px;
+  }
+
+  .cardTitle {
+    font-size: 0.98rem;
+    font-weight: 700;
+    gap: 4px;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+  }
+
+  .cardTitleCount {
+    font-size: 0.88rem;
+    font-weight: 600;
+  }
+
+  .invoiceHeaderBtn,
+  .invoiceHeaderBtnDisabled {
+    padding: 5px 10px;
+    font-size: 0.78rem;
+    gap: 5px;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .invoiceBtnFullText {
+    display: none;
+  }
+
+  .invoiceBtnShortText {
+    display: inline;
+  }
+
   .actionButtonsRow {
     flex-direction: column;
     width: 100%;
@@ -982,4 +1053,24 @@
   padding: 16px 28px;
   cursor: not-allowed;
   opacity: 0.75;
+}
+
+
+@media (max-width: 390px) {
+  .cardTitle {
+    font-size: 0.9rem;
+  }
+  .cardTitleCount {
+    font-size: 0.82rem;
+  }
+  .cardIconBox {
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+  }
+  .invoiceHeaderBtn,
+  .invoiceHeaderBtnDisabled {
+    padding: 4px 8px;
+    font-size: 0.74rem;
+  }
 }
