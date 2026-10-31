@@ -40,6 +40,7 @@ import {
   ArrowUp,
   ArrowDown,
   Store,
+  Home,
   Sparkles,
   ShoppingBag,
   CookingPot,
@@ -2863,46 +2864,71 @@ function FoodExploreContent() {
                       <div
                         style={{
                           width: "100%",
-                          height: "170px",
+                          height: "175px",
                           position: "relative",
                           overflow: "hidden",
                           backgroundColor: "#F1F5F9",
                         }}
                       >
                         {/* Top Right Favorite Button for Mobile */}
-<button
-  type="button"
-  onClick={(e) => toggleFavorite(dish.id, e)}
-  className="mobile-dish-favorite-btn"
-  aria-label={favorites[dish.id] ? "Remove from favorites" : "Add to favorites"}
->
-  <Heart
-    size={18}
-    color={favorites[dish.id] ? "#EF4444" : "#64748B"}
-    fill={favorites[dish.id] ? "#EF4444" : "none"}
-  />
-</button>
+                        <button
+                          type="button"
+                          onClick={(e) => toggleFavorite(dish.id, e)}
+                          className="mobile-dish-favorite-btn"
+                          aria-label={favorites[dish.id] ? "Remove from favorites" : "Add to favorites"}
+                        >
+                          <Heart
+                            size={18}
+                            color={favorites[dish.id] ? "#EF4444" : "#64748B"}
+                            fill={favorites[dish.id] ? "#EF4444" : "none"}
+                          />
+                        </button>
 
-{/* Offer Badge on Top Left (Only displayed when the dish has an active deal/offer/coupon) */}
-                        {!isClosed && offerDetails.hasOffer && offerDetails.badgeText && (
+                        {/* Top Right Rating Badge for Desktop (Image 2 Design) */}
+                        <div
+                          className="desktop-dish-rating-badge"
+                          style={{
+                            position: "absolute",
+                            top: "10px",
+                            right: "10px",
+                            zIndex: 2,
+                            backgroundColor: "#FFFFFF",
+                            color: "#0F172A",
+                            fontSize: "11.5px",
+                            fontWeight: "700",
+                            padding: "3px 8px",
+                            borderRadius: "9999px",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "3px",
+                            boxShadow: "0 2px 6px rgba(0,0,0,0.12)",
+                          }}
+                        >
+                          <Star size={11} fill="#F59E0B" color="#F59E0B" />
+                          <span>{dish.rating && Number(dish.rating) > 0 ? Number(dish.rating).toFixed(1) : "4.8"}</span>
+                        </div>
+
+                        {/* Offer Badge on Top Left (Image 2 Design) */}
+                        {!isClosed && offerDetails.hasOffer && (offerDetails.badgeText || offerDetails.discountAmount) && (
                           <div
                             style={{
                               position: "absolute",
                               top: "10px",
                               left: "10px",
-                              backgroundColor: "#BC4B24",
+                              backgroundColor: "#FF5500",
                               color: "#FFFFFF",
                               fontSize: "11px",
-                              fontWeight: "600",
+                              fontWeight: "800",
                               lineHeight: "1.2",
-                              letterSpacing: "0.2px",
+                              letterSpacing: "0.4px",
                               padding: "4px 9px",
-                              borderRadius: "6px",
-                              boxShadow: "0 2px 5px rgba(0,0,0,0.15)",
+                              borderRadius: "8px",
+                              boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
                               zIndex: 2,
+                              textTransform: "uppercase",
                             }}
                           >
-                            {offerDetails.badgeText}
+                            {offerDetails.badgeText || (offerDetails.discountAmount ? `FLAT ₹${offerDetails.discountAmount} OFF` : "SPECIAL OFFER")}
                           </div>
                         )}
 
@@ -2956,123 +2982,87 @@ function FoodExploreContent() {
                           </div>
                         )}
 
-                        {/* Kitchen Tag Badge overlay at bottom of image */}
+                        {/* Kitchen Tag Badge overlay at bottom of image (Image 2 Design) */}
                         <div
                           style={{
                             position: "absolute",
                             bottom: "8px",
                             left: "8px",
                             zIndex: 2,
-                            backgroundColor: "rgba(15, 23, 42, 0.8)",
+                            backgroundColor: "rgba(15, 23, 42, 0.75)",
                             backdropFilter: "blur(4px)",
                             color: "#FFFFFF",
                             fontSize: "11px",
-                            fontWeight: "700",
-                            padding: "3px 8px",
-                            borderRadius: "6px",
+                            fontWeight: "600",
+                            padding: "3px 9px",
+                            borderRadius: "9999px",
                             display: "flex",
                             alignItems: "center",
                             gap: "5px",
-                            boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+                            boxShadow: "0 2px 6px rgba(0,0,0,0.25)",
                             maxWidth: "calc(100% - 16px)",
                           }}
                         >
-                          <Store size={12} color="#FB923C" style={{ flexShrink: 0 }} />
+                          <Home size={11} color="#FFFFFF" style={{ flexShrink: 0 }} />
                           <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            {dish.sellerName || "Verified Cloud Kitchen"}
+                            {dish.sellerName || "Verified Kitchen"}
                           </span>
                         </div>
                       </div>
 
-                      {/* Card Info: Desktop */}
-                      <div className="desktop-card-body"
+                      {/* Card Info: Desktop (Image 2 Design) */}
+                      <div
+                        className="desktop-card-body"
                         style={{
                           padding: "14px 16px 16px 16px",
                           display: "flex",
                           flexDirection: "column",
-                          gap: "6px",
+                          gap: "8px",
                           flex: 1,
                         }}
                       >
-                        {/* Title & Kitchen Name */}
-                        <div>
-                          <h3
-                            style={{
-                              fontSize: "1.05rem",
-                              fontWeight: "800",
-                              color: isClosed ? "#64748B" : "#18181B",
-                              margin: "0 0 2px 0",
-                              whiteSpace: "nowrap",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                            }}
-                          >
-                            {dish.name}
-                          </h3>
+                        {/* Row 1: Badges Above Title - Kitchen Name Pill + Dietary Pill */}
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                          {/* Kitchen Name Pill */}
                           <Link
                             href={dish.sellerTrackingId ? `/shop/${dish.sellerTrackingId}${selectedPrice && selectedPrice !== "all" ? `?price=${selectedPrice}` : ""}` : "#"}
                             style={{
-                              fontSize: "0.8rem",
-                              color: "#EA580C",
-                              backgroundColor: "#FFF7ED",
-                              border: "1px solid #FFEDD5",
+                              fontSize: "0.76rem",
+                              color: "#C2410C",
+                              backgroundColor: "#FFF8F4",
+                              border: "1px solid #FED7AA",
                               fontWeight: "700",
                               textDecoration: "none",
                               display: "inline-flex",
                               alignItems: "center",
-                              gap: "5px",
-                              padding: "3px 8px",
-                              borderRadius: "6px",
-                              width: "fit-content",
-                              marginTop: "3px",
-                              marginBottom: "3px",
+                              gap: "4px",
+                              padding: "3px 9px",
+                              borderRadius: "8px",
+                              maxWidth: "180px",
                               transition: "all 0.15s ease",
                             }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = "#FFEDD5";
-                              e.currentTarget.style.borderColor = "#FDBA74";
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = "#FFF7ED";
-                              e.currentTarget.style.borderColor = "#FFEDD5";
-                            }}
-                            title={`Kitchen: ${dish.sellerName || "Verified Cloud Kitchen"}`}
+                            title={`Kitchen: ${dish.sellerName || "Verified Kitchen"}`}
                           >
-                            <Store size={12} color="#EA580C" style={{ flexShrink: 0 }} />
+                            <Home size={11} color="#EA580C" style={{ flexShrink: 0 }} />
                             <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                              {dish.sellerName || "Verified Cloud Kitchen"}
+                              {dish.sellerName || "Verified Kitchen"}
                             </span>
                           </Link>
-                        </div>
 
-                        {/* Dietary Tag inside Food Menu Description (Shows all seller-specified dietary categories horizontally: Veg, Jain, Vegan) */}
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", margin: "2px 0" }}>
+                          {/* Dietary Pill (Pure Veg / Non-Veg / Vegan / Jain) */}
                           {(() => {
-                            const rawType = resolveDishDietaryTypes(dish).toUpperCase();
-                            const rawParts = rawType.split(",").map((s) => s.trim());
-                            const catName = String(dish.categoryName || (dish as any).category || "").toUpperCase();
-                            const nameUpper = String(dish.name || "").toUpperCase();
-
-                            const isNonVeg =
-                              !rawParts.includes("VEG") &&
-                              !rawParts.includes("VEGAN") &&
-                              !rawParts.includes("JAIN") &&
-                              (rawParts.includes("NON_VEG") ||
-                                rawParts.includes("NON-VEG") ||
-                                rawParts.includes("NON VEG") ||
-                                isNonVegDish(dish));
-
+                            const isNonVeg = isNonVegDish(dish);
                             if (isNonVeg) {
                               return (
                                 <span
-                                  key="non-veg"
                                   style={{
                                     backgroundColor: "#FEF2F2",
-                                    color: "#B91C1C",
-                                    fontSize: "11px",
+                                    border: "1px solid #FECACA",
+                                    color: "#991B1B",
+                                    fontSize: "0.76rem",
                                     fontWeight: "700",
-                                    padding: "2px 8px",
-                                    borderRadius: "6px",
+                                    padding: "3px 9px",
+                                    borderRadius: "8px",
                                     display: "inline-flex",
                                     alignItems: "center",
                                     gap: "4px",
@@ -3084,39 +3074,16 @@ function FoodExploreContent() {
                                 </span>
                               );
                             }
-
-                            const hasVeg =
-                              rawParts.includes("VEG") ||
-                              rawParts.includes("PURE_VEG") ||
-                              (!rawParts.includes("VEGAN") && !rawParts.includes("JAIN"));
-                            const hasJain =
-                              rawParts.includes("JAIN") ||
-                              catName.includes("JAIN") ||
-                              nameUpper.includes("JAIN");
-                            const hasVegan =
-                              rawParts.includes("VEGAN") ||
-                              catName.includes("VEGAN") ||
-                              nameUpper.includes("VEGAN");
-
-                            const tags: Array<{ key: string; label: string }> = [];
-                            if (hasVeg) tags.push({ key: "veg", label: "Veg" });
-                            if (hasJain) tags.push({ key: "jain", label: "Jain" });
-                            if (hasVegan) tags.push({ key: "vegan", label: "Vegan" });
-
-                            if (tags.length === 0) {
-                              tags.push({ key: "veg", label: "Veg" });
-                            }
-
-                            return tags.map((t) => (
+                            return (
                               <span
-                                key={t.key}
                                 style={{
                                   backgroundColor: "#ECFDF5",
-                                  color: "#047857",
-                                  fontSize: "11px",
+                                  border: "1px solid #A7F3D0",
+                                  color: "#065F46",
+                                  fontSize: "0.76rem",
                                   fontWeight: "700",
-                                  padding: "2px 8px",
-                                  borderRadius: "6px",
+                                  padding: "3px 9px",
+                                  borderRadius: "8px",
                                   display: "inline-flex",
                                   alignItems: "center",
                                   gap: "4px",
@@ -3124,23 +3091,39 @@ function FoodExploreContent() {
                                 }}
                               >
                                 <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#10B981" }} />
-                                {t.label}
+                                Pure Veg
                               </span>
-                            ));
+                            );
                           })()}
                         </div>
 
-                        {/* Dish Description & Active Offer Coupon Code */}
+                        {/* Row 2: Dish Title */}
+                        <h3
+                          style={{
+                            fontSize: "1.12rem",
+                            fontWeight: "800",
+                            color: isClosed ? "#64748B" : "#0F172A",
+                            margin: "0",
+                            lineHeight: "1.35",
+                            letterSpacing: "-0.01em",
+                          }}
+                        >
+                          {dish.name}
+                        </h3>
+
+                        {/* Row 3: Dish Description */}
                         {dish.description && dish.description.trim() && dish.description.trim().toLowerCase() !== "xyz" && (
                           <p
                             style={{
                               margin: "0",
-                              fontSize: "0.78rem",
-                              color: isClosed ? "#94A3B8" : "#475569",
-                              fontWeight: "500",
-                              lineHeight: "1.4",
-                              wordBreak: "break-word",
-                              overflowWrap: "break-word",
+                              fontSize: "0.82rem",
+                              color: isClosed ? "#94A3B8" : "#64748B",
+                              fontWeight: "400",
+                              lineHeight: "1.45",
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
                             }}
                             title={dish.description}
                           >
@@ -3148,124 +3131,43 @@ function FoodExploreContent() {
                           </p>
                         )}
 
+                        {/* Row 4: Coupon Code / Offer Tag (Image 2 Design) */}
                         {!isClosed && offerDetails.hasOffer && (offerDetails.couponCode || offerDetails.couponDescription) && (
                           <div
                             style={{
                               display: "inline-flex",
                               alignItems: "center",
                               gap: "5px",
-                              backgroundColor: "#FFF7ED",
-                              border: "1px dashed #FDBA74",
-                              color: "#C2410C",
-                              fontSize: "0.74rem",
-                              fontWeight: "700",
-                              padding: "3px 8px",
-                              borderRadius: "6px",
+                              backgroundColor: "#FFFBEB",
+                              border: "1px solid #FDE68A",
+                              color: "#92400E",
+                              fontSize: "0.76rem",
+                              fontWeight: "600",
+                              padding: "3px 9px",
+                              borderRadius: "7px",
                               width: "fit-content",
                               maxWidth: "100%",
                             }}
                           >
-                            <Tag size={11} color="#EA580C" style={{ flexShrink: 0 }} />
+                            <Tag size={11} color="#D97706" style={{ flexShrink: 0 }} />
                             <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                              {offerDetails.couponCode ? `Use code: ${offerDetails.couponCode}` : offerDetails.couponDescription}
+                              {offerDetails.couponCode ? (
+                                <>
+                                  Use code: <strong style={{ color: "#78350F", fontWeight: "800" }}>{offerDetails.couponCode}</strong>
+                                </>
+                              ) : (
+                                offerDetails.couponDescription
+                              )}
                             </span>
                           </div>
                         )}
 
-                        {/* Rating Stars + Ratings Count & Delivery Time Row */}
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            fontSize: "0.82rem",
-                            marginTop: "2px",
-                          }}
-                        >
-                          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
-                              {(() => {
-                                const dishRating =
-                                  dish.rating && !isNaN(Number(dish.rating)) && Number(dish.rating) > 0
-                                    ? Number(dish.rating)
-                                    : 5.0;
-                                return [1, 2, 3, 4, 5].map((s) => {
-                                  let fillPct = 0;
-                                  if (dishRating >= s) {
-                                    fillPct = 100;
-                                  } else if (dishRating > s - 1) {
-                                    fillPct = Math.round((dishRating - (s - 1)) * 100);
-                                  }
-
-                                  const starActiveColor = isClosed ? "#94A3B8" : "#D97706";
-                                  const starEmptyBg = isClosed ? "#E2E8F0" : "#F1F5F9";
-                                  const starEmptyBorder = isClosed ? "#CBD5E1" : "#CBD5E1";
-
-                                  return (
-                                    <div
-                                      key={s}
-                                      style={{
-                                        position: "relative",
-                                        display: "inline-flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        width: 13,
-                                        height: 13,
-                                        flexShrink: 0,
-                                      }}
-                                    >
-                                      {/* Unfilled base star */}
-                                      <Star
-                                        size={13}
-                                        fill={starEmptyBg}
-                                        color={starEmptyBorder}
-                                        strokeWidth={1.2}
-                                      />
-                                      {/* Dynamic filled star overlay */}
-                                      {fillPct > 0 && (
-                                        <div
-                                          style={{
-                                            position: "absolute",
-                                            top: 0,
-                                            left: 0,
-                                            width: `${fillPct}%`,
-                                            height: "100%",
-                                            overflow: "hidden",
-                                            display: "inline-flex",
-                                            alignItems: "center",
-                                          }}
-                                        >
-                                          <Star
-                                            size={13}
-                                            fill={starActiveColor}
-                                            color={starActiveColor}
-                                            strokeWidth={1.2}
-                                            style={{ flexShrink: 0, minWidth: 13, minHeight: 13 }}
-                                          />
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                });
-                              })()}
-                            </div>
-                            <span style={{ fontSize: "0.78rem", fontWeight: "700", color: isClosed ? "#94A3B8" : "#18181B" }}>
-                              {dish.rating && dish.rating > 0 ? `${Number(dish.rating).toFixed(1)} Ratings` : "5.0 Ratings"}
-                            </span>
-                          </div>
-
-                          <div style={{ display: "flex", alignItems: "center", gap: "4px", color: "#475569", fontSize: "0.82rem", fontWeight: "600" }}>
-                            <Clock size={14} color="#64748B" />
-                            <span>{dish.deliveryTime || "20–30 min"}</span>
-                          </div>
-                        </div>
-
-                        {/* Add-ons Available Badge */}
-                        {hasAddons && !isClosed && (
-                          <div style={{ display: "flex", alignItems: "center", gap: "4px", margin: "1px 0" }}>
+                        {/* Row 5: Add-ons & Distance (if applicable) */}
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                          {hasAddons && !isClosed && (
                             <span
                               style={{
-                                fontSize: "0.72rem",
+                                fontSize: "0.70rem",
                                 fontWeight: "700",
                                 color: "#EA580C",
                                 backgroundColor: "#FFF7ED",
@@ -3274,47 +3176,52 @@ function FoodExploreContent() {
                                 borderRadius: "6px",
                                 display: "inline-flex",
                                 alignItems: "center",
-                                gap: "4px",
+                                gap: "3px",
                               }}
                             >
-                              <Sparkles size={11} />
-                              <span>{dishAddons.length} Add-on{dishAddons.length > 1 ? "s" : ""} Available</span>
+                              <Sparkles size={10} />
+                              <span>{dishAddons.length} Add-on{dishAddons.length > 1 ? "s" : ""}</span>
                             </span>
-                          </div>
-                        )}
+                          )}
 
-                        {/* Stock Quantity / Status Text */}
-                        {isOutOfStock ? (
-                          <div style={{ fontSize: "0.78rem", color: "#DC2626", fontWeight: "700" }}>
-                            Out of stock
-                          </div>
-                        ) : null}
+                          {dish.distanceText && (
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", fontSize: "0.74rem", color: "#FF5500", fontWeight: "600" }}>
+                              <MapPin size={11} />
+                              <span>{dish.distanceText} away</span>
+                            </span>
+                          )}
+                        </div>
 
-                        {/* Distance Badge */}
-                        {dish.distanceText && (
-                          <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.78rem", color: "#FF6B00", fontWeight: "700" }}>
-                            <MapPin size={13} />
-                            <span>{dish.distanceText} away</span>
-                          </div>
-                        )}
-
-                        {/* Price & Action Button Row */}
+                        {/* Row 6: Price, Time & Add Button (Image 2 Design) */}
                         <div
                           style={{
                             marginTop: "auto",
                             paddingTop: "10px",
+                            borderTop: "1px solid #F1F5F9",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "space-between",
-                            borderTop: "1px solid #F1F5F9",
                           }}
                         >
+                          {/* Price & Delivery Time on Left */}
                           <div>
-                            <span style={{ fontSize: "1.15rem", fontWeight: "800", color: isClosed ? "#64748B" : "#18181B" }}>
-                              ₹{dish.price}
-                            </span>
+                            <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
+                              <span style={{ fontSize: "1.25rem", fontWeight: "800", color: isClosed ? "#64748B" : "#0F172A" }}>
+                                ₹{dish.price}
+                              </span>
+                              {offerDetails.hasOffer && (
+                                <span style={{ fontSize: "0.82rem", fontWeight: "500", color: "#94A3B8", textDecoration: "line-through" }}>
+                                  ₹{Math.round(dish.price * 1.35)}
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "4px", color: "#64748B", fontSize: "0.76rem", fontWeight: "500", marginTop: "2px" }}>
+                              <Clock size={12} color="#64748B" />
+                              <span>{dish.deliveryTime || "20–30 min"}</span>
+                            </div>
                           </div>
 
+                          {/* Right: + ADD Button */}
                           {isClosed ? (
                             <button
                               type="button"
@@ -3324,11 +3231,10 @@ function FoodExploreContent() {
                                 color: "#64748B",
                                 fontSize: "0.82rem",
                                 fontWeight: "700",
-                                padding: "6px 14px",
+                                padding: "7px 14px",
                                 borderRadius: "10px",
                                 border: "1px solid #CBD5E1",
                                 cursor: "pointer",
-                                transition: "all 0.2s ease",
                               }}
                               title={isSellerClosed ? "Seller is closed" : "Unavailable"}
                             >
@@ -3342,12 +3248,11 @@ function FoodExploreContent() {
                                 color: "#FFFFFF",
                                 fontSize: "0.86rem",
                                 fontWeight: "700",
-                                padding: "7px 16px",
-                                borderRadius: "12px",
+                                padding: "8px 18px",
+                                borderRadius: "10px",
                                 border: "none",
                                 cursor: "default",
                                 boxShadow: "0 4px 12px rgba(16, 185, 129, 0.25)",
-                                transition: "all 0.2s ease",
                                 display: "inline-flex",
                                 alignItems: "center",
                                 gap: "4px",
@@ -3379,8 +3284,6 @@ function FoodExploreContent() {
                                     lineHeight: "1.15",
                                     boxShadow: "0 2px 6px rgba(234, 88, 12, 0.12)",
                                     boxSizing: "border-box",
-                                    whiteSpace: "normal",
-                                    wordBreak: "break-word",
                                   }}
                                 >
                                   We have only {stockLimit} left in stock
@@ -3391,43 +3294,37 @@ function FoodExploreContent() {
                                   display: "inline-flex",
                                   alignItems: "center",
                                   backgroundColor: "#FFF7ED",
-                                  border: "1.5px solid #FF6B00",
+                                  border: "1.5px solid #FF5500",
                                   borderRadius: "10px",
                                   overflow: "hidden",
-                                  boxShadow: "0 2px 8px rgba(255, 107, 0, 0.15)",
+                                  boxShadow: "0 2px 8px rgba(255, 85, 0, 0.15)",
                                 }}
                               >
                                 <button
                                   type="button"
                                   onClick={() => handleDecreaseFromCart(dish.id)}
                                   style={{
-                                    padding: "5px 11px",
+                                    padding: "6px 12px",
                                     backgroundColor: "transparent",
                                     border: "none",
                                     cursor: "pointer",
                                     fontWeight: "800",
                                     fontSize: "1rem",
-                                    color: "#FF6B00",
-                                    transition: "background-color 0.15s ease",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
+                                    color: "#FF5500",
                                   }}
-                                  onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "rgba(255, 107, 0, 0.15)")}
-                                  onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
                                   aria-label="Decrease quantity"
                                 >
                                   -
                                 </button>
                                 <span
                                   style={{
-                                    padding: "5px 10px",
+                                    padding: "6px 10px",
                                     fontWeight: "800",
                                     fontSize: "0.88rem",
-                                    color: "#FF6B00",
+                                    color: "#FF5500",
                                     backgroundColor: "#FFFFFF",
-                                    borderLeft: "1.5px solid #FF6B00",
-                                    borderRight: "1.5px solid #FF6B00",
+                                    borderLeft: "1.5px solid #FF5500",
+                                    borderRight: "1.5px solid #FF5500",
                                     minWidth: "22px",
                                     textAlign: "center",
                                   }}
@@ -3444,23 +3341,15 @@ function FoodExploreContent() {
                                     }
                                   }}
                                   style={{
-                                    padding: "5px 11px",
+                                    padding: "6px 12px",
                                     backgroundColor: "transparent",
                                     border: "none",
                                     cursor: isMaxStockInCart ? "not-allowed" : "pointer",
                                     opacity: isMaxStockInCart ? 0.35 : 1,
                                     fontWeight: "800",
                                     fontSize: "1rem",
-                                    color: "#FF6B00",
-                                    transition: "background-color 0.15s ease",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
+                                    color: "#FF5500",
                                   }}
-                                  onMouseOver={(e) => {
-                                    if (!isMaxStockInCart) e.currentTarget.style.backgroundColor = "rgba(255, 107, 0, 0.15)";
-                                  }}
-                                  onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
                                   aria-label="Increase quantity"
                                 >
                                   +
@@ -3472,23 +3361,34 @@ function FoodExploreContent() {
                               type="button"
                               onClick={() => handleAddToCart(dish, true)}
                               style={{
-                                backgroundColor: "#FF6B00",
+                                backgroundColor: "#FF5500",
                                 color: "#FFFFFF",
                                 fontSize: "0.86rem",
-                                fontWeight: "700",
-                                padding: "8px 18px",
+                                fontWeight: "800",
+                                padding: "9px 20px",
                                 borderRadius: "10px",
                                 border: "none",
                                 cursor: "pointer",
-                                boxShadow: "0 3px 10px rgba(255, 107, 0, 0.25)",
-                                transition: "all 0.2s ease",
+                                boxShadow: "0 4px 12px rgba(255, 85, 0, 0.25)",
+                                transition: "all 0.18s ease",
                                 display: "inline-flex",
                                 alignItems: "center",
                                 gap: "5px",
+                                letterSpacing: "0.02em",
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = "#E04B00";
+                                e.currentTarget.style.transform = "translateY(-1px)";
+                                e.currentTarget.style.boxShadow = "0 6px 16px rgba(255, 85, 0, 0.35)";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = "#FF5500";
+                                e.currentTarget.style.transform = "none";
+                                e.currentTarget.style.boxShadow = "0 4px 12px rgba(255, 85, 0, 0.25)";
                               }}
                             >
-                              <span>{hasAddons ? "Add Item" : "Add to cart"}</span>
-                              <span style={{ fontSize: "0.9rem", fontWeight: "700" }}>+</span>
+                              <span style={{ fontSize: "1rem", fontWeight: "800" }}>+</span>
+                              <span>{hasAddons ? "ADD ITEM" : "ADD"}</span>
                             </button>
                           )}
                         </div>
@@ -4167,7 +4067,8 @@ function FoodExploreContent() {
           .food-explore-desktop-categories,
           .food-explore-desktop-filters,
           .food-explore-desktop-results-header,
-          .desktop-card-body {
+          .desktop-card-body,
+          .desktop-dish-rating-badge {
             display: none !important;
           }
           .food-explore-container {
