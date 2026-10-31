@@ -350,6 +350,24 @@ function FoodExploreContent() {
   const categoryScrollRef = React.useRef<HTMLDivElement>(null);
   const [mobileSortOpen, setMobileSortOpen] = useState(false);
   const mobileSortRef = React.useRef<HTMLDivElement>(null);
+  const [isDesktopSortOpen, setIsDesktopSortOpen] = useState(false);
+  const desktopSortRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const handleDesktopSortClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (desktopSortRef.current && !desktopSortRef.current.contains(e.target as Node)) {
+        setIsDesktopSortOpen(false);
+      }
+    };
+    if (isDesktopSortOpen) {
+      document.addEventListener("mousedown", handleDesktopSortClickOutside);
+      document.addEventListener("touchstart", handleDesktopSortClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleDesktopSortClickOutside);
+      document.removeEventListener("touchstart", handleDesktopSortClickOutside);
+    };
+  }, [isDesktopSortOpen]);
 
   React.useEffect(() => {
     const handleClickOutside = (e: MouseEvent | TouchEvent) => {
@@ -2541,114 +2559,225 @@ function FoodExploreContent() {
           </div>
         </div>
 
-        {/* Desktop Results Header */}
-        <div className="food-explore-desktop-results-header">
-        <div
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: "12px",
-            borderBottom: "1px solid #E2E8F0",
-            paddingBottom: "14px",
-          }}
-        >
-          <div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: "10px" }}>
-              <h2
-                style={{
-                  fontSize: "1.35rem",
-                  fontWeight: "800",
-                  color: "#18181B",
-                  margin: 0,
-                  letterSpacing: "-0.01em",
-                }}
-              >
-                {selectedCategory || (activeTab === "dishes" ? "All cuisines" : "Cloud Kitchens")}
-              </h2>
-              <span style={{ fontSize: "0.88rem", color: "#64748B", fontWeight: "500" }}>
-                Showing {activeTab === "dishes" ? filteredFoodItems.length : filteredKitchens.length} {activeTab === "dishes" ? (filteredFoodItems.length === 1 ? "dish" : "dishes") : (filteredKitchens.length === 1 ? "kitchen" : "kitchens")}
-              </span>
-            </div>
-            <p style={{ margin: "4px 0 0 0", fontSize: "0.85rem", color: "#64748B" }}>
-              Dietary labels are shown on each dish. Choose a preference to refine your menu.
-            </p>
-          </div>
 
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px" }}>
-            {/* Sort Selector */}
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ fontSize: "0.85rem", fontWeight: "600", color: "#64748B" }}>Sort by:</span>
-              <select
-                value={sortBy}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setSortBy(val);
-                  if (typeof window !== "undefined") {
-                    const params = new URLSearchParams(window.location.search);
-                    if (val) {
-                      params.set("sort", val);
-                    } else {
-                      params.delete("sort");
-                    }
-                    const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
-                    router.replace(newUrl, { scroll: false });
+        {/* Desktop Results Header (Image 2 Design) */}
+        <div className="food-explore-desktop-results-header">
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: "16px",
+              borderBottom: "1px solid #E2E8F0",
+              paddingBottom: "14px",
+            }}
+          >
+            {/* Left: All cuisines [Showing 6 dishes] + Subtitle */}
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                <h2
+                  style={{
+                    fontSize: "1.35rem",
+                    fontWeight: "800",
+                    color: "#0F172A",
+                    margin: 0,
+                    letterSpacing: "-0.01em",
+                  }}
+                >
+                  {selectedCategory || (activeTab === "dishes" ? "All cuisines" : "Cloud Kitchens")}
+                </h2>
+                <span
+                  style={{
+                    fontSize: "0.80rem",
+                    color: "#475569",
+                    fontWeight: "600",
+                    backgroundColor: "#F1F5F9",
+                    padding: "3px 10px",
+                    borderRadius: "9999px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                  }}
+                >
+                  Showing {activeTab === "dishes" ? filteredFoodItems.length : filteredKitchens.length} {activeTab === "dishes" ? (filteredFoodItems.length === 1 ? "dish" : "dishes") : (filteredKitchens.length === 1 ? "kitchen" : "kitchens")}
+                </span>
+              </div>
+              <p style={{ margin: "4px 0 0 0", fontSize: "0.84rem", color: "#64748B" }}>
+                Dietary labels and kitchen safety tags are shown on each dish. Choose a preference to refine your menu.
+              </p>
+            </div>
+
+            {/* Right: Sort by: [ Recommended ⌵ ]    Back to categories ↑ */}
+            <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+              {/* Sort Selector */}
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ fontSize: "0.85rem", fontWeight: "600", color: "#64748B" }}>Sort by:</span>
+                <div style={{ position: "relative" }} ref={desktopSortRef}>
+                  <button
+                    type="button"
+                    onClick={() => setIsDesktopSortOpen(!isDesktopSortOpen)}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: "8px",
+                      padding: "6px 14px",
+                      borderRadius: "9999px",
+                      border: "1px solid #CBD5E1",
+                      backgroundColor: "#FFFFFF",
+                      fontSize: "0.85rem",
+                      fontWeight: "600",
+                      color: "#0F172A",
+                      cursor: "pointer",
+                      minWidth: "145px",
+                      boxShadow: "0 1px 2px rgba(15, 23, 42, 0.03)",
+                      transition: "all 0.15s ease",
+                      fontFamily: "inherit",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#94A3B8")}
+                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#CBD5E1")}
+                  >
+                    <span>
+                      {sortBy === "popular"
+                        ? "Most Popular"
+                        : sortBy === "rating"
+                        ? "Rating: High to Low"
+                        : sortBy === "price_asc"
+                        ? "Price: Low to High"
+                        : sortBy === "price_desc"
+                        ? "Price: High to Low"
+                        : sortBy === "fastest"
+                        ? "Fastest Delivery"
+                        : "Recommended"}
+                    </span>
+                    <ChevronDown
+                      size={14}
+                      color="#64748B"
+                      style={{
+                        transform: isDesktopSortOpen ? "rotate(180deg)" : "none",
+                        transition: "transform 0.18s ease",
+                        flexShrink: 0,
+                      }}
+                    />
+                  </button>
+
+                  {isDesktopSortOpen && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "calc(100% + 6px)",
+                        right: 0,
+                        backgroundColor: "#FFFFFF",
+                        borderRadius: "12px",
+                        padding: "6px",
+                        boxShadow: "0 12px 30px -4px rgba(15, 23, 42, 0.14), 0 4px 12px -2px rgba(15, 23, 42, 0.08)",
+                        border: "1px solid #E2E8F0",
+                        zIndex: 100,
+                        minWidth: "185px",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "2px",
+                      }}
+                      role="listbox"
+                    >
+                      {[
+                        { value: "", label: "Recommended" },
+                        { value: "popular", label: "Most Popular" },
+                        { value: "rating", label: "Rating: High to Low ⭐" },
+                        { value: "price_asc", label: "Price: Low to High" },
+                        { value: "price_desc", label: "Price: High to Low" },
+                        { value: "fastest", label: "Fastest Delivery ⚡" },
+                      ].map((opt) => {
+                        const isSelected = sortBy === opt.value;
+                        return (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => {
+                              setSortBy(opt.value);
+                              if (typeof window !== "undefined") {
+                                const params = new URLSearchParams(window.location.search);
+                                if (opt.value) params.set("sort", opt.value);
+                                else params.delete("sort");
+                                const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
+                                router.replace(newUrl, { scroll: false });
+                              }
+                              setIsDesktopSortOpen(false);
+                            }}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              padding: "7px 10px",
+                              borderRadius: "8px",
+                              border: "none",
+                              backgroundColor: isSelected ? "#FFF7ED" : "transparent",
+                              color: isSelected ? "#C2410C" : "#334155",
+                              fontWeight: isSelected ? 700 : 500,
+                              fontSize: "13px",
+                              cursor: "pointer",
+                              textAlign: "left",
+                              transition: "all 0.12s ease",
+                              fontFamily: "inherit",
+                              width: "100%",
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!isSelected) {
+                                e.currentTarget.style.backgroundColor = "#F8FAFC";
+                                e.currentTarget.style.color = "#0F172A";
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!isSelected) {
+                                e.currentTarget.style.backgroundColor = "transparent";
+                                e.currentTarget.style.color = "#334155";
+                              }
+                            }}
+                            role="option"
+                            aria-selected={isSelected}
+                          >
+                            <span>{opt.label}</span>
+                            {isSelected && <Check size={14} color="#EA580C" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Back to categories (On same line as Sort) */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (categoryScrollRef.current) {
+                    categoryScrollRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+                  } else if (typeof window !== "undefined") {
+                    window.scrollTo({ top: 0, behavior: "smooth" });
                   }
                 }}
                 style={{
-                  padding: "8px 12px",
-                  borderRadius: "10px",
-                  border: "1px solid #E2E8F0",
-                  backgroundColor: "#FFFFFF",
-                  fontSize: "0.85rem",
+                  background: "none",
+                  border: "none",
+                  color: "#EA580C",
                   fontWeight: "700",
-                  color: "#18181B",
+                  fontSize: "0.85rem",
                   cursor: "pointer",
-                  outline: "none",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  padding: "4px 0",
+                  whiteSpace: "nowrap",
+                  transition: "color 0.15s ease",
                 }}
+                onMouseOver={(e) => (e.currentTarget.style.color = "#C2410C")}
+                onMouseOut={(e) => (e.currentTarget.style.color = "#EA580C")}
               >
-                <option value="">Recommended</option>
-                <option value="popular">Most Popular</option>
-                <option value="rating">Rating: High to Low ⭐</option>
-                <option value="price_asc">Price: Low to High</option>
-                <option value="price_desc">Price: High to Low</option>
-                <option value="fastest">Fastest Delivery ⚡</option>
-              </select>
+                <span>Back to categories</span>
+                <ArrowUp size={14} color="currentColor" />
+              </button>
             </div>
-
-            {/* Back to categories (Always available & dynamic) */}
-            <button
-              type="button"
-              onClick={() => {
-                if (categoryScrollRef.current) {
-                  categoryScrollRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
-                } else if (typeof window !== "undefined") {
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }
-              }}
-              style={{
-                background: "none",
-                border: "none",
-                color: "#C2410C",
-                fontWeight: "700",
-                fontSize: "0.85rem",
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "4px",
-                padding: "2px 0",
-                marginTop: "2px",
-                transition: "color 0.15s ease",
-              }}
-              onMouseOver={(e) => (e.currentTarget.style.color = "#FF6B00")}
-              onMouseOut={(e) => (e.currentTarget.style.color = "#C2410C")}
-            >
-              <span>Back to categories</span>
-              <ArrowUp size={14} color="currentColor" />
-            </button>
           </div>
-        </div>
         </div>{/* End food-explore-desktop-results-header */}
 
         {/* 2. Results Content: Dishes Grid or Kitchens Grid */}
