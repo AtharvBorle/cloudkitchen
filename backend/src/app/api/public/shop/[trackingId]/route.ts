@@ -125,7 +125,21 @@ export async function GET(req: Request, { params }: { params: Promise<{ tracking
         }
 
         // Process food items with their average rating and live addon stock
-        const processedFoodItems = seller.foodItems.map((item: any) => {
+        const rawSellerFoodType = String(seller.foodType || "").toUpperCase().replace(/[\s-]/g, "_").trim();
+        const isPureVegSeller = rawSellerFoodType === "PURE_VEG" || rawSellerFoodType === "VEG" || rawSellerFoodType === "VEG_ONLY" || rawSellerFoodType === "PUREVEG";
+        const NON_VEG_REGEX = /\b(chicken|murgh?|mutton|gosht|egg|eggs|anda|fish|prawns?|shrimps?|meat|beef|pork|seafood|crab|keema|kheema|haleem|wings?|shawarma|non[\s-_]?veg)\b/i;
+
+        const filteredFoodItems = (seller.foodItems || []).filter((item: any) => {
+            if (isPureVegSeller) {
+                const itemType = String(item.itemType || "").toUpperCase();
+                if (itemType.includes("NON_VEG") || item.isVeg === false) return false;
+                const text = `${item.name || ""} ${item.description || ""}`.toLowerCase();
+                if (NON_VEG_REGEX.test(text)) return false;
+            }
+            return true;
+        });
+
+        const processedFoodItems = filteredFoodItems.map((item: any) => {
             let enrichedAddonsStr = item.addons;
             if (item.addons) {
                 try {

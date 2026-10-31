@@ -356,7 +356,7 @@ export const PopularFood: React.FC<PopularFoodProps> = ({
 
                   {/* Dietary Tag below description */}
                   <div style={{ display: "flex", alignItems: "center", gap: "4px", margin: "2px 0 6px 0", flexWrap: "wrap" }}>
-                    <DietaryTag isVeg={item.isVeg !== false} itemType={(item as any).itemType} size="xs" />
+                    <DietaryTag isVeg={item.isVeg !== false} itemType={(item as any).itemType} name={item.title} description={item.description} size="xs" />
                   </div>
 
                   {item.addons && item.addons.length > 0 && (

@@ -430,47 +430,20 @@ export const ResponsiveSellerNotifications: React.FC<ResponsiveSellerNotificatio
         </header>
 
         {/* Search Bar */}
-        <div
-          style={{
-            margin: "10px 16px 2px 16px",
-            display: "flex",
-            alignItems: "center",
-            backgroundColor: "#FFFFFF",
-            border: "1px solid #E2E8F0",
-            borderRadius: "10px",
-            padding: "8px 12px",
-            gap: "8px",
-            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.02)",
-          }}
-        >
+        <div className={styles.searchBarContainer}>
           <Search size={16} color="#64748B" />
           <input
             type="text"
             placeholder="Search notifications..."
             value={searchQuery}
             onChange={(e) => handleSearchChange(e.target.value)}
-            style={{
-              border: "none",
-              backgroundColor: "transparent",
-              outline: "none",
-              fontSize: "13px",
-              color: "#1E293B",
-              width: "100%",
-            }}
+            className={styles.searchBarInput}
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => handleSearchChange("")}
-              style={{
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                padding: 0,
-                color: "#94A3B8",
-                display: "flex",
-                alignItems: "center",
-              }}
+              className={styles.searchBarClearBtn}
               title="Clear search"
               aria-label="Clear search"
             >

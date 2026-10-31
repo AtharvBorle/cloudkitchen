@@ -769,8 +769,8 @@ export const ResponsiveSellerOrdersDetails: React.FC<
                       )}
                       <span>
                         {isCod && !isOrderPaid
-                          ? `Collect Cash (${total || `₹${taxCalc?.grandTotal?.toFixed(2) || "0.00"}`}) &amp; Mark Delivered ✓`
-                          : "Mark as Delivered &amp; Complete ✓"}
+                          ? `Collect Cash (${total || `₹${taxCalc?.grandTotal?.toFixed(2) || "0.00"}`}) & Mark Delivered ✓`
+                          : "Mark as Delivered & Complete ✓"}
                       </span>
                     </button>
                   </div>
