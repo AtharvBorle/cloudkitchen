@@ -75,7 +75,7 @@
 /* Top Overview Stats Grid */
 .statsGrid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 20px;
   width: 100%;
 }
@@ -662,6 +662,10 @@
 
   .contentRow {
     grid-template-columns: 1fr;
+  }
+
+  .sidebarCol {
+    order: -1;
   }
 }
 

@@ -37,6 +37,12 @@ interface Message {
         title: string;
         category: string;
         description: string;
+        attachment?: {
+            name: string;
+            type: string;
+            size: number;
+            dataUrl: string;
+        } | null;
     };
     isTicketSuccess?: boolean;
     ticketId?: string;
@@ -94,6 +100,12 @@ export default function ChatbotWidget() {
     const [ticketCategory, setTicketCategory] = useState("FOOD");
     const [ticketTitle, setTicketTitle] = useState("");
     const [ticketDesc, setTicketDesc] = useState("");
+    const [ticketAttachment, setTicketAttachment] = useState<{
+        name: string;
+        type: string;
+        size: number;
+        dataUrl: string;
+    } | null>(null);
     const [submittingTicket, setSubmittingTicket] = useState(false);
 
     // Category Request states for chatbot widget
@@ -1063,6 +1075,7 @@ export default function ChatbotWidget() {
                 setTicketCategory("FOOD");
                 setTicketTitle(`Order Issue: ${payload.issueLabel} (#${payload.orderId.slice(0, 8)})`);
                 setTicketDesc(payload.defaultDesc);
+                setTicketAttachment(null);
                 setMessages(prev => [...prev, {
                     id: `b_${Date.now()}`,
                     sender: "bot",
@@ -1076,6 +1089,7 @@ export default function ChatbotWidget() {
                 setTicketCategory("ROOM");
                 setTicketTitle(`Booking Issue: ${payload.issueLabel} (#${payload.bookingId.slice(0, 8)})`);
                 setTicketDesc(payload.defaultDesc);
+                setTicketAttachment(null);
                 setMessages(prev => [...prev, {
                     id: `b_${Date.now()}`,
                     sender: "bot",
@@ -1170,6 +1184,11 @@ export default function ChatbotWidget() {
                 setTicketCategory(category);
                 setTicketTitle(title);
                 setTicketDesc(desc);
+                if (payload?.attachment) {
+                    setTicketAttachment(payload.attachment);
+                } else {
+                    setTicketAttachment(null);
+                }
                 if (category === "NEW_CATEGORY_REQUEST") {
                     setReqCategoryType("FOOD");
                     setReqCategoryName("");
@@ -1184,7 +1203,8 @@ export default function ChatbotWidget() {
                     ticketData: {
                         category,
                         title,
-                        description: desc
+                        description: desc,
+                        attachment: payload?.attachment || null
                     }
                 }]);
             }
@@ -1226,6 +1246,7 @@ export default function ChatbotWidget() {
                 setTicketCategory("FOOD");
                 setTicketTitle("");
                 setTicketDesc("");
+                setTicketAttachment(null);
                 setReqCategoryType("FOOD");
                 setReqCategoryName("");
 
@@ -1444,7 +1465,15 @@ export default function ChatbotWidget() {
         }
 
         let finalTitle = ticketTitle.trim();
-        let finalDescription = ticketDesc.trim();
+        let rawDescription = ticketDesc.trim();
+
+        // Sanitize any raw attachment metadata from description if present
+        let sanitizedDescription = rawDescription
+            .replace(/^User attached (?:image )?file:[^\n]*\n*/gi, "")
+            .replace(/!\[[^\]]*\]\([^)]*\)/gi, "")
+            .replace(/\[Attachment:\s*[^\\\]]+\]\s*(?:data:[a-zA-Z0-9+.-]+\/[a-zA-Z0-9+.-]+;base64,[A-Za-z0-9+/=]+|https?:\/\/[^\s\n]+)/gi, "")
+            .replace(/\[Attachment:\s*[^\]]+\]\s*/gi, "")
+            .trim();
 
         if (ticketCategory === "NEW_CATEGORY_REQUEST") {
             if (!reqCategoryName.trim()) {
@@ -1452,17 +1481,27 @@ export default function ChatbotWidget() {
                 return;
             }
             finalTitle = `Request Category: ${reqCategoryName.trim()} (${reqCategoryType})`;
-            finalDescription = `--- Category Request Metadata ---
+            sanitizedDescription = `--- Category Request Metadata ---
 Request Type: ${reqCategoryType === "FOOD" ? "Food Category" : "Room Category"}
 Requested Name: ${reqCategoryName.trim()}
 
 Details: Category request submitted via chatbot assistant.`;
         } else {
-            if (!finalTitle || !finalDescription) {
-                alert("Please provide both a title and description.");
+            if (!finalTitle) {
+                alert("Please provide a title.");
+                return;
+            }
+            if (!sanitizedDescription && ticketAttachment) {
+                sanitizedDescription = `Query regarding attached file (${ticketAttachment.name}).`;
+            } else if (!sanitizedDescription) {
+                alert("Please provide a description.");
                 return;
             }
         }
+
+        const finalDescription = ticketAttachment
+            ? `${sanitizedDescription}\n\n[Attachment: ${ticketAttachment.name}|${ticketAttachment.type || "image/jpeg"}]\n${ticketAttachment.dataUrl}`
+            : sanitizedDescription;
 
         setSubmittingTicket(true);
         try {
@@ -1479,6 +1518,7 @@ Details: Category request submitted via chatbot assistant.`;
             if (res.ok) {
                 setTicketTitle("");
                 setTicketDesc("");
+                setTicketAttachment(null);
                 setReqCategoryName("");
                 
                 setMessages(prev => {
@@ -2033,6 +2073,62 @@ Details: Category request submitted via chatbot assistant.`;
                                                                 required
                                                             />
                                                         </div>
+
+                                                        {/* Attachment Preview Box */}
+                                                        {ticketAttachment && (
+                                                            <div>
+                                                                <label style={{ display: "block", fontSize: "0.7rem", fontWeight: "800", color: "#64748B", marginBottom: "4px", letterSpacing: "0.5px" }}>ATTACHMENT</label>
+                                                                <div style={{
+                                                                    display: "flex",
+                                                                    alignItems: "center",
+                                                                    justifyContent: "space-between",
+                                                                    padding: "8px 10px",
+                                                                    backgroundColor: "#FFF7ED",
+                                                                    border: "1px solid #FED7AA",
+                                                                    borderRadius: "10px",
+                                                                    gap: "8px"
+                                                                }}>
+                                                                    <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+                                                                        {ticketAttachment.type.startsWith("image/") ? (
+                                                                            <img
+                                                                                src={ticketAttachment.dataUrl}
+                                                                                alt={ticketAttachment.name}
+                                                                                style={{ width: "32px", height: "32px", objectFit: "cover", borderRadius: "6px", flexShrink: 0, border: "1px solid #FED7AA" }}
+                                                                            />
+                                                                        ) : (
+                                                                            <span style={{ fontSize: "1.2rem" }}>📎</span>
+                                                                        )}
+                                                                        <div style={{ minWidth: 0 }}>
+                                                                            <div style={{ fontSize: "0.78rem", fontWeight: "700", color: "#9A3412", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "180px" }}>
+                                                                                {ticketAttachment.name}
+                                                                            </div>
+                                                                            <div style={{ fontSize: "0.68rem", color: "#C2410C" }}>
+                                                                                {(ticketAttachment.size / 1024).toFixed(1)} KB • Attached
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setTicketAttachment(null)}
+                                                                        style={{
+                                                                            background: "none",
+                                                                            border: "none",
+                                                                            color: "#9A3412",
+                                                                            cursor: "pointer",
+                                                                            padding: "4px",
+                                                                            display: "flex",
+                                                                            alignItems: "center",
+                                                                            justifyContent: "center",
+                                                                            borderRadius: "4px"
+                                                                        }}
+                                                                        title="Remove attachment"
+                                                                    >
+                                                                        <X size={14} />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        )}
+
                                                         <div>
                                                             <label style={{ display: "block", fontSize: "0.7rem", fontWeight: "800", color: "#64748B", marginBottom: "4px", letterSpacing: "0.5px" }}>DESCRIPTION</label>
                                                             <textarea
@@ -2041,7 +2137,7 @@ Details: Category request submitted via chatbot assistant.`;
                                                                 value={ticketDesc}
                                                                 onChange={(e) => setTicketDesc(e.target.value)}
                                                                 style={{ width: "100%", padding: "8px 10px", borderRadius: "10px", border: "1.5px solid #CBD5E1", fontSize: "0.82rem", resize: "none", outline: "none" }}
-                                                                required
+                                                                required={!ticketAttachment}
                                                             />
                                                         </div>
                                                     </>
@@ -2536,10 +2632,6 @@ Details: Category request submitted via chatbot assistant.`;
                                             ? `![${file.name}](${dataUrl})\n📎 Attached file: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`
                                             : `📎 Attached file: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
                                         
-                                        const ticketDescPayload = isImg
-                                            ? `User attached image file: ${file.name}\n\n![${file.name}](${dataUrl})`
-                                            : `User attached file: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
-
                                         setMessages(prev => [...prev, {
                                             id: `u_${Date.now()}`,
                                             sender: "user",
@@ -2558,7 +2650,13 @@ Details: Category request submitted via chatbot assistant.`;
                                                         action: () => handleSelectOption("custom_ticket_prefilled", { 
                                                             category: "OTHER", 
                                                             title: `Attachment Query: ${file.name}`, 
-                                                            desc: ticketDescPayload 
+                                                            desc: "",
+                                                            attachment: {
+                                                                name: file.name,
+                                                                type: file.type || (isImg ? "image/jpeg" : "application/octet-stream"),
+                                                                size: file.size,
+                                                                dataUrl: dataUrl
+                                                            }
                                                         }) 
                                                     },
                                                     { label: "🏠 Back to Menu", action: () => handleSelectOption("back_to_menu") }

@@ -75,9 +75,7 @@ export default function ResponsiveAddonsManager({
   const [formIsActive, setFormIsActive] = useState(true);
 
   // Replenish / Stock Form
-  const [stockMode, setStockMode] = useState<"REPLENISH" | "EXACT">("REPLENISH");
   const [replenishDelta, setReplenishDelta] = useState("20");
-  const [exactStockInput, setExactStockInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [updatingStockId, setUpdatingStockId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -295,9 +293,7 @@ export default function ResponsiveAddonsManager({
   // Open Update Stock Modal
   const handleOpenReplenish = (addon: AddonItemData) => {
     setSelectedAddon(addon);
-    setStockMode("REPLENISH");
     setReplenishDelta("20");
-    setExactStockInput(String(addon.stockQuantity));
     setIsReplenishModalOpen(true);
   };
 
@@ -350,41 +346,24 @@ export default function ResponsiveAddonsManager({
     }
   };
 
-  // Submit Replenish / Exact Stock
+  // Submit Stock Update
   const handleSaveStockUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedAddon) return;
 
+    const delta = parseInt(replenishDelta, 10);
+    if (isNaN(delta) || delta <= 0) {
+      showToast("Quantity must be greater than zero");
+      return;
+    }
+
     setSubmitting(true);
     try {
-      let payload: any = {};
-      let updatedStock = selectedAddon.stockQuantity;
-
-      if (stockMode === "REPLENISH") {
-        const delta = parseInt(replenishDelta, 10);
-        if (isNaN(delta) || delta <= 0) {
-          showToast("Replenish quantity must be greater than zero");
-          setSubmitting(false);
-          return;
-        }
-        payload = {
-          replenishQuantity: delta,
-          note: `Quick stock update +${delta} units`,
-        };
-        updatedStock = selectedAddon.stockQuantity + delta;
-      } else {
-        const exact = parseInt(exactStockInput, 10);
-        if (isNaN(exact) || exact < 0) {
-          showToast("Stock quantity cannot be negative");
-          setSubmitting(false);
-          return;
-        }
-        payload = {
-          stockQuantity: exact,
-          note: `Stock adjusted directly to ${exact} units`,
-        };
-        updatedStock = exact;
-      }
+      const payload = {
+        replenishQuantity: delta,
+        note: `Quick stock update +${delta} units`,
+      };
+      const updatedStock = selectedAddon.stockQuantity + delta;
 
       const res = await fetchApi(`/api/seller/addons/${selectedAddon.id}`, {
         method: "PATCH",
@@ -1057,130 +1036,52 @@ export default function ResponsiveAddonsManager({
                   </div>
                 </div>
 
-                {/* Mode Selector Tabs: Replenish vs Set Exact */}
-                <div
-                  style={{
-                    display: "flex",
-                    backgroundColor: "#F1F5F9",
-                    padding: "3px",
-                    borderRadius: "8px",
-                    gap: "4px",
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setStockMode("REPLENISH")}
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>
+                    Add Quantity to Inventory <span style={{ color: "#DC2626" }}>*</span>
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    step="1"
+                    value={replenishDelta}
+                    onChange={(e) => setReplenishDelta(e.target.value)}
+                    className={styles.formInput}
+                    placeholder="e.g. 20"
+                  />
+
+                  {/* Presets */}
+                  <div className={styles.presetGroup}>
+                    {[10, 20, 50, 100].map((num) => (
+                      <button
+                        key={num}
+                        type="button"
+                        onClick={() => setReplenishDelta(String(num))}
+                        className={styles.presetBtn}
+                      >
+                        +{num}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div
                     style={{
-                      flex: 1,
-                      height: "32px",
-                      borderRadius: "6px",
-                      border: "none",
-                      backgroundColor: stockMode === "REPLENISH" ? "#FFFFFF" : "transparent",
-                      color: stockMode === "REPLENISH" ? "#EA580C" : "#64748B",
-                      fontWeight: stockMode === "REPLENISH" ? 700 : 600,
+                      marginTop: "8px",
                       fontSize: "12.5px",
-                      cursor: "pointer",
-                      boxShadow: stockMode === "REPLENISH" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+                      color: "#64748B",
+                      backgroundColor: "#FFF7ED",
+                      padding: "8px 12px",
+                      borderRadius: "8px",
+                      border: "1px solid #FED7AA",
                     }}
                   >
-                    + Add Quantity
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setStockMode("EXACT")}
-                    style={{
-                      flex: 1,
-                      height: "32px",
-                      borderRadius: "6px",
-                      border: "none",
-                      backgroundColor: stockMode === "EXACT" ? "#FFFFFF" : "transparent",
-                      color: stockMode === "EXACT" ? "#EA580C" : "#64748B",
-                      fontWeight: stockMode === "EXACT" ? 700 : 600,
-                      fontSize: "12.5px",
-                      cursor: "pointer",
-                      boxShadow: stockMode === "EXACT" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
-                    }}
-                  >
-                    Set Exact Stock
-                  </button>
+                    New stock will be:{" "}
+                    <strong style={{ color: "#EA580C" }}>
+                      {selectedAddon.stockQuantity + (parseInt(replenishDelta, 10) || 0)} units
+                    </strong>
+                  </div>
                 </div>
-
-                {stockMode === "REPLENISH" ? (
-                  <div className={styles.formGroup}>
-                    <label className={styles.formLabel}>Quantity to Add</label>
-                    <input
-                      type="number"
-                      required
-                      min="1"
-                      step="1"
-                      value={replenishDelta}
-                      onChange={(e) => setReplenishDelta(e.target.value)}
-                      className={styles.formInput}
-                      placeholder="e.g. 20"
-                    />
-
-                    {/* Presets */}
-                    <div className={styles.presetGroup}>
-                      {[10, 20, 50, 100].map((num) => (
-                        <button
-                          key={num}
-                          type="button"
-                          onClick={() => setReplenishDelta(String(num))}
-                          className={styles.presetBtn}
-                        >
-                          +{num}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div
-                      style={{
-                        marginTop: "8px",
-                        fontSize: "12.5px",
-                        color: "#64748B",
-                        backgroundColor: "#FFF7ED",
-                        padding: "8px 12px",
-                        borderRadius: "8px",
-                        border: "1px solid #FED7AA",
-                      }}
-                    >
-                      New stock will be:{" "}
-                      <strong style={{ color: "#EA580C" }}>
-                        {selectedAddon.stockQuantity + (parseInt(replenishDelta, 10) || 0)} units
-                      </strong>
-                    </div>
-                  </div>
-                ) : (
-                  <div className={styles.formGroup}>
-                    <label className={styles.formLabel}>New Total Stock</label>
-                    <input
-                      type="number"
-                      required
-                      min="0"
-                      step="1"
-                      value={exactStockInput}
-                      onChange={(e) => setExactStockInput(e.target.value)}
-                      className={styles.formInput}
-                      placeholder="e.g. 35"
-                    />
-                    <div
-                      style={{
-                        marginTop: "8px",
-                        fontSize: "12.5px",
-                        color: "#64748B",
-                        backgroundColor: "#FFF7ED",
-                        padding: "8px 12px",
-                        borderRadius: "8px",
-                        border: "1px solid #FED7AA",
-                      }}
-                    >
-                      Stock level will update directly to:{" "}
-                      <strong style={{ color: "#EA580C" }}>
-                        {parseInt(exactStockInput, 10) || 0} units
-                      </strong>
-                    </div>
-                  </div>
-                )}
               </div>
 
               <div className={styles.modalFooter}>
