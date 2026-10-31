@@ -30,12 +30,9 @@ const ACTIVE_ORDER_STATUSES = new Set([
     "OUT_FOR_DELIVERY",
 ]);
 
-// Reset stale test timers older than 2 hours so active test orders start cleanly at 20-25 mins
-const STALE_TIMER_THRESHOLD_MS = 2 * 60 * 60 * 1000;
-
 export async function getOrInitOrderTimer(
     order: { id: string; status?: string; createdAt?: Date | string; updatedAt?: Date | string },
-    resetIfExpired = false
+    _resetIfExpired = false
 ): Promise<OrderTimerData | null> {
     if (!order?.id) return null;
     const status = (order.status || "").toUpperCase();
@@ -69,19 +66,45 @@ export async function getOrInitOrderTimer(
 
     if (existing) {
         const startedMs = new Date(existing.startedAt).getTime();
-        const updatedMs = new Date(existing.updatedAt || existing.startedAt).getTime();
-        const elapsedMinutes = Math.floor((now - startedMs) / 60000);
-        const isStale = isNaN(startedMs) || (now - updatedMs > STALE_TIMER_THRESHOLD_MS);
-        const isFullyExpired = resetIfExpired && (25 + (existing.delayMinutes || 0) - elapsedMinutes <= 1);
-
-        if (!isStale && !isFullyExpired) {
+        const isCorrupt = isNaN(startedMs) || startedMs <= 0;
+        if (!isCorrupt) {
             return existing;
         }
     }
 
+    // Determine initial startedAt anchored to order creation in database
+    let orderCreatedMs: number | null = null;
+    if (order.createdAt) {
+        const parsedMs = new Date(order.createdAt).getTime();
+        if (!isNaN(parsedMs) && parsedMs > 0) {
+            orderCreatedMs = parsedMs;
+        }
+    }
+
+    if (!orderCreatedMs) {
+        try {
+            const dbOrder = await db.order.findUnique({
+                where: { id: order.id },
+                select: { createdAt: true },
+            });
+            if (dbOrder?.createdAt) {
+                const parsedMs = new Date(dbOrder.createdAt).getTime();
+                if (!isNaN(parsedMs) && parsedMs > 0) {
+                    orderCreatedMs = parsedMs;
+                }
+            }
+        } catch (err) {
+            console.error(`[OrderETA] Error looking up createdAt for order ${order.id}:`, err);
+        }
+    }
+
+    const initialStartedAt = (orderCreatedMs && orderCreatedMs > 0)
+        ? new Date(orderCreatedMs).toISOString()
+        : new Date(now).toISOString();
+
     const freshTimer: OrderTimerData = {
         orderId: order.id,
-        startedAt: new Date(now).toISOString(),
+        startedAt: initialStartedAt,
         delayMinutes: 0,
         updatedAt: new Date(now).toISOString(),
     };

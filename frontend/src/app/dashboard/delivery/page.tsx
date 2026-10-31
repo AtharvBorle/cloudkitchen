@@ -144,12 +144,15 @@ const computeDeliveryEta = (
     const remMin = 20 + delay - elapsedMinutes;
     const remMax = 25 + delay - elapsedMinutes;
 
+    if (remMax < 1) {
+        return "Delayed";
+    }
+
     if (remMin >= 1) {
         return `${remMin}-${remMax} mins`;
     }
 
-    const singleRem = Math.max(1, remMax);
-    return `${singleRem} ${singleRem === 1 ? "min" : "mins"}`;
+    return `${remMax} ${remMax === 1 ? "min" : "mins"}`;
 };
 
 export default function DeliveryDashboard() {
@@ -995,7 +998,7 @@ export default function DeliveryDashboard() {
                                                     <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#059669', backgroundColor: '#DCFCE7', padding: '2px 10px', borderRadius: '999px' }}>
                                                         {computeDeliveryEta(
                                                             order.status,
-                                                            order.deliveryTimerStartedAt || order.updatedAt || order.createdAt,
+                                                            order.deliveryTimerStartedAt || order.createdAt || order.updatedAt,
                                                             order.deliveryDelayMinutes,
                                                             nowMs
                                                         )}

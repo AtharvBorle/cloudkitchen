@@ -201,8 +201,8 @@ export const updateOrderStatus = async (req: Request, orderId: string) => {
     // Handle delivery delay minutes addition (+5, +10, +20, or Custom <= 30)
     const rawDelayToAdd = delayMinutes !== undefined ? delayMinutes : addDelayMinutes;
     if (rawDelayToAdd !== undefined && !status) {
-        if (order.status !== "OUT_FOR_DELIVERY") {
-            throw new ApiError("Delay time can only be added when the order is out for delivery.", 400);
+        if (!["OUT_FOR_DELIVERY", "PICKED_UP", "PREPARING"].includes(order.status)) {
+            throw new ApiError("Delay time can only be added for active orders.", 400);
         }
         const timer = await addOrderDelayMinutes(orderId, Number(rawDelayToAdd));
         const enrichedOrder = {
@@ -266,7 +266,7 @@ export const updateOrderStatus = async (req: Request, orderId: string) => {
     });
 
     if (status === "OUT_FOR_DELIVERY") {
-        await getOrInitOrderTimer(updatedOrder, true);
+        await getOrInitOrderTimer(updatedOrder, false);
     }
 
     const enrichedUpdatedOrder = await enrichOrderWithEta(updatedOrder);
