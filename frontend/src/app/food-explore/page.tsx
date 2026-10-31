@@ -851,6 +851,59 @@ function FoodExploreContent() {
     sortBy,
   ]);
 
+  // Dishes Pagination (6 items per page as requested)
+  const DISHES_PER_PAGE = 6;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset to page 1 whenever any filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [
+    searchQuery,
+    selectedCategory,
+    selectedDiet,
+    selectedPrice,
+    selectedCuisines,
+    openOnly,
+    offersOnly,
+    sortBy,
+    activeTab,
+  ]);
+
+  const totalPages = Math.ceil(filteredFoodItems.length / DISHES_PER_PAGE) || 1;
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+
+  const startIndex = (safeCurrentPage - 1) * DISHES_PER_PAGE;
+  const endIndex = Math.min(startIndex + DISHES_PER_PAGE, filteredFoodItems.length);
+  const paginatedFoodItems = useMemo(() => {
+    return filteredFoodItems.slice(startIndex, endIndex);
+  }, [filteredFoodItems, startIndex, endIndex]);
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    if (typeof window !== "undefined") {
+      const el = document.getElementById("food-explore-results-section");
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+  };
+
+  const pageNumbers = useMemo(() => {
+    if (totalPages <= 5) {
+      const pages: (number | string)[] = [];
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+      return pages;
+    }
+    if (safeCurrentPage <= 3) {
+      return [1, 2, 3, 4, "...", totalPages];
+    }
+    if (safeCurrentPage >= totalPages - 2) {
+      return [1, "...", totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    }
+    return [1, "...", safeCurrentPage - 1, safeCurrentPage, safeCurrentPage + 1, "...", totalPages];
+  }, [safeCurrentPage, totalPages]);
+
   // Dynamic list of categories with live dish counts and emojis
   const dynamicCategories = useMemo(() => {
     const map = new Map<string, { id: string; name: string; emoji: string; count: number }>();
@@ -2562,7 +2615,7 @@ function FoodExploreContent() {
 
 
         {/* Desktop Results Header (Image 2 Design) */}
-        <div className="food-explore-desktop-results-header">
+        <div id="food-explore-results-section" className="food-explore-desktop-results-header">
           <div
             style={{
               display: "flex",
@@ -2600,7 +2653,7 @@ function FoodExploreContent() {
                     alignItems: "center",
                   }}
                 >
-                  Showing {activeTab === "dishes" ? filteredFoodItems.length : filteredKitchens.length} {activeTab === "dishes" ? (filteredFoodItems.length === 1 ? "dish" : "dishes") : (filteredKitchens.length === 1 ? "kitchen" : "kitchens")}
+                  Showing {activeTab === "dishes" ? paginatedFoodItems.length : filteredKitchens.length} {activeTab === "dishes" ? (paginatedFoodItems.length === 1 ? "dish" : "dishes") : (filteredKitchens.length === 1 ? "kitchen" : "kitchens")}
                 </span>
               </div>
               <p style={{ margin: "4px 0 0 0", fontSize: "0.84rem", color: "#64748B" }}>
@@ -2817,16 +2870,17 @@ function FoodExploreContent() {
                 ))}
               </div>
             ) : filteredFoodItems.length > 0 ? (
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-                  gap: "20px",
-                  width: "100%",
-                }}
-                className="food-explore-grid"
-              >
-                {filteredFoodItems.map((dish) => {
+              <>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+                    gap: "20px",
+                    width: "100%",
+                  }}
+                  className="food-explore-grid"
+                >
+                  {paginatedFoodItems.map((dish) => {
                   const isSellerClosed = dish.sellerIsOnline === false;
                   const rawStock = (dish as any).maxStock !== undefined ? (dish as any).maxStock : (dish as any).stockQuantity;
                   const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
@@ -3493,6 +3547,127 @@ function FoodExploreContent() {
                   );
                 })}
               </div>
+
+              {/* Pagination Bar (Matching Designer UI) */}
+              <div
+                className="food-explore-pagination-bar"
+                style={{
+                  marginTop: "28px",
+                  backgroundColor: "#FFFFFF",
+                  border: "1px solid #E2E8F0",
+                  borderRadius: "16px",
+                  padding: "14px 24px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: "14px",
+                  boxShadow: "0 2px 6px rgba(0, 0, 0, 0.02)",
+                }}
+              >
+                {/* Left: Showing 1 to 6 of 24 dishes nearby */}
+                <div style={{ fontSize: "0.85rem", color: "#64748B", fontWeight: "500" }}>
+                  Showing{" "}
+                  <strong style={{ color: "#0F172A", fontWeight: "700" }}>
+                    {startIndex + 1} to {endIndex}
+                  </strong>{" "}
+                  of{" "}
+                  <strong style={{ color: "#0F172A", fontWeight: "700" }}>
+                    {filteredFoodItems.length}
+                  </strong>{" "}
+                  {filteredFoodItems.length === 1 ? "dish" : "dishes"} nearby
+                </div>
+
+                {/* Right: Previous, page numbers, Next */}
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <button
+                    type="button"
+                    disabled={safeCurrentPage <= 1}
+                    onClick={() => handlePageChange(safeCurrentPage - 1)}
+                    style={{
+                      padding: "7px 16px",
+                      borderRadius: "12px",
+                      border: "1px solid #E2E8F0",
+                      backgroundColor: "#FFFFFF",
+                      color: safeCurrentPage <= 1 ? "#94A3B8" : "#334155",
+                      fontSize: "0.84rem",
+                      fontWeight: "600",
+                      cursor: safeCurrentPage <= 1 ? "not-allowed" : "pointer",
+                      opacity: safeCurrentPage <= 1 ? 0.6 : 1,
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    Previous
+                  </button>
+
+                  {pageNumbers.map((p, idx) => {
+                    if (p === "...") {
+                      return (
+                        <span
+                          key={`ellipsis-${idx}`}
+                          style={{
+                            padding: "0 4px",
+                            color: "#94A3B8",
+                            fontWeight: "700",
+                            fontSize: "0.85rem",
+                          }}
+                        >
+                          ...
+                        </span>
+                      );
+                    }
+                    const pageNum = p as number;
+                    const isActive = pageNum === safeCurrentPage;
+                    return (
+                      <button
+                        key={pageNum}
+                        type="button"
+                        onClick={() => handlePageChange(pageNum)}
+                        style={{
+                          minWidth: "36px",
+                          height: "36px",
+                          padding: "0 6px",
+                          borderRadius: "12px",
+                          border: isActive ? "none" : "1px solid #E2E8F0",
+                          backgroundColor: isActive ? "#FF5500" : "#FFFFFF",
+                          color: isActive ? "#FFFFFF" : "#334155",
+                          fontSize: "0.86rem",
+                          fontWeight: isActive ? "800" : "600",
+                          cursor: isActive ? "default" : "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          boxShadow: isActive ? "0 2px 8px rgba(255, 85, 0, 0.28)" : "none",
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+
+                  <button
+                    type="button"
+                    disabled={safeCurrentPage >= totalPages}
+                    onClick={() => handlePageChange(safeCurrentPage + 1)}
+                    style={{
+                      padding: "7px 18px",
+                      borderRadius: "12px",
+                      border: "1px solid #E2E8F0",
+                      backgroundColor: "#FFFFFF",
+                      color: safeCurrentPage >= totalPages ? "#94A3B8" : "#334155",
+                      fontSize: "0.84rem",
+                      fontWeight: "600",
+                      cursor: safeCurrentPage >= totalPages ? "not-allowed" : "pointer",
+                      opacity: safeCurrentPage >= totalPages ? 0.6 : 1,
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </>
             ) : (
               <div
                 style={{
@@ -4948,6 +5123,11 @@ function FoodExploreContent() {
           }
           .kitchens-explore-grid {
             grid-template-columns: 1fr !important;
+          }
+          .food-explore-pagination-bar {
+            justify-content: center !important;
+            text-align: center;
+            padding: 12px 14px !important;
           }
         }
       `}</style>
