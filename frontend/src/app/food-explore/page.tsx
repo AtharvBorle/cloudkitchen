@@ -473,19 +473,70 @@ function FoodExploreContent() {
     if (sortParam) setSortBy(sortParam);
   }, [categoryParam, queryParam, dietaryParam, priceParam, offersParam, sortParam]);
 
-  // Extract available cuisines from live items & categories
+  // Extract available cuisines from food categories, subcategories & dishes (No business categories)
   const availableCuisines = useMemo(() => {
     const set = new Set<string>();
-    homeData.categories.forEach((c) => {
-      if (c.id !== "food" && c.id !== "rooms" && c.name) {
-        set.add(c.name);
+
+    const BUSINESS_CATEGORIES = new Set<string>([
+      "homely food", "homely", "home food", "mess", "daily mess", "student mess",
+      "cafe", "south indian", "lunch(homely food)", "lunch (homely food)",
+      "lunch", "dinner", "food", "rooms", "room", "rent property", "property",
+      "furniture", "bakery"
+    ]);
+
+    if (homeData.categories && Array.isArray(homeData.categories)) {
+      homeData.categories.forEach((c) => {
+        if (c?.name) BUSINESS_CATEGORIES.add(c.name.toLowerCase().trim());
+      });
+    }
+
+    const isBusiness = (raw?: string | null): boolean => {
+      if (!raw) return true;
+      const lower = raw.toLowerCase().trim();
+      const clean = lower.replace(/[^a-z0-9]/g, "");
+      return (
+        BUSINESS_CATEGORIES.has(lower) ||
+        BUSINESS_CATEGORIES.has(clean) ||
+        clean === "food" ||
+        clean === "rooms" ||
+        clean === "room" ||
+        clean === "mess" ||
+        clean === "bakery" ||
+        clean.includes("room") ||
+        clean.includes("property") ||
+        lower.includes("homely food") ||
+        lower.includes("lunch(homely")
+      );
+    };
+
+    (homeData.foodCategories || []).forEach((fc) => {
+      if (fc.name && !isBusiness(fc.name)) {
+        set.add(fc.name.toLowerCase().trim() === "dalrice" ? "Dal Rice" : (fc.name.trim().charAt(0).toUpperCase() + fc.name.trim().slice(1)));
+      }
+      (fc.subCategories || []).forEach((sc) => {
+        if (sc.name && !isBusiness(sc.name)) {
+          set.add(sc.name.trim().split(" ").map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" "));
+        }
+      });
+    });
+
+    (homeData.foodItems || []).forEach((f) => {
+      if (f.foodCategory?.name && !isBusiness(f.foodCategory.name)) {
+        set.add(f.foodCategory.name.toLowerCase().trim() === "dalrice" ? "Dal Rice" : (f.foodCategory.name.trim().charAt(0).toUpperCase() + f.foodCategory.name.trim().slice(1)));
+      }
+      if (f.foodSubCategory?.name && !isBusiness(f.foodSubCategory.name)) {
+        set.add(f.foodSubCategory.name.trim().split(" ").map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" "));
+      }
+      if (f.categoryName && !isBusiness(f.categoryName)) {
+        set.add(f.categoryName.toLowerCase().trim() === "dalrice" ? "Dal Rice" : (f.categoryName.trim().charAt(0).toUpperCase() + f.categoryName.trim().slice(1)));
+      }
+      if (f.subCategoryName && !isBusiness(f.subCategoryName)) {
+        set.add(f.subCategoryName.trim().split(" ").map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" "));
       }
     });
-    homeData.foodItems.forEach((f) => {
-      if (f.categoryName) set.add(f.categoryName);
-    });
-    return Array.from(set);
-  }, [homeData.categories, homeData.foodItems]);
+
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [homeData.categories, homeData.foodCategories, homeData.foodItems]);
 
   // Dynamic filter counts
   const filterCounts = useMemo(() => {
@@ -904,29 +955,75 @@ function FoodExploreContent() {
     return [1, "...", safeCurrentPage - 1, safeCurrentPage, safeCurrentPage + 1, "...", totalPages];
   }, [safeCurrentPage, totalPages]);
 
-  // Dynamic list of categories with live dish counts and emojis
+  // Dynamic list of categories with live dish counts and emojis (Food Categories & Sub Food Categories ONLY)
   const dynamicCategories = useMemo(() => {
     const map = new Map<string, { id: string; name: string; emoji: string; count: number }>();
 
     const EMOJI_MAP: Record<string, string> = {
       burger: "🍔",
+      "veg burger": "🍔",
+      "chicken burger": "🍔",
+      "triple layer veg": "🍔",
+      "2 layer veg": "🍔",
       cake: "🍰",
+      "chocolate cake": "🍰",
+      "rasmalai cake": "🍰",
+      "rasgulla cake": "🍰",
+      pastry: "🧁",
+      pastries: "🧁",
+      cup: "🧁",
+      round: "🧁",
       meal: "🍱",
-      mess: "🍲",
       thali: "🍱",
+      "special maharashtrian thali": "🍱",
+      "homely veg thali": "🍱",
+      "chiken thali": "🍱",
       biryani: "🍚",
+      "chicken dum biryani": "🍚",
       pizza: "🍕",
+      "cheese corn": "🍕",
+      paproni: "🍕",
+      "capsicum pizza": "🍕",
+      "cheese valcano pizza": "🍕",
       shake: "🥤",
+      "fresh strawberry shake": "🥤",
+      "cold coffee": "☕",
+      "chocolate badam shake": "🥤",
+      "vanela shake": "🥤",
+      "butterscotch shake": "🥤",
+      "jamun shake": "🥤",
+      "chikoo shake": "🥤",
+      "watermelon shake": "🥤",
       dalrice: "🍛",
       "dal rice": "🍛",
+      "plain rice": "🍚",
+      "jeera rice plate": "🍚",
+      "lemon rice": "🍚",
+      "tadka dal rice": "🍛",
       dosa: "🥞",
+      "masala dosa": "🥞",
+      "masala cheese dosa": "🥞",
+      "cut dosa": "🥞",
+      "sada dosa": "🥞",
+      "irani dosa": "🥞",
+      "cone cheese dosa": "🥞",
       idli: "🥟",
+      "idli sambar plate": "🥟",
       pohe: "🥣",
       poha: "🥣",
+      "kanda pohe": "🥣",
+      "kande pohe": "🥣",
+      "dadape pohe": "🥣",
+      "dahi pohe": "🥣",
+      "indori pohe": "🥣",
+      "bhel pohe": "🥣",
       sabudana: "🥣",
+      "sabudana khichdi": "🥣",
       shira: "🍮",
       sheera: "🍮",
+      "sujatha kesari shira": "🍮",
       upma: "🥣",
+      "rava upma": "🥣",
       healthy: "🥗",
       dessert: "🍨",
       desserts: "🍨",
@@ -939,54 +1036,220 @@ function FoodExploreContent() {
       chinese: "🍜",
       roll: "🌯",
       sandwich: "🥪",
-      pastry: "🧁",
-      pastries: "🧁",
+      wrap: "🌯",
+      coffee: "☕",
+      tea: "☕",
     };
 
+    const getCategoryEmoji = (name: string): string => {
+      const lower = name.toLowerCase().trim();
+      if (EMOJI_MAP[lower]) return EMOJI_MAP[lower];
+      const clean = lower.replace(/[^a-z0-9]/g, "");
+      if (EMOJI_MAP[clean]) return EMOJI_MAP[clean];
+      if (lower.includes("burger")) return "🍔";
+      if (lower.includes("pizza")) return "🍕";
+      if (lower.includes("cake") || lower.includes("pastry")) return "🍰";
+      if (lower.includes("dosa")) return "🥞";
+      if (lower.includes("idli")) return "🥟";
+      if (lower.includes("pohe") || lower.includes("poha") || lower.includes("upma") || lower.includes("sabudana")) return "🥣";
+      if (lower.includes("shira") || lower.includes("sheera")) return "🍮";
+      if (lower.includes("biryani") || lower.includes("rice")) return "🍚";
+      if (lower.includes("dal")) return "🍛";
+      if (lower.includes("coffee") || lower.includes("tea") || lower.includes("chai")) return "☕";
+      if (lower.includes("shake") || lower.includes("drink") || lower.includes("juice") || lower.includes("smoothie")) return "🥤";
+      if (lower.includes("thali") || lower.includes("meal")) return "🍱";
+      if (lower.includes("dessert") || lower.includes("ice cream") || lower.includes("waffle")) return "🍨";
+      if (lower.includes("sandwich") || lower.includes("wrap") || lower.includes("roll")) return "🥪";
+      if (lower.includes("snack") || lower.includes("fries")) return "🍟";
+      if (lower.includes("chinese") || lower.includes("noodle")) return "🍜";
+      return "🍲";
+    };
+
+    const BUSINESS_CATEGORIES = new Set<string>([
+      "homely food", "homely", "home food", "mess", "daily mess", "student mess",
+      "cafe", "south indian", "lunch(homely food)", "lunch (homely food)",
+      "lunch", "dinner", "food", "rooms", "room", "rent property", "property",
+      "furniture", "bakery"
+    ]);
+
     if (homeData.categories && Array.isArray(homeData.categories)) {
-      homeData.categories
-        .filter((c) => c.id !== "food" && c.id !== "rooms" && c.name)
-        .forEach((c) => {
-          const rawName = c.name.trim();
-          const lower = rawName.toLowerCase();
-          map.set(lower, {
-            id: c.id || lower,
-            name: rawName,
-            emoji: c.emoji && c.emoji !== "🍽️" && c.emoji !== "🍲" ? c.emoji : (EMOJI_MAP[lower] || "🍲"),
-            count: 0,
-          });
-        });
+      homeData.categories.forEach((c) => {
+        if (c?.name) BUSINESS_CATEGORIES.add(c.name.toLowerCase().trim());
+      });
     }
 
-    const sourceItems = homeData.foodItems;
+    const isBusiness = (name?: string | null): boolean => {
+      if (!name) return true;
+      const lower = name.toLowerCase().trim();
+      const clean = lower.replace(/[^a-z0-9]/g, "");
+      return (
+        BUSINESS_CATEGORIES.has(lower) ||
+        BUSINESS_CATEGORIES.has(clean) ||
+        clean === "food" ||
+        clean === "rooms" ||
+        clean === "room" ||
+        clean === "mess" ||
+        clean === "bakery" ||
+        clean.includes("room") ||
+        clean.includes("property") ||
+        lower.includes("homely food") ||
+        lower.includes("lunch(homely")
+      );
+    };
+
+    // 1. Process Food Categories and their Subcategories from DB
+    if (homeData.foodCategories && Array.isArray(homeData.foodCategories)) {
+      homeData.foodCategories.forEach((fc) => {
+        if (!fc || !fc.name || isBusiness(fc.name)) return;
+        const rawFcName = fc.name.trim();
+        const lowerFc = rawFcName.toLowerCase();
+        const displayFcName = lowerFc === "dalrice" ? "Dal Rice" : (rawFcName.charAt(0).toUpperCase() + rawFcName.slice(1));
+        if (!map.has(lowerFc)) {
+          map.set(lowerFc, {
+            id: fc.id || lowerFc,
+            name: displayFcName,
+            emoji: getCategoryEmoji(displayFcName),
+            count: 0,
+          });
+        }
+
+        // Sub Food Categories
+        if (fc.subCategories && Array.isArray(fc.subCategories)) {
+          fc.subCategories.forEach((sc) => {
+            if (!sc || !sc.name || isBusiness(sc.name)) return;
+            const rawScName = sc.name.trim();
+            const lowerSc = rawScName.toLowerCase();
+            const displaySubName = rawScName
+              .split(" ")
+              .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+              .join(" ");
+
+            if (!map.has(lowerSc)) {
+              map.set(lowerSc, {
+                id: sc.id || lowerSc,
+                name: displaySubName,
+                emoji: getCategoryEmoji(displaySubName),
+                count: 0,
+              });
+            }
+          });
+        }
+      });
+    }
+
+    // 2. Process Food Items from live menu
+    const sourceItems = homeData.foodItems || [];
     sourceItems.forEach((f) => {
-      if (f.categoryName && f.categoryName.trim()) {
-        const rawName = f.categoryName.trim();
-        const lower = rawName.toLowerCase();
-        if (lower !== "food" && lower !== "rooms" && !map.has(lower)) {
+      if (f.foodCategory?.name && !isBusiness(f.foodCategory.name)) {
+        const raw = f.foodCategory.name.trim();
+        const lower = raw.toLowerCase();
+        const display = lower === "dalrice" ? "Dal Rice" : (raw.charAt(0).toUpperCase() + raw.slice(1));
+        if (!map.has(lower)) {
+          map.set(lower, {
+            id: f.foodCategory.id || lower,
+            name: display,
+            emoji: getCategoryEmoji(display),
+            count: 0,
+          });
+        }
+      }
+      if (f.foodSubCategory?.name && !isBusiness(f.foodSubCategory.name)) {
+        const raw = f.foodSubCategory.name.trim();
+        const lower = raw.toLowerCase();
+        const display = raw.split(" ").map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+        if (!map.has(lower)) {
+          map.set(lower, {
+            id: f.foodSubCategory.id || lower,
+            name: display,
+            emoji: getCategoryEmoji(display),
+            count: 0,
+          });
+        }
+      }
+      if (f.subCategoryName && !isBusiness(f.subCategoryName)) {
+        const raw = f.subCategoryName.trim();
+        const lower = raw.toLowerCase();
+        const display = raw.split(" ").map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+        if (!map.has(lower)) {
           map.set(lower, {
             id: lower,
-            name: rawName.charAt(0).toUpperCase() + rawName.slice(1),
-            emoji: EMOJI_MAP[lower] || "🍲",
+            name: display,
+            emoji: getCategoryEmoji(display),
+            count: 0,
+          });
+        }
+      }
+      if (f.categoryName && !isBusiness(f.categoryName)) {
+        const raw = f.categoryName.trim();
+        const lower = raw.toLowerCase();
+        const display = lower === "dalrice" ? "Dal Rice" : (raw.charAt(0).toUpperCase() + raw.slice(1));
+        if (!map.has(lower)) {
+          map.set(lower, {
+            id: lower,
+            name: display,
+            emoji: getCategoryEmoji(display),
             count: 0,
           });
         }
       }
     });
 
-    return Array.from(map.values()).map((cat) => ({
-      ...cat,
-      count: sourceItems.filter((f) => {
-        const matchesCategory = matchesDishCategory(cat.name, f);
-        const matchesDiet = selectedDiet === "all" ? true : isDishMatchingDiet(f, selectedDiet);
-        return matchesCategory && matchesDiet;
-      }).length,
-    }));
-  }, [homeData.categories, homeData.foodItems, selectedDiet]);
+    // 3. Core popular Food Categories to guarantee comprehensive options
+    const CORE_CATEGORIES = [
+      { id: "dosa", name: "Dosa", emoji: "🥞" },
+      { id: "pohe", name: "Pohe", emoji: "🥣" },
+      { id: "cake", name: "Cake", emoji: "🍰" },
+      { id: "burger", name: "Burger", emoji: "🍔" },
+      { id: "pizza", name: "Pizza", emoji: "🍕" },
+      { id: "biryani", name: "Biryani", emoji: "🍚" },
+      { id: "meal", name: "Meal", emoji: "🍱" },
+      { id: "thali", name: "Thali", emoji: "🍱" },
+      { id: "shake", name: "Shake", emoji: "🥤" },
+      { id: "idli", name: "Idli", emoji: "🥟" },
+      { id: "sabudana", name: "Sabudana", emoji: "🥣" },
+      { id: "shira", name: "Shira", emoji: "🍮" },
+      { id: "upma", name: "Upma", emoji: "🥣" },
+      { id: "dalrice", name: "Dal Rice", emoji: "🍛" },
+      { id: "chinese", name: "Chinese", emoji: "🍜" },
+      { id: "sandwich", name: "Sandwich", emoji: "🥪" },
+      { id: "desserts", name: "Desserts", emoji: "🍨" },
+      { id: "snacks", name: "Snacks", emoji: "🍟" },
+    ];
+    CORE_CATEGORIES.forEach((cat) => {
+      const lower = cat.id.toLowerCase();
+      if (!isBusiness(cat.name) && !map.has(lower)) {
+        map.set(lower, {
+          id: cat.id,
+          name: cat.name,
+          emoji: cat.emoji,
+          count: 0,
+        });
+      }
+    });
 
-  // Mobile Explore Categories (exact 8 cuisines as Image 2)
+    // 4. Calculate live counts and sort: active dishes first (count descending), then alphabetically
+    const listWithCounts = Array.from(map.values())
+      .filter((cat) => !isBusiness(cat.name))
+      .map((cat) => ({
+        ...cat,
+        count: sourceItems.filter((f) => {
+          const matchesCategory = matchesDishCategory(cat.name, f);
+          const matchesDiet = selectedDiet === "all" ? true : isDishMatchingDiet(f, selectedDiet);
+          return matchesCategory && matchesDiet;
+        }).length,
+      }));
+
+    return listWithCounts.sort((a, b) => {
+      if (a.count > 0 && b.count === 0) return -1;
+      if (a.count === 0 && b.count > 0) return 1;
+      if (a.count > 0 && b.count > 0) return b.count - a.count;
+      return a.name.localeCompare(b.name);
+    });
+  }, [homeData.categories, homeData.foodCategories, homeData.foodItems, selectedDiet]);
+
+  // Mobile Explore Categories (clean Food Categories only)
   const mobileCategories = useMemo(() => {
-    const coreNames = ["Bakery", "Drinks", "Breakfast", "Chinese", "Desserts", "Pizza", "Burger", "Biryani"];
+    const coreNames = ["Dosa", "Drinks", "Breakfast", "Chinese", "Desserts", "Pizza", "Burger", "Biryani"];
     const list: Array<{ id: string; name: string; count: number }> = [];
 
     coreNames.forEach((name) => {
