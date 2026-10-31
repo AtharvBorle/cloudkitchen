@@ -52,6 +52,7 @@ import {
   Drumstick,
   Apple,
   Wheat,
+  RotateCcw,
 } from "lucide-react";
 import {
   isKitchenMatchingDiet,
@@ -378,6 +379,31 @@ function FoodExploreContent() {
   const [addedIds, setAddedIds] = useState<Record<string, boolean>>({});
   const [addonModalDish, setAddonModalDish] = useState<(DynamicFoodItem & { parsedAddons: AddonItem[] }) | null>(null);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  const [activeFilterPopover, setActiveFilterPopover] = useState<"dietary" | "price" | "delivery" | "rating" | "more" | null>(null);
+  const filterCardRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const handleFilterClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (activeFilterPopover && filterCardRef.current && !filterCardRef.current.contains(e.target as Node)) {
+        setActiveFilterPopover(null);
+      }
+    };
+    const handleFilterKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setActiveFilterPopover(null);
+      }
+    };
+    if (activeFilterPopover) {
+      document.addEventListener("mousedown", handleFilterClickOutside);
+      document.addEventListener("touchstart", handleFilterClickOutside);
+      document.addEventListener("keydown", handleFilterKeyDown);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleFilterClickOutside);
+      document.removeEventListener("touchstart", handleFilterClickOutside);
+      document.removeEventListener("keydown", handleFilterKeyDown);
+    };
+  }, [activeFilterPopover]);
   const [favorites, setFavorites] = useState<Record<string, boolean>>({});
 
   React.useEffect(() => {
@@ -1091,152 +1117,159 @@ function FoodExploreContent() {
         className="food-explore-container"
       >
         <div className="food-explore-desktop-hero">
-        {/* Breadcrumb */}
-        <div style={{ fontSize: "0.85rem", color: "#64748B", fontWeight: "500", marginTop: "-12px", marginBottom: "-14px" }}>
-          <span>Food marketplace</span>
-          <span style={{ margin: "0 6px" }}>·</span>
-          <span>Browse menu</span>
-        </div>
 
-        {/* Header Top Row: Title on Left, Search Bar on Right */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: "20px",
-          }}
-        >
-          <div>
-            <div
-              style={{
-                fontSize: "0.72rem",
-                fontWeight: "800",
-                color: "#FF6B00",
-                textTransform: "uppercase",
-                letterSpacing: "0.8px",
-                marginBottom: "4px",
-              }}
-            >
-              EXPLORE THE MENU
-            </div>
-            <h1
-              style={{
-                fontSize: "clamp(1.75rem, 3.2vw, 2.35rem)",
-                fontWeight: "800",
-                color: "#18181B",
-                margin: "0 0 6px 0",
-                letterSpacing: "-0.03em",
-              }}
-            >
-              What are you craving?
-            </h1>
-            <p style={{ margin: 0, fontSize: "0.92rem", color: "#64748B", fontWeight: "500" }}>
-              Discover delicious chef-crafted food and cloud kitchens nearby
-            </p>
-          </div>
-
-          {/* Search Input on Right with Interactive Popover */}
           <div
-            ref={searchContainerRef}
             style={{
-              position: "relative",
-              flex: "0 1 430px",
-              width: "100%",
-              maxWidth: "430px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: "20px",
+              paddingBottom: "4px",
             }}
           >
+            {/* Breadcrumb on Left: Home · Explore food */}
             <div
               style={{
+                fontSize: "0.88rem",
+                color: "#64748B",
+                fontWeight: "500",
                 display: "flex",
                 alignItems: "center",
-                gap: "10px",
-                width: "100%",
-                height: "44px",
-                backgroundColor: "#FFFFFF",
-                borderRadius: "9999px",
-                padding: "0 16px",
-                border: isSearchFocused ? "1.5px solid #FF6B00" : "1.5px solid #E2E8F0",
-                boxShadow: isSearchFocused
-                  ? "0 0 0 3.5px rgba(255, 107, 0, 0.14), 0 8px 24px rgba(255, 107, 0, 0.1)"
-                  : "0 2px 8px rgba(0, 0, 0, 0.03)",
-                transform: isSearchFocused ? "translateY(-1.5px) scale(1.01)" : "translateY(0) scale(1)",
-                transition: "all 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
-                boxSizing: "border-box",
-                cursor: "text",
+                gap: "8px",
               }}
-              onClick={() => searchInputRef.current?.focus()}
             >
-              <Search
-                size={18}
-                color={isSearchFocused ? "#FF6B00" : "#94A3B8"}
-                style={{
-                  transition: "all 0.2s ease",
-                  transform: isSearchFocused ? "scale(1.08)" : "scale(1)",
-                  flexShrink: 0,
-                }}
-              />
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={searchQuery}
-                onFocus={() => setIsSearchFocused(true)}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    setIsSearchFocused(false);
-                  }
-                }}
-                placeholder="Search dishes, biryani, cakes, burgers, cloud kitchens..."
-                style={{
-                  border: "none",
-                  outline: "none",
-                  backgroundColor: "transparent",
-                  width: "100%",
-                  fontSize: "0.88rem",
-                  color: "#18181B",
-                  fontWeight: "500",
-                  fontFamily: "inherit",
-                }}
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSearchQuery("");
-                    searchInputRef.current?.focus();
-                  }}
-                  style={{
-                    background: "#F1F5F9",
-                    border: "none",
-                    cursor: "pointer",
-                    padding: "4px",
-                    borderRadius: "50%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#64748B",
-                    transition: "all 0.15s ease",
-                    flexShrink: 0,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = "#FFE8D6";
-                    e.currentTarget.style.color = "#FF6B00";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = "#F1F5F9";
-                    e.currentTarget.style.color = "#64748B";
-                  }}
-                  aria-label="Clear search"
-                >
-                  <X size={14} />
-                </button>
-              )}
+              <span
+                onClick={() => router.push("/")}
+                style={{ cursor: "pointer", color: "#64748B", transition: "color 0.15s ease" }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "#0F172A")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "#64748B")}
+              >
+                Home
+              </span>
+              <span style={{ color: "#94A3B8" }}>·</span>
+              <span style={{ color: "#FF5500", fontWeight: "600" }}>Explore food</span>
             </div>
 
-            {/* Interactive Popover Dropdown Panel */}
+            {/* Search Input on Right with Orange Search Button */}
+            <div
+              ref={searchContainerRef}
+              style={{
+                position: "relative",
+                flex: "0 1 480px",
+                width: "100%",
+                maxWidth: "480px",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  width: "100%",
+                  height: "44px",
+                  backgroundColor: "#FFFFFF",
+                  borderRadius: "12px",
+                  padding: "0 6px 0 14px",
+                  border: isSearchFocused ? "1.5px solid #FF5500" : "1.5px solid #E2E8F0",
+                  boxShadow: isSearchFocused
+                    ? "0 0 0 3px rgba(255, 85, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.04)"
+                    : "0 1px 3px rgba(0, 0, 0, 0.02)",
+                  transition: "all 0.2s ease",
+                  boxSizing: "border-box",
+                  cursor: "text",
+                }}
+                onClick={() => searchInputRef.current?.focus()}
+              >
+                <Search
+                  size={18}
+                  color={isSearchFocused ? "#FF5500" : "#94A3B8"}
+                  style={{
+                    transition: "all 0.2s ease",
+                    transform: isSearchFocused ? "scale(1.05)" : "scale(1)",
+                    flexShrink: 0,
+                  }}
+                />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onFocus={() => setIsSearchFocused(true)}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      setIsSearchFocused(false);
+                    }
+                  }}
+                  placeholder="Search dishes, cuisines, or kitchens..."
+                  style={{
+                    border: "none",
+                    outline: "none",
+                    backgroundColor: "transparent",
+                    width: "100%",
+                    fontSize: "0.88rem",
+                    color: "#18181B",
+                    fontWeight: "500",
+                    fontFamily: "inherit",
+                  }}
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSearchQuery("");
+                      searchInputRef.current?.focus();
+                    }}
+                    style={{
+                      background: "#F1F5F9",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: "4px",
+                      borderRadius: "50%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#64748B",
+                      transition: "all 0.15s ease",
+                      flexShrink: 0,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = "#FFE8D6";
+                      e.currentTarget.style.color = "#FF5500";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "#F1F5F9";
+                      e.currentTarget.style.color = "#64748B";
+                    }}
+                    aria-label="Clear search"
+                  >
+                    <X size={13} />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setIsSearchFocused(false)}
+                  style={{
+                    backgroundColor: "#FF5500",
+                    color: "#FFFFFF",
+                    border: "none",
+                    borderRadius: "8px",
+                    padding: "7px 18px",
+                    fontSize: "0.85rem",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                    flexShrink: 0,
+                    transition: "background-color 0.15s ease",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#E04B00")}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#FF5500")}
+                >
+                  Search
+                </button>
+              </div>
+
+              {/* Interactive Popover Dropdown Panel */}
             {isSearchFocused && (
               <div
                 style={{
@@ -1507,8 +1540,8 @@ function FoodExploreContent() {
                 )}
               </div>
             )}
+            </div>
           </div>
-        </div>
         </div>{/* End food-explore-desktop-hero */}
 
         {/* Mobile Explore Categories (Image 2 Design) */}
@@ -1574,138 +1607,175 @@ function FoodExploreContent() {
 
         {/* Desktop Dynamic Category Chips Carousel */}
         <div className="food-explore-desktop-categories">
-        {/* Dynamic Category Chips Carousel */}
-        {dynamicCategories.length > 0 && (
-          <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-            <div
-              ref={categoryScrollRef}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                overflowX: "auto",
-                scrollbarWidth: "none",
-                paddingBottom: "4px",
-                width: "100%",
-                scrollBehavior: "smooth",
-              }}
-              className="hide-scrollbar"
-            >
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedCategory("");
-                  if (typeof window !== "undefined") {
-                    const params = new URLSearchParams(window.location.search);
-                    params.delete("category");
-                    const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
-                    router.replace(newUrl, { scroll: false });
-                  }
-                }}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: "8px 16px",
-                  borderRadius: "12px",
-                  border: !selectedCategory ? "1.5px solid #FF6B00" : "1px solid #E2E8F0",
-                  backgroundColor: !selectedCategory ? "#FFF3EB" : "#FFFFFF",
-                  color: !selectedCategory ? "#FF6B00" : "#475569",
-                  fontWeight: "700",
-                  fontSize: "0.88rem",
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                  flexShrink: 0,
-                  transition: "all 0.2s ease",
-                }}
-              >
-                <UtensilsCrossed size={14} color={!selectedCategory ? "#FF6B00" : "#64748B"} />
-                <span>All Cuisines</span>
-              </button>
-
-              {dynamicCategories.map((cat) => {
-                const isSelected = selectedCategory.toLowerCase().trim() === cat.name.toLowerCase().trim();
-                return (
+          {dynamicCategories.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              {/* Row Header: Popular Categories Title + Scroll Buttons */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <h2 style={{ fontSize: "1.25rem", fontWeight: "700", color: "#0F172A", margin: 0, letterSpacing: "-0.01em" }}>
+                  Popular Categories
+                </h2>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <button
-                    key={cat.id}
                     type="button"
-                    onClick={() => {
-                      const newCat = isSelected ? "" : cat.name;
-                      setSelectedCategory(newCat);
-                      if (typeof window !== "undefined") {
-                        const params = new URLSearchParams(window.location.search);
-                        if (newCat) {
-                          params.set("category", newCat);
-                        } else {
-                          params.delete("category");
-                        }
-                        const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
-                        router.replace(newUrl, { scroll: false });
-                      }
-                    }}
+                    onClick={() => categoryScrollRef.current?.scrollBy({ left: -240, behavior: "smooth" })}
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
-                      gap: "6px",
-                      padding: "8px 16px",
-                      borderRadius: "12px",
-                      border: isSelected ? "1.5px solid #FF6B00" : "1px solid #E2E8F0",
-                      backgroundColor: isSelected ? "#FFF3EB" : "#FFFFFF",
-                      color: isSelected ? "#FF6B00" : "#475569",
-                      fontWeight: isSelected ? "700" : "600",
-                      fontSize: "0.88rem",
+                      justifyContent: "center",
+                      width: "32px",
+                      height: "32px",
+                      borderRadius: "50%",
+                      border: "1px solid #E2E8F0",
+                      backgroundColor: "#FFFFFF",
+                      color: "#475569",
                       cursor: "pointer",
-                      whiteSpace: "nowrap",
-                      flexShrink: 0,
-                      transition: "all 0.2s ease",
+                      transition: "all 0.15s ease",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
                     }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = "#CBD5E1";
+                      e.currentTarget.style.backgroundColor = "#F8FAFC";
+                      e.currentTarget.style.color = "#0F172A";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = "#E2E8F0";
+                      e.currentTarget.style.backgroundColor = "#FFFFFF";
+                      e.currentTarget.style.color = "#475569";
+                    }}
+                    aria-label="Scroll categories left"
                   >
-                    <span>{cat.emoji || "🍲"}</span>
-                    <span>{cat.name}</span>
-                    {cat.count > 0 && (
-                      <span
-                        style={{
-                          fontSize: "0.72rem",
-                          padding: "1px 6px",
-                          borderRadius: "8px",
-                          backgroundColor: isSelected ? "#FFEDD5" : "#F1F5F9",
-                          color: isSelected ? "#EA580C" : "#64748B",
-                          fontWeight: "700",
-                        }}
-                      >
-                        {cat.count}
-                      </span>
-                    )}
+                    <ChevronLeft size={16} />
                   </button>
-                );
-              })}
-            </div>
+                  <button
+                    type="button"
+                    onClick={() => categoryScrollRef.current?.scrollBy({ left: 240, behavior: "smooth" })}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: "32px",
+                      height: "32px",
+                      borderRadius: "50%",
+                      border: "1px solid #E2E8F0",
+                      backgroundColor: "#FFFFFF",
+                      color: "#475569",
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = "#CBD5E1";
+                      e.currentTarget.style.backgroundColor = "#F8FAFC";
+                      e.currentTarget.style.color = "#0F172A";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = "#E2E8F0";
+                      e.currentTarget.style.backgroundColor = "#FFFFFF";
+                      e.currentTarget.style.color = "#475569";
+                    }}
+                    aria-label="Scroll categories right"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              </div>
 
-            {/* Scroll Next Arrow */}
-            <button
-              type="button"
-              onClick={() => categoryScrollRef.current?.scrollBy({ left: 220, behavior: "smooth" })}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: "34px",
-                height: "34px",
-                borderRadius: "10px",
-                border: "1px solid #E2E8F0",
-                backgroundColor: "#FFFFFF",
-                color: "#475569",
-                cursor: "pointer",
-                flexShrink: 0,
-                marginLeft: "8px",
-                boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
-              }}
-              aria-label="Scroll categories right"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
-        )}
+              {/* Pills Carousel */}
+              <div
+                ref={categoryScrollRef}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  overflowX: "auto",
+                  scrollbarWidth: "none",
+                  paddingBottom: "4px",
+                  width: "100%",
+                  scrollBehavior: "smooth",
+                }}
+                className="hide-scrollbar"
+              >
+                {/* All Cuisines Pill */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedCategory("");
+                    if (typeof window !== "undefined") {
+                      const params = new URLSearchParams(window.location.search);
+                      params.delete("category");
+                      const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
+                      router.replace(newUrl, { scroll: false });
+                    }
+                  }}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    padding: "8px 18px",
+                    borderRadius: "9999px",
+                    border: !selectedCategory ? "1.5px solid #FF5500" : "1px solid #E2E8F0",
+                    backgroundColor: !selectedCategory ? "#FFF7ED" : "#FFFFFF",
+                    color: !selectedCategory ? "#FF5500" : "#475569",
+                    fontWeight: !selectedCategory ? "700" : "600",
+                    fontSize: "0.88rem",
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                    transition: "all 0.15s ease",
+                    boxShadow: "0 1px 2px rgba(15, 23, 42, 0.03)",
+                  }}
+                >
+                  <UtensilsCrossed size={14} color={!selectedCategory ? "#FF5500" : "#64748B"} />
+                  <span>All Cuisines</span>
+                </button>
+
+                {/* Individual Categories from dynamicCategories */}
+                {dynamicCategories.map((cat) => {
+                  const isSelected = selectedCategory.toLowerCase().trim() === cat.name.toLowerCase().trim();
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => {
+                        const newCat = isSelected ? "" : cat.name;
+                        setSelectedCategory(newCat);
+                        if (typeof window !== "undefined") {
+                          const params = new URLSearchParams(window.location.search);
+                          if (newCat) {
+                            params.set("category", newCat);
+                          } else {
+                            params.delete("category");
+                          }
+                          const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
+                          router.replace(newUrl, { scroll: false });
+                        }
+                      }}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        padding: "8px 18px",
+                        borderRadius: "9999px",
+                        border: isSelected ? "1.5px solid #FF5500" : "1px solid #E2E8F0",
+                        backgroundColor: isSelected ? "#FFF7ED" : "#FFFFFF",
+                        color: isSelected ? "#FF5500" : "#475569",
+                        fontWeight: isSelected ? "700" : "600",
+                        fontSize: "0.88rem",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                        flexShrink: 0,
+                        transition: "all 0.15s ease",
+                        boxShadow: "0 1px 2px rgba(15, 23, 42, 0.03)",
+                      }}
+                    >
+                      <span>{cat.emoji || "🍲"}</span>
+                      <span>{cat.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>{/* End food-explore-desktop-categories */}
 
         {/* Mobile Sticky Filter Bar (Image 2 Design) */}
@@ -1919,157 +1989,433 @@ function FoodExploreContent() {
           )}
         </div>
 
-        {/* Multi-Dimensional Filter Box */}
-        <div className={filterStyles.filterBox}>
-          {/* Row 1: Dietary */}
-          <div className={`${filterStyles.filterRow} ${filterStyles.filterRowDietary}`}>
-            {/* Desktop Side Label */}
-            <span className={filterStyles.filterLabelDesktop}>Dietary</span>
-
-            {/* Mobile Section Header */}
-            <div className={filterStyles.sectionHeaderMobile}>
-              <span className={filterStyles.sectionTitleText}>Dietary</span>
-            </div>
-
-            <div className={filterStyles.dietaryPillsGroup}>
-              {[
-                { id: "all", label: "All Diet", count: filterCounts.all },
-                { id: "veg", label: "🌱 Pure Veg", count: filterCounts.veg },
-                { id: "non_veg", label: "🍗 Non-Veg", count: filterCounts.non_veg },
-                { id: "vegan", label: "🌿 Vegan", count: filterCounts.vegan },
-                { id: "jain", label: "🌾 Jain", count: filterCounts.jain },
-              ].map((d) => {
-                const isSelected = selectedDiet === d.id;
-                return (
-                  <button
-                    key={d.id}
-                    type="button"
-                    onClick={() => {
-                      const nextDiet = isSelected && d.id !== "all" ? "all" : (d.id as any);
-                      setSelectedDiet(nextDiet);
-                      if (typeof window !== "undefined") {
-                        localStorage.setItem("cloudkitchen_diet_preference", nextDiet);
-                        window.dispatchEvent(new CustomEvent("cloudkitchen_diet_preference_changed", { detail: nextDiet }));
-                      }
-                    }}
-                    className={`${filterStyles.dietPillBtn} ${isSelected ? filterStyles.dietPillBtnSelected : ""}`}
-                  >
-                    <span>{d.label}</span>
-                    {d.count !== undefined && (
-                      <span className={`${filterStyles.dietPillCount} ${isSelected ? filterStyles.dietPillCountSelected : ""}`}>
-                        {d.count}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Horizontal Line separating Dietary & Refine by */}
-          <div className={filterStyles.filterDivider} />
-
-          {/* Row 2: Refine by */}
-          <div className={`${filterStyles.filterRow} ${filterStyles.filterRowRefine}`}>
-            {/* Desktop Side Label */}
-            <span className={filterStyles.filterLabelDesktop}>Refine by</span>
-
-            {/* Mobile Section Header with Clear All */}
-            <div className={filterStyles.sectionHeaderMobile}>
-              <span className={filterStyles.sectionTitleText}>Refine by</span>
+        {/* Filters Card (Image 2 Design) */}
+        <div ref={filterCardRef} className={`${filterStyles.filterBox} food-explore-desktop-filters`}>
+          {/* Header Row: Filters [2 active] ... Reset All */}
+          <div className={filterStyles.filterHeaderRow}>
+            <div className={filterStyles.filterHeaderLeft}>
+              <div className={filterStyles.filterHeaderTitle}>
+                <SlidersHorizontal size={15} className={filterStyles.filterHeaderIcon} />
+                <span>Filters</span>
+              </div>
               {activeFiltersCount > 0 && (
-                <button
-                  type="button"
-                  onClick={handleClearAll}
-                  className={filterStyles.clearBtnMobile}
-                >
-                  <SlidersHorizontal size={11} />
-                  <span>Clear All ({activeFiltersCount})</span>
-                  <X size={11} />
-                </button>
+                <span className={filterStyles.filterActiveBadge}>
+                  {activeFiltersCount} active
+                </span>
               )}
             </div>
 
-            <div className={filterStyles.refineControlsGroup}>
-              {/* Price Range Dropdown */}
-              <div className={filterStyles.refineDropdownWrapper} ref={pricePopoverRef}>
-                <button
-                  type="button"
-                  onClick={() => setOpenPricePopover(!openPricePopover)}
-                  className={`${filterStyles.dropdownTriggerBtn} ${selectedPrice !== "all" ? filterStyles.dropdownTriggerBtnActive : ""}`}
-                >
-                  <span>
-                    {selectedPrice === "under-150"
-                      ? "Under ₹150"
-                      : selectedPrice === "150-300"
-                      ? "₹150 – ₹300"
-                      : selectedPrice === "300-plus"
-                      ? "₹300+"
-                      : "Price Range"}
-                  </span>
-                  <ChevronDown
-                    size={13}
-                    style={{
-                      transform: openPricePopover ? "rotate(180deg)" : "none",
-                      transition: "transform 0.15s ease",
-                    }}
-                  />
-                </button>
+            <button
+              type="button"
+              onClick={handleClearAll}
+              className={filterStyles.filterResetBtn}
+              title="Reset all filters"
+            >
+              <RotateCcw size={13} />
+              <span>Reset All</span>
+            </button>
+          </div>
 
-                {openPricePopover && (
-                  <div className={filterStyles.pricePopover}>
-                    {[
-                      { id: "all", label: "Any Price", count: filterCounts.all },
-                      { id: "under-150", label: "Under ₹150", count: filterCounts.under150 },
-                      { id: "150-300", label: "₹150 – ₹300", count: filterCounts.price150to300 },
-                      { id: "300-plus", label: "₹300+", count: filterCounts.price300plus },
-                    ].map((p) => {
-                      const isSelected = selectedPrice === p.id;
-                      return (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedPrice(p.id as any);
-                            setOpenPricePopover(false);
-                          }}
-                          className={`${filterStyles.popoverItem} ${isSelected ? filterStyles.popoverItemSelected : ""}`}
-                        >
+          {/* Controls Row: 5 Filter Pills */}
+          <div className={filterStyles.filterControlsRow}>
+            {/* 1. Dietary Filter Pill */}
+            <div className={filterStyles.filterDropdownWrapper}>
+              <button
+                type="button"
+                onClick={() =>
+                  setActiveFilterPopover(activeFilterPopover === "dietary" ? null : "dietary")
+                }
+                className={`${filterStyles.filterPillBtn} ${
+                  selectedDiet !== "all" ? filterStyles.filterPillDietaryActive : ""
+                }`}
+              >
+                {selectedDiet !== "all" && (
+                  <span
+                    className={
+                      selectedDiet === "non_veg"
+                        ? filterStyles.dietaryDotRed
+                        : filterStyles.dietaryDotGreen
+                    }
+                  />
+                )}
+                <span>
+                  {selectedDiet === "all"
+                    ? "Dietary"
+                    : selectedDiet === "veg"
+                    ? "Dietary: Pure Veg"
+                    : selectedDiet === "non_veg"
+                    ? "Dietary: Non-Veg"
+                    : selectedDiet === "vegan"
+                    ? "Dietary: Vegan"
+                    : "Dietary: Jain"}
+                </span>
+                <ChevronDown
+                  size={14}
+                  className={`${filterStyles.filterPillChevron} ${
+                    activeFilterPopover === "dietary" ? filterStyles.filterPillChevronRotated : ""
+                  }`}
+                />
+              </button>
+
+              {activeFilterPopover === "dietary" && (
+                <div className={filterStyles.filterPopoverMenu} role="listbox">
+                  <div className={filterStyles.popoverHeader}>
+                    <span>Dietary Preference</span>
+                  </div>
+                  {[
+                    { id: "all", label: "All Diet", count: filterCounts.all },
+                    { id: "veg", label: "🌱 Pure Veg", count: filterCounts.veg },
+                    { id: "non_veg", label: "🍗 Non-Veg", count: filterCounts.non_veg },
+                    { id: "vegan", label: "🌿 Vegan", count: filterCounts.vegan },
+                    { id: "jain", label: "🌾 Jain", count: filterCounts.jain },
+                  ].map((d) => {
+                    const isSelected = selectedDiet === d.id;
+                    return (
+                      <button
+                        key={d.id}
+                        type="button"
+                        onClick={() => {
+                          const nextDiet = isSelected && d.id !== "all" ? "all" : (d.id as any);
+                          setSelectedDiet(nextDiet);
+                          if (typeof window !== "undefined") {
+                            localStorage.setItem("cloudkitchen_diet_preference", nextDiet);
+                            window.dispatchEvent(
+                              new CustomEvent("cloudkitchen_diet_preference_changed", {
+                                detail: nextDiet,
+                              })
+                            );
+                          }
+                          setActiveFilterPopover(null);
+                        }}
+                        className={`${filterStyles.popoverItemBtn} ${
+                          isSelected ? filterStyles.popoverItemBtnActive : ""
+                        }`}
+                        role="option"
+                        aria-selected={isSelected}
+                      >
+                        <div className={filterStyles.popoverItemLeft}>
+                          <span>{d.label}</span>
+                          {d.count !== undefined && (
+                            <span className={filterStyles.popoverItemCount}>({d.count})</span>
+                          )}
+                        </div>
+                        {isSelected && <Check size={14} className={filterStyles.popoverCheckIcon} />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* 2. Price Filter Pill */}
+            <div className={filterStyles.filterDropdownWrapper}>
+              <button
+                type="button"
+                onClick={() =>
+                  setActiveFilterPopover(activeFilterPopover === "price" ? null : "price")
+                }
+                className={`${filterStyles.filterPillBtn} ${
+                  selectedPrice !== "all" ? filterStyles.filterPillPriceActive : ""
+                }`}
+              >
+                <span>
+                  {selectedPrice === "all"
+                    ? "Price Range"
+                    : selectedPrice === "under-150"
+                    ? "Price: Under ₹150"
+                    : selectedPrice === "150-300"
+                    ? "Price: ₹150 – ₹300"
+                    : "Price: ₹300+"}
+                </span>
+                <ChevronDown
+                  size={14}
+                  className={`${filterStyles.filterPillChevron} ${
+                    activeFilterPopover === "price" ? filterStyles.filterPillChevronRotated : ""
+                  }`}
+                />
+              </button>
+
+              {activeFilterPopover === "price" && (
+                <div className={filterStyles.filterPopoverMenu} role="listbox">
+                  <div className={filterStyles.popoverHeader}>
+                    <span>Price Range</span>
+                  </div>
+                  {[
+                    { id: "all", label: "Any Price", count: filterCounts.all },
+                    { id: "under-150", label: "Under ₹150", count: filterCounts.under150 },
+                    { id: "150-300", label: "₹150 – ₹300", count: filterCounts.price150to300 },
+                    { id: "300-plus", label: "₹300+", count: filterCounts.price300plus },
+                  ].map((p) => {
+                    const isSelected = selectedPrice === p.id;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedPrice(p.id as any);
+                          setActiveFilterPopover(null);
+                        }}
+                        className={`${filterStyles.popoverItemBtn} ${
+                          isSelected ? filterStyles.popoverItemBtnActive : ""
+                        }`}
+                        role="option"
+                        aria-selected={isSelected}
+                      >
+                        <div className={filterStyles.popoverItemLeft}>
                           <span>{p.label}</span>
                           {p.count > 0 && (
-                            <span style={{ fontSize: "11px", color: isSelected ? "#FF6B00" : "#94A3B8", flexShrink: 0 }}>
-                              ({p.count})
-                            </span>
+                            <span className={filterStyles.popoverItemCount}>({p.count})</span>
                           )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+                        </div>
+                        {isSelected && <Check size={14} className={filterStyles.popoverCheckIcon} />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
-              {/* Cuisines Dropdown */}
-              {availableCuisines.length > 0 && (
-                <div className={filterStyles.refineDropdownWrapper} ref={cuisinePopoverRef}>
+            {/* 3. Delivery Time Filter Pill */}
+            <div className={filterStyles.filterDropdownWrapper}>
+              <button
+                type="button"
+                onClick={() =>
+                  setActiveFilterPopover(activeFilterPopover === "delivery" ? null : "delivery")
+                }
+                className={`${filterStyles.filterPillBtn} ${
+                  sortBy === "fastest" ? filterStyles.filterPillActive : ""
+                }`}
+              >
+                <span>{sortBy === "fastest" ? "⚡ Delivery: Fastest" : "⚡ Delivery Time"}</span>
+                <ChevronDown
+                  size={14}
+                  className={`${filterStyles.filterPillChevron} ${
+                    activeFilterPopover === "delivery" ? filterStyles.filterPillChevronRotated : ""
+                  }`}
+                />
+              </button>
+
+              {activeFilterPopover === "delivery" && (
+                <div className={filterStyles.filterPopoverMenu} role="listbox">
+                  <div className={filterStyles.popoverHeader}>
+                    <span>Delivery Time</span>
+                  </div>
                   <button
                     type="button"
-                    onClick={() => setOpenCuisinePopover(!openCuisinePopover)}
-                    className={`${filterStyles.dropdownTriggerBtn} ${selectedCuisines.length > 0 ? filterStyles.dropdownTriggerBtnActive : ""}`}
+                    onClick={() => {
+                      setSortBy(sortBy === "fastest" ? "" : "fastest");
+                      setActiveFilterPopover(null);
+                    }}
+                    className={`${filterStyles.popoverItemBtn} ${
+                      sortBy === "fastest" ? filterStyles.popoverItemBtnActive : ""
+                    }`}
                   >
-                    <span>
-                      {selectedCuisines.length > 0 ? `Cuisines (${selectedCuisines.length})` : "Cuisines"}
-                    </span>
-                    <ChevronDown
-                      size={13}
-                      style={{
-                        transform: openCuisinePopover ? "rotate(180deg)" : "none",
-                        transition: "transform 0.15s ease",
-                      }}
-                    />
+                    <span>⚡ Fastest Delivery (&lt; 30 min)</span>
+                    {sortBy === "fastest" && (
+                      <Check size={14} className={filterStyles.popoverCheckIcon} />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (sortBy === "fastest") setSortBy("");
+                      setActiveFilterPopover(null);
+                    }}
+                    className={`${filterStyles.popoverItemBtn} ${
+                      sortBy !== "fastest" ? filterStyles.popoverItemBtnActive : ""
+                    }`}
+                  >
+                    <span>⏱️ Standard Delivery (All)</span>
+                    {sortBy !== "fastest" && (
+                      <Check size={14} className={filterStyles.popoverCheckIcon} />
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* 4. Rating Filter Pill */}
+            <div className={filterStyles.filterDropdownWrapper}>
+              <button
+                type="button"
+                onClick={() =>
+                  setActiveFilterPopover(activeFilterPopover === "rating" ? null : "rating")
+                }
+                className={`${filterStyles.filterPillBtn} ${
+                  sortBy === "rating" ? filterStyles.filterPillActive : ""
+                }`}
+              >
+                <span>{sortBy === "rating" ? "★ Rating: Top Rated" : "★ Rating"}</span>
+                <ChevronDown
+                  size={14}
+                  className={`${filterStyles.filterPillChevron} ${
+                    activeFilterPopover === "rating" ? filterStyles.filterPillChevronRotated : ""
+                  }`}
+                />
+              </button>
+
+              {activeFilterPopover === "rating" && (
+                <div className={filterStyles.filterPopoverMenu} role="listbox">
+                  <div className={filterStyles.popoverHeader}>
+                    <span>Customer Ratings</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSortBy(sortBy === "rating" ? "" : "rating");
+                      setActiveFilterPopover(null);
+                    }}
+                    className={`${filterStyles.popoverItemBtn} ${
+                      sortBy === "rating" ? filterStyles.popoverItemBtnActive : ""
+                    }`}
+                  >
+                    <span>⭐ Top Rated (4.0+ Stars)</span>
+                    {sortBy === "rating" && (
+                      <Check size={14} className={filterStyles.popoverCheckIcon} />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (sortBy === "rating") setSortBy("");
+                      setActiveFilterPopover(null);
+                    }}
+                    className={`${filterStyles.popoverItemBtn} ${
+                      sortBy !== "rating" ? filterStyles.popoverItemBtnActive : ""
+                    }`}
+                  >
+                    <span>✨ Any Rating</span>
+                    {sortBy !== "rating" && (
+                      <Check size={14} className={filterStyles.popoverCheckIcon} />
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* 5. More Filters Pill */}
+            <div className={filterStyles.filterDropdownWrapper}>
+              <button
+                type="button"
+                onClick={() =>
+                  setActiveFilterPopover(activeFilterPopover === "more" ? null : "more")
+                }
+                className={`${filterStyles.filterPillBtn} ${
+                  offersOnly || openOnly || sortBy === "popular" || selectedCuisines.length > 0
+                    ? filterStyles.filterPillActive
+                    : ""
+                }`}
+              >
+                <span>
+                  🏷️ More Filters
+                  {offersOnly || openOnly || sortBy === "popular" || selectedCuisines.length > 0
+                    ? ` (${
+                        (offersOnly ? 1 : 0) +
+                        (openOnly ? 1 : 0) +
+                        (sortBy === "popular" ? 1 : 0) +
+                        (selectedCuisines.length > 0 ? 1 : 0)
+                      })`
+                    : ""}
+                </span>
+                <ChevronDown
+                  size={14}
+                  className={`${filterStyles.filterPillChevron} ${
+                    activeFilterPopover === "more" ? filterStyles.filterPillChevronRotated : ""
+                  }`}
+                />
+              </button>
+
+              {activeFilterPopover === "more" && (
+                <div
+                  className={`${filterStyles.filterPopoverMenu} ${filterStyles.filterPopoverMenuRight}`}
+                  style={{ minWidth: "220px", maxHeight: "300px", overflowY: "auto" }}
+                  role="listbox"
+                >
+                  <div className={filterStyles.popoverHeader}>
+                    <span>Quick Filters</span>
+                  </div>
+
+                  {/* Offers & Deals */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = !offersOnly;
+                      setOffersOnly(next);
+                      if (typeof window !== "undefined") {
+                        const params = new URLSearchParams(window.location.search);
+                        if (next) params.set("offers", "true");
+                        else params.delete("offers");
+                        const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
+                        router.replace(newUrl, { scroll: false });
+                      }
+                    }}
+                    className={filterStyles.popoverItemBtn}
+                  >
+                    <div className={filterStyles.popoverItemLeft}>
+                      <span
+                        className={`${filterStyles.popoverCheckboxIndicator} ${
+                          offersOnly ? filterStyles.popoverCheckboxActive : ""
+                        }`}
+                      >
+                        {offersOnly && <Check size={11} color="#FFFFFF" />}
+                      </span>
+                      <span>🏷️ Offers &amp; Deals</span>
+                    </div>
                   </button>
 
-                  {openCuisinePopover && (
-                    <div className={filterStyles.cuisinePopover}>
+                  {/* Open Kitchens */}
+                  <button
+                    type="button"
+                    onClick={() => setOpenOnly(!openOnly)}
+                    className={filterStyles.popoverItemBtn}
+                  >
+                    <div className={filterStyles.popoverItemLeft}>
+                      <span
+                        className={`${filterStyles.popoverCheckboxIndicator} ${
+                          openOnly ? filterStyles.popoverCheckboxActive : ""
+                        }`}
+                      >
+                        {openOnly && <Check size={11} color="#FFFFFF" />}
+                      </span>
+                      <span>🏪 Open Kitchens</span>
+                    </div>
+                  </button>
+
+                  {/* Popular Dishes */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = sortBy === "popular" ? "" : "popular";
+                      setSortBy(next);
+                      if (typeof window !== "undefined") {
+                        const params = new URLSearchParams(window.location.search);
+                        if (next === "popular") params.set("sort", "popular");
+                        else params.delete("sort");
+                        const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
+                        router.replace(newUrl, { scroll: false });
+                      }
+                    }}
+                    className={filterStyles.popoverItemBtn}
+                  >
+                    <div className={filterStyles.popoverItemLeft}>
+                      <span
+                        className={`${filterStyles.popoverCheckboxIndicator} ${
+                          sortBy === "popular" ? filterStyles.popoverCheckboxActive : ""
+                        }`}
+                      >
+                        {sortBy === "popular" && <Check size={11} color="#FFFFFF" />}
+                      </span>
+                      <span>✨ Popular Dishes</span>
+                    </div>
+                  </button>
+
+                  {/* Cuisines Sublist */}
+                  {availableCuisines.length > 0 && (
+                    <>
+                      <div className={filterStyles.popoverDivider} />
+                      <div className={filterStyles.popoverHeader}>
+                        <span>Cuisines</span>
+                      </div>
                       {availableCuisines.map((c) => {
                         const isSelected = selectedCuisines.includes(c);
                         const count = filterCounts.cuisineCounts[c];
@@ -2082,134 +2428,27 @@ function FoodExploreContent() {
                                 prev.includes(c) ? prev.filter((item) => item !== c) : [...prev, c]
                               );
                             }}
-                            className={`${filterStyles.popoverItem} ${isSelected ? filterStyles.popoverItemSelected : ""}`}
+                            className={filterStyles.popoverItemBtn}
                           >
-                            <span>{c}</span>
-                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                              {count !== undefined && <span style={{ fontSize: "11px", color: "#94A3B8" }}>({count})</span>}
-                              {isSelected && <Check size={14} color="#FF6B00" />}
+                            <div className={filterStyles.popoverItemLeft}>
+                              <span
+                                className={`${filterStyles.popoverCheckboxIndicator} ${
+                                  isSelected ? filterStyles.popoverCheckboxActive : ""
+                                }`}
+                              >
+                                {isSelected && <Check size={11} color="#FFFFFF" />}
+                              </span>
+                              <span>{c}</span>
                             </div>
+                            {count !== undefined && (
+                              <span className={filterStyles.popoverItemCount}>({count})</span>
+                            )}
                           </button>
                         );
                       })}
-                    </div>
+                    </>
                   )}
                 </div>
-              )}
-
-              {/* Offers & Deals Toggle */}
-              <button
-                type="button"
-                onClick={() => {
-                  const next = !offersOnly;
-                  setOffersOnly(next);
-                  if (typeof window !== "undefined") {
-                    const params = new URLSearchParams(window.location.search);
-                    if (next) {
-                      params.set("offers", "true");
-                    } else {
-                      params.delete("offers");
-                    }
-                    const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
-                    router.replace(newUrl, { scroll: false });
-                  }
-                }}
-                className={`${filterStyles.toggleBtn} ${offersOnly ? filterStyles.toggleBtnActiveOffers : ""}`}
-              >
-                <span
-                  className={`${filterStyles.checkboxIndicator} ${offersOnly ? filterStyles.checkboxIndicatorActiveOffers : ""}`}
-                >
-                  {offersOnly && <Check size={10} color="#FFFFFF" />}
-                </span>
-                <Tag size={13} color={offersOnly ? "#FF6B00" : "#94A3B8"} />
-                <span>Offers &amp; Deals</span>
-              </button>
-
-              {/* Open Kitchens Toggle */}
-              <button
-                type="button"
-                onClick={() => setOpenOnly(!openOnly)}
-                className={`${filterStyles.toggleBtn} ${openOnly ? filterStyles.toggleBtnActiveOpen : ""}`}
-              >
-                <span
-                  className={`${filterStyles.checkboxIndicator} ${openOnly ? filterStyles.checkboxIndicatorActiveOpen : ""}`}
-                >
-                  {openOnly && <Check size={10} color="#FFFFFF" />}
-                </span>
-                <span>Open Kitchens</span>
-              </button>
-
-              {/* Popular Dishes Toggle */}
-              <button
-                type="button"
-                onClick={() => {
-                  const next = sortBy === "popular" ? "" : "popular";
-                  setSortBy(next);
-                  if (typeof window !== "undefined") {
-                    const params = new URLSearchParams(window.location.search);
-                    if (next === "popular") {
-                      params.set("sort", "popular");
-                    } else {
-                      params.delete("sort");
-                    }
-                    const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
-                    router.replace(newUrl, { scroll: false });
-                  }
-                }}
-                className={`${filterStyles.toggleBtn} ${sortBy === "popular" ? filterStyles.toggleBtnActivePopular : ""}`}
-              >
-                <span
-                  className={`${filterStyles.checkboxIndicator} ${sortBy === "popular" ? filterStyles.checkboxIndicatorActivePopular : ""}`}
-                >
-                  {sortBy === "popular" && <Check size={10} color="#FFFFFF" />}
-                </span>
-                <Sparkles size={13} color={sortBy === "popular" ? "#FF6B00" : "#94A3B8"} />
-                <span>Popular Dishes</span>
-              </button>
-
-              {/* Top Rated Toggle */}
-              <button
-                type="button"
-                onClick={() => {
-                  const next = sortBy === "rating" ? "" : "rating";
-                  setSortBy(next);
-                  if (typeof window !== "undefined") {
-                    const params = new URLSearchParams(window.location.search);
-                    if (next === "rating") {
-                      params.set("sort", "rating");
-                    } else {
-                      params.delete("sort");
-                    }
-                    const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
-                    router.replace(newUrl, { scroll: false });
-                  }
-                }}
-                className={`${filterStyles.toggleBtn} ${sortBy === "rating" ? filterStyles.toggleBtnActiveTopRated : ""}`}
-              >
-                <span
-                  className={`${filterStyles.checkboxIndicator} ${sortBy === "rating" ? filterStyles.checkboxIndicatorActiveTopRated : ""}`}
-                >
-                  {sortBy === "rating" && <Check size={10} color="#FFFFFF" />}
-                </span>
-                <Star
-                  size={13}
-                  color={sortBy === "rating" ? "#D97706" : "#94A3B8"}
-                  fill={sortBy === "rating" ? "#D97706" : "none"}
-                />
-                <span>Top Rated</span>
-              </button>
-
-              {/* Clear All Button on Desktop */}
-              {activeFiltersCount > 0 && (
-                <button
-                  type="button"
-                  onClick={handleClearAll}
-                  className={filterStyles.clearAllBtnDesktop}
-                >
-                  <SlidersHorizontal size={13} />
-                  <span>Clear All ({activeFiltersCount})</span>
-                  <X size={13} />
-                </button>
               )}
             </div>
           </div>
