@@ -2893,18 +2893,18 @@ function FoodExploreContent() {
                             right: "10px",
                             zIndex: 2,
                             backgroundColor: "#FFFFFF",
-                            color: "#0F172A",
-                            fontSize: "11.5px",
-                            fontWeight: "700",
-                            padding: "3px 8px",
+                            color: "#D97706",
+                            fontSize: "12px",
+                            fontWeight: "800",
+                            padding: "4px 9px",
                             borderRadius: "9999px",
                             display: "inline-flex",
                             alignItems: "center",
-                            gap: "3px",
+                            gap: "4px",
                             boxShadow: "0 2px 6px rgba(0,0,0,0.12)",
                           }}
                         >
-                          <Star size={11} fill="#F59E0B" color="#F59E0B" />
+                          <Star size={11.5} fill="#D97706" color="#D97706" />
                           <span>{dish.rating && Number(dish.rating) > 0 ? Number(dish.rating).toFixed(1) : "4.8"}</span>
                         </div>
 
