@@ -1,301 +1,235 @@
-/* Multi-Dimensional Filter Box Styles */
+/* Multi-Dimensional Filter Box Styles - New Designer UI */
 .filterBox {
   display: flex;
   flex-direction: column;
   gap: 14px;
   background-color: #ffffff;
   border-radius: 16px;
-  padding: 16px 22px;
+  padding: 16px 20px 18px 20px;
   border: 1px solid #e2e8f0;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.02);
   position: relative;
   z-index: 40;
 }
 
-/* Row Layout */
-.filterRow {
+/* Card Header Row: Filters [2 active] ... Reset All */
+.filterHeaderRow {
   display: flex;
   align-items: center;
-  gap: 14px;
-}
-
-.filterRowDietary {
-  position: relative;
-}
-
-.filterRowRefine {
-  position: relative;
-  z-index: 45;
-}
-
-/* Desktop Side Labels */
-.filterLabelDesktop {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #64748b;
-  min-width: 75px;
-  flex-shrink: 0;
-}
-
-/* Mobile Section Header (hidden on desktop) */
-.sectionHeaderMobile {
-  display: none;
-}
-
-.sectionTitleText {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-/* Mobile Clear Button in Section Header */
-.clearBtnMobile {
-  display: none;
-}
-
-/* Dietary Pills Group */
-.dietaryPillsGroup {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  flex: 1;
-}
-
-.dietPillBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
-  background-color: #ffffff;
-  color: #475569;
-  font-weight: 600;
-  font-size: 0.84rem;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  white-space: nowrap;
-}
-
-.dietPillBtn:hover {
-  border-color: #cbd5e1;
-  background-color: #f8fafc;
-}
-
-.dietPillBtnSelected {
-  border: 1.5px solid #ff6b00 !important;
-  background-color: #fff3eb !important;
-  color: #ff6b00 !important;
-  font-weight: 700;
-}
-
-.dietPillCount {
-  font-size: 0.74rem;
-  color: #94a3b8;
-  font-weight: 700;
-}
-
-.dietPillCountSelected {
-  color: #ea580c !important;
-}
-
-/* Divider */
-.filterDivider {
-  height: 1px;
-  background-color: #f1f5f9;
+  justify-content: space-between;
   width: 100%;
 }
 
-/* Refine Controls Group (Desktop Flex Row) */
-.refineControlsGroup {
+.filterHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filterHeaderTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.filterHeaderIcon {
+  color: #ff5500;
+  flex-shrink: 0;
+}
+
+.filterActiveBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #fff7ed;
+  color: #ea580c;
+  border: 1px solid #ffedd5;
+  border-radius: 9999px;
+  padding: 2px 9px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1px;
+}
+
+.filterResetBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  padding: 5px 10px;
+  border-radius: 8px;
+}
+
+.filterResetBtn:hover {
+  color: #0f172a;
+  background-color: #f8fafc;
+}
+
+/* Filter Controls Row */
+.filterControlsRow {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-  flex: 1;
+  width: 100%;
 }
 
-.refineDropdownWrapper {
+.filterDropdownWrapper {
   position: relative;
 }
 
-/* Dropdown Trigger Button */
-.dropdownTriggerBtn {
+/* Individual Filter Pill Buttons */
+.filterPillBtn {
   display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  padding: 7px 14px;
-  border-radius: 10px;
+  gap: 7px;
+  padding: 7px 15px;
+  border-radius: 9999px;
   border: 1px solid #e2e8f0;
   background-color: #ffffff;
-  color: #475569;
+  color: #334155;
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 13px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   white-space: nowrap;
+  font-family: inherit;
+  user-select: none;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
 }
 
-.dropdownTriggerBtn:hover {
+.filterPillBtn:hover {
   border-color: #cbd5e1;
   background-color: #f8fafc;
+  color: #0f172a;
 }
 
-.dropdownTriggerBtnActive {
-  border: 1.5px solid #ff6b00 !important;
-  background-color: #fff3eb !important;
-  color: #ff6b00 !important;
-  font-weight: 700;
-}
-
-/* Toggle Buttons */
-.toggleBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
-  background-color: #ffffff;
-  color: #475569;
-  font-weight: 600;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  white-space: nowrap;
-}
-
-.toggleBtn:hover {
-  border-color: #cbd5e1;
-  background-color: #f8fafc;
-}
-
-.toggleBtnActiveOffers {
-  border: 1.5px solid #ff6b00 !important;
-  background-color: #fff3eb !important;
-  color: #ff6b00 !important;
-  font-weight: 700;
-}
-
-.toggleBtnActiveOpen {
+/* Active State for Dietary (Green like Image 2) */
+.filterPillDietaryActive {
   border: 1.5px solid #10b981 !important;
-  background-color: #ecfdf5 !important;
-  color: #047857 !important;
-  font-weight: 700;
+  background-color: #f0fdf4 !important;
+  color: #15803d !important;
+  font-weight: 700 !important;
 }
 
-.toggleBtnActivePopular {
-  border: 1.5px solid #ff6b00 !important;
-  background-color: #fff3eb !important;
-  color: #ff6b00 !important;
-  font-weight: 700;
-}
-
-.toggleBtnActiveTopRated {
-  border: 1.5px solid #f59e0b !important;
-  background-color: #fffbeb !important;
-  color: #b45309 !important;
-  font-weight: 700;
-}
-
-.checkboxIndicator {
-  width: 14px;
-  height: 14px;
-  border-radius: 4px;
-  border: 1.5px solid #94a3b8;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.dietaryDotGreen {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #16a34a;
   flex-shrink: 0;
 }
 
-.checkboxIndicatorActiveOffers {
-  border-color: #ff6b00 !important;
-  background-color: #ff6b00 !important;
+.dietaryDotRed {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #dc2626;
+  flex-shrink: 0;
 }
 
-.checkboxIndicatorActiveOpen {
-  border-color: #10b981 !important;
-  background-color: #10b981 !important;
+/* Active State for Price (Orange like Image 2) */
+.filterPillPriceActive {
+  border: 1.5px solid #ff5500 !important;
+  background-color: #fff7ed !important;
+  color: #c2410c !important;
+  font-weight: 700 !important;
 }
 
-.checkboxIndicatorActivePopular {
-  border-color: #ff6b00 !important;
-  background-color: #ff6b00 !important;
+/* Active State for Delivery / Rating / More Filters */
+.filterPillActive {
+  border: 1.5px solid #ff5500 !important;
+  background-color: #fff7ed !important;
+  color: #c2410c !important;
+  font-weight: 700 !important;
 }
 
-.checkboxIndicatorActiveTopRated {
-  border-color: #f59e0b !important;
-  background-color: #f59e0b !important;
+.filterPillChevron {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  color: #94a3b8;
+  flex-shrink: 0;
 }
 
-/* Clear All Button on Desktop */
-.clearAllBtnDesktop {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 12px;
-  border-radius: 10px;
-  border: 1px solid #fca5a5;
-  background-color: #fef2f2;
-  color: #dc2626;
-  font-size: 0.82rem;
+.filterPillBtn:hover .filterPillChevron {
+  color: #64748b;
+}
+
+.filterPillPriceActive .filterPillChevron,
+.filterPillActive .filterPillChevron {
+  color: #ea580c !important;
+}
+
+.filterPillDietaryActive .filterPillChevron {
+  color: #16a34a !important;
+}
+
+.filterPillChevronRotated {
+  transform: rotate(180deg);
+}
+
+/* Dropdown Popovers */
+.filterPopoverMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  background-color: #ffffff;
+  border-radius: 14px;
+  padding: 6px;
+  box-shadow: 0 12px 32px -4px rgba(15, 23, 42, 0.14), 0 4px 12px -2px rgba(15, 23, 42, 0.08);
+  border: 1px solid #e2e8f0;
+  z-index: 100;
+  min-width: 195px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: filterPopFade 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.filterPopoverMenuRight {
+  left: auto;
+  right: 0;
+}
+
+@keyframes filterPopFade {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.popoverHeader {
+  padding: 6px 8px 4px 8px;
+  font-size: 10.5px;
   font-weight: 700;
-  cursor: pointer;
-  margin-left: auto;
-  white-space: nowrap;
-  transition: all 0.15s ease;
-}
-
-.clearAllBtnDesktop:hover {
-  background-color: #fee2e2;
-  border-color: #f87171;
-}
-
-/* Popover Dropdown Menus */
-.pricePopover {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  background-color: #ffffff;
-  border-radius: 14px;
-  padding: 8px;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.16);
-  border: 1px solid #e2e8f0;
-  z-index: 1000;
-  min-width: 180px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.cuisinePopover {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  background-color: #ffffff;
-  border-radius: 14px;
-  padding: 8px;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.16);
-  border: 1px solid #e2e8f0;
-  z-index: 1000;
-  min-width: 220px;
-  max-height: 260px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.popoverItem {
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 3px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 10px;
+}
+
+.popoverItemBtn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px;
   border-radius: 8px;
   border: none;
   background: transparent;
@@ -305,124 +239,69 @@
   cursor: pointer;
   gap: 12px;
   white-space: nowrap;
-  transition: all 0.15s ease;
+  transition: all 0.12s ease;
+  font-family: inherit;
+  width: 100%;
+  text-align: left;
 }
 
-.popoverItem:hover {
+.popoverItemBtn:hover {
   background-color: #f8fafc;
   color: #0f172a;
 }
 
-.popoverItemSelected {
-  background-color: #fff3eb !important;
-  color: #ff6b00 !important;
-  font-weight: 700;
+.popoverItemBtnActive {
+  background-color: #fff7ed !important;
+  color: #c2410c !important;
+  font-weight: 700 !important;
 }
 
-/* ===================================================================
-   RESPONSIVE MOBILE VIEW (<= 768px)
-   =================================================================== */
+.popoverItemLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.popoverItemCount {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.popoverItemBtnActive .popoverItemCount {
+  color: #ea580c;
+}
+
+.popoverCheckIcon {
+  color: #ea580c;
+  flex-shrink: 0;
+}
+
+.popoverCheckboxIndicator {
+  width: 15px;
+  height: 15px;
+  border-radius: 4px;
+  border: 1.5px solid #cbd5e1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.12s ease;
+}
+
+.popoverCheckboxActive {
+  background-color: #ff5500;
+  border-color: #ff5500;
+}
+
+.popoverDivider {
+  height: 1px;
+  background-color: #f1f5f9;
+  margin: 4px 0;
+}
+
+/* Legacy & Mobile media queries */
 @media (max-width: 768px) {
   .filterBox {
     display: none !important;
-  }
-
-  .filterRow {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-  }
-
-  /* Hide desktop side label */
-  .filterLabelDesktop {
-    display: none !important;
-  }
-
-  /* Show mobile section headers */
-  .sectionHeaderMobile {
-    display: flex !important;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    margin-bottom: 2px;
-  }
-
-  .clearBtnMobile {
-    display: inline-flex !important;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 8px;
-    border-radius: 8px;
-    border: 1px solid #fca5a5;
-    background-color: #fef2f2;
-    color: #dc2626;
-    font-size: 0.74rem;
-    font-weight: 700;
-    cursor: pointer;
-  }
-
-  .dietaryPillsGroup {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    width: 100%;
-  }
-
-  .dietPillBtn {
-    padding: 6px 11px;
-    font-size: 0.79rem;
-    border-radius: 8px;
-    flex: 1 1 auto;
-    justify-content: center;
-  }
-
-  /* 2x2 Grid for Refine Controls on Mobile */
-  .refineControlsGroup {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    width: 100%;
-  }
-
-  .refineDropdownWrapper {
-    width: 100%;
-  }
-
-  .dropdownTriggerBtn {
-    width: 100%;
-    justify-content: space-between;
-    padding: 8px 10px;
-    font-size: 0.79rem;
-    border-radius: 8px;
-    box-sizing: border-box;
-  }
-
-  .toggleBtn {
-    width: 100%;
-    justify-content: flex-start;
-    padding: 8px 10px;
-    font-size: 0.79rem;
-    border-radius: 8px;
-    box-sizing: border-box;
-  }
-
-  /* Desktop Clear Button hidden in row on mobile */
-  .clearAllBtnDesktop {
-    display: none !important;
-  }
-
-  /* Popover positioning on mobile */
-  .pricePopover {
-    left: 0;
-    right: auto;
-    min-width: 170px;
-    max-width: calc(100vw - 32px);
-  }
-
-  .cuisinePopover {
-    left: auto;
-    right: 0;
-    min-width: 200px;
-    max-width: calc(100vw - 32px);
   }
 }

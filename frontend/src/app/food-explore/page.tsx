@@ -40,6 +40,7 @@ import {
   ArrowUp,
   ArrowDown,
   Store,
+  Home,
   Sparkles,
   ShoppingBag,
   CookingPot,
@@ -52,6 +53,7 @@ import {
   Drumstick,
   Apple,
   Wheat,
+  RotateCcw,
 } from "lucide-react";
 import {
   isKitchenMatchingDiet,
@@ -349,6 +351,24 @@ function FoodExploreContent() {
   const categoryScrollRef = React.useRef<HTMLDivElement>(null);
   const [mobileSortOpen, setMobileSortOpen] = useState(false);
   const mobileSortRef = React.useRef<HTMLDivElement>(null);
+  const [isDesktopSortOpen, setIsDesktopSortOpen] = useState(false);
+  const desktopSortRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const handleDesktopSortClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (desktopSortRef.current && !desktopSortRef.current.contains(e.target as Node)) {
+        setIsDesktopSortOpen(false);
+      }
+    };
+    if (isDesktopSortOpen) {
+      document.addEventListener("mousedown", handleDesktopSortClickOutside);
+      document.addEventListener("touchstart", handleDesktopSortClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleDesktopSortClickOutside);
+      document.removeEventListener("touchstart", handleDesktopSortClickOutside);
+    };
+  }, [isDesktopSortOpen]);
 
   React.useEffect(() => {
     const handleClickOutside = (e: MouseEvent | TouchEvent) => {
@@ -378,6 +398,31 @@ function FoodExploreContent() {
   const [addedIds, setAddedIds] = useState<Record<string, boolean>>({});
   const [addonModalDish, setAddonModalDish] = useState<(DynamicFoodItem & { parsedAddons: AddonItem[] }) | null>(null);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  const [activeFilterPopover, setActiveFilterPopover] = useState<"dietary" | "price" | "delivery" | "rating" | "more" | null>(null);
+  const filterCardRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const handleFilterClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (activeFilterPopover && filterCardRef.current && !filterCardRef.current.contains(e.target as Node)) {
+        setActiveFilterPopover(null);
+      }
+    };
+    const handleFilterKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setActiveFilterPopover(null);
+      }
+    };
+    if (activeFilterPopover) {
+      document.addEventListener("mousedown", handleFilterClickOutside);
+      document.addEventListener("touchstart", handleFilterClickOutside);
+      document.addEventListener("keydown", handleFilterKeyDown);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleFilterClickOutside);
+      document.removeEventListener("touchstart", handleFilterClickOutside);
+      document.removeEventListener("keydown", handleFilterKeyDown);
+    };
+  }, [activeFilterPopover]);
   const [favorites, setFavorites] = useState<Record<string, boolean>>({});
 
   React.useEffect(() => {
@@ -806,6 +851,59 @@ function FoodExploreContent() {
     sortBy,
   ]);
 
+  // Dishes Pagination (8 items per page as requested)
+  const DISHES_PER_PAGE = 8;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset to page 1 whenever any filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [
+    searchQuery,
+    selectedCategory,
+    selectedDiet,
+    selectedPrice,
+    selectedCuisines,
+    openOnly,
+    offersOnly,
+    sortBy,
+    activeTab,
+  ]);
+
+  const totalPages = Math.ceil(filteredFoodItems.length / DISHES_PER_PAGE) || 1;
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+
+  const startIndex = (safeCurrentPage - 1) * DISHES_PER_PAGE;
+  const endIndex = Math.min(startIndex + DISHES_PER_PAGE, filteredFoodItems.length);
+  const paginatedFoodItems = useMemo(() => {
+    return filteredFoodItems.slice(startIndex, endIndex);
+  }, [filteredFoodItems, startIndex, endIndex]);
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    if (typeof window !== "undefined") {
+      const el = document.getElementById("food-explore-results-section");
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+  };
+
+  const pageNumbers = useMemo(() => {
+    if (totalPages <= 5) {
+      const pages: (number | string)[] = [];
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+      return pages;
+    }
+    if (safeCurrentPage <= 3) {
+      return [1, 2, 3, 4, "...", totalPages];
+    }
+    if (safeCurrentPage >= totalPages - 2) {
+      return [1, "...", totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    }
+    return [1, "...", safeCurrentPage - 1, safeCurrentPage, safeCurrentPage + 1, "...", totalPages];
+  }, [safeCurrentPage, totalPages]);
+
   // Dynamic list of categories with live dish counts and emojis
   const dynamicCategories = useMemo(() => {
     const map = new Map<string, { id: string; name: string; emoji: string; count: number }>();
@@ -1091,152 +1189,159 @@ function FoodExploreContent() {
         className="food-explore-container"
       >
         <div className="food-explore-desktop-hero">
-        {/* Breadcrumb */}
-        <div style={{ fontSize: "0.85rem", color: "#64748B", fontWeight: "500", marginTop: "-12px", marginBottom: "-14px" }}>
-          <span>Food marketplace</span>
-          <span style={{ margin: "0 6px" }}>·</span>
-          <span>Browse menu</span>
-        </div>
 
-        {/* Header Top Row: Title on Left, Search Bar on Right */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: "20px",
-          }}
-        >
-          <div>
-            <div
-              style={{
-                fontSize: "0.72rem",
-                fontWeight: "800",
-                color: "#FF6B00",
-                textTransform: "uppercase",
-                letterSpacing: "0.8px",
-                marginBottom: "4px",
-              }}
-            >
-              EXPLORE THE MENU
-            </div>
-            <h1
-              style={{
-                fontSize: "clamp(1.75rem, 3.2vw, 2.35rem)",
-                fontWeight: "800",
-                color: "#18181B",
-                margin: "0 0 6px 0",
-                letterSpacing: "-0.03em",
-              }}
-            >
-              What are you craving?
-            </h1>
-            <p style={{ margin: 0, fontSize: "0.92rem", color: "#64748B", fontWeight: "500" }}>
-              Discover delicious chef-crafted food and cloud kitchens nearby
-            </p>
-          </div>
-
-          {/* Search Input on Right with Interactive Popover */}
           <div
-            ref={searchContainerRef}
             style={{
-              position: "relative",
-              flex: "0 1 430px",
-              width: "100%",
-              maxWidth: "430px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: "20px",
+              paddingBottom: "4px",
             }}
           >
+            {/* Breadcrumb on Left: Home · Explore food */}
             <div
               style={{
+                fontSize: "0.88rem",
+                color: "#64748B",
+                fontWeight: "500",
                 display: "flex",
                 alignItems: "center",
-                gap: "10px",
-                width: "100%",
-                height: "44px",
-                backgroundColor: "#FFFFFF",
-                borderRadius: "9999px",
-                padding: "0 16px",
-                border: isSearchFocused ? "1.5px solid #FF6B00" : "1.5px solid #E2E8F0",
-                boxShadow: isSearchFocused
-                  ? "0 0 0 3.5px rgba(255, 107, 0, 0.14), 0 8px 24px rgba(255, 107, 0, 0.1)"
-                  : "0 2px 8px rgba(0, 0, 0, 0.03)",
-                transform: isSearchFocused ? "translateY(-1.5px) scale(1.01)" : "translateY(0) scale(1)",
-                transition: "all 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
-                boxSizing: "border-box",
-                cursor: "text",
+                gap: "8px",
               }}
-              onClick={() => searchInputRef.current?.focus()}
             >
-              <Search
-                size={18}
-                color={isSearchFocused ? "#FF6B00" : "#94A3B8"}
-                style={{
-                  transition: "all 0.2s ease",
-                  transform: isSearchFocused ? "scale(1.08)" : "scale(1)",
-                  flexShrink: 0,
-                }}
-              />
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={searchQuery}
-                onFocus={() => setIsSearchFocused(true)}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    setIsSearchFocused(false);
-                  }
-                }}
-                placeholder="Search dishes, biryani, cakes, burgers, cloud kitchens..."
-                style={{
-                  border: "none",
-                  outline: "none",
-                  backgroundColor: "transparent",
-                  width: "100%",
-                  fontSize: "0.88rem",
-                  color: "#18181B",
-                  fontWeight: "500",
-                  fontFamily: "inherit",
-                }}
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSearchQuery("");
-                    searchInputRef.current?.focus();
-                  }}
-                  style={{
-                    background: "#F1F5F9",
-                    border: "none",
-                    cursor: "pointer",
-                    padding: "4px",
-                    borderRadius: "50%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#64748B",
-                    transition: "all 0.15s ease",
-                    flexShrink: 0,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = "#FFE8D6";
-                    e.currentTarget.style.color = "#FF6B00";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = "#F1F5F9";
-                    e.currentTarget.style.color = "#64748B";
-                  }}
-                  aria-label="Clear search"
-                >
-                  <X size={14} />
-                </button>
-              )}
+              <span
+                onClick={() => router.push("/")}
+                style={{ cursor: "pointer", color: "#64748B", transition: "color 0.15s ease" }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "#0F172A")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "#64748B")}
+              >
+                Home
+              </span>
+              <span style={{ color: "#94A3B8" }}>·</span>
+              <span style={{ color: "#FF5500", fontWeight: "600" }}>Explore food</span>
             </div>
 
-            {/* Interactive Popover Dropdown Panel */}
+            {/* Search Input on Right with Orange Search Button */}
+            <div
+              ref={searchContainerRef}
+              style={{
+                position: "relative",
+                flex: "0 1 480px",
+                width: "100%",
+                maxWidth: "480px",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  width: "100%",
+                  height: "44px",
+                  backgroundColor: "#FFFFFF",
+                  borderRadius: "12px",
+                  padding: "0 6px 0 14px",
+                  border: isSearchFocused ? "1.5px solid #FF5500" : "1.5px solid #E2E8F0",
+                  boxShadow: isSearchFocused
+                    ? "0 0 0 3px rgba(255, 85, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.04)"
+                    : "0 1px 3px rgba(0, 0, 0, 0.02)",
+                  transition: "all 0.2s ease",
+                  boxSizing: "border-box",
+                  cursor: "text",
+                }}
+                onClick={() => searchInputRef.current?.focus()}
+              >
+                <Search
+                  size={18}
+                  color={isSearchFocused ? "#FF5500" : "#94A3B8"}
+                  style={{
+                    transition: "all 0.2s ease",
+                    transform: isSearchFocused ? "scale(1.05)" : "scale(1)",
+                    flexShrink: 0,
+                  }}
+                />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onFocus={() => setIsSearchFocused(true)}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      setIsSearchFocused(false);
+                    }
+                  }}
+                  placeholder="Search dishes, cuisines, or kitchens..."
+                  style={{
+                    border: "none",
+                    outline: "none",
+                    backgroundColor: "transparent",
+                    width: "100%",
+                    fontSize: "0.88rem",
+                    color: "#18181B",
+                    fontWeight: "500",
+                    fontFamily: "inherit",
+                  }}
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSearchQuery("");
+                      searchInputRef.current?.focus();
+                    }}
+                    style={{
+                      background: "#F1F5F9",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: "4px",
+                      borderRadius: "50%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#64748B",
+                      transition: "all 0.15s ease",
+                      flexShrink: 0,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = "#FFE8D6";
+                      e.currentTarget.style.color = "#FF5500";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "#F1F5F9";
+                      e.currentTarget.style.color = "#64748B";
+                    }}
+                    aria-label="Clear search"
+                  >
+                    <X size={13} />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setIsSearchFocused(false)}
+                  style={{
+                    backgroundColor: "#FF5500",
+                    color: "#FFFFFF",
+                    border: "none",
+                    borderRadius: "8px",
+                    padding: "7px 18px",
+                    fontSize: "0.85rem",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                    flexShrink: 0,
+                    transition: "background-color 0.15s ease",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#E04B00")}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#FF5500")}
+                >
+                  Search
+                </button>
+              </div>
+
+              {/* Interactive Popover Dropdown Panel */}
             {isSearchFocused && (
               <div
                 style={{
@@ -1507,8 +1612,8 @@ function FoodExploreContent() {
                 )}
               </div>
             )}
+            </div>
           </div>
-        </div>
         </div>{/* End food-explore-desktop-hero */}
 
         {/* Mobile Explore Categories (Image 2 Design) */}
@@ -1574,138 +1679,175 @@ function FoodExploreContent() {
 
         {/* Desktop Dynamic Category Chips Carousel */}
         <div className="food-explore-desktop-categories">
-        {/* Dynamic Category Chips Carousel */}
-        {dynamicCategories.length > 0 && (
-          <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-            <div
-              ref={categoryScrollRef}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                overflowX: "auto",
-                scrollbarWidth: "none",
-                paddingBottom: "4px",
-                width: "100%",
-                scrollBehavior: "smooth",
-              }}
-              className="hide-scrollbar"
-            >
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedCategory("");
-                  if (typeof window !== "undefined") {
-                    const params = new URLSearchParams(window.location.search);
-                    params.delete("category");
-                    const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
-                    router.replace(newUrl, { scroll: false });
-                  }
-                }}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: "8px 16px",
-                  borderRadius: "12px",
-                  border: !selectedCategory ? "1.5px solid #FF6B00" : "1px solid #E2E8F0",
-                  backgroundColor: !selectedCategory ? "#FFF3EB" : "#FFFFFF",
-                  color: !selectedCategory ? "#FF6B00" : "#475569",
-                  fontWeight: "700",
-                  fontSize: "0.88rem",
-                  cursor: "pointer",
-                  whiteSpace: "nowrap",
-                  flexShrink: 0,
-                  transition: "all 0.2s ease",
-                }}
-              >
-                <UtensilsCrossed size={14} color={!selectedCategory ? "#FF6B00" : "#64748B"} />
-                <span>All Cuisines</span>
-              </button>
-
-              {dynamicCategories.map((cat) => {
-                const isSelected = selectedCategory.toLowerCase().trim() === cat.name.toLowerCase().trim();
-                return (
+          {dynamicCategories.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              {/* Row Header: Popular Categories Title + Scroll Buttons */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <h2 style={{ fontSize: "1.25rem", fontWeight: "700", color: "#0F172A", margin: 0, letterSpacing: "-0.01em" }}>
+                  Popular Categories
+                </h2>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <button
-                    key={cat.id}
                     type="button"
-                    onClick={() => {
-                      const newCat = isSelected ? "" : cat.name;
-                      setSelectedCategory(newCat);
-                      if (typeof window !== "undefined") {
-                        const params = new URLSearchParams(window.location.search);
-                        if (newCat) {
-                          params.set("category", newCat);
-                        } else {
-                          params.delete("category");
-                        }
-                        const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
-                        router.replace(newUrl, { scroll: false });
-                      }
-                    }}
+                    onClick={() => categoryScrollRef.current?.scrollBy({ left: -240, behavior: "smooth" })}
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
-                      gap: "6px",
-                      padding: "8px 16px",
-                      borderRadius: "12px",
-                      border: isSelected ? "1.5px solid #FF6B00" : "1px solid #E2E8F0",
-                      backgroundColor: isSelected ? "#FFF3EB" : "#FFFFFF",
-                      color: isSelected ? "#FF6B00" : "#475569",
-                      fontWeight: isSelected ? "700" : "600",
-                      fontSize: "0.88rem",
+                      justifyContent: "center",
+                      width: "32px",
+                      height: "32px",
+                      borderRadius: "50%",
+                      border: "1px solid #E2E8F0",
+                      backgroundColor: "#FFFFFF",
+                      color: "#475569",
                       cursor: "pointer",
-                      whiteSpace: "nowrap",
-                      flexShrink: 0,
-                      transition: "all 0.2s ease",
+                      transition: "all 0.15s ease",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
                     }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = "#CBD5E1";
+                      e.currentTarget.style.backgroundColor = "#F8FAFC";
+                      e.currentTarget.style.color = "#0F172A";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = "#E2E8F0";
+                      e.currentTarget.style.backgroundColor = "#FFFFFF";
+                      e.currentTarget.style.color = "#475569";
+                    }}
+                    aria-label="Scroll categories left"
                   >
-                    <span>{cat.emoji || "🍲"}</span>
-                    <span>{cat.name}</span>
-                    {cat.count > 0 && (
-                      <span
-                        style={{
-                          fontSize: "0.72rem",
-                          padding: "1px 6px",
-                          borderRadius: "8px",
-                          backgroundColor: isSelected ? "#FFEDD5" : "#F1F5F9",
-                          color: isSelected ? "#EA580C" : "#64748B",
-                          fontWeight: "700",
-                        }}
-                      >
-                        {cat.count}
-                      </span>
-                    )}
+                    <ChevronLeft size={16} />
                   </button>
-                );
-              })}
-            </div>
+                  <button
+                    type="button"
+                    onClick={() => categoryScrollRef.current?.scrollBy({ left: 240, behavior: "smooth" })}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: "32px",
+                      height: "32px",
+                      borderRadius: "50%",
+                      border: "1px solid #E2E8F0",
+                      backgroundColor: "#FFFFFF",
+                      color: "#475569",
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = "#CBD5E1";
+                      e.currentTarget.style.backgroundColor = "#F8FAFC";
+                      e.currentTarget.style.color = "#0F172A";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = "#E2E8F0";
+                      e.currentTarget.style.backgroundColor = "#FFFFFF";
+                      e.currentTarget.style.color = "#475569";
+                    }}
+                    aria-label="Scroll categories right"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              </div>
 
-            {/* Scroll Next Arrow */}
-            <button
-              type="button"
-              onClick={() => categoryScrollRef.current?.scrollBy({ left: 220, behavior: "smooth" })}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: "34px",
-                height: "34px",
-                borderRadius: "10px",
-                border: "1px solid #E2E8F0",
-                backgroundColor: "#FFFFFF",
-                color: "#475569",
-                cursor: "pointer",
-                flexShrink: 0,
-                marginLeft: "8px",
-                boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
-              }}
-              aria-label="Scroll categories right"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
-        )}
+              {/* Pills Carousel */}
+              <div
+                ref={categoryScrollRef}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  overflowX: "auto",
+                  scrollbarWidth: "none",
+                  paddingBottom: "4px",
+                  width: "100%",
+                  scrollBehavior: "smooth",
+                }}
+                className="hide-scrollbar"
+              >
+                {/* All Cuisines Pill */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedCategory("");
+                    if (typeof window !== "undefined") {
+                      const params = new URLSearchParams(window.location.search);
+                      params.delete("category");
+                      const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
+                      router.replace(newUrl, { scroll: false });
+                    }
+                  }}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    padding: "8px 18px",
+                    borderRadius: "9999px",
+                    border: !selectedCategory ? "1.5px solid #FF5500" : "1px solid #E2E8F0",
+                    backgroundColor: !selectedCategory ? "#FFF7ED" : "#FFFFFF",
+                    color: !selectedCategory ? "#FF5500" : "#475569",
+                    fontWeight: !selectedCategory ? "700" : "600",
+                    fontSize: "0.88rem",
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                    transition: "all 0.15s ease",
+                    boxShadow: "0 1px 2px rgba(15, 23, 42, 0.03)",
+                  }}
+                >
+                  <UtensilsCrossed size={14} color={!selectedCategory ? "#FF5500" : "#64748B"} />
+                  <span>All Cuisines</span>
+                </button>
+
+                {/* Individual Categories from dynamicCategories */}
+                {dynamicCategories.map((cat) => {
+                  const isSelected = selectedCategory.toLowerCase().trim() === cat.name.toLowerCase().trim();
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => {
+                        const newCat = isSelected ? "" : cat.name;
+                        setSelectedCategory(newCat);
+                        if (typeof window !== "undefined") {
+                          const params = new URLSearchParams(window.location.search);
+                          if (newCat) {
+                            params.set("category", newCat);
+                          } else {
+                            params.delete("category");
+                          }
+                          const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
+                          router.replace(newUrl, { scroll: false });
+                        }
+                      }}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        padding: "8px 18px",
+                        borderRadius: "9999px",
+                        border: isSelected ? "1.5px solid #FF5500" : "1px solid #E2E8F0",
+                        backgroundColor: isSelected ? "#FFF7ED" : "#FFFFFF",
+                        color: isSelected ? "#FF5500" : "#475569",
+                        fontWeight: isSelected ? "700" : "600",
+                        fontSize: "0.88rem",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                        flexShrink: 0,
+                        transition: "all 0.15s ease",
+                        boxShadow: "0 1px 2px rgba(15, 23, 42, 0.03)",
+                      }}
+                    >
+                      <span>{cat.emoji || "🍲"}</span>
+                      <span>{cat.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>{/* End food-explore-desktop-categories */}
 
         {/* Mobile Sticky Filter Bar (Image 2 Design) */}
@@ -1919,157 +2061,433 @@ function FoodExploreContent() {
           )}
         </div>
 
-        {/* Multi-Dimensional Filter Box */}
-        <div className={filterStyles.filterBox}>
-          {/* Row 1: Dietary */}
-          <div className={`${filterStyles.filterRow} ${filterStyles.filterRowDietary}`}>
-            {/* Desktop Side Label */}
-            <span className={filterStyles.filterLabelDesktop}>Dietary</span>
-
-            {/* Mobile Section Header */}
-            <div className={filterStyles.sectionHeaderMobile}>
-              <span className={filterStyles.sectionTitleText}>Dietary</span>
-            </div>
-
-            <div className={filterStyles.dietaryPillsGroup}>
-              {[
-                { id: "all", label: "All Diet", count: filterCounts.all },
-                { id: "veg", label: "🌱 Pure Veg", count: filterCounts.veg },
-                { id: "non_veg", label: "🍗 Non-Veg", count: filterCounts.non_veg },
-                { id: "vegan", label: "🌿 Vegan", count: filterCounts.vegan },
-                { id: "jain", label: "🌾 Jain", count: filterCounts.jain },
-              ].map((d) => {
-                const isSelected = selectedDiet === d.id;
-                return (
-                  <button
-                    key={d.id}
-                    type="button"
-                    onClick={() => {
-                      const nextDiet = isSelected && d.id !== "all" ? "all" : (d.id as any);
-                      setSelectedDiet(nextDiet);
-                      if (typeof window !== "undefined") {
-                        localStorage.setItem("cloudkitchen_diet_preference", nextDiet);
-                        window.dispatchEvent(new CustomEvent("cloudkitchen_diet_preference_changed", { detail: nextDiet }));
-                      }
-                    }}
-                    className={`${filterStyles.dietPillBtn} ${isSelected ? filterStyles.dietPillBtnSelected : ""}`}
-                  >
-                    <span>{d.label}</span>
-                    {d.count !== undefined && (
-                      <span className={`${filterStyles.dietPillCount} ${isSelected ? filterStyles.dietPillCountSelected : ""}`}>
-                        {d.count}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Horizontal Line separating Dietary & Refine by */}
-          <div className={filterStyles.filterDivider} />
-
-          {/* Row 2: Refine by */}
-          <div className={`${filterStyles.filterRow} ${filterStyles.filterRowRefine}`}>
-            {/* Desktop Side Label */}
-            <span className={filterStyles.filterLabelDesktop}>Refine by</span>
-
-            {/* Mobile Section Header with Clear All */}
-            <div className={filterStyles.sectionHeaderMobile}>
-              <span className={filterStyles.sectionTitleText}>Refine by</span>
+        {/* Filters Card (Image 2 Design) */}
+        <div ref={filterCardRef} className={`${filterStyles.filterBox} food-explore-desktop-filters`}>
+          {/* Header Row: Filters [2 active] ... Reset All */}
+          <div className={filterStyles.filterHeaderRow}>
+            <div className={filterStyles.filterHeaderLeft}>
+              <div className={filterStyles.filterHeaderTitle}>
+                <SlidersHorizontal size={15} className={filterStyles.filterHeaderIcon} />
+                <span>Filters</span>
+              </div>
               {activeFiltersCount > 0 && (
-                <button
-                  type="button"
-                  onClick={handleClearAll}
-                  className={filterStyles.clearBtnMobile}
-                >
-                  <SlidersHorizontal size={11} />
-                  <span>Clear All ({activeFiltersCount})</span>
-                  <X size={11} />
-                </button>
+                <span className={filterStyles.filterActiveBadge}>
+                  {activeFiltersCount} active
+                </span>
               )}
             </div>
 
-            <div className={filterStyles.refineControlsGroup}>
-              {/* Price Range Dropdown */}
-              <div className={filterStyles.refineDropdownWrapper} ref={pricePopoverRef}>
-                <button
-                  type="button"
-                  onClick={() => setOpenPricePopover(!openPricePopover)}
-                  className={`${filterStyles.dropdownTriggerBtn} ${selectedPrice !== "all" ? filterStyles.dropdownTriggerBtnActive : ""}`}
-                >
-                  <span>
-                    {selectedPrice === "under-150"
-                      ? "Under ₹150"
-                      : selectedPrice === "150-300"
-                      ? "₹150 – ₹300"
-                      : selectedPrice === "300-plus"
-                      ? "₹300+"
-                      : "Price Range"}
-                  </span>
-                  <ChevronDown
-                    size={13}
-                    style={{
-                      transform: openPricePopover ? "rotate(180deg)" : "none",
-                      transition: "transform 0.15s ease",
-                    }}
-                  />
-                </button>
+            <button
+              type="button"
+              onClick={handleClearAll}
+              className={filterStyles.filterResetBtn}
+              title="Reset all filters"
+            >
+              <RotateCcw size={13} />
+              <span>Reset All</span>
+            </button>
+          </div>
 
-                {openPricePopover && (
-                  <div className={filterStyles.pricePopover}>
-                    {[
-                      { id: "all", label: "Any Price", count: filterCounts.all },
-                      { id: "under-150", label: "Under ₹150", count: filterCounts.under150 },
-                      { id: "150-300", label: "₹150 – ₹300", count: filterCounts.price150to300 },
-                      { id: "300-plus", label: "₹300+", count: filterCounts.price300plus },
-                    ].map((p) => {
-                      const isSelected = selectedPrice === p.id;
-                      return (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedPrice(p.id as any);
-                            setOpenPricePopover(false);
-                          }}
-                          className={`${filterStyles.popoverItem} ${isSelected ? filterStyles.popoverItemSelected : ""}`}
-                        >
+          {/* Controls Row: 5 Filter Pills */}
+          <div className={filterStyles.filterControlsRow}>
+            {/* 1. Dietary Filter Pill */}
+            <div className={filterStyles.filterDropdownWrapper}>
+              <button
+                type="button"
+                onClick={() =>
+                  setActiveFilterPopover(activeFilterPopover === "dietary" ? null : "dietary")
+                }
+                className={`${filterStyles.filterPillBtn} ${
+                  selectedDiet !== "all" ? filterStyles.filterPillDietaryActive : ""
+                }`}
+              >
+                {selectedDiet !== "all" && (
+                  <span
+                    className={
+                      selectedDiet === "non_veg"
+                        ? filterStyles.dietaryDotRed
+                        : filterStyles.dietaryDotGreen
+                    }
+                  />
+                )}
+                <span>
+                  {selectedDiet === "all"
+                    ? "Dietary"
+                    : selectedDiet === "veg"
+                    ? "Dietary: Pure Veg"
+                    : selectedDiet === "non_veg"
+                    ? "Dietary: Non-Veg"
+                    : selectedDiet === "vegan"
+                    ? "Dietary: Vegan"
+                    : "Dietary: Jain"}
+                </span>
+                <ChevronDown
+                  size={14}
+                  className={`${filterStyles.filterPillChevron} ${
+                    activeFilterPopover === "dietary" ? filterStyles.filterPillChevronRotated : ""
+                  }`}
+                />
+              </button>
+
+              {activeFilterPopover === "dietary" && (
+                <div className={filterStyles.filterPopoverMenu} role="listbox">
+                  <div className={filterStyles.popoverHeader}>
+                    <span>Dietary Preference</span>
+                  </div>
+                  {[
+                    { id: "all", label: "All Diet", count: filterCounts.all },
+                    { id: "veg", label: "🌱 Pure Veg", count: filterCounts.veg },
+                    { id: "non_veg", label: "🍗 Non-Veg", count: filterCounts.non_veg },
+                    { id: "vegan", label: "🌿 Vegan", count: filterCounts.vegan },
+                    { id: "jain", label: "🌾 Jain", count: filterCounts.jain },
+                  ].map((d) => {
+                    const isSelected = selectedDiet === d.id;
+                    return (
+                      <button
+                        key={d.id}
+                        type="button"
+                        onClick={() => {
+                          const nextDiet = isSelected && d.id !== "all" ? "all" : (d.id as any);
+                          setSelectedDiet(nextDiet);
+                          if (typeof window !== "undefined") {
+                            localStorage.setItem("cloudkitchen_diet_preference", nextDiet);
+                            window.dispatchEvent(
+                              new CustomEvent("cloudkitchen_diet_preference_changed", {
+                                detail: nextDiet,
+                              })
+                            );
+                          }
+                          setActiveFilterPopover(null);
+                        }}
+                        className={`${filterStyles.popoverItemBtn} ${
+                          isSelected ? filterStyles.popoverItemBtnActive : ""
+                        }`}
+                        role="option"
+                        aria-selected={isSelected}
+                      >
+                        <div className={filterStyles.popoverItemLeft}>
+                          <span>{d.label}</span>
+                          {d.count !== undefined && (
+                            <span className={filterStyles.popoverItemCount}>({d.count})</span>
+                          )}
+                        </div>
+                        {isSelected && <Check size={14} className={filterStyles.popoverCheckIcon} />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* 2. Price Filter Pill */}
+            <div className={filterStyles.filterDropdownWrapper}>
+              <button
+                type="button"
+                onClick={() =>
+                  setActiveFilterPopover(activeFilterPopover === "price" ? null : "price")
+                }
+                className={`${filterStyles.filterPillBtn} ${
+                  selectedPrice !== "all" ? filterStyles.filterPillPriceActive : ""
+                }`}
+              >
+                <span>
+                  {selectedPrice === "all"
+                    ? "Price Range"
+                    : selectedPrice === "under-150"
+                    ? "Price: Under ₹150"
+                    : selectedPrice === "150-300"
+                    ? "Price: ₹150 – ₹300"
+                    : "Price: ₹300+"}
+                </span>
+                <ChevronDown
+                  size={14}
+                  className={`${filterStyles.filterPillChevron} ${
+                    activeFilterPopover === "price" ? filterStyles.filterPillChevronRotated : ""
+                  }`}
+                />
+              </button>
+
+              {activeFilterPopover === "price" && (
+                <div className={filterStyles.filterPopoverMenu} role="listbox">
+                  <div className={filterStyles.popoverHeader}>
+                    <span>Price Range</span>
+                  </div>
+                  {[
+                    { id: "all", label: "Any Price", count: filterCounts.all },
+                    { id: "under-150", label: "Under ₹150", count: filterCounts.under150 },
+                    { id: "150-300", label: "₹150 – ₹300", count: filterCounts.price150to300 },
+                    { id: "300-plus", label: "₹300+", count: filterCounts.price300plus },
+                  ].map((p) => {
+                    const isSelected = selectedPrice === p.id;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedPrice(p.id as any);
+                          setActiveFilterPopover(null);
+                        }}
+                        className={`${filterStyles.popoverItemBtn} ${
+                          isSelected ? filterStyles.popoverItemBtnActive : ""
+                        }`}
+                        role="option"
+                        aria-selected={isSelected}
+                      >
+                        <div className={filterStyles.popoverItemLeft}>
                           <span>{p.label}</span>
                           {p.count > 0 && (
-                            <span style={{ fontSize: "11px", color: isSelected ? "#FF6B00" : "#94A3B8", flexShrink: 0 }}>
-                              ({p.count})
-                            </span>
+                            <span className={filterStyles.popoverItemCount}>({p.count})</span>
                           )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+                        </div>
+                        {isSelected && <Check size={14} className={filterStyles.popoverCheckIcon} />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
-              {/* Cuisines Dropdown */}
-              {availableCuisines.length > 0 && (
-                <div className={filterStyles.refineDropdownWrapper} ref={cuisinePopoverRef}>
+            {/* 3. Delivery Time Filter Pill */}
+            <div className={filterStyles.filterDropdownWrapper}>
+              <button
+                type="button"
+                onClick={() =>
+                  setActiveFilterPopover(activeFilterPopover === "delivery" ? null : "delivery")
+                }
+                className={`${filterStyles.filterPillBtn} ${
+                  sortBy === "fastest" ? filterStyles.filterPillActive : ""
+                }`}
+              >
+                <span>{sortBy === "fastest" ? "⚡ Delivery: Fastest" : "⚡ Delivery Time"}</span>
+                <ChevronDown
+                  size={14}
+                  className={`${filterStyles.filterPillChevron} ${
+                    activeFilterPopover === "delivery" ? filterStyles.filterPillChevronRotated : ""
+                  }`}
+                />
+              </button>
+
+              {activeFilterPopover === "delivery" && (
+                <div className={filterStyles.filterPopoverMenu} role="listbox">
+                  <div className={filterStyles.popoverHeader}>
+                    <span>Delivery Time</span>
+                  </div>
                   <button
                     type="button"
-                    onClick={() => setOpenCuisinePopover(!openCuisinePopover)}
-                    className={`${filterStyles.dropdownTriggerBtn} ${selectedCuisines.length > 0 ? filterStyles.dropdownTriggerBtnActive : ""}`}
+                    onClick={() => {
+                      setSortBy(sortBy === "fastest" ? "" : "fastest");
+                      setActiveFilterPopover(null);
+                    }}
+                    className={`${filterStyles.popoverItemBtn} ${
+                      sortBy === "fastest" ? filterStyles.popoverItemBtnActive : ""
+                    }`}
                   >
-                    <span>
-                      {selectedCuisines.length > 0 ? `Cuisines (${selectedCuisines.length})` : "Cuisines"}
-                    </span>
-                    <ChevronDown
-                      size={13}
-                      style={{
-                        transform: openCuisinePopover ? "rotate(180deg)" : "none",
-                        transition: "transform 0.15s ease",
-                      }}
-                    />
+                    <span>⚡ Fastest Delivery (&lt; 30 min)</span>
+                    {sortBy === "fastest" && (
+                      <Check size={14} className={filterStyles.popoverCheckIcon} />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (sortBy === "fastest") setSortBy("");
+                      setActiveFilterPopover(null);
+                    }}
+                    className={`${filterStyles.popoverItemBtn} ${
+                      sortBy !== "fastest" ? filterStyles.popoverItemBtnActive : ""
+                    }`}
+                  >
+                    <span>⏱️ Standard Delivery (All)</span>
+                    {sortBy !== "fastest" && (
+                      <Check size={14} className={filterStyles.popoverCheckIcon} />
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* 4. Rating Filter Pill */}
+            <div className={filterStyles.filterDropdownWrapper}>
+              <button
+                type="button"
+                onClick={() =>
+                  setActiveFilterPopover(activeFilterPopover === "rating" ? null : "rating")
+                }
+                className={`${filterStyles.filterPillBtn} ${
+                  sortBy === "rating" ? filterStyles.filterPillActive : ""
+                }`}
+              >
+                <span>{sortBy === "rating" ? "★ Rating: Top Rated" : "★ Rating"}</span>
+                <ChevronDown
+                  size={14}
+                  className={`${filterStyles.filterPillChevron} ${
+                    activeFilterPopover === "rating" ? filterStyles.filterPillChevronRotated : ""
+                  }`}
+                />
+              </button>
+
+              {activeFilterPopover === "rating" && (
+                <div className={filterStyles.filterPopoverMenu} role="listbox">
+                  <div className={filterStyles.popoverHeader}>
+                    <span>Customer Ratings</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSortBy(sortBy === "rating" ? "" : "rating");
+                      setActiveFilterPopover(null);
+                    }}
+                    className={`${filterStyles.popoverItemBtn} ${
+                      sortBy === "rating" ? filterStyles.popoverItemBtnActive : ""
+                    }`}
+                  >
+                    <span>⭐ Top Rated (4.0+ Stars)</span>
+                    {sortBy === "rating" && (
+                      <Check size={14} className={filterStyles.popoverCheckIcon} />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (sortBy === "rating") setSortBy("");
+                      setActiveFilterPopover(null);
+                    }}
+                    className={`${filterStyles.popoverItemBtn} ${
+                      sortBy !== "rating" ? filterStyles.popoverItemBtnActive : ""
+                    }`}
+                  >
+                    <span>✨ Any Rating</span>
+                    {sortBy !== "rating" && (
+                      <Check size={14} className={filterStyles.popoverCheckIcon} />
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* 5. More Filters Pill */}
+            <div className={filterStyles.filterDropdownWrapper}>
+              <button
+                type="button"
+                onClick={() =>
+                  setActiveFilterPopover(activeFilterPopover === "more" ? null : "more")
+                }
+                className={`${filterStyles.filterPillBtn} ${
+                  offersOnly || openOnly || sortBy === "popular" || selectedCuisines.length > 0
+                    ? filterStyles.filterPillActive
+                    : ""
+                }`}
+              >
+                <span>
+                  🏷️ More Filters
+                  {offersOnly || openOnly || sortBy === "popular" || selectedCuisines.length > 0
+                    ? ` (${
+                        (offersOnly ? 1 : 0) +
+                        (openOnly ? 1 : 0) +
+                        (sortBy === "popular" ? 1 : 0) +
+                        (selectedCuisines.length > 0 ? 1 : 0)
+                      })`
+                    : ""}
+                </span>
+                <ChevronDown
+                  size={14}
+                  className={`${filterStyles.filterPillChevron} ${
+                    activeFilterPopover === "more" ? filterStyles.filterPillChevronRotated : ""
+                  }`}
+                />
+              </button>
+
+              {activeFilterPopover === "more" && (
+                <div
+                  className={`${filterStyles.filterPopoverMenu} ${filterStyles.filterPopoverMenuRight}`}
+                  style={{ minWidth: "220px", maxHeight: "300px", overflowY: "auto" }}
+                  role="listbox"
+                >
+                  <div className={filterStyles.popoverHeader}>
+                    <span>Quick Filters</span>
+                  </div>
+
+                  {/* Offers & Deals */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = !offersOnly;
+                      setOffersOnly(next);
+                      if (typeof window !== "undefined") {
+                        const params = new URLSearchParams(window.location.search);
+                        if (next) params.set("offers", "true");
+                        else params.delete("offers");
+                        const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
+                        router.replace(newUrl, { scroll: false });
+                      }
+                    }}
+                    className={filterStyles.popoverItemBtn}
+                  >
+                    <div className={filterStyles.popoverItemLeft}>
+                      <span
+                        className={`${filterStyles.popoverCheckboxIndicator} ${
+                          offersOnly ? filterStyles.popoverCheckboxActive : ""
+                        }`}
+                      >
+                        {offersOnly && <Check size={11} color="#FFFFFF" />}
+                      </span>
+                      <span>🏷️ Offers &amp; Deals</span>
+                    </div>
                   </button>
 
-                  {openCuisinePopover && (
-                    <div className={filterStyles.cuisinePopover}>
+                  {/* Open Kitchens */}
+                  <button
+                    type="button"
+                    onClick={() => setOpenOnly(!openOnly)}
+                    className={filterStyles.popoverItemBtn}
+                  >
+                    <div className={filterStyles.popoverItemLeft}>
+                      <span
+                        className={`${filterStyles.popoverCheckboxIndicator} ${
+                          openOnly ? filterStyles.popoverCheckboxActive : ""
+                        }`}
+                      >
+                        {openOnly && <Check size={11} color="#FFFFFF" />}
+                      </span>
+                      <span>🏪 Open Kitchens</span>
+                    </div>
+                  </button>
+
+                  {/* Popular Dishes */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = sortBy === "popular" ? "" : "popular";
+                      setSortBy(next);
+                      if (typeof window !== "undefined") {
+                        const params = new URLSearchParams(window.location.search);
+                        if (next === "popular") params.set("sort", "popular");
+                        else params.delete("sort");
+                        const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
+                        router.replace(newUrl, { scroll: false });
+                      }
+                    }}
+                    className={filterStyles.popoverItemBtn}
+                  >
+                    <div className={filterStyles.popoverItemLeft}>
+                      <span
+                        className={`${filterStyles.popoverCheckboxIndicator} ${
+                          sortBy === "popular" ? filterStyles.popoverCheckboxActive : ""
+                        }`}
+                      >
+                        {sortBy === "popular" && <Check size={11} color="#FFFFFF" />}
+                      </span>
+                      <span>✨ Popular Dishes</span>
+                    </div>
+                  </button>
+
+                  {/* Cuisines Sublist */}
+                  {availableCuisines.length > 0 && (
+                    <>
+                      <div className={filterStyles.popoverDivider} />
+                      <div className={filterStyles.popoverHeader}>
+                        <span>Cuisines</span>
+                      </div>
                       {availableCuisines.map((c) => {
                         const isSelected = selectedCuisines.includes(c);
                         const count = filterCounts.cuisineCounts[c];
@@ -2082,134 +2500,27 @@ function FoodExploreContent() {
                                 prev.includes(c) ? prev.filter((item) => item !== c) : [...prev, c]
                               );
                             }}
-                            className={`${filterStyles.popoverItem} ${isSelected ? filterStyles.popoverItemSelected : ""}`}
+                            className={filterStyles.popoverItemBtn}
                           >
-                            <span>{c}</span>
-                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                              {count !== undefined && <span style={{ fontSize: "11px", color: "#94A3B8" }}>({count})</span>}
-                              {isSelected && <Check size={14} color="#FF6B00" />}
+                            <div className={filterStyles.popoverItemLeft}>
+                              <span
+                                className={`${filterStyles.popoverCheckboxIndicator} ${
+                                  isSelected ? filterStyles.popoverCheckboxActive : ""
+                                }`}
+                              >
+                                {isSelected && <Check size={11} color="#FFFFFF" />}
+                              </span>
+                              <span>{c}</span>
                             </div>
+                            {count !== undefined && (
+                              <span className={filterStyles.popoverItemCount}>({count})</span>
+                            )}
                           </button>
                         );
                       })}
-                    </div>
+                    </>
                   )}
                 </div>
-              )}
-
-              {/* Offers & Deals Toggle */}
-              <button
-                type="button"
-                onClick={() => {
-                  const next = !offersOnly;
-                  setOffersOnly(next);
-                  if (typeof window !== "undefined") {
-                    const params = new URLSearchParams(window.location.search);
-                    if (next) {
-                      params.set("offers", "true");
-                    } else {
-                      params.delete("offers");
-                    }
-                    const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
-                    router.replace(newUrl, { scroll: false });
-                  }
-                }}
-                className={`${filterStyles.toggleBtn} ${offersOnly ? filterStyles.toggleBtnActiveOffers : ""}`}
-              >
-                <span
-                  className={`${filterStyles.checkboxIndicator} ${offersOnly ? filterStyles.checkboxIndicatorActiveOffers : ""}`}
-                >
-                  {offersOnly && <Check size={10} color="#FFFFFF" />}
-                </span>
-                <Tag size={13} color={offersOnly ? "#FF6B00" : "#94A3B8"} />
-                <span>Offers &amp; Deals</span>
-              </button>
-
-              {/* Open Kitchens Toggle */}
-              <button
-                type="button"
-                onClick={() => setOpenOnly(!openOnly)}
-                className={`${filterStyles.toggleBtn} ${openOnly ? filterStyles.toggleBtnActiveOpen : ""}`}
-              >
-                <span
-                  className={`${filterStyles.checkboxIndicator} ${openOnly ? filterStyles.checkboxIndicatorActiveOpen : ""}`}
-                >
-                  {openOnly && <Check size={10} color="#FFFFFF" />}
-                </span>
-                <span>Open Kitchens</span>
-              </button>
-
-              {/* Popular Dishes Toggle */}
-              <button
-                type="button"
-                onClick={() => {
-                  const next = sortBy === "popular" ? "" : "popular";
-                  setSortBy(next);
-                  if (typeof window !== "undefined") {
-                    const params = new URLSearchParams(window.location.search);
-                    if (next === "popular") {
-                      params.set("sort", "popular");
-                    } else {
-                      params.delete("sort");
-                    }
-                    const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
-                    router.replace(newUrl, { scroll: false });
-                  }
-                }}
-                className={`${filterStyles.toggleBtn} ${sortBy === "popular" ? filterStyles.toggleBtnActivePopular : ""}`}
-              >
-                <span
-                  className={`${filterStyles.checkboxIndicator} ${sortBy === "popular" ? filterStyles.checkboxIndicatorActivePopular : ""}`}
-                >
-                  {sortBy === "popular" && <Check size={10} color="#FFFFFF" />}
-                </span>
-                <Sparkles size={13} color={sortBy === "popular" ? "#FF6B00" : "#94A3B8"} />
-                <span>Popular Dishes</span>
-              </button>
-
-              {/* Top Rated Toggle */}
-              <button
-                type="button"
-                onClick={() => {
-                  const next = sortBy === "rating" ? "" : "rating";
-                  setSortBy(next);
-                  if (typeof window !== "undefined") {
-                    const params = new URLSearchParams(window.location.search);
-                    if (next === "rating") {
-                      params.set("sort", "rating");
-                    } else {
-                      params.delete("sort");
-                    }
-                    const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
-                    router.replace(newUrl, { scroll: false });
-                  }
-                }}
-                className={`${filterStyles.toggleBtn} ${sortBy === "rating" ? filterStyles.toggleBtnActiveTopRated : ""}`}
-              >
-                <span
-                  className={`${filterStyles.checkboxIndicator} ${sortBy === "rating" ? filterStyles.checkboxIndicatorActiveTopRated : ""}`}
-                >
-                  {sortBy === "rating" && <Check size={10} color="#FFFFFF" />}
-                </span>
-                <Star
-                  size={13}
-                  color={sortBy === "rating" ? "#D97706" : "#94A3B8"}
-                  fill={sortBy === "rating" ? "#D97706" : "none"}
-                />
-                <span>Top Rated</span>
-              </button>
-
-              {/* Clear All Button on Desktop */}
-              {activeFiltersCount > 0 && (
-                <button
-                  type="button"
-                  onClick={handleClearAll}
-                  className={filterStyles.clearAllBtnDesktop}
-                >
-                  <SlidersHorizontal size={13} />
-                  <span>Clear All ({activeFiltersCount})</span>
-                  <X size={13} />
-                </button>
               )}
             </div>
           </div>
@@ -2302,114 +2613,225 @@ function FoodExploreContent() {
           </div>
         </div>
 
-        {/* Desktop Results Header */}
-        <div className="food-explore-desktop-results-header">
-        <div
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: "12px",
-            borderBottom: "1px solid #E2E8F0",
-            paddingBottom: "14px",
-          }}
-        >
-          <div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: "10px" }}>
-              <h2
-                style={{
-                  fontSize: "1.35rem",
-                  fontWeight: "800",
-                  color: "#18181B",
-                  margin: 0,
-                  letterSpacing: "-0.01em",
-                }}
-              >
-                {selectedCategory || (activeTab === "dishes" ? "All cuisines" : "Cloud Kitchens")}
-              </h2>
-              <span style={{ fontSize: "0.88rem", color: "#64748B", fontWeight: "500" }}>
-                Showing {activeTab === "dishes" ? filteredFoodItems.length : filteredKitchens.length} {activeTab === "dishes" ? (filteredFoodItems.length === 1 ? "dish" : "dishes") : (filteredKitchens.length === 1 ? "kitchen" : "kitchens")}
-              </span>
-            </div>
-            <p style={{ margin: "4px 0 0 0", fontSize: "0.85rem", color: "#64748B" }}>
-              Dietary labels are shown on each dish. Choose a preference to refine your menu.
-            </p>
-          </div>
 
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px" }}>
-            {/* Sort Selector */}
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ fontSize: "0.85rem", fontWeight: "600", color: "#64748B" }}>Sort by:</span>
-              <select
-                value={sortBy}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setSortBy(val);
-                  if (typeof window !== "undefined") {
-                    const params = new URLSearchParams(window.location.search);
-                    if (val) {
-                      params.set("sort", val);
-                    } else {
-                      params.delete("sort");
-                    }
-                    const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
-                    router.replace(newUrl, { scroll: false });
+        {/* Desktop Results Header (Image 2 Design) */}
+        <div id="food-explore-results-section" className="food-explore-desktop-results-header">
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: "16px",
+              borderBottom: "1px solid #E2E8F0",
+              paddingBottom: "14px",
+            }}
+          >
+            {/* Left: All cuisines [Showing 6 dishes] + Subtitle */}
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                <h2
+                  style={{
+                    fontSize: "1.35rem",
+                    fontWeight: "800",
+                    color: "#0F172A",
+                    margin: 0,
+                    letterSpacing: "-0.01em",
+                  }}
+                >
+                  {selectedCategory || (activeTab === "dishes" ? "All cuisines" : "Cloud Kitchens")}
+                </h2>
+                <span
+                  style={{
+                    fontSize: "0.80rem",
+                    color: "#475569",
+                    fontWeight: "600",
+                    backgroundColor: "#F1F5F9",
+                    padding: "3px 10px",
+                    borderRadius: "9999px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                  }}
+                >
+                  Showing {activeTab === "dishes" ? paginatedFoodItems.length : filteredKitchens.length} {activeTab === "dishes" ? (paginatedFoodItems.length === 1 ? "dish" : "dishes") : (filteredKitchens.length === 1 ? "kitchen" : "kitchens")}
+                </span>
+              </div>
+              <p style={{ margin: "4px 0 0 0", fontSize: "0.84rem", color: "#64748B" }}>
+                Dietary labels and kitchen safety tags are shown on each dish. Choose a preference to refine your menu.
+              </p>
+            </div>
+
+            {/* Right: Sort by: [ Recommended ⌵ ]    Back to categories ↑ */}
+            <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+              {/* Sort Selector */}
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ fontSize: "0.85rem", fontWeight: "600", color: "#64748B" }}>Sort by:</span>
+                <div style={{ position: "relative" }} ref={desktopSortRef}>
+                  <button
+                    type="button"
+                    onClick={() => setIsDesktopSortOpen(!isDesktopSortOpen)}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: "8px",
+                      padding: "6px 14px",
+                      borderRadius: "9999px",
+                      border: "1px solid #CBD5E1",
+                      backgroundColor: "#FFFFFF",
+                      fontSize: "0.85rem",
+                      fontWeight: "600",
+                      color: "#0F172A",
+                      cursor: "pointer",
+                      minWidth: "145px",
+                      boxShadow: "0 1px 2px rgba(15, 23, 42, 0.03)",
+                      transition: "all 0.15s ease",
+                      fontFamily: "inherit",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#94A3B8")}
+                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#CBD5E1")}
+                  >
+                    <span>
+                      {sortBy === "popular"
+                        ? "Most Popular"
+                        : sortBy === "rating"
+                        ? "Rating: High to Low"
+                        : sortBy === "price_asc"
+                        ? "Price: Low to High"
+                        : sortBy === "price_desc"
+                        ? "Price: High to Low"
+                        : sortBy === "fastest"
+                        ? "Fastest Delivery"
+                        : "Recommended"}
+                    </span>
+                    <ChevronDown
+                      size={14}
+                      color="#64748B"
+                      style={{
+                        transform: isDesktopSortOpen ? "rotate(180deg)" : "none",
+                        transition: "transform 0.18s ease",
+                        flexShrink: 0,
+                      }}
+                    />
+                  </button>
+
+                  {isDesktopSortOpen && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "calc(100% + 6px)",
+                        right: 0,
+                        backgroundColor: "#FFFFFF",
+                        borderRadius: "12px",
+                        padding: "6px",
+                        boxShadow: "0 12px 30px -4px rgba(15, 23, 42, 0.14), 0 4px 12px -2px rgba(15, 23, 42, 0.08)",
+                        border: "1px solid #E2E8F0",
+                        zIndex: 100,
+                        minWidth: "185px",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "2px",
+                      }}
+                      role="listbox"
+                    >
+                      {[
+                        { value: "", label: "Recommended" },
+                        { value: "popular", label: "Most Popular" },
+                        { value: "rating", label: "Rating: High to Low ⭐" },
+                        { value: "price_asc", label: "Price: Low to High" },
+                        { value: "price_desc", label: "Price: High to Low" },
+                        { value: "fastest", label: "Fastest Delivery ⚡" },
+                      ].map((opt) => {
+                        const isSelected = sortBy === opt.value;
+                        return (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => {
+                              setSortBy(opt.value);
+                              if (typeof window !== "undefined") {
+                                const params = new URLSearchParams(window.location.search);
+                                if (opt.value) params.set("sort", opt.value);
+                                else params.delete("sort");
+                                const newUrl = params.toString() ? `/food-explore?${params.toString()}` : "/food-explore";
+                                router.replace(newUrl, { scroll: false });
+                              }
+                              setIsDesktopSortOpen(false);
+                            }}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              padding: "7px 10px",
+                              borderRadius: "8px",
+                              border: "none",
+                              backgroundColor: isSelected ? "#FFF7ED" : "transparent",
+                              color: isSelected ? "#C2410C" : "#334155",
+                              fontWeight: isSelected ? 700 : 500,
+                              fontSize: "13px",
+                              cursor: "pointer",
+                              textAlign: "left",
+                              transition: "all 0.12s ease",
+                              fontFamily: "inherit",
+                              width: "100%",
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!isSelected) {
+                                e.currentTarget.style.backgroundColor = "#F8FAFC";
+                                e.currentTarget.style.color = "#0F172A";
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!isSelected) {
+                                e.currentTarget.style.backgroundColor = "transparent";
+                                e.currentTarget.style.color = "#334155";
+                              }
+                            }}
+                            role="option"
+                            aria-selected={isSelected}
+                          >
+                            <span>{opt.label}</span>
+                            {isSelected && <Check size={14} color="#EA580C" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Back to categories (On same line as Sort) */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (categoryScrollRef.current) {
+                    categoryScrollRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+                  } else if (typeof window !== "undefined") {
+                    window.scrollTo({ top: 0, behavior: "smooth" });
                   }
                 }}
                 style={{
-                  padding: "8px 12px",
-                  borderRadius: "10px",
-                  border: "1px solid #E2E8F0",
-                  backgroundColor: "#FFFFFF",
-                  fontSize: "0.85rem",
+                  background: "none",
+                  border: "none",
+                  color: "#EA580C",
                   fontWeight: "700",
-                  color: "#18181B",
+                  fontSize: "0.85rem",
                   cursor: "pointer",
-                  outline: "none",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  padding: "4px 0",
+                  whiteSpace: "nowrap",
+                  transition: "color 0.15s ease",
                 }}
+                onMouseOver={(e) => (e.currentTarget.style.color = "#C2410C")}
+                onMouseOut={(e) => (e.currentTarget.style.color = "#EA580C")}
               >
-                <option value="">Recommended</option>
-                <option value="popular">Most Popular</option>
-                <option value="rating">Rating: High to Low ⭐</option>
-                <option value="price_asc">Price: Low to High</option>
-                <option value="price_desc">Price: High to Low</option>
-                <option value="fastest">Fastest Delivery ⚡</option>
-              </select>
+                <span>Back to categories</span>
+                <ArrowUp size={14} color="currentColor" />
+              </button>
             </div>
-
-            {/* Back to categories (Always available & dynamic) */}
-            <button
-              type="button"
-              onClick={() => {
-                if (categoryScrollRef.current) {
-                  categoryScrollRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
-                } else if (typeof window !== "undefined") {
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }
-              }}
-              style={{
-                background: "none",
-                border: "none",
-                color: "#C2410C",
-                fontWeight: "700",
-                fontSize: "0.85rem",
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "4px",
-                padding: "2px 0",
-                marginTop: "2px",
-                transition: "color 0.15s ease",
-              }}
-              onMouseOver={(e) => (e.currentTarget.style.color = "#FF6B00")}
-              onMouseOut={(e) => (e.currentTarget.style.color = "#C2410C")}
-            >
-              <span>Back to categories</span>
-              <ArrowUp size={14} color="currentColor" />
-            </button>
           </div>
-        </div>
         </div>{/* End food-explore-desktop-results-header */}
 
         {/* 2. Results Content: Dishes Grid or Kitchens Grid */}
@@ -2448,16 +2870,17 @@ function FoodExploreContent() {
                 ))}
               </div>
             ) : filteredFoodItems.length > 0 ? (
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-                  gap: "20px",
-                  width: "100%",
-                }}
-                className="food-explore-grid"
-              >
-                {filteredFoodItems.map((dish) => {
+              <>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+                    gap: "20px",
+                    width: "100%",
+                  }}
+                  className="food-explore-grid"
+                >
+                  {paginatedFoodItems.map((dish) => {
                   const isSellerClosed = dish.sellerIsOnline === false;
                   const rawStock = (dish as any).maxStock !== undefined ? (dish as any).maxStock : (dish as any).stockQuantity;
                   const stockLimit = rawStock !== undefined && rawStock !== null && !isNaN(Number(rawStock)) ? Number(rawStock) : -1;
@@ -2495,46 +2918,71 @@ function FoodExploreContent() {
                       <div
                         style={{
                           width: "100%",
-                          height: "170px",
+                          height: "175px",
                           position: "relative",
                           overflow: "hidden",
                           backgroundColor: "#F1F5F9",
                         }}
                       >
                         {/* Top Right Favorite Button for Mobile */}
-<button
-  type="button"
-  onClick={(e) => toggleFavorite(dish.id, e)}
-  className="mobile-dish-favorite-btn"
-  aria-label={favorites[dish.id] ? "Remove from favorites" : "Add to favorites"}
->
-  <Heart
-    size={18}
-    color={favorites[dish.id] ? "#EF4444" : "#64748B"}
-    fill={favorites[dish.id] ? "#EF4444" : "none"}
-  />
-</button>
+                        <button
+                          type="button"
+                          onClick={(e) => toggleFavorite(dish.id, e)}
+                          className="mobile-dish-favorite-btn"
+                          aria-label={favorites[dish.id] ? "Remove from favorites" : "Add to favorites"}
+                        >
+                          <Heart
+                            size={18}
+                            color={favorites[dish.id] ? "#EF4444" : "#64748B"}
+                            fill={favorites[dish.id] ? "#EF4444" : "none"}
+                          />
+                        </button>
 
-{/* Offer Badge on Top Left (Only displayed when the dish has an active deal/offer/coupon) */}
-                        {!isClosed && offerDetails.hasOffer && offerDetails.badgeText && (
+                        {/* Top Right Rating Badge for Desktop (Image 2 Design) */}
+                        <div
+                          className="desktop-dish-rating-badge"
+                          style={{
+                            position: "absolute",
+                            top: "10px",
+                            right: "10px",
+                            zIndex: 2,
+                            backgroundColor: "#FFFFFF",
+                            color: "#D97706",
+                            fontSize: "12px",
+                            fontWeight: "800",
+                            padding: "4px 9px",
+                            borderRadius: "9999px",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            boxShadow: "0 2px 6px rgba(0,0,0,0.12)",
+                          }}
+                        >
+                          <Star size={11.5} fill="#D97706" color="#D97706" />
+                          <span>{dish.rating && Number(dish.rating) > 0 ? Number(dish.rating).toFixed(1) : "4.8"}</span>
+                        </div>
+
+                        {/* Offer Badge on Top Left (Image 2 Design) */}
+                        {!isClosed && offerDetails.hasOffer && (offerDetails.badgeText || offerDetails.discountAmount) && (
                           <div
                             style={{
                               position: "absolute",
                               top: "10px",
                               left: "10px",
-                              backgroundColor: "#BC4B24",
+                              backgroundColor: "#FF5500",
                               color: "#FFFFFF",
                               fontSize: "11px",
-                              fontWeight: "600",
+                              fontWeight: "800",
                               lineHeight: "1.2",
-                              letterSpacing: "0.2px",
+                              letterSpacing: "0.4px",
                               padding: "4px 9px",
-                              borderRadius: "6px",
-                              boxShadow: "0 2px 5px rgba(0,0,0,0.15)",
+                              borderRadius: "8px",
+                              boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
                               zIndex: 2,
+                              textTransform: "uppercase",
                             }}
                           >
-                            {offerDetails.badgeText}
+                            {offerDetails.badgeText || (offerDetails.discountAmount ? `FLAT ₹${offerDetails.discountAmount} OFF` : "SPECIAL OFFER")}
                           </div>
                         )}
 
@@ -2588,123 +3036,87 @@ function FoodExploreContent() {
                           </div>
                         )}
 
-                        {/* Kitchen Tag Badge overlay at bottom of image */}
+                        {/* Kitchen Tag Badge overlay at bottom of image (Image 2 Design) */}
                         <div
                           style={{
                             position: "absolute",
                             bottom: "8px",
                             left: "8px",
                             zIndex: 2,
-                            backgroundColor: "rgba(15, 23, 42, 0.8)",
+                            backgroundColor: "rgba(15, 23, 42, 0.75)",
                             backdropFilter: "blur(4px)",
                             color: "#FFFFFF",
                             fontSize: "11px",
-                            fontWeight: "700",
-                            padding: "3px 8px",
-                            borderRadius: "6px",
+                            fontWeight: "600",
+                            padding: "3px 9px",
+                            borderRadius: "9999px",
                             display: "flex",
                             alignItems: "center",
                             gap: "5px",
-                            boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+                            boxShadow: "0 2px 6px rgba(0,0,0,0.25)",
                             maxWidth: "calc(100% - 16px)",
                           }}
                         >
-                          <Store size={12} color="#FB923C" style={{ flexShrink: 0 }} />
+                          <Home size={11} color="#FFFFFF" style={{ flexShrink: 0 }} />
                           <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            {dish.sellerName || "Verified Cloud Kitchen"}
+                            {dish.sellerName || "Verified Kitchen"}
                           </span>
                         </div>
                       </div>
 
-                      {/* Card Info: Desktop */}
-                      <div className="desktop-card-body"
+                      {/* Card Info: Desktop (Image 2 Design) */}
+                      <div
+                        className="desktop-card-body"
                         style={{
                           padding: "14px 16px 16px 16px",
                           display: "flex",
                           flexDirection: "column",
-                          gap: "6px",
+                          gap: "8px",
                           flex: 1,
                         }}
                       >
-                        {/* Title & Kitchen Name */}
-                        <div>
-                          <h3
-                            style={{
-                              fontSize: "1.05rem",
-                              fontWeight: "800",
-                              color: isClosed ? "#64748B" : "#18181B",
-                              margin: "0 0 2px 0",
-                              whiteSpace: "nowrap",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                            }}
-                          >
-                            {dish.name}
-                          </h3>
+                        {/* Row 1: Badges Above Title - Kitchen Name Pill + Dietary Pill */}
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                          {/* Kitchen Name Pill */}
                           <Link
                             href={dish.sellerTrackingId ? `/shop/${dish.sellerTrackingId}${selectedPrice && selectedPrice !== "all" ? `?price=${selectedPrice}` : ""}` : "#"}
                             style={{
-                              fontSize: "0.8rem",
-                              color: "#EA580C",
-                              backgroundColor: "#FFF7ED",
-                              border: "1px solid #FFEDD5",
+                              fontSize: "0.76rem",
+                              color: "#C2410C",
+                              backgroundColor: "#FFF8F4",
+                              border: "1px solid #FED7AA",
                               fontWeight: "700",
                               textDecoration: "none",
                               display: "inline-flex",
                               alignItems: "center",
-                              gap: "5px",
-                              padding: "3px 8px",
-                              borderRadius: "6px",
-                              width: "fit-content",
-                              marginTop: "3px",
-                              marginBottom: "3px",
+                              gap: "4px",
+                              padding: "3px 9px",
+                              borderRadius: "8px",
+                              maxWidth: "180px",
                               transition: "all 0.15s ease",
                             }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = "#FFEDD5";
-                              e.currentTarget.style.borderColor = "#FDBA74";
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = "#FFF7ED";
-                              e.currentTarget.style.borderColor = "#FFEDD5";
-                            }}
-                            title={`Kitchen: ${dish.sellerName || "Verified Cloud Kitchen"}`}
+                            title={`Kitchen: ${dish.sellerName || "Verified Kitchen"}`}
                           >
-                            <Store size={12} color="#EA580C" style={{ flexShrink: 0 }} />
+                            <Home size={11} color="#EA580C" style={{ flexShrink: 0 }} />
                             <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                              {dish.sellerName || "Verified Cloud Kitchen"}
+                              {dish.sellerName || "Verified Kitchen"}
                             </span>
                           </Link>
-                        </div>
 
-                        {/* Dietary Tag inside Food Menu Description (Shows all seller-specified dietary categories horizontally: Veg, Jain, Vegan) */}
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", margin: "2px 0" }}>
+                          {/* Dietary Pill (Pure Veg / Non-Veg / Vegan / Jain) */}
                           {(() => {
-                            const rawType = resolveDishDietaryTypes(dish).toUpperCase();
-                            const rawParts = rawType.split(",").map((s) => s.trim());
-                            const catName = String(dish.categoryName || (dish as any).category || "").toUpperCase();
-                            const nameUpper = String(dish.name || "").toUpperCase();
-
-                            const isNonVeg =
-                              !rawParts.includes("VEG") &&
-                              !rawParts.includes("VEGAN") &&
-                              !rawParts.includes("JAIN") &&
-                              (rawParts.includes("NON_VEG") ||
-                                rawParts.includes("NON-VEG") ||
-                                rawParts.includes("NON VEG") ||
-                                isNonVegDish(dish));
-
+                            const isNonVeg = isNonVegDish(dish);
                             if (isNonVeg) {
                               return (
                                 <span
-                                  key="non-veg"
                                   style={{
                                     backgroundColor: "#FEF2F2",
-                                    color: "#B91C1C",
-                                    fontSize: "11px",
+                                    border: "1px solid #FECACA",
+                                    color: "#991B1B",
+                                    fontSize: "0.76rem",
                                     fontWeight: "700",
-                                    padding: "2px 8px",
-                                    borderRadius: "6px",
+                                    padding: "3px 9px",
+                                    borderRadius: "8px",
                                     display: "inline-flex",
                                     alignItems: "center",
                                     gap: "4px",
@@ -2716,39 +3128,16 @@ function FoodExploreContent() {
                                 </span>
                               );
                             }
-
-                            const hasVeg =
-                              rawParts.includes("VEG") ||
-                              rawParts.includes("PURE_VEG") ||
-                              (!rawParts.includes("VEGAN") && !rawParts.includes("JAIN"));
-                            const hasJain =
-                              rawParts.includes("JAIN") ||
-                              catName.includes("JAIN") ||
-                              nameUpper.includes("JAIN");
-                            const hasVegan =
-                              rawParts.includes("VEGAN") ||
-                              catName.includes("VEGAN") ||
-                              nameUpper.includes("VEGAN");
-
-                            const tags: Array<{ key: string; label: string }> = [];
-                            if (hasVeg) tags.push({ key: "veg", label: "Veg" });
-                            if (hasJain) tags.push({ key: "jain", label: "Jain" });
-                            if (hasVegan) tags.push({ key: "vegan", label: "Vegan" });
-
-                            if (tags.length === 0) {
-                              tags.push({ key: "veg", label: "Veg" });
-                            }
-
-                            return tags.map((t) => (
+                            return (
                               <span
-                                key={t.key}
                                 style={{
                                   backgroundColor: "#ECFDF5",
-                                  color: "#047857",
-                                  fontSize: "11px",
+                                  border: "1px solid #A7F3D0",
+                                  color: "#065F46",
+                                  fontSize: "0.76rem",
                                   fontWeight: "700",
-                                  padding: "2px 8px",
-                                  borderRadius: "6px",
+                                  padding: "3px 9px",
+                                  borderRadius: "8px",
                                   display: "inline-flex",
                                   alignItems: "center",
                                   gap: "4px",
@@ -2756,23 +3145,39 @@ function FoodExploreContent() {
                                 }}
                               >
                                 <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#10B981" }} />
-                                {t.label}
+                                Pure Veg
                               </span>
-                            ));
+                            );
                           })()}
                         </div>
 
-                        {/* Dish Description & Active Offer Coupon Code */}
+                        {/* Row 2: Dish Title */}
+                        <h3
+                          style={{
+                            fontSize: "1.12rem",
+                            fontWeight: "800",
+                            color: isClosed ? "#64748B" : "#0F172A",
+                            margin: "0",
+                            lineHeight: "1.35",
+                            letterSpacing: "-0.01em",
+                          }}
+                        >
+                          {dish.name}
+                        </h3>
+
+                        {/* Row 3: Dish Description */}
                         {dish.description && dish.description.trim() && dish.description.trim().toLowerCase() !== "xyz" && (
                           <p
                             style={{
                               margin: "0",
-                              fontSize: "0.78rem",
-                              color: isClosed ? "#94A3B8" : "#475569",
-                              fontWeight: "500",
-                              lineHeight: "1.4",
-                              wordBreak: "break-word",
-                              overflowWrap: "break-word",
+                              fontSize: "0.82rem",
+                              color: isClosed ? "#94A3B8" : "#64748B",
+                              fontWeight: "400",
+                              lineHeight: "1.45",
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
                             }}
                             title={dish.description}
                           >
@@ -2780,124 +3185,43 @@ function FoodExploreContent() {
                           </p>
                         )}
 
+                        {/* Row 4: Coupon Code / Offer Tag (Image 2 Design) */}
                         {!isClosed && offerDetails.hasOffer && (offerDetails.couponCode || offerDetails.couponDescription) && (
                           <div
                             style={{
                               display: "inline-flex",
                               alignItems: "center",
                               gap: "5px",
-                              backgroundColor: "#FFF7ED",
-                              border: "1px dashed #FDBA74",
-                              color: "#C2410C",
-                              fontSize: "0.74rem",
-                              fontWeight: "700",
-                              padding: "3px 8px",
-                              borderRadius: "6px",
+                              backgroundColor: "#FFFBEB",
+                              border: "1px solid #FDE68A",
+                              color: "#92400E",
+                              fontSize: "0.76rem",
+                              fontWeight: "600",
+                              padding: "3px 9px",
+                              borderRadius: "7px",
                               width: "fit-content",
                               maxWidth: "100%",
                             }}
                           >
-                            <Tag size={11} color="#EA580C" style={{ flexShrink: 0 }} />
+                            <Tag size={11} color="#D97706" style={{ flexShrink: 0 }} />
                             <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                              {offerDetails.couponCode ? `Use code: ${offerDetails.couponCode}` : offerDetails.couponDescription}
+                              {offerDetails.couponCode ? (
+                                <>
+                                  Use code: <strong style={{ color: "#78350F", fontWeight: "800" }}>{offerDetails.couponCode}</strong>
+                                </>
+                              ) : (
+                                offerDetails.couponDescription
+                              )}
                             </span>
                           </div>
                         )}
 
-                        {/* Rating Stars + Ratings Count & Delivery Time Row */}
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            fontSize: "0.82rem",
-                            marginTop: "2px",
-                          }}
-                        >
-                          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "2px" }}>
-                              {(() => {
-                                const dishRating =
-                                  dish.rating && !isNaN(Number(dish.rating)) && Number(dish.rating) > 0
-                                    ? Number(dish.rating)
-                                    : 5.0;
-                                return [1, 2, 3, 4, 5].map((s) => {
-                                  let fillPct = 0;
-                                  if (dishRating >= s) {
-                                    fillPct = 100;
-                                  } else if (dishRating > s - 1) {
-                                    fillPct = Math.round((dishRating - (s - 1)) * 100);
-                                  }
-
-                                  const starActiveColor = isClosed ? "#94A3B8" : "#D97706";
-                                  const starEmptyBg = isClosed ? "#E2E8F0" : "#F1F5F9";
-                                  const starEmptyBorder = isClosed ? "#CBD5E1" : "#CBD5E1";
-
-                                  return (
-                                    <div
-                                      key={s}
-                                      style={{
-                                        position: "relative",
-                                        display: "inline-flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        width: 13,
-                                        height: 13,
-                                        flexShrink: 0,
-                                      }}
-                                    >
-                                      {/* Unfilled base star */}
-                                      <Star
-                                        size={13}
-                                        fill={starEmptyBg}
-                                        color={starEmptyBorder}
-                                        strokeWidth={1.2}
-                                      />
-                                      {/* Dynamic filled star overlay */}
-                                      {fillPct > 0 && (
-                                        <div
-                                          style={{
-                                            position: "absolute",
-                                            top: 0,
-                                            left: 0,
-                                            width: `${fillPct}%`,
-                                            height: "100%",
-                                            overflow: "hidden",
-                                            display: "inline-flex",
-                                            alignItems: "center",
-                                          }}
-                                        >
-                                          <Star
-                                            size={13}
-                                            fill={starActiveColor}
-                                            color={starActiveColor}
-                                            strokeWidth={1.2}
-                                            style={{ flexShrink: 0, minWidth: 13, minHeight: 13 }}
-                                          />
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                });
-                              })()}
-                            </div>
-                            <span style={{ fontSize: "0.78rem", fontWeight: "700", color: isClosed ? "#94A3B8" : "#18181B" }}>
-                              {dish.rating && dish.rating > 0 ? `${Number(dish.rating).toFixed(1)} Ratings` : "5.0 Ratings"}
-                            </span>
-                          </div>
-
-                          <div style={{ display: "flex", alignItems: "center", gap: "4px", color: "#475569", fontSize: "0.82rem", fontWeight: "600" }}>
-                            <Clock size={14} color="#64748B" />
-                            <span>{dish.deliveryTime || "20–30 min"}</span>
-                          </div>
-                        </div>
-
-                        {/* Add-ons Available Badge */}
-                        {hasAddons && !isClosed && (
-                          <div style={{ display: "flex", alignItems: "center", gap: "4px", margin: "1px 0" }}>
+                        {/* Row 5: Add-ons & Distance (if applicable) */}
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                          {hasAddons && !isClosed && (
                             <span
                               style={{
-                                fontSize: "0.72rem",
+                                fontSize: "0.70rem",
                                 fontWeight: "700",
                                 color: "#EA580C",
                                 backgroundColor: "#FFF7ED",
@@ -2906,47 +3230,52 @@ function FoodExploreContent() {
                                 borderRadius: "6px",
                                 display: "inline-flex",
                                 alignItems: "center",
-                                gap: "4px",
+                                gap: "3px",
                               }}
                             >
-                              <Sparkles size={11} />
-                              <span>{dishAddons.length} Add-on{dishAddons.length > 1 ? "s" : ""} Available</span>
+                              <Sparkles size={10} />
+                              <span>{dishAddons.length} Add-on{dishAddons.length > 1 ? "s" : ""}</span>
                             </span>
-                          </div>
-                        )}
+                          )}
 
-                        {/* Stock Quantity / Status Text */}
-                        {isOutOfStock ? (
-                          <div style={{ fontSize: "0.78rem", color: "#DC2626", fontWeight: "700" }}>
-                            Out of stock
-                          </div>
-                        ) : null}
+                          {dish.distanceText && (
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", fontSize: "0.74rem", color: "#FF5500", fontWeight: "600" }}>
+                              <MapPin size={11} />
+                              <span>{dish.distanceText} away</span>
+                            </span>
+                          )}
+                        </div>
 
-                        {/* Distance Badge */}
-                        {dish.distanceText && (
-                          <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "0.78rem", color: "#FF6B00", fontWeight: "700" }}>
-                            <MapPin size={13} />
-                            <span>{dish.distanceText} away</span>
-                          </div>
-                        )}
-
-                        {/* Price & Action Button Row */}
+                        {/* Row 6: Price, Time & Add Button (Image 2 Design) */}
                         <div
                           style={{
                             marginTop: "auto",
                             paddingTop: "10px",
+                            borderTop: "1px solid #F1F5F9",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "space-between",
-                            borderTop: "1px solid #F1F5F9",
                           }}
                         >
+                          {/* Price & Delivery Time on Left */}
                           <div>
-                            <span style={{ fontSize: "1.15rem", fontWeight: "800", color: isClosed ? "#64748B" : "#18181B" }}>
-                              ₹{dish.price}
-                            </span>
+                            <div style={{ display: "flex", alignItems: "baseline", gap: "6px" }}>
+                              <span style={{ fontSize: "1.25rem", fontWeight: "800", color: isClosed ? "#64748B" : "#0F172A" }}>
+                                ₹{dish.price}
+                              </span>
+                              {offerDetails.hasOffer && (
+                                <span style={{ fontSize: "0.82rem", fontWeight: "500", color: "#94A3B8", textDecoration: "line-through" }}>
+                                  ₹{Math.round(dish.price * 1.35)}
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "4px", color: "#64748B", fontSize: "0.76rem", fontWeight: "500", marginTop: "2px" }}>
+                              <Clock size={12} color="#64748B" />
+                              <span>{dish.deliveryTime || "20–30 min"}</span>
+                            </div>
                           </div>
 
+                          {/* Right: + ADD Button */}
                           {isClosed ? (
                             <button
                               type="button"
@@ -2956,11 +3285,10 @@ function FoodExploreContent() {
                                 color: "#64748B",
                                 fontSize: "0.82rem",
                                 fontWeight: "700",
-                                padding: "6px 14px",
+                                padding: "7px 14px",
                                 borderRadius: "10px",
                                 border: "1px solid #CBD5E1",
                                 cursor: "pointer",
-                                transition: "all 0.2s ease",
                               }}
                               title={isSellerClosed ? "Seller is closed" : "Unavailable"}
                             >
@@ -2974,12 +3302,11 @@ function FoodExploreContent() {
                                 color: "#FFFFFF",
                                 fontSize: "0.86rem",
                                 fontWeight: "700",
-                                padding: "7px 16px",
-                                borderRadius: "12px",
+                                padding: "8px 18px",
+                                borderRadius: "10px",
                                 border: "none",
                                 cursor: "default",
                                 boxShadow: "0 4px 12px rgba(16, 185, 129, 0.25)",
-                                transition: "all 0.2s ease",
                                 display: "inline-flex",
                                 alignItems: "center",
                                 gap: "4px",
@@ -3011,8 +3338,6 @@ function FoodExploreContent() {
                                     lineHeight: "1.15",
                                     boxShadow: "0 2px 6px rgba(234, 88, 12, 0.12)",
                                     boxSizing: "border-box",
-                                    whiteSpace: "normal",
-                                    wordBreak: "break-word",
                                   }}
                                 >
                                   We have only {stockLimit} left in stock
@@ -3023,43 +3348,37 @@ function FoodExploreContent() {
                                   display: "inline-flex",
                                   alignItems: "center",
                                   backgroundColor: "#FFF7ED",
-                                  border: "1.5px solid #FF6B00",
+                                  border: "1.5px solid #FF5500",
                                   borderRadius: "10px",
                                   overflow: "hidden",
-                                  boxShadow: "0 2px 8px rgba(255, 107, 0, 0.15)",
+                                  boxShadow: "0 2px 8px rgba(255, 85, 0, 0.15)",
                                 }}
                               >
                                 <button
                                   type="button"
                                   onClick={() => handleDecreaseFromCart(dish.id)}
                                   style={{
-                                    padding: "5px 11px",
+                                    padding: "6px 12px",
                                     backgroundColor: "transparent",
                                     border: "none",
                                     cursor: "pointer",
                                     fontWeight: "800",
                                     fontSize: "1rem",
-                                    color: "#FF6B00",
-                                    transition: "background-color 0.15s ease",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
+                                    color: "#FF5500",
                                   }}
-                                  onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "rgba(255, 107, 0, 0.15)")}
-                                  onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
                                   aria-label="Decrease quantity"
                                 >
                                   -
                                 </button>
                                 <span
                                   style={{
-                                    padding: "5px 10px",
+                                    padding: "6px 10px",
                                     fontWeight: "800",
                                     fontSize: "0.88rem",
-                                    color: "#FF6B00",
+                                    color: "#FF5500",
                                     backgroundColor: "#FFFFFF",
-                                    borderLeft: "1.5px solid #FF6B00",
-                                    borderRight: "1.5px solid #FF6B00",
+                                    borderLeft: "1.5px solid #FF5500",
+                                    borderRight: "1.5px solid #FF5500",
                                     minWidth: "22px",
                                     textAlign: "center",
                                   }}
@@ -3076,23 +3395,15 @@ function FoodExploreContent() {
                                     }
                                   }}
                                   style={{
-                                    padding: "5px 11px",
+                                    padding: "6px 12px",
                                     backgroundColor: "transparent",
                                     border: "none",
                                     cursor: isMaxStockInCart ? "not-allowed" : "pointer",
                                     opacity: isMaxStockInCart ? 0.35 : 1,
                                     fontWeight: "800",
                                     fontSize: "1rem",
-                                    color: "#FF6B00",
-                                    transition: "background-color 0.15s ease",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
+                                    color: "#FF5500",
                                   }}
-                                  onMouseOver={(e) => {
-                                    if (!isMaxStockInCart) e.currentTarget.style.backgroundColor = "rgba(255, 107, 0, 0.15)";
-                                  }}
-                                  onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
                                   aria-label="Increase quantity"
                                 >
                                   +
@@ -3104,23 +3415,34 @@ function FoodExploreContent() {
                               type="button"
                               onClick={() => handleAddToCart(dish, true)}
                               style={{
-                                backgroundColor: "#FF6B00",
+                                backgroundColor: "#FF5500",
                                 color: "#FFFFFF",
                                 fontSize: "0.86rem",
-                                fontWeight: "700",
-                                padding: "8px 18px",
+                                fontWeight: "800",
+                                padding: "9px 20px",
                                 borderRadius: "10px",
                                 border: "none",
                                 cursor: "pointer",
-                                boxShadow: "0 3px 10px rgba(255, 107, 0, 0.25)",
-                                transition: "all 0.2s ease",
+                                boxShadow: "0 4px 12px rgba(255, 85, 0, 0.25)",
+                                transition: "all 0.18s ease",
                                 display: "inline-flex",
                                 alignItems: "center",
                                 gap: "5px",
+                                letterSpacing: "0.02em",
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = "#E04B00";
+                                e.currentTarget.style.transform = "translateY(-1px)";
+                                e.currentTarget.style.boxShadow = "0 6px 16px rgba(255, 85, 0, 0.35)";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = "#FF5500";
+                                e.currentTarget.style.transform = "none";
+                                e.currentTarget.style.boxShadow = "0 4px 12px rgba(255, 85, 0, 0.25)";
                               }}
                             >
-                              <span>{hasAddons ? "Add Item" : "Add to cart"}</span>
-                              <span style={{ fontSize: "0.9rem", fontWeight: "700" }}>+</span>
+                              <span style={{ fontSize: "1rem", fontWeight: "800" }}>+</span>
+                              <span>{hasAddons ? "ADD ITEM" : "ADD"}</span>
                             </button>
                           )}
                         </div>
@@ -3225,6 +3547,127 @@ function FoodExploreContent() {
                   );
                 })}
               </div>
+
+              {/* Pagination Bar (Matching Designer UI) */}
+              <div
+                className="food-explore-pagination-bar"
+                style={{
+                  marginTop: "28px",
+                  backgroundColor: "#FFFFFF",
+                  border: "1px solid #E2E8F0",
+                  borderRadius: "16px",
+                  padding: "14px 24px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: "14px",
+                  boxShadow: "0 2px 6px rgba(0, 0, 0, 0.02)",
+                }}
+              >
+                {/* Left: Showing 1 to 6 of 24 dishes nearby */}
+                <div style={{ fontSize: "0.85rem", color: "#64748B", fontWeight: "500" }}>
+                  Showing{" "}
+                  <strong style={{ color: "#0F172A", fontWeight: "700" }}>
+                    {startIndex + 1} to {endIndex}
+                  </strong>{" "}
+                  of{" "}
+                  <strong style={{ color: "#0F172A", fontWeight: "700" }}>
+                    {filteredFoodItems.length}
+                  </strong>{" "}
+                  {filteredFoodItems.length === 1 ? "dish" : "dishes"} nearby
+                </div>
+
+                {/* Right: Previous, page numbers, Next */}
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <button
+                    type="button"
+                    disabled={safeCurrentPage <= 1}
+                    onClick={() => handlePageChange(safeCurrentPage - 1)}
+                    style={{
+                      padding: "7px 16px",
+                      borderRadius: "12px",
+                      border: "1px solid #E2E8F0",
+                      backgroundColor: "#FFFFFF",
+                      color: safeCurrentPage <= 1 ? "#94A3B8" : "#334155",
+                      fontSize: "0.84rem",
+                      fontWeight: "600",
+                      cursor: safeCurrentPage <= 1 ? "not-allowed" : "pointer",
+                      opacity: safeCurrentPage <= 1 ? 0.6 : 1,
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    Previous
+                  </button>
+
+                  {pageNumbers.map((p, idx) => {
+                    if (p === "...") {
+                      return (
+                        <span
+                          key={`ellipsis-${idx}`}
+                          style={{
+                            padding: "0 4px",
+                            color: "#94A3B8",
+                            fontWeight: "700",
+                            fontSize: "0.85rem",
+                          }}
+                        >
+                          ...
+                        </span>
+                      );
+                    }
+                    const pageNum = p as number;
+                    const isActive = pageNum === safeCurrentPage;
+                    return (
+                      <button
+                        key={pageNum}
+                        type="button"
+                        onClick={() => handlePageChange(pageNum)}
+                        style={{
+                          minWidth: "36px",
+                          height: "36px",
+                          padding: "0 6px",
+                          borderRadius: "12px",
+                          border: isActive ? "none" : "1px solid #E2E8F0",
+                          backgroundColor: isActive ? "#FF5500" : "#FFFFFF",
+                          color: isActive ? "#FFFFFF" : "#334155",
+                          fontSize: "0.86rem",
+                          fontWeight: isActive ? "800" : "600",
+                          cursor: isActive ? "default" : "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          boxShadow: isActive ? "0 2px 8px rgba(255, 85, 0, 0.28)" : "none",
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+
+                  <button
+                    type="button"
+                    disabled={safeCurrentPage >= totalPages}
+                    onClick={() => handlePageChange(safeCurrentPage + 1)}
+                    style={{
+                      padding: "7px 18px",
+                      borderRadius: "12px",
+                      border: "1px solid #E2E8F0",
+                      backgroundColor: "#FFFFFF",
+                      color: safeCurrentPage >= totalPages ? "#94A3B8" : "#334155",
+                      fontSize: "0.84rem",
+                      fontWeight: "600",
+                      cursor: safeCurrentPage >= totalPages ? "not-allowed" : "pointer",
+                      opacity: safeCurrentPage >= totalPages ? 0.6 : 1,
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </>
             ) : (
               <div
                 style={{
@@ -3799,7 +4242,8 @@ function FoodExploreContent() {
           .food-explore-desktop-categories,
           .food-explore-desktop-filters,
           .food-explore-desktop-results-header,
-          .desktop-card-body {
+          .desktop-card-body,
+          .desktop-dish-rating-badge {
             display: none !important;
           }
           .food-explore-container {
@@ -4679,6 +5123,11 @@ function FoodExploreContent() {
           }
           .kitchens-explore-grid {
             grid-template-columns: 1fr !important;
+          }
+          .food-explore-pagination-bar {
+            justify-content: center !important;
+            text-align: center;
+            padding: 12px 14px !important;
           }
         }
       `}</style>

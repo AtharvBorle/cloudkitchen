@@ -1,7 +1,152 @@
 "use client";
 
-import React from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import React, { useState, useRef, useEffect } from "react";
+import { ChevronLeft, ChevronRight, ChevronDown, Check, SlidersHorizontal } from "lucide-react";
+import styles from "./PaginationControls.module.css";
+
+export interface PageSizeSelectorProps {
+  pageSize: number | "All";
+  onPageSizeChange: (newSize: number | "All") => void;
+  pageSizeOptions?: (number | "All")[];
+  onPageChange?: (newPage: number) => void;
+  label?: string;
+  dropDirection?: "up" | "down" | "auto";
+  className?: string;
+}
+
+export const PageSizeSelector: React.FC<PageSizeSelectorProps> = ({
+  pageSize,
+  onPageSizeChange,
+  pageSizeOptions = [10, 20, 25, 50, "All"],
+  onPageChange,
+  label = "Per page:",
+  dropDirection = "auto",
+  className,
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [computedDirection, setComputedDirection] = useState<"up" | "down">("up");
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // Close when clicked outside or on Escape
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent | TouchEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    }
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("touchstart", handleClickOutside);
+      document.addEventListener("keydown", handleKeyDown);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
+
+  // Handle position direction calculation (smart dropup / dropdown)
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (dropDirection === "up" || dropDirection === "down") {
+      setComputedDirection(dropDirection);
+      return;
+    }
+
+    if (wrapperRef.current) {
+      const rect = wrapperRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+
+      // In table footers or bottom pages, prefer dropping up if space below is limited
+      if (spaceBelow < 230 && spaceAbove > 180) {
+        setComputedDirection("up");
+      } else if (spaceBelow >= 230) {
+        setComputedDirection("down");
+      } else {
+        setComputedDirection("up");
+      }
+    }
+  }, [isOpen, dropDirection]);
+
+  const handleSelect = (opt: number | "All") => {
+    onPageSizeChange(opt);
+    if (onPageChange) {
+      onPageChange(1);
+    }
+    setIsOpen(false);
+  };
+
+  return (
+    <div ref={wrapperRef} className={`${styles.pageSizeWrapper} ${className || ""}`}>
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className={`${styles.pageSizeTrigger} ${isOpen ? styles.pageSizeTriggerActive : ""}`}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        aria-label={`${label} ${pageSize === "All" ? "All records" : `${pageSize} records`}`}
+      >
+        <SlidersHorizontal size={13} className={styles.triggerIcon} />
+        {label && <span className={styles.triggerLabel}>{label}</span>}
+        <span className={styles.triggerBadge}>{pageSize === "All" ? "All" : pageSize}</span>
+        <ChevronDown
+          size={14}
+          className={`${styles.chevronIcon} ${isOpen ? styles.chevronRotated : ""}`}
+        />
+      </button>
+
+      {isOpen && (
+        <div
+          className={`${styles.pageSizeMenu} ${
+            computedDirection === "up" ? styles.menuDropUp : styles.menuDropDown
+          }`}
+          role="listbox"
+          aria-label="Select records per page"
+        >
+          <div className={styles.menuHeader}>
+            <span className={styles.menuHeaderTitle}>Records Per Page</span>
+            <span className={styles.menuHeaderCount}>
+              {pageSize === "All" ? "All" : `${pageSize}`}
+            </span>
+          </div>
+
+          {pageSizeOptions.map((opt) => {
+            const isSelected = String(pageSize) === String(opt);
+            return (
+              <button
+                key={String(opt)}
+                type="button"
+                className={`${styles.menuItem} ${isSelected ? styles.menuItemActive : ""}`}
+                onClick={() => handleSelect(opt)}
+                role="option"
+                aria-selected={isSelected}
+              >
+                <div className={styles.menuItemLeft}>
+                  <span className={styles.menuItemBadge}>{opt === "All" ? "∞" : opt}</span>
+                  <span className={styles.menuItemText}>
+                    {opt === "All" ? "Show All" : `${opt} per page`}
+                  </span>
+                </div>
+                {isSelected && <Check size={14} strokeWidth={2.8} className={styles.menuCheckIcon} />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export interface PaginationControlsProps {
   currentPage: number;
@@ -51,25 +196,9 @@ export const PaginationControls: React.FC<PaginationControlsProps> = ({
   const pages = getPageNumbers();
 
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        flexWrap: "wrap",
-        gap: "12px",
-        padding: "14px 18px",
-        backgroundColor: "#FFFFFF",
-        borderTop: "1px solid #E2E8F0",
-        borderRadius: "0 0 12px 12px",
-        fontSize: "13px",
-        color: "#475569",
-        marginTop: "auto",
-      }}
-      className="pagination-controls-bar"
-    >
+    <div className={`${styles.paginationContainer} pagination-controls-bar`}>
       {/* Left: Summary text */}
-      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+      <div className={styles.summaryText}>
         <span>
           Showing <strong>{startItem}</strong> - <strong>{endItem}</strong> of <strong>{totalItems}</strong> {displayLabel}
         </span>
@@ -77,27 +206,13 @@ export const PaginationControls: React.FC<PaginationControlsProps> = ({
 
       {/* Center: Page Buttons */}
       {!isAll && totalPages > 1 && (
-        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+        <div className={styles.pageNavList}>
           {/* Previous Page */}
           <button
             type="button"
             disabled={currentPage <= 1}
             onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "6px 10px",
-              borderRadius: "6px",
-              border: "1px solid #CBD5E1",
-              backgroundColor: currentPage <= 1 ? "#F8FAFC" : "#FFFFFF",
-              color: currentPage <= 1 ? "#94A3B8" : "#334155",
-              cursor: currentPage <= 1 ? "not-allowed" : "pointer",
-              fontSize: "12.5px",
-              fontWeight: 600,
-              gap: "4px",
-              transition: "all 0.15s ease",
-            }}
+            className={styles.pageNavBtn}
             title="Previous Page"
             aria-label="Previous Page"
           >
@@ -109,15 +224,7 @@ export const PaginationControls: React.FC<PaginationControlsProps> = ({
           {pages.map((p, idx) => {
             if (p === "...") {
               return (
-                <span
-                  key={`ellipsis-${idx}`}
-                  style={{
-                    padding: "4px 8px",
-                    color: "#94A3B8",
-                    fontWeight: 600,
-                    userSelect: "none",
-                  }}
-                >
+                <span key={`ellipsis-${idx}`} className={styles.pageEllipsis}>
                   ...
                 </span>
               );
@@ -131,22 +238,7 @@ export const PaginationControls: React.FC<PaginationControlsProps> = ({
                 key={`page-${pageNum}`}
                 type="button"
                 onClick={() => onPageChange(pageNum)}
-                style={{
-                  minWidth: "32px",
-                  height: "32px",
-                  padding: "0 6px",
-                  borderRadius: "6px",
-                  border: isActive ? "1px solid #F97316" : "1px solid #CBD5E1",
-                  backgroundColor: isActive ? "#F97316" : "#FFFFFF",
-                  color: isActive ? "#FFFFFF" : "#334155",
-                  fontWeight: isActive ? 700 : 500,
-                  fontSize: "12.5px",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  transition: "all 0.15s ease",
-                }}
+                className={`${styles.pageNumberBtn} ${isActive ? styles.pageNumberActive : ""}`}
                 aria-current={isActive ? "page" : undefined}
                 aria-label={`Page ${pageNum}`}
               >
@@ -160,21 +252,7 @@ export const PaginationControls: React.FC<PaginationControlsProps> = ({
             type="button"
             disabled={currentPage >= totalPages}
             onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "6px 10px",
-              borderRadius: "6px",
-              border: "1px solid #CBD5E1",
-              backgroundColor: currentPage >= totalPages ? "#F8FAFC" : "#FFFFFF",
-              color: currentPage >= totalPages ? "#94A3B8" : "#334155",
-              cursor: currentPage >= totalPages ? "not-allowed" : "pointer",
-              fontSize: "12.5px",
-              fontWeight: 600,
-              gap: "4px",
-              transition: "all 0.15s ease",
-            }}
+            className={styles.pageNavBtn}
             title="Next Page"
             aria-label="Next Page"
           >
@@ -184,36 +262,13 @@ export const PaginationControls: React.FC<PaginationControlsProps> = ({
         </div>
       )}
 
-      {/* Right: Page Size Selector */}
-      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-        <span style={{ fontSize: "12.5px", color: "#64748B" }}>Per page:</span>
-        <select
-          value={String(pageSize)}
-          onChange={(e) => {
-            const val = e.target.value;
-            onPageSizeChange(val === "All" ? "All" : Number(val));
-            onPageChange(1);
-          }}
-          style={{
-            padding: "5px 10px",
-            borderRadius: "6px",
-            border: "1px solid #CBD5E1",
-            backgroundColor: "#FFFFFF",
-            fontSize: "12.5px",
-            fontWeight: 600,
-            color: "#1E293B",
-            cursor: "pointer",
-            outline: "none",
-          }}
-          aria-label="Items per page"
-        >
-          {pageSizeOptions.map((opt) => (
-            <option key={String(opt)} value={String(opt)}>
-              {opt === "All" ? "Show All" : `${opt} per page`}
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* Right: Interactive Page Size Selector */}
+      <PageSizeSelector
+        pageSize={pageSize}
+        onPageSizeChange={onPageSizeChange}
+        pageSizeOptions={pageSizeOptions}
+        onPageChange={onPageChange}
+      />
     </div>
   );
 };
