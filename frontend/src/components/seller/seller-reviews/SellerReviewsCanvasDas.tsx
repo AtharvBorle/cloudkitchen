@@ -31,14 +31,6 @@ export interface SellerReviewsCanvasDasProps {
 
 const DEFAULT_REVIEWS: ReviewItem[] = [];
 
-const DEFAULT_RATINGS_DISTRIBUTION = [
-  { label: "5 Stars", count: 0, percentage: "0%" },
-  { label: "4 Stars", count: 0, percentage: "0%" },
-  { label: "3 Stars", count: 0, percentage: "0%" },
-  { label: "2 Stars", count: 0, percentage: "0%" },
-  { label: "1 Star", count: 0, percentage: "0%" },
-];
-
 const DEFAULT_BREAKDOWN_BARS = [
   { label: "5 Star", count: 0, percentage: 0, color: "#334155" },
   { label: "4 Star", count: 0, percentage: 0, color: "#EF4444" },
@@ -285,7 +277,6 @@ export default function SellerReviewsCanvasDas({
   const [reviewsList, setReviewsList] = useState<ReviewItem[]>([]);
   const [overallRating, setOverallRating] = useState(0);
   const [totalReviewsCount, setTotalReviewsCount] = useState(0);
-  const [ratingsDistribution, setRatingsDistribution] = useState(DEFAULT_RATINGS_DISTRIBUTION);
   const [breakdownBars, setBreakdownBars] = useState(DEFAULT_BREAKDOWN_BARS);
 
   // Filter & Sort state
@@ -359,16 +350,6 @@ export default function SellerReviewsCanvasDas({
             setOverallRating(stats?.averageRating || 0);
 
             const distMap = stats?.ratingDistribution || {};
-            const dist = [5, 4, 3, 2, 1].map((star) => {
-              const count = distMap[star] || 0;
-              const pct = total > 0 ? ((count / total) * 100).toFixed(1) : "0";
-              return {
-                label: star === 1 ? "1 Star" : `${star} Stars`,
-                count,
-                percentage: `${pct}%`,
-              };
-            });
-            setRatingsDistribution(dist);
 
             const bars = [
               { label: "5 Star", count: distMap[5] || 0, percentage: total > 0 ? Number(((distMap[5] || 0) / total * 100).toFixed(1)) : 0, color: "#334155" },
@@ -544,20 +525,6 @@ export default function SellerReviewsCanvasDas({
                 <div className={styles.countSubtext}>Total customer feedback received</div>
               </div>
 
-              {/* Card 3: Ratings Distribution */}
-              <div className={styles.card}>
-                <div className={styles.cardHeader}>Ratings Distribution</div>
-                <div className={styles.distList}>
-                  {ratingsDistribution.map((item) => (
-                    <div key={item.label} className={styles.distRow}>
-                      <span className={styles.distLabel}>{item.label}</span>
-                      <span className={styles.distValue}>
-                        <AnimatedCounter value={item.count} duration={1000} /> ({item.percentage})
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
 
             {/* Main Content Split: Left Review List & Right Rating Breakdown */}
