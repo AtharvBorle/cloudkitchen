@@ -230,7 +230,7 @@ function parseOrderFromDb(o: any): OrderItemData {
     : null;
 
   const rawStatus = (o.status || "PENDING").toUpperCase();
-  const deliveryTimerStartedAt = o.deliveryTimerStartedAt || o.updatedAt || o.createdAt || new Date().toISOString();
+  const deliveryTimerStartedAt = o.deliveryTimerStartedAt || o.createdAt || o.updatedAt || new Date().toISOString();
   const deliveryDelayMinutes = Number(o.deliveryDelayMinutes) || 0;
 
   let status: "ONGOING" | "DELIVERED" | "CANCELLED" = "ONGOING";

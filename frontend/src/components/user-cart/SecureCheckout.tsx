@@ -713,7 +713,10 @@ export const SecureCheckout: React.FC<SecureCheckoutProps> = ({
       const confirmedOrderPayload = {
         orderId: finalOrderId,
         orderTime: "Just now",
-        estimatedDelivery: "25-35 mins",
+        estimatedDelivery: "20-25 mins",
+        deliveryTimerStartedAt: createdOrder?.deliveryTimerStartedAt || new Date().toISOString(),
+        deliveryDelayMinutes: Number(createdOrder?.deliveryDelayMinutes) || 0,
+        createdAt: createdOrder?.createdAt || new Date().toISOString(),
         deliveryAddress: {
           fullName: tx.fullName || fullName.trim(),
           phoneNumber: tx.customerPhone || phoneNumber.trim(),
@@ -1772,7 +1775,10 @@ const loadRazorpayScript = (): Promise<boolean> => {
               const confirmedOrderPayload = {
                 orderId: finalOrderId,
                 orderTime: "Just now",
-                estimatedDelivery: "25-35 mins",
+                estimatedDelivery: "20-25 mins",
+                deliveryTimerStartedAt: createdOrder?.deliveryTimerStartedAt || new Date().toISOString(),
+                deliveryDelayMinutes: Number(createdOrder?.deliveryDelayMinutes) || 0,
+                createdAt: createdOrder?.createdAt || new Date().toISOString(),
                 deliveryAddress: {
                   fullName: fullName.trim(),
                   phoneNumber: phoneNumber.trim(),
@@ -1946,7 +1952,10 @@ const loadRazorpayScript = (): Promise<boolean> => {
       const confirmedOrderPayload = {
         orderId: finalOrderId,
         orderTime: "Just now",
-        estimatedDelivery: "25-35 mins",
+        estimatedDelivery: "20-25 mins",
+        deliveryTimerStartedAt: createdOrder?.deliveryTimerStartedAt || new Date().toISOString(),
+        deliveryDelayMinutes: Number(createdOrder?.deliveryDelayMinutes) || 0,
+        createdAt: createdOrder?.createdAt || new Date().toISOString(),
         deliveryAddress: {
           fullName: fullName.trim(),
           phoneNumber: phoneNumber.trim(),
