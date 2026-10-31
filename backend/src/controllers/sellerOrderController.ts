@@ -371,7 +371,7 @@ export const updateSellerOrder = async (req: Request, orderId: string) => {
     });
 
     if (status === "PREPARING" || status === "OUT_FOR_DELIVERY") {
-        await getOrInitOrderTimer(updatedOrder, true);
+        await getOrInitOrderTimer(updatedOrder, false);
     }
 
     const enrichedUpdatedOrder = await enrichOrderWithEta(updatedOrder);

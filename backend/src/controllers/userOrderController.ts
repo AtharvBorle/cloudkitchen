@@ -9,7 +9,7 @@ import { emitOrderCreated, emitOrderCancelled, emitOrderUpdated } from "@/lib/re
 import { calculateDistanceKm, getPincodeCoordinates, MAX_DELIVERY_RADIUS_KM } from "@/lib/geo-distance";
 import { isItemAvailableNow } from "@/lib/item-timing";
 import { cancelExpiredOrder, isOrderExpired, revertCouponUsageFloorZero } from "@/lib/order-expiry";
-import { enrichOrderWithEta } from "@/lib/order-eta";
+import { enrichOrderWithEta, getOrInitOrderTimer, OrderTimerData } from "@/lib/order-eta";
 import { sendOrderPlacedNotification, sendOrderStatusNotification, sendRefundInitiatedEmail } from "@/lib/emailService";
 import { sendCouponExpiryReport } from "@/lib/subscriptionNotificationService";
 import { calculateOrderTax } from "@/lib/tax-calculator";
@@ -951,9 +951,23 @@ export const createOrder = async (req: Request) => {
         return createdOrder;
     });
 
+    // Initialize and persist order ETA timer anchored to createdAt
+    let initialTimer: OrderTimerData | null = null;
+    try {
+        initialTimer = await getOrInitOrderTimer({
+            id: order.id,
+            status: order.status,
+            createdAt: order.createdAt,
+        });
+    } catch (err) {
+        console.error("[OrderETA] Failed to initialize timer for created order:", err);
+    }
+
     try {
         emitOrderCreated({
             ...order,
+            deliveryTimerStartedAt: initialTimer?.startedAt || new Date(order.createdAt).toISOString(),
+            deliveryDelayMinutes: initialTimer?.delayMinutes || 0,
             user: {
                 id: dbUser.id,
                 name: dbUser.name,
@@ -986,8 +1000,10 @@ export const createOrder = async (req: Request) => {
         // Fallback
     }
 
+    const enrichedOrder = await enrichOrderWithEta(order);
+
     return {
-        order
+        order: enrichedOrder
     };
 };
 

@@ -49,6 +49,9 @@ interface ConfirmedOrderData {
   orderTime: string;
   status: string;
   estimatedDelivery: string;
+  deliveryTimerStartedAt?: string | null;
+  deliveryDelayMinutes?: number;
+  createdAt?: string;
   deliveryAddress: {
     fullName: string;
     phoneNumber: string;
@@ -76,6 +79,34 @@ interface ConfirmedOrderData {
     vehicleType?: string;
     vehicleNumber?: string;
   } | null;
+}
+
+function computeConfirmationEta(
+  rawStatus?: string,
+  timerStartedAt?: string | null,
+  delayMinutes?: number,
+  nowMs: number = Date.now()
+): string {
+  const s = (rawStatus || "PENDING").toUpperCase();
+  if (s === "DELIVERED") return "Delivered";
+  if (s === "CANCELLED" || s === "REJECTED") return "Cancelled";
+
+  const delay = Math.max(0, Number(delayMinutes) || 0);
+  const startedMs = timerStartedAt ? new Date(timerStartedAt).getTime() : nowMs;
+  const elapsedMinutes = !isNaN(startedMs) ? Math.max(0, Math.floor((nowMs - startedMs) / 60000)) : 0;
+
+  const remMin = 20 + delay - elapsedMinutes;
+  const remMax = 25 + delay - elapsedMinutes;
+
+  if (remMax < 1) {
+    return "Delayed";
+  }
+
+  if (remMin >= 1) {
+    return `${remMin}-${remMax} mins`;
+  }
+
+  return `${remMax} ${remMax === 1 ? "min" : "mins"}`;
 }
 
 // Colors for the celebratory confetti
@@ -111,9 +142,17 @@ export default function OrderConfirmation({ orderIdProp }: OrderConfirmationProp
   const [copied, setCopied] = useState(false);
   const [showConfetti, setShowConfetti] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNowMs(Date.now());
+    }, 15000);
+    return () => clearInterval(timer);
   }, []);
 
   const parseAndSetOrder = (data: any) => {
@@ -184,11 +223,19 @@ export default function OrderConfirmation({ orderIdProp }: OrderConfirmationProp
       }
     }
 
-    setOrderData({
+    const rawStatus = (rawOrder.status || "PENDING").toUpperCase();
+    const timerStartedAt = rawOrder.deliveryTimerStartedAt || rawOrder.createdAt || new Date().toISOString();
+    const delayMinutes = Number(rawOrder.deliveryDelayMinutes) || 0;
+    const computedEta = computeConfirmationEta(rawStatus, timerStartedAt, delayMinutes, Date.now());
+
+    const nextOrderData: ConfirmedOrderData = {
       orderId: rawOrder.id,
       orderTime: dateStr,
-      status: (rawOrder.status || "PENDING").toUpperCase(),
-      estimatedDelivery: rawOrder.status === "DELIVERED" ? "Delivered" : "25-35 mins",
+      status: rawStatus,
+      estimatedDelivery: computedEta,
+      deliveryTimerStartedAt: timerStartedAt,
+      deliveryDelayMinutes: delayMinutes,
+      createdAt: rawOrder.createdAt,
       deliveryAddress: {
         fullName: rawOrder.user?.name || "Customer",
         phoneNumber: rawOrder.customerPhone || rawOrder.user?.phone || "",
@@ -210,16 +257,23 @@ export default function OrderConfirmation({ orderIdProp }: OrderConfirmationProp
       grandTotal: parsedTaxBreakdown ? parsedTaxBreakdown.grandTotal : finalTotal,
       sellerName: rawOrder.seller?.restaurantName || rawOrder.seller?.businessName,
       deliveryPerson: rawOrder.deliveryPerson,
-    });
+    };
+
+    setOrderData(nextOrderData);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("latestConfirmedOrder", JSON.stringify(nextOrderData));
+      } catch {}
+    }
   };
 
   useEffect(() => {
     let isMounted = true;
 
-    // First check sessionStorage for immediate render
+    // First check sessionStorage and localStorage for immediate render across restarts
     if (typeof window !== "undefined") {
       try {
-        const storedOrder = sessionStorage.getItem("latestConfirmedOrder");
+        const storedOrder = sessionStorage.getItem("latestConfirmedOrder") || localStorage.getItem("latestConfirmedOrder");
         if (storedOrder) {
           const parsed = JSON.parse(storedOrder);
           if (parsed && parsed.orderId) {
@@ -233,7 +287,7 @@ export default function OrderConfirmation({ orderIdProp }: OrderConfirmationProp
 
     const orderIdToFetch = effectiveOrderId || (typeof window !== "undefined" ? (() => {
       try {
-        const s = sessionStorage.getItem("latestConfirmedOrder");
+        const s = sessionStorage.getItem("latestConfirmedOrder") || localStorage.getItem("latestConfirmedOrder");
         return s ? JSON.parse(s)?.orderId : null;
       } catch { return null; }
     })() : null);
@@ -277,7 +331,7 @@ export default function OrderConfirmation({ orderIdProp }: OrderConfirmationProp
     onOrder: (payload) => {
       const orderIdToFetch = effectiveOrderId || (typeof window !== "undefined" ? (() => {
         try {
-          const s = sessionStorage.getItem("latestConfirmedOrder");
+          const s = sessionStorage.getItem("latestConfirmedOrder") || localStorage.getItem("latestConfirmedOrder");
           return s ? JSON.parse(s)?.orderId : null;
         } catch { return null; }
       })() : null);
@@ -383,6 +437,16 @@ export default function OrderConfirmation({ orderIdProp }: OrderConfirmationProp
       (orderData.paymentMethod || "").toUpperCase().includes("CASH ON DELIVERY") ||
       (orderData.paymentMethod || "").toUpperCase().includes("PAY ON DELIVERY"));
 
+  const liveEta = orderData
+    ? computeConfirmationEta(
+        orderData.status,
+        orderData.deliveryTimerStartedAt || orderData.createdAt,
+        orderData.deliveryDelayMinutes,
+        nowMs
+      )
+    : "20-25 mins";
+  const isDelayed = liveEta === "Delayed";
+
   const timelineSteps = isCancelled
     ? [
         {
@@ -444,7 +508,7 @@ export default function OrderConfirmation({ orderIdProp }: OrderConfirmationProp
         {
           id: 5,
           title: "Delivered to Doorstep",
-          time: isDelivered ? "Delivered 🎉" : `Est. ${orderData.estimatedDelivery}`,
+          time: isDelivered ? "Delivered 🎉" : isDelayed ? "Delayed" : `Est. ${liveEta}`,
           desc: isDelivered
             ? `Handover completed at ${orderData.deliveryAddress.streetAddress}.`
             : `Will be delivered to ${orderData.deliveryAddress.streetAddress}.`,
@@ -576,7 +640,7 @@ export default function OrderConfirmation({ orderIdProp }: OrderConfirmationProp
             <div className={styles.metaItem}>
               <Clock size={16} color={isCancelled ? "#DC2626" : "#EA580C"} />
               <span className={styles.metaLabel}>Est. Delivery:</span>
-              <span className={styles.metaValue}>{isCancelled ? "Cancelled" : orderData.estimatedDelivery}</span>
+              <span className={styles.metaValue}>{isCancelled ? "Cancelled" : isDelayed ? "Order Delayed" : liveEta}</span>
             </div>
 
             <div className={styles.metaDivider} />
@@ -613,7 +677,7 @@ export default function OrderConfirmation({ orderIdProp }: OrderConfirmationProp
               ) : (
                 <div className={styles.estimatedBadge}>
                   <Clock size={14} />
-                  <span>{isDelivered ? "Delivered" : `On Time • ${orderData.estimatedDelivery}`}</span>
+                  <span>{isDelivered ? "Delivered" : isDelayed ? "Order Delayed" : `On Time • ${liveEta}`}</span>
                 </div>
               )}
             </div>
