@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { fetchApi } from "@/lib/fetch-api";
 import { useRoomModule } from "@/context/RoomModuleContext";
+import { PageSizeSelector } from "@/components/seller/common/PaginationControls";
 import {
   Search,
   Filter,
@@ -1200,25 +1201,16 @@ export default function SuperadminOverview() {
         {filteredSellers.length > 0 && (
           <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", marginTop: "20px", gap: "12px", fontSize: "0.85rem", color: "#64748B" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span>Show</span>
-              <select
-                value={pageSize}
-                onChange={(e) => setPageSize(Number(e.target.value))}
-                style={{
-                  padding: "4px 8px",
-                  borderRadius: "6px",
-                  border: "1px solid #CBD5E1",
-                  fontSize: "0.82rem",
-                  color: "#0F172A",
-                  backgroundColor: "#FFFFFF",
-                  cursor: "pointer",
+              <PageSizeSelector
+                pageSize={pageSize}
+                onPageSizeChange={(newSize) => {
+                  setPageSize(Number(newSize) || 10);
+                  setCurrentPage(1);
                 }}
-              >
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-              </select>
-              <span>per page (Total {filteredSellers.length} sellers)</span>
+                pageSizeOptions={[10, 25, 50]}
+                label="Per page:"
+              />
+              <span>(Total {filteredSellers.length} sellers)</span>
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
