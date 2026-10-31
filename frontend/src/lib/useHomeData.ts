@@ -59,6 +59,8 @@ export interface DynamicFoodItem {
   distanceText?: string;
   categoryName?: string;
   subCategoryName?: string | null;
+  foodCategory?: { id?: string; name?: string } | null;
+  foodSubCategory?: { id?: string; name?: string } | null;
   stockQuantity?: number;
   maxStock?: number;
   rating?: number;
@@ -382,18 +384,39 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           (typeof window !== "undefined" ? localStorage.getItem("ENABLE_ROOM_MODULE") === "true" : false)
         );
 
-        // 1. Process Categories (Deduplicated)
+        // 1. Process Categories (Deduplicated - Food & Sub Food Categories ONLY, NO Business Categories)
+        const businessCategoryNames = new Set<string>([
+          "homely food", "homely", "home food", "mess", "daily mess", "student mess",
+          "cafe", "south indian", "lunch(homely food)", "lunch (homely food)",
+          "lunch", "dinner", "food", "rooms", "room", "rent property", "property",
+          "furniture", "bakery"
+        ]);
+        if (categoriesRes?.categories && Array.isArray(categoriesRes.categories)) {
+          categoriesRes.categories.forEach((bc: any) => {
+            if (bc?.name) businessCategoryNames.add(String(bc.name).toLowerCase().trim());
+          });
+        }
+
+        const isBusinessCat = (name?: string | null): boolean => {
+          if (!name) return true;
+          const lower = name.toLowerCase().trim();
+          const clean = lower.replace(/[^a-z0-9]/g, "");
+          return (
+            businessCategoryNames.has(lower) ||
+            businessCategoryNames.has(clean) ||
+            clean === "food" ||
+            clean === "rooms" ||
+            clean === "room" ||
+            clean === "mess" ||
+            clean === "bakery" ||
+            clean.includes("room") ||
+            clean.includes("property") ||
+            lower.includes("homely food") ||
+            lower.includes("lunch(homely")
+          );
+        };
+
         const categoryMap = new Map<string, DynamicCategory>();
-        // Generic "Food" category commented out from category carousel
-        /*
-        categoryMap.set("food", {
-          id: "food",
-          name: "Food",
-          image: "/images/categories/cat-food.png",
-          emoji: "🍔",
-          route: "/food-explore",
-        });
-        */
 
         const processCatEntry = (fc: any) => {
           if (!fc || !fc.name) return;
@@ -402,13 +425,10 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
           const cleanKey = lower.replace(/[\s\-_]+/g, "");
           if (!lower) return;
 
-          // Exclude generic "food" from category carousel
-          if (lower === "food") return;
+          // Strictly exclude business categories or non-food categories
+          if (isBusinessCat(rawName)) return;
 
-          // Exclude business category "mess" (mess is a kitchen business category, not a food category)
-          if (lower === "mess" || cleanKey === "mess") return;
-
-          const displayName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+          const displayName = lower === "dalrice" ? "Dal Rice" : (rawName.charAt(0).toUpperCase() + rawName.slice(1));
           const isMismatchedImg = fc.imageUrl && String(fc.imageUrl).includes("zwy6klrcbxepkcjr1big");
           const customFallback = getCustomCategoryIcon(cleanKey, rawName);
 
@@ -418,18 +438,6 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
               : fc.image && !isMismatchedImg
               ? String(fc.image).trim()
               : null;
-
-          // Ignore non-food room/property categories for shortcut keys
-          if (
-            lower === "rooms" ||
-            lower === "room" ||
-            cleanKey.includes("room") ||
-            lower === "rent property" ||
-            lower === "rentproperty" ||
-            lower === "property"
-          ) {
-            return;
-          }
 
           // Dynamic image takes priority over static hardcoded fallback
           const mappedImage =
@@ -463,40 +471,43 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
 
         const explorePayload = exploreRes?.data || exploreRes;
 
-        if (explorePayload?.foodCategories && Array.isArray(explorePayload.foodCategories) && explorePayload.foodCategories.length > 0) {
-          explorePayload.foodCategories.forEach(processCatEntry);
-        }
-        if (categoriesRes?.foodCategories && Array.isArray(categoriesRes.foodCategories) && categoriesRes.foodCategories.length > 0) {
-          categoriesRes.foodCategories.forEach(processCatEntry);
-        }
-        if (categoriesRes?.categories && Array.isArray(categoriesRes.categories) && categoriesRes.categories.length > 0) {
-          categoriesRes.categories.forEach(processCatEntry);
-        } else if (Array.isArray(categoriesRes) && categoriesRes.length > 0) {
-          categoriesRes.forEach(processCatEntry);
+        // Process structured Food Categories & Subcategories from DB ONLY (NO business categories)
+        const rawFcs = (categoriesRes?.foodCategories && categoriesRes.foodCategories.length > 0)
+          ? categoriesRes.foodCategories
+          : (explorePayload?.foodCategories || []);
+
+        if (Array.isArray(rawFcs)) {
+          rawFcs.forEach((fc: any) => {
+            if (!fc || !fc.name || isBusinessCat(fc.name)) return;
+            processCatEntry(fc);
+            if (Array.isArray(fc.subCategories)) {
+              fc.subCategories.forEach((sc: any) => {
+                if (sc && sc.name && !isBusinessCat(sc.name)) {
+                  processCatEntry(sc);
+                }
+              });
+            }
+          });
         }
 
-        // Process structured Food Categories & Subcategories from DB
-        const rawFcs = categoriesRes?.foodCategories || explorePayload?.foodCategories || [];
         const processedFcs: HomeFoodCategory[] = [];
         if (Array.isArray(rawFcs)) {
           rawFcs.forEach((fc: any) => {
-            if (!fc || !fc.name) return;
-            const nameLower = fc.name.toLowerCase().trim();
-            if (nameLower === "food" || nameLower === "mess") return;
+            if (!fc || !fc.name || isBusinessCat(fc.name)) return;
 
             const subs: HomeFoodSubCategory[] = Array.isArray(fc.subCategories)
               ? fc.subCategories
-                  .filter((s: any) => s && s.name && s.name.toLowerCase().trim() !== "mess" && s.name.toLowerCase().trim() !== "food")
+                  .filter((s: any) => s && s.name && !isBusinessCat(s.name))
                   .map((s: any) => ({
                     id: s.id,
-                    name: s.name.trim().charAt(0).toUpperCase() + s.name.trim().slice(1),
+                    name: s.name.trim().split(" ").map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" "),
                     imageUrl: s.imageUrl || null,
                   }))
               : [];
 
             processedFcs.push({
               id: fc.id,
-              name: fc.name.trim().charAt(0).toUpperCase() + fc.name.trim().slice(1),
+              name: fc.name.toLowerCase().trim() === "dalrice" ? "Dal Rice" : (fc.name.trim().charAt(0).toUpperCase() + fc.name.trim().slice(1)),
               imageUrl: fc.imageUrl || null,
               subCategories: subs,
             });
@@ -504,11 +515,16 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
         }
         setFoodCategories(processedFcs);
 
-        // Ensure rooms, generic food, mess, or non-food categories are not included
+        // Ensure rooms, generic food, mess, bakery, or business categories are never present
+        businessCategoryNames.forEach((bc) => {
+          categoryMap.delete(bc);
+          categoryMap.delete(bc.replace(/[^a-z0-9]/g, ""));
+        });
         categoryMap.delete("rooms");
         categoryMap.delete("room");
         categoryMap.delete("food");
         categoryMap.delete("mess");
+        categoryMap.delete("bakery");
 
         const dbCategories: DynamicCategory[] = Array.from(categoryMap.values());
         setCategories(dbCategories);
@@ -549,8 +565,39 @@ export function useHomeData(options?: HomeDataFilterOptions): HomeDataState {
               sellerLatitude: resolvedLat,
               sellerLongitude: resolvedLng,
               sellerIsLocationPinned: item.sellerIsLocationPinned ?? false,
-              categoryName: item.foodCategory?.name || item.category?.name || 'Food',
-              subCategoryName: item.foodSubCategory?.name || item.subCategory?.name || null,
+              categoryName: (() => {
+                const rawFoodCat = (item.foodCategory?.name || "").trim();
+                const rawBizCat = (item.category?.name || "").trim();
+                const validBizCat = rawBizCat && !isBusinessCat(rawBizCat) ? rawBizCat : "";
+                const inferCat = (dishName?: string | null): string => {
+                  if (!dishName) return "Food";
+                  const lower = dishName.toLowerCase();
+                  if (lower.includes("burger")) return "Burger";
+                  if (lower.includes("pizza")) return "Pizza";
+                  if (lower.includes("biryani")) return "Biryani";
+                  if (lower.includes("dosa")) return "Dosa";
+                  if (lower.includes("idli")) return "Idli";
+                  if (lower.includes("pohe") || lower.includes("poha")) return "Pohe";
+                  if (lower.includes("upma")) return "Upma";
+                  if (lower.includes("sabudana")) return "Sabudana";
+                  if (lower.includes("shira") || lower.includes("sheera")) return "Shira";
+                  if (lower.includes("cake") || lower.includes("pastry") || lower.includes("cheesecake")) return "Cake";
+                  if (lower.includes("shake") || lower.includes("smoothie") || lower.includes("coffee") || lower.includes("drink") || lower.includes("beverage")) return "Shake";
+                  if (lower.includes("thali") || lower.includes("meal") || lower.includes("rice") || lower.includes("dal") || lower.includes("roti") || lower.includes("chapati") || lower.includes("paneer")) return "Meal";
+                  if (lower.includes("waffle") || lower.includes("dessert") || lower.includes("ice cream") || lower.includes("sweet")) return "Desserts";
+                  if (lower.includes("sandwich") || lower.includes("wrap") || lower.includes("roll")) return "Sandwich";
+                  if (lower.includes("snack") || lower.includes("fries") || lower.includes("samosa") || lower.includes("kachori")) return "Snacks";
+                  if (lower.includes("noodle") || lower.includes("manchurian") || lower.includes("fried rice") || lower.includes("chinese")) return "Chinese";
+                  return "Food";
+                };
+                return rawFoodCat || validBizCat || inferCat(item.name);
+              })(),
+              subCategoryName: (() => {
+                const rawSub = (item.foodSubCategory?.name || item.subCategory?.name || "").trim();
+                return rawSub && !isBusinessCat(rawSub) ? rawSub : null;
+              })(),
+              foodCategory: item.foodCategory ? { id: item.foodCategory.id, name: item.foodCategory.name } : null,
+              foodSubCategory: item.foodSubCategory ? { id: item.foodSubCategory.id, name: item.foodSubCategory.name } : null,
               rating: typeof item.rating === "number" ? item.rating : (typeof item.averageRating === "number" ? item.averageRating : (Array.isArray(item.itemRatings) && item.itemRatings.length > 0 ? item.itemRatings.reduce((sum: number, r: any) => sum + (Number(r?.rating) || 0), 0) / item.itemRatings.length : 0)),
               totalRatings: typeof item.totalRatings === "number" ? item.totalRatings : (Array.isArray(item.itemRatings) ? item.itemRatings.length : 0),
               reviewsCount: typeof item.reviewsCount === "number" ? item.reviewsCount : (typeof item.totalRatings === "number" ? item.totalRatings : 0),
