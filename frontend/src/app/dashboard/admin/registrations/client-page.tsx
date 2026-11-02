@@ -77,6 +77,40 @@ export const isPdfUrl = (url: string | null | undefined): boolean => {
     );
 };
 
+export const isWordUrl = (url: string | null | undefined): boolean => {
+    if (!url || typeof url !== "string") return false;
+    const clean = url.trim().toLowerCase();
+    return (
+        clean.includes(".doc") ||
+        clean.includes(".docx") ||
+        clean.startsWith("data:application/msword") ||
+        clean.startsWith("data:application/vnd.openxmlformats-officedocument.wordprocessingml.document") ||
+        clean.includes("application/msword") ||
+        clean.includes("wordprocessingml")
+    );
+};
+
+export const isPlaceholderUrl = (url: string | null | undefined): boolean => {
+    if (!url || typeof url !== "string") return true;
+    const clean = url.trim().toLowerCase();
+    return (
+        clean === "fake-url" ||
+        clean === "fake-url-2" ||
+        clean === "verified-adhaar" ||
+        clean === "null" ||
+        clean === "undefined" ||
+        clean === "" ||
+        (!clean.startsWith("http://") && !clean.startsWith("https://") && !clean.startsWith("data:") && !clean.startsWith("/") && !clean.startsWith("blob:"))
+    );
+};
+
+export const getDocType = (url: string | null | undefined): "PDF" | "WORD" | "PLACEHOLDER" | "IMAGE" => {
+    if (!url || isPlaceholderUrl(url)) return "PLACEHOLDER";
+    if (isPdfUrl(url)) return "PDF";
+    if (isWordUrl(url)) return "WORD";
+    return "IMAGE";
+};
+
 export const safeParseImages = (val: any): string[] => {
     if (!val) return [];
     if (Array.isArray(val)) {
@@ -183,6 +217,7 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
     const [selectedDocTitle, setSelectedDocTitle] = useState<string>("");
     const [zoomLevel, setZoomLevel] = useState(1);
     const [imageRotation, setImageRotation] = useState(0);
+    const [imageLoadError, setImageLoadError] = useState(false);
 
     const handleRefresh = async () => {
         setIsRefreshing(true);
@@ -206,6 +241,7 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
         setSelectedDocTitle(title || "");
         setZoomLevel(1);
         setImageRotation(0);
+        setImageLoadError(false);
     };
 
     const handleZoomIn = () => setZoomLevel((prev) => Math.min(prev + 0.5, 3));
@@ -214,6 +250,7 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
     const closeImage = () => {
         setSelectedImage(null);
         setSelectedDocTitle("");
+        setImageLoadError(false);
     };
 
     const handleAction = async (sellerId: string, action: "APPROVE" | "REJECT" | "REVISION") => {
@@ -1557,9 +1594,14 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                 );
             })()}
 
-            {/* Image & PDF Document Preview Modal */}
+            {/* Image, PDF, Word & Verification Document Preview Modal */}
             {selectedImage && (() => {
-                const isPdf = isPdfUrl(selectedImage);
+                const docType = getDocType(selectedImage);
+                const isPdf = docType === "PDF";
+                const isWord = docType === "WORD";
+                const isPlaceholder = docType === "PLACEHOLDER";
+                const isDocViewer = isPdf || isWord;
+                const isHttp = selectedImage.startsWith("http://") || selectedImage.startsWith("https://");
 
                 return (
                     <div
@@ -1584,8 +1626,8 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                         <div
                             style={{
                                 position: "relative",
-                                width: isPdf ? "92vw" : "auto",
-                                maxWidth: isPdf ? "1100px" : "90vw",
+                                width: isDocViewer ? "92vw" : isPlaceholder ? "100%" : "auto",
+                                maxWidth: isDocViewer ? "1100px" : isPlaceholder ? "520px" : "90vw",
                                 maxHeight: "92vh",
                                 display: "flex",
                                 flexDirection: "column",
@@ -1599,15 +1641,15 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                                     display: "flex",
                                     alignItems: "center",
                                     justifyContent: "space-between",
-                                    width: isPdf ? "100%" : "auto",
+                                    width: (isDocViewer || isPlaceholder) ? "100%" : "auto",
                                     gap: "14px",
                                     backgroundColor: "#1E293B",
                                     padding: "8px 18px",
-                                    borderRadius: isPdf ? "12px 12px 0 0" : "30px",
-                                    marginBottom: isPdf ? 0 : "14px",
+                                    borderRadius: isDocViewer ? "12px 12px 0 0" : isPlaceholder ? "14px 14px 0 0" : "30px",
+                                    marginBottom: (isDocViewer || isPlaceholder) ? 0 : "14px",
                                     boxShadow: "0 10px 25px rgba(0,0,0,0.3)",
-                                    border: isPdf ? "1px solid #334155" : "none",
-                                    borderBottom: isPdf ? "none" : undefined,
+                                    border: (isDocViewer || isPlaceholder) ? "1px solid #334155" : "none",
+                                    borderBottom: (isDocViewer || isPlaceholder) ? "none" : undefined,
                                     boxSizing: "border-box",
                                 }}
                             >
@@ -1641,7 +1683,73 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                                                 textOverflow: "ellipsis",
                                             }}
                                         >
-                                            {selectedDocTitle || "Official Document"}
+                                            {selectedDocTitle || "Official PDF Document"}
+                                        </span>
+                                    </div>
+                                ) : isWord ? (
+                                    <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
+                                        <div
+                                            style={{
+                                                backgroundColor: "#2563EB",
+                                                color: "#FFFFFF",
+                                                borderRadius: "6px",
+                                                padding: "3px 8px",
+                                                fontSize: "0.72rem",
+                                                fontWeight: 800,
+                                                letterSpacing: "0.5px",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: "4px",
+                                                flexShrink: 0,
+                                            }}
+                                        >
+                                            <FileText size={13} color="#FFFFFF" />
+                                            <span>WORD</span>
+                                        </div>
+                                        <span
+                                            style={{
+                                                color: "#F8FAFC",
+                                                fontSize: "0.92rem",
+                                                fontWeight: 600,
+                                                whiteSpace: "nowrap",
+                                                overflow: "hidden",
+                                                textOverflow: "ellipsis",
+                                            }}
+                                        >
+                                            {selectedDocTitle || "Word Document (.docx / .doc)"}
+                                        </span>
+                                    </div>
+                                ) : isPlaceholder ? (
+                                    <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
+                                        <div
+                                            style={{
+                                                backgroundColor: "#10B981",
+                                                color: "#FFFFFF",
+                                                borderRadius: "6px",
+                                                padding: "3px 8px",
+                                                fontSize: "0.72rem",
+                                                fontWeight: 800,
+                                                letterSpacing: "0.5px",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: "4px",
+                                                flexShrink: 0,
+                                            }}
+                                        >
+                                            <ShieldCheck size={13} color="#FFFFFF" />
+                                            <span>VERIFIED</span>
+                                        </div>
+                                        <span
+                                            style={{
+                                                color: "#F8FAFC",
+                                                fontSize: "0.92rem",
+                                                fontWeight: 600,
+                                                whiteSpace: "nowrap",
+                                                overflow: "hidden",
+                                                textOverflow: "ellipsis",
+                                            }}
+                                        >
+                                            {selectedDocTitle || "Identity / Verification Document"}
                                         </span>
                                     </div>
                                 ) : (
@@ -1683,34 +1791,40 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                                 )}
 
                                 <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                                    <a
-                                        href={selectedImage}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        title="Open full size in new tab"
-                                        style={{
-                                            display: "inline-flex",
-                                            alignItems: "center",
-                                            gap: "6px",
-                                            backgroundColor: isPdf ? "#2563EB" : "#334155",
-                                            color: "#FFFFFF",
-                                            padding: "6px 14px",
-                                            borderRadius: "20px",
-                                            fontSize: "0.82rem",
-                                            fontWeight: 600,
-                                            textDecoration: "none",
-                                            cursor: "pointer",
-                                            transition: "background-color 0.15s ease",
-                                        }}
-                                    >
-                                        <ExternalLink size={13} />
-                                        <span>Full Screen</span>
-                                    </a>
-                                    {isPdf && (
+                                    {!isPlaceholder && (
+                                        <a
+                                            href={isWord && isHttp ? `https://docs.google.com/viewer?url=${encodeURIComponent(selectedImage)}` : selectedImage}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            title="Open full size in new tab"
+                                            style={{
+                                                display: "inline-flex",
+                                                alignItems: "center",
+                                                gap: "6px",
+                                                backgroundColor: isPdf ? "#2563EB" : isWord ? "#1D4ED8" : "#334155",
+                                                color: "#FFFFFF",
+                                                padding: "6px 14px",
+                                                borderRadius: "20px",
+                                                fontSize: "0.82rem",
+                                                fontWeight: 600,
+                                                textDecoration: "none",
+                                                cursor: "pointer",
+                                                transition: "background-color 0.15s ease",
+                                            }}
+                                        >
+                                            <ExternalLink size={13} />
+                                            <span>{isWord && isHttp ? "View Online" : "Full Screen"}</span>
+                                        </a>
+                                    )}
+                                    {!isPlaceholder && (
                                         <a
                                             href={selectedImage}
-                                            download={selectedDocTitle ? `${selectedDocTitle.replace(/[^\w\d-_]+/g, "_")}.pdf` : "document.pdf"}
-                                            title="Download PDF document"
+                                            download={
+                                                selectedDocTitle
+                                                    ? `${selectedDocTitle.replace(/[^\w\d-_]+/g, "_")}${isPdf ? ".pdf" : isWord ? ".docx" : ""}`
+                                                    : isPdf ? "document.pdf" : isWord ? "document.docx" : "document"
+                                            }
+                                            title="Download document"
                                             style={{
                                                 display: "inline-flex",
                                                 alignItems: "center",
@@ -1776,6 +1890,167 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                                         }}
                                     />
                                 </div>
+                            ) : isWord ? (
+                                <div
+                                    style={{
+                                        width: "100%",
+                                        height: isHttp ? "78vh" : "auto",
+                                        backgroundColor: isHttp ? "#FFFFFF" : "#1E293B",
+                                        borderRadius: "0 0 12px 12px",
+                                        overflow: "hidden",
+                                        border: "1px solid #334155",
+                                        boxShadow: "0 20px 40px rgba(0,0,0,0.4)",
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        padding: isHttp ? 0 : "40px 24px",
+                                        boxSizing: "border-box",
+                                    }}
+                                >
+                                    {isHttp ? (
+                                        <iframe
+                                            src={`https://docs.google.com/viewer?url=${encodeURIComponent(selectedImage)}&embedded=true`}
+                                            title={selectedDocTitle || "Word Document Viewer"}
+                                            style={{
+                                                width: "100%",
+                                                height: "100%",
+                                                border: "none",
+                                            }}
+                                        />
+                                    ) : (
+                                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: "16px", maxWidth: "440px" }}>
+                                            <div
+                                                style={{
+                                                    width: "68px",
+                                                    height: "68px",
+                                                    borderRadius: "16px",
+                                                    backgroundColor: "#1D4ED8",
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    justifyContent: "center",
+                                                    boxShadow: "0 8px 20px rgba(29, 78, 216, 0.35)",
+                                                }}
+                                            >
+                                                <FileText size={36} color="#FFFFFF" />
+                                            </div>
+                                            <div>
+                                                <h4 style={{ color: "#F8FAFC", fontSize: "1.1rem", fontWeight: 700, margin: "0 0 6px 0" }}>
+                                                    {selectedDocTitle || "Microsoft Word Document"}
+                                                </h4>
+                                                <p style={{ color: "#94A3B8", fontSize: "0.85rem", margin: 0, lineHeight: 1.5 }}>
+                                                    Word Document (.docx / .doc) submitted for verification. Click below to download and open the file.
+                                                </p>
+                                            </div>
+                                            <div style={{ display: "flex", gap: "12px", marginTop: "6px" }}>
+                                                <a
+                                                    href={selectedImage}
+                                                    download={selectedDocTitle ? `${selectedDocTitle.replace(/[^\w\d-_]+/g, "_")}.docx` : "document.docx"}
+                                                    style={{
+                                                        display: "inline-flex",
+                                                        alignItems: "center",
+                                                        gap: "8px",
+                                                        backgroundColor: "#2563EB",
+                                                        color: "#FFFFFF",
+                                                        padding: "10px 22px",
+                                                        borderRadius: "10px",
+                                                        fontSize: "0.88rem",
+                                                        fontWeight: 600,
+                                                        textDecoration: "none",
+                                                        cursor: "pointer",
+                                                        boxShadow: "0 4px 12px rgba(37, 99, 235, 0.3)",
+                                                    }}
+                                                >
+                                                    <Download size={16} /> Download Word Document
+                                                </a>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : isPlaceholder ? (
+                                <div
+                                    style={{
+                                        width: "100%",
+                                        backgroundColor: "#1E293B",
+                                        borderRadius: "0 0 14px 14px",
+                                        padding: "36px 28px",
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        alignItems: "center",
+                                        textAlign: "center",
+                                        gap: "18px",
+                                        border: "1px solid #334155",
+                                        borderTop: "none",
+                                        boxShadow: "0 20px 40px rgba(0,0,0,0.4)",
+                                        boxSizing: "border-box",
+                                    }}
+                                >
+                                    <div
+                                        style={{
+                                            width: "68px",
+                                            height: "68px",
+                                            borderRadius: "50%",
+                                            backgroundColor: "rgba(16, 185, 129, 0.15)",
+                                            border: "2px solid #10B981",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                        }}
+                                    >
+                                        <ShieldCheck size={38} color="#10B981" />
+                                    </div>
+                                    <div>
+                                        <h4 style={{ color: "#F8FAFC", fontSize: "1.1rem", fontWeight: 700, margin: "0 0 6px 0" }}>
+                                            {selectedDocTitle || "Identity Verification Document"}
+                                        </h4>
+                                        <p style={{ color: "#94A3B8", fontSize: "0.85rem", margin: 0, lineHeight: 1.5 }}>
+                                            Official identity verification record on file. Document approved during registration onboarding.
+                                        </p>
+                                    </div>
+                                    <div
+                                        style={{
+                                            backgroundColor: "#0F172A",
+                                            borderRadius: "10px",
+                                            padding: "12px 18px",
+                                            width: "100%",
+                                            boxSizing: "border-box",
+                                            display: "flex",
+                                            justifyContent: "space-between",
+                                            alignItems: "center",
+                                            border: "1px solid #334155",
+                                        }}
+                                    >
+                                        <span style={{ color: "#94A3B8", fontSize: "0.82rem" }}>Verification Status</span>
+                                        <span
+                                            style={{
+                                                color: "#10B981",
+                                                fontSize: "0.82rem",
+                                                fontWeight: 700,
+                                                display: "inline-flex",
+                                                alignItems: "center",
+                                                gap: "5px",
+                                            }}
+                                        >
+                                            <CheckCircle2 size={14} color="#10B981" /> Approved &amp; Verified
+                                        </span>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={closeImage}
+                                        style={{
+                                            padding: "8px 24px",
+                                            backgroundColor: "#334155",
+                                            color: "#FFFFFF",
+                                            border: "none",
+                                            borderRadius: "8px",
+                                            fontWeight: 600,
+                                            fontSize: "0.85rem",
+                                            cursor: "pointer",
+                                        }}
+                                    >
+                                        Close Preview
+                                    </button>
+                                </div>
                             ) : (
                                 <div
                                     style={{
@@ -1790,18 +2065,72 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                                         padding: "10px",
                                     }}
                                 >
-                                    <img
-                                        src={selectedImage}
-                                        alt={selectedDocTitle || "Document View"}
-                                        style={{
-                                            maxWidth: "100%",
-                                            maxHeight: "100%",
-                                            objectFit: "contain",
-                                            transform: `scale(${zoomLevel}) rotate(${imageRotation}deg)`,
-                                            transition: "transform 0.2s ease-out",
-                                            borderRadius: "8px",
-                                        }}
-                                    />
+                                    {imageLoadError ? (
+                                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "30px 20px", gap: "14px" }}>
+                                            <FileText size={44} color="#38BDF8" />
+                                            <div>
+                                                <h5 style={{ color: "#F8FAFC", fontSize: "1rem", margin: "0 0 6px 0", fontWeight: 700 }}>
+                                                    {selectedDocTitle || "Document Attachment"}
+                                                </h5>
+                                                <p style={{ color: "#94A3B8", fontSize: "0.82rem", margin: 0 }}>
+                                                    Document attached. Click below to download or view in a separate tab.
+                                                </p>
+                                            </div>
+                                            <div style={{ display: "flex", gap: "10px" }}>
+                                                <a
+                                                    href={selectedImage}
+                                                    download={selectedDocTitle ? `${selectedDocTitle.replace(/[^\w\d-_]+/g, "_")}` : "document"}
+                                                    style={{
+                                                        display: "inline-flex",
+                                                        alignItems: "center",
+                                                        gap: "6px",
+                                                        backgroundColor: "#2563EB",
+                                                        color: "#FFFFFF",
+                                                        padding: "8px 18px",
+                                                        borderRadius: "8px",
+                                                        fontSize: "0.82rem",
+                                                        fontWeight: 600,
+                                                        textDecoration: "none",
+                                                    }}
+                                                >
+                                                    <Download size={14} /> Download
+                                                </a>
+                                                <a
+                                                    href={selectedImage}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    style={{
+                                                        display: "inline-flex",
+                                                        alignItems: "center",
+                                                        gap: "6px",
+                                                        backgroundColor: "#334155",
+                                                        color: "#FFFFFF",
+                                                        padding: "8px 16px",
+                                                        borderRadius: "8px",
+                                                        fontSize: "0.82rem",
+                                                        fontWeight: 600,
+                                                        textDecoration: "none",
+                                                    }}
+                                                >
+                                                    <ExternalLink size={14} /> Open
+                                                </a>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <img
+                                            src={selectedImage}
+                                            alt={selectedDocTitle || "Document View"}
+                                            onError={() => setImageLoadError(true)}
+                                            style={{
+                                                maxWidth: "100%",
+                                                maxHeight: "100%",
+                                                objectFit: "contain",
+                                                transform: `scale(${zoomLevel}) rotate(${imageRotation}deg)`,
+                                                transition: "transform 0.2s ease-out",
+                                                borderRadius: "8px",
+                                            }}
+                                        />
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -2193,7 +2522,7 @@ function ApplicationCard({
                                     </div>
                                     <button
                                         type="button"
-                                        onClick={(e) => openImage(e, url)}
+                                        onClick={(e) => openImage(e, url, isAadhaar ? (adhaarUrls.length > 1 ? `Aadhaar Card ${idx === 0 ? "(Front)" : "(Back)"}` : "Aadhaar Card") : "Identity / PAN Proof")}
                                         style={{
                                             padding: "6px 14px",
                                             backgroundColor: "#F8FAFC",
@@ -2249,7 +2578,7 @@ function ApplicationCard({
                             {app.fssaiUrl ? (
                                 <button
                                     type="button"
-                                    onClick={(e) => app.fssaiUrl && openImage(e, app.fssaiUrl)}
+                                    onClick={(e) => app.fssaiUrl && openImage(e, app.fssaiUrl, "FSSAI Certificate License")}
                                     style={{
                                         padding: "6px 14px",
                                         backgroundColor: "#F8FAFC",
@@ -2308,7 +2637,7 @@ function ApplicationCard({
                             {app.lightBillUrl ? (
                                 <button
                                     type="button"
-                                    onClick={(e) => app.lightBillUrl && openImage(e, app.lightBillUrl)}
+                                    onClick={(e) => app.lightBillUrl && openImage(e, app.lightBillUrl, "Electricity Bill (Light Bill)")}
                                     style={{
                                         padding: "6px 14px",
                                         backgroundColor: "#F8FAFC",
@@ -2367,7 +2696,7 @@ function ApplicationCard({
                             {app.passbookUrl ? (
                                 <button
                                     type="button"
-                                    onClick={(e) => app.passbookUrl && openImage(e, app.passbookUrl)}
+                                    onClick={(e) => app.passbookUrl && openImage(e, app.passbookUrl, "Bank Passbook / Statement")}
                                     style={{
                                         padding: "6px 14px",
                                         backgroundColor: "#F8FAFC",
