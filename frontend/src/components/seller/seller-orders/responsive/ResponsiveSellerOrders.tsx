@@ -95,6 +95,12 @@ export function normalizeStatus(
   return "Pending";
 }
 
+export function formatDisplayOrderId(idOrNum?: string): string {
+  if (!idOrNum) return "";
+  const cleaned = idOrNum.replace(/^#/, "").trim();
+  return cleaned.length > 8 ? cleaned.slice(0, 8) : cleaned;
+}
+
 import { useSellerProfile, isGenericFallbackName } from "@/hooks/useSellerProfile";
 import { useSellerNotifications } from "@/hooks/useSellerNotifications";
 
@@ -809,10 +815,12 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
                       className={styles.orderCard}
                       onClick={() => handleCardClick(order)}
                     >
-                      {/* Top Meta Line: #NCR-XXXX • ⏱️ 04:32 > */}
+                      {/* Top Meta Line: 9035ca86 • 05:51 pm > */}
                       <div className={styles.cardTopRow}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          <span className={styles.orderMetaText}>{order.orderNumber}</span>
+                        <div className={styles.cardMetaLeft}>
+                          <span className={styles.orderMetaText}>
+                            {formatDisplayOrderId(order.orderNumber || order.id)}
+                          </span>
                           {effStatus === "Pending" ? (
                             (() => {
                               const sec = getRemainingSeconds(order.createdAt, now);
@@ -827,10 +835,18 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
                                   <Clock size={12} style={{ display: "inline", verticalAlign: "middle", marginRight: "3px" }} />
                                   {mm}:{ss}
                                 </span>
-                              ) : null;
+                              ) : (
+                                <>
+                                  <span className={styles.orderMetaDot}>•</span>
+                                  <span className={styles.orderMetaText}>{order.timeAgo}</span>
+                                </>
+                              );
                             })()
                           ) : (
-                            <span className={styles.orderMetaText}>• {order.timeAgo}</span>
+                            <>
+                              <span className={styles.orderMetaDot}>•</span>
+                              <span className={styles.orderMetaText}>{order.timeAgo}</span>
+                            </>
                           )}
                         </div>
                         <ChevronRight size={18} className={styles.chevronIcon} />
