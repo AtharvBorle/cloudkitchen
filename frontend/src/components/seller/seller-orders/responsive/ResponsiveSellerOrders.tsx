@@ -880,10 +880,14 @@ export const ResponsiveSellerOrders: React.FC<ResponsiveSellerOrdersProps> = ({
                               (Boolean(order.cancellationReason) && /cancelled by (customer|user|you)/i.test(order.cancellationReason || ""));
                             return (
                               <div className={styles.cancelledStat}>
-                                <span className={styles.statDotRed} />
-                                <span>{isUserCancelled ? "Cancelled by User" : "Cancelled"}</span>
+                                <div className={styles.cancelledStatusBadge}>
+                                  <span className={styles.statDotRed} />
+                                  <span className={styles.cancelledStatusLabel}>
+                                    {isUserCancelled ? "Cancelled by User" : "Cancelled"}
+                                  </span>
+                                </div>
                                 {isUserCancelled && order.cancellationReason && (
-                                  <span style={{ marginLeft: "6px", fontSize: "0.74rem", color: "#B91C1C", fontWeight: 500 }}>
+                                  <span className={styles.cancelledReasonText}>
                                     ({order.cancellationReason})
                                   </span>
                                 )}
