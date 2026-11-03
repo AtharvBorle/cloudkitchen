@@ -536,6 +536,7 @@ export default function MyOrdersView() {
   const { data: session, status: authStatus } = useSession();
   const { cartItems, addToCart, addMultipleToCart } = useCart();
   const hasTriggeredReorderRef = useRef<string | null>(null);
+  const handledInitialOrderIdRef = useRef<string | null>(null);
 
   const [modalState, setModalState] = useState<{
     isOpen: boolean;
@@ -961,6 +962,65 @@ export default function MyOrdersView() {
     }, 50);
   };
 
+  const handleFoodFilterChange = (filter: FoodFilterType) => {
+    setFoodFilter(filter);
+    if (typeof window !== "undefined") {
+      try {
+        const url = new URL(window.location.href);
+        if (url.searchParams.has("orderId")) {
+          url.searchParams.delete("orderId");
+          window.history.replaceState(null, "", url.toString());
+        }
+      } catch {
+        // ignore
+      }
+      if (window.innerWidth <= 960) {
+        setIsSidebarOpen(false);
+      }
+    }
+  };
+
+  const handleRoomFilterChange = (filter: RoomFilterType) => {
+    setRoomFilter(filter);
+    if (typeof window !== "undefined") {
+      try {
+        const url = new URL(window.location.href);
+        if (url.searchParams.has("bookingId")) {
+          url.searchParams.delete("bookingId");
+          window.history.replaceState(null, "", url.toString());
+        }
+      } catch {
+        // ignore
+      }
+      if (window.innerWidth <= 960) {
+        setIsSidebarOpen(false);
+      }
+    }
+  };
+
+  const handleCloseSidebar = () => {
+    setIsSidebarOpen(false);
+    if (typeof window !== "undefined") {
+      try {
+        const url = new URL(window.location.href);
+        let changed = false;
+        if (url.searchParams.has("orderId")) {
+          url.searchParams.delete("orderId");
+          changed = true;
+        }
+        if (url.searchParams.has("bookingId")) {
+          url.searchParams.delete("bookingId");
+          changed = true;
+        }
+        if (changed) {
+          window.history.replaceState(null, "", url.toString());
+        }
+      } catch {
+        // ignore
+      }
+    }
+  };
+
   const handleReorder = async (order: OrderItemData) => {
     setPendingOrderForReorder(order);
     setIsReorderValidating(true);
@@ -1153,6 +1213,8 @@ export default function MyOrdersView() {
   useEffect(() => {
     const queryOrderId = searchParams?.get("orderId");
     if (!queryOrderId || orders.length === 0) return;
+    if (handledInitialOrderIdRef.current === queryOrderId) return;
+    handledInitialOrderIdRef.current = queryOrderId;
 
     const matched = findMatchingOrder(orders, queryOrderId);
 
@@ -1162,15 +1224,18 @@ export default function MyOrdersView() {
       setIsSidebarOpen(true);
 
       // Adjust food filter if current filter hides the selected order
-      if (foodFilter !== "ALL") {
-        if (
-          (foodFilter === "ONGOING" && matched.status !== "ONGOING") ||
-          (foodFilter === "COMPLETED" && matched.status !== "DELIVERED") ||
-          (foodFilter === "CANCELLED" && matched.status !== "CANCELLED")
-        ) {
-          setFoodFilter("ALL");
+      setFoodFilter((currFilter) => {
+        if (currFilter !== "ALL") {
+          if (
+            (currFilter === "ONGOING" && matched.status !== "ONGOING") ||
+            (currFilter === "COMPLETED" && matched.status !== "DELIVERED") ||
+            (currFilter === "CANCELLED" && matched.status !== "CANCELLED")
+          ) {
+            return "ALL";
+          }
         }
-      }
+        return currFilter;
+      });
 
       // Ensure the pagination page containing this order is active
       const idx = orders.findIndex((o) => o.id === matched.id);
@@ -1196,7 +1261,7 @@ export default function MyOrdersView() {
         handleReorder(matched);
       }
     }
-  }, [searchParams, orders, foodFilter]);
+  }, [searchParams, orders]);
 
   // Rating / Review Modal State
   const [ratingModalOrder, setRatingModalOrder] = useState<OrderItemData | null>(null);
@@ -1479,6 +1544,7 @@ export default function MyOrdersView() {
                   onClick={() => {
                     setMainCategory("FOODS");
                     if (!selectedOrder && orders.length > 0) setSelectedOrder(orders[0]);
+                    if (typeof window !== "undefined" && window.innerWidth <= 960) setIsSidebarOpen(false);
                   }}
                 >
                   <Utensils size={18} />
@@ -1494,6 +1560,7 @@ export default function MyOrdersView() {
                   onClick={() => {
                     setMainCategory("ROOMS");
                     if (!selectedBooking && bookings.length > 0) setSelectedBooking(bookings[0]);
+                    if (typeof window !== "undefined" && window.innerWidth <= 960) setIsSidebarOpen(false);
                   }}
                 >
                   <BedDouble size={18} />
@@ -1512,7 +1579,7 @@ export default function MyOrdersView() {
                   <button
                     type="button"
                     className={`${styles.filterPill} ${foodFilter === "ALL" ? styles.filterPillActive : ""}`}
-                    onClick={() => setFoodFilter("ALL")}
+                    onClick={() => handleFoodFilterChange("ALL")}
                   >
                     All
                   </button>
@@ -1520,7 +1587,7 @@ export default function MyOrdersView() {
                   <button
                     type="button"
                     className={`${styles.filterPill} ${foodFilter === "ONGOING" ? styles.filterPillActive : ""}`}
-                    onClick={() => setFoodFilter("ONGOING")}
+                    onClick={() => handleFoodFilterChange("ONGOING")}
                   >
                     <span>Ongoing</span>
                     {ongoingOrdersCount > 0 && <span className={styles.badgeCount}>{ongoingOrdersCount}</span>}
@@ -1529,7 +1596,7 @@ export default function MyOrdersView() {
                   <button
                     type="button"
                     className={`${styles.filterPill} ${foodFilter === "COMPLETED" ? styles.filterPillActive : ""}`}
-                    onClick={() => setFoodFilter("COMPLETED")}
+                    onClick={() => handleFoodFilterChange("COMPLETED")}
                   >
                     Completed
                   </button>
@@ -1537,7 +1604,7 @@ export default function MyOrdersView() {
                   <button
                     type="button"
                     className={`${styles.filterPill} ${foodFilter === "CANCELLED" ? styles.filterPillActive : ""}`}
-                    onClick={() => setFoodFilter("CANCELLED")}
+                    onClick={() => handleFoodFilterChange("CANCELLED")}
                   >
                     Cancelled
                   </button>
@@ -1547,7 +1614,7 @@ export default function MyOrdersView() {
                   <button
                     type="button"
                     className={`${styles.filterPill} ${roomFilter === "ALL" ? styles.filterPillActive : ""}`}
-                    onClick={() => setRoomFilter("ALL")}
+                    onClick={() => handleRoomFilterChange("ALL")}
                   >
                     All
                   </button>
@@ -1555,7 +1622,7 @@ export default function MyOrdersView() {
                   <button
                     type="button"
                     className={`${styles.filterPill} ${roomFilter === "CONFIRMED" ? styles.filterPillActive : ""}`}
-                    onClick={() => setRoomFilter("CONFIRMED")}
+                    onClick={() => handleRoomFilterChange("CONFIRMED")}
                   >
                     <span>Confirmed</span>
                   </button>
@@ -1563,7 +1630,7 @@ export default function MyOrdersView() {
                   <button
                     type="button"
                     className={`${styles.filterPill} ${roomFilter === "PENDING" ? styles.filterPillActive : ""}`}
-                    onClick={() => setRoomFilter("PENDING")}
+                    onClick={() => handleRoomFilterChange("PENDING")}
                   >
                     <span>Pending</span>
                   </button>
@@ -1571,7 +1638,7 @@ export default function MyOrdersView() {
                   <button
                     type="button"
                     className={`${styles.filterPill} ${roomFilter === "CANCELLED" ? styles.filterPillActive : ""}`}
-                    onClick={() => setRoomFilter("CANCELLED")}
+                    onClick={() => handleRoomFilterChange("CANCELLED")}
                   >
                     Cancelled
                   </button>
@@ -2329,7 +2396,7 @@ export default function MyOrdersView() {
           <>
             <div
               className={styles.mobileBackdrop}
-              onClick={() => setIsSidebarOpen(false)}
+              onClick={handleCloseSidebar}
               aria-hidden="true"
             />
             {mainCategory === "FOODS" && selectedOrder ? (
@@ -2382,7 +2449,7 @@ export default function MyOrdersView() {
                   <button
                     type="button"
                     className={styles.closeSidebarBtn}
-                    onClick={() => setIsSidebarOpen(false)}
+                    onClick={handleCloseSidebar}
                     aria-label="Close details"
                   >
                     <X size={16} />
@@ -2835,7 +2902,7 @@ export default function MyOrdersView() {
                   <button
                     type="button"
                     className={styles.closeSidebarBtn}
-                    onClick={() => setIsSidebarOpen(false)}
+                    onClick={handleCloseSidebar}
                     aria-label="Close details"
                   >
                     <X size={16} />

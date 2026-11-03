@@ -286,28 +286,28 @@ export default function SuperadminOverview() {
     const s = (status || "").toUpperCase();
     if (s === "APPROVED") {
       return (
-        <span style={{ backgroundColor: "#DCFCE7", color: "#15803D", padding: "4px 10px", borderRadius: "12px", fontSize: "0.74rem", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-          <CheckCircle2 size={12} /> APPROVED
+        <span style={{ backgroundColor: "#DCFCE7", color: "#15803D", padding: "4px 10px", borderRadius: "12px", fontSize: "0.74rem", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap", flexShrink: 0 }}>
+          <CheckCircle2 size={12} style={{ flexShrink: 0 }} /> APPROVED
         </span>
       );
     }
     if (s === "PENDING") {
       return (
-        <span style={{ backgroundColor: "#FEF3C7", color: "#B45309", padding: "4px 10px", borderRadius: "12px", fontSize: "0.74rem", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-          <Clock size={12} /> PENDING
+        <span style={{ backgroundColor: "#FEF3C7", color: "#B45309", padding: "4px 10px", borderRadius: "12px", fontSize: "0.74rem", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap", flexShrink: 0 }}>
+          <Clock size={12} style={{ flexShrink: 0 }} /> PENDING
         </span>
       );
     }
     if (s === "REVISION") {
       return (
-        <span style={{ backgroundColor: "#E0F2FE", color: "#0369A1", padding: "4px 10px", borderRadius: "12px", fontSize: "0.74rem", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-          <AlertCircle size={12} /> REVISION
+        <span style={{ backgroundColor: "#E0F2FE", color: "#0369A1", padding: "4px 10px", borderRadius: "12px", fontSize: "0.74rem", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap", flexShrink: 0 }}>
+          <AlertCircle size={12} style={{ flexShrink: 0 }} /> REVISION
         </span>
       );
     }
     return (
-      <span style={{ backgroundColor: "#FEE2E2", color: "#B91C1C", padding: "4px 10px", borderRadius: "12px", fontSize: "0.74rem", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-        <XCircle size={12} /> {s || "REJECTED"}
+      <span style={{ backgroundColor: "#FEE2E2", color: "#B91C1C", padding: "4px 10px", borderRadius: "12px", fontSize: "0.74rem", fontWeight: "700", display: "inline-flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap", flexShrink: 0 }}>
+        <XCircle size={12} style={{ flexShrink: 0 }} /> {s || "REJECTED"}
       </span>
     );
   };
@@ -316,23 +316,23 @@ export default function SuperadminOverview() {
     const ft = (foodType || "BOTH").toUpperCase();
     if (ft === "VEG") {
       return (
-        <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", backgroundColor: "#F0FDF4", color: "#166534", padding: "3px 8px", borderRadius: "8px", fontSize: "0.75rem", fontWeight: "700", border: "1px solid #BBF7D0" }}>
-          <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#16A34A" }} />
+        <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", backgroundColor: "#F0FDF4", color: "#166534", padding: "4px 10px", borderRadius: "8px", fontSize: "0.75rem", fontWeight: "700", border: "1px solid #BBF7D0", whiteSpace: "nowrap", flexShrink: 0 }}>
+          <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#16A34A", flexShrink: 0 }} />
           Pure Veg
         </span>
       );
     }
     if (ft === "NON_VEG") {
       return (
-        <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", backgroundColor: "#FEF2F2", color: "#991B1B", padding: "3px 8px", borderRadius: "8px", fontSize: "0.75rem", fontWeight: "700", border: "1px solid #FECACA" }}>
-          <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#DC2626" }} />
+        <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", backgroundColor: "#FEF2F2", color: "#991B1B", padding: "4px 10px", borderRadius: "8px", fontSize: "0.75rem", fontWeight: "700", border: "1px solid #FECACA", whiteSpace: "nowrap", flexShrink: 0 }}>
+          <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#DC2626", flexShrink: 0 }} />
           Non-Veg
         </span>
       );
     }
     return (
-      <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", backgroundColor: "#FFF7ED", color: "#9A3412", padding: "3px 8px", borderRadius: "8px", fontSize: "0.75rem", fontWeight: "700", border: "1px solid #FED7AA" }}>
-        <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#EA580C" }} />
+      <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", backgroundColor: "#FFF7ED", color: "#9A3412", padding: "4px 10px", borderRadius: "8px", fontSize: "0.75rem", fontWeight: "700", border: "1px solid #FED7AA", whiteSpace: "nowrap", flexShrink: 0 }}>
+        <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#EA580C", flexShrink: 0 }} />
         Both (Veg & Non-Veg)
       </span>
     );
@@ -342,21 +342,21 @@ export default function SuperadminOverview() {
     const c = (cat || "FOOD").toUpperCase();
     if (c === "FOOD") {
       return (
-        <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", backgroundColor: "#EFF6FF", color: "#1D4ED8", padding: "3px 8px", borderRadius: "8px", fontSize: "0.75rem", fontWeight: "600" }}>
-          <Utensils size={12} /> Food Kitchen
+        <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", backgroundColor: "#EFF6FF", color: "#1D4ED8", padding: "4px 10px", borderRadius: "8px", fontSize: "0.75rem", fontWeight: "600", whiteSpace: "nowrap", flexShrink: 0 }}>
+          <Utensils size={12} style={{ flexShrink: 0 }} /> Food Kitchen
         </span>
       );
     }
     if (c === "ROOM") {
       return (
-        <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", backgroundColor: "#F5F3FF", color: "#6D28D9", padding: "3px 8px", borderRadius: "8px", fontSize: "0.75rem", fontWeight: "600" }}>
-          <Home size={12} /> Rooms / Stay
+        <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", backgroundColor: "#F5F3FF", color: "#6D28D9", padding: "4px 10px", borderRadius: "8px", fontSize: "0.75rem", fontWeight: "600", whiteSpace: "nowrap", flexShrink: 0 }}>
+          <Home size={12} style={{ flexShrink: 0 }} /> Rooms / Stay
         </span>
       );
     }
     return (
-      <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", backgroundColor: "#FAF5FF", color: "#7E22CE", padding: "3px 8px", borderRadius: "8px", fontSize: "0.75rem", fontWeight: "600" }}>
-        <Layers size={12} /> Both (Food & Rooms)
+      <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", backgroundColor: "#FAF5FF", color: "#7E22CE", padding: "4px 10px", borderRadius: "8px", fontSize: "0.75rem", fontWeight: "600", whiteSpace: "nowrap", flexShrink: 0 }}>
+        <Layers size={12} style={{ flexShrink: 0 }} /> Both (Food & Rooms)
       </span>
     );
   };
@@ -977,17 +977,17 @@ export default function SuperadminOverview() {
 
         {/* Sellers Data Table */}
         <div style={{ overflowX: "auto", borderRadius: "12px", border: "1px solid #E2E8F0" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "0.88rem" }}>
+          <table style={{ width: "100%", minWidth: "1150px", borderCollapse: "collapse", textAlign: "left", fontSize: "0.88rem" }}>
             <thead>
               <tr style={{ backgroundColor: "#F8FAFC", borderBottom: "1.5px solid #E2E8F0", color: "#475569", fontWeight: "700", fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                <th style={{ padding: "14px 18px" }}>Kitchen / Business Name</th>
-                <th style={{ padding: "14px 18px" }}>Owner & Contact</th>
-                <th style={{ padding: "14px 18px" }}>Application</th>
-                <th style={{ padding: "14px 18px" }}>Dietary Type</th>
-                <th style={{ padding: "14px 18px", textAlign: "center" }}>Status</th>
-                <th style={{ padding: "14px 18px" }}>Verification</th>
-                <th style={{ padding: "14px 18px" }}>Subscription</th>
-                <th style={{ padding: "14px 18px", textAlign: "right" }}>Actions</th>
+                <th style={{ padding: "14px 18px", minWidth: "180px" }}>Kitchen / Business Name</th>
+                <th style={{ padding: "14px 18px", minWidth: "160px" }}>Owner & Contact</th>
+                <th style={{ padding: "14px 18px", whiteSpace: "nowrap" }}>Application</th>
+                <th style={{ padding: "14px 18px", whiteSpace: "nowrap" }}>Dietary Type</th>
+                <th style={{ padding: "14px 18px", textAlign: "center", whiteSpace: "nowrap" }}>Status</th>
+                <th style={{ padding: "14px 18px", whiteSpace: "nowrap" }}>Verification</th>
+                <th style={{ padding: "14px 18px", whiteSpace: "nowrap" }}>Subscription</th>
+                <th style={{ padding: "14px 18px", textAlign: "right", whiteSpace: "nowrap" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -1068,17 +1068,17 @@ export default function SuperadminOverview() {
                       </td>
 
                       {/* Application Category */}
-                      <td style={{ padding: "14px 18px" }}>
+                      <td style={{ padding: "14px 18px", whiteSpace: "nowrap" }}>
                         {getApplicationBadge(seller.businessCategory)}
                       </td>
 
                       {/* Dietary Type */}
-                      <td style={{ padding: "14px 18px" }}>
+                      <td style={{ padding: "14px 18px", whiteSpace: "nowrap" }}>
                         {getDietaryPill(seller.foodType)}
                       </td>
 
                       {/* Account & Online Status */}
-                      <td style={{ padding: "14px 18px", textAlign: "center" }}>
+                      <td style={{ padding: "14px 18px", textAlign: "center", whiteSpace: "nowrap" }}>
                         <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
                           <span
                             style={{
@@ -1116,32 +1116,32 @@ export default function SuperadminOverview() {
                       </td>
 
                       {/* Verification Status */}
-                      <td style={{ padding: "14px 18px" }}>
+                      <td style={{ padding: "14px 18px", whiteSpace: "nowrap" }}>
                         {getVerificationBadge(seller.verificationStatus)}
                       </td>
 
                       {/* Subscription Status */}
-                      <td style={{ padding: "14px 18px" }}>
+                      <td style={{ padding: "14px 18px", whiteSpace: "nowrap" }}>
                         {seller.hasActiveSubscription ? (
                           <div>
-                            <span style={{ backgroundColor: "#DCFCE7", color: "#166534", padding: "3px 8px", borderRadius: "8px", fontSize: "0.74rem", fontWeight: "700" }}>
+                            <span style={{ backgroundColor: "#DCFCE7", color: "#166534", padding: "3px 8px", borderRadius: "8px", fontSize: "0.74rem", fontWeight: "700", whiteSpace: "nowrap" }}>
                               Subscribed
                             </span>
                             {seller.subscriptionValidUntil && (
-                              <div style={{ fontSize: "0.7rem", color: "#64748B", marginTop: "3px" }}>
+                              <div style={{ fontSize: "0.7rem", color: "#64748B", marginTop: "3px", whiteSpace: "nowrap" }}>
                                 Till {new Date(seller.subscriptionValidUntil).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" })}
                               </div>
                             )}
                           </div>
                         ) : (
-                          <span style={{ backgroundColor: "#F1F5F9", color: "#64748B", padding: "3px 8px", borderRadius: "8px", fontSize: "0.74rem", fontWeight: "600" }}>
+                          <span style={{ backgroundColor: "#F1F5F9", color: "#64748B", padding: "3px 8px", borderRadius: "8px", fontSize: "0.74rem", fontWeight: "600", whiteSpace: "nowrap" }}>
                             Unsubscribed
                           </span>
                         )}
                       </td>
 
                       {/* Actions */}
-                      <td style={{ padding: "14px 18px", textAlign: "right" }}>
+                      <td style={{ padding: "14px 18px", textAlign: "right", whiteSpace: "nowrap" }}>
                         <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
                           <button
                             type="button"

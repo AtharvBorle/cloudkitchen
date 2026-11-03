@@ -2193,7 +2193,8 @@ function FoodExploreContent() {
               }}
               className={`mobile-filter-pill-btn ${selectedDiet === "jain" ? "active-veg" : ""}`}
             >
-              <span>🌾 Jain {filterCounts.jain !== undefined ? `(${filterCounts.jain})` : ""}</span>
+              <span className="mobile-filter-veg-dot" />
+              <span>Jain {filterCounts.jain !== undefined ? `(${filterCounts.jain})` : ""}</span>
             </button>
 
             {/* 6. Offers Pill */}
@@ -2398,11 +2399,11 @@ function FoodExploreContent() {
                     <span>Dietary Preference</span>
                   </div>
                   {[
-                    { id: "all", label: "All Diet", count: filterCounts.all },
-                    { id: "veg", label: "🌱 Pure Veg", count: filterCounts.veg },
-                    { id: "non_veg", label: "🍗 Non-Veg", count: filterCounts.non_veg },
-                    { id: "vegan", label: "🌿 Vegan", count: filterCounts.vegan },
-                    { id: "jain", label: "🌾 Jain", count: filterCounts.jain },
+                    { id: "all", label: "All Diet", count: filterCounts.all, type: "ALL" },
+                    { id: "veg", label: "Pure Veg", count: filterCounts.veg, type: "VEG" },
+                    { id: "non_veg", label: "Non-Veg", count: filterCounts.non_veg, type: "NON_VEG" },
+                    { id: "vegan", label: "Vegan", count: filterCounts.vegan, type: "VEGAN" },
+                    { id: "jain", label: "Jain", count: filterCounts.jain, type: "JAIN" },
                   ].map((d) => {
                     const isSelected = selectedDiet === d.id;
                     return (
@@ -2429,6 +2430,74 @@ function FoodExploreContent() {
                         aria-selected={isSelected}
                       >
                         <div className={filterStyles.popoverItemLeft}>
+                          {d.type === "VEG" && (
+                            <span
+                              style={{
+                                width: "14px",
+                                height: "14px",
+                                border: "1.5px solid #16A34A",
+                                borderRadius: "3px",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flexShrink: 0,
+                                boxSizing: "border-box",
+                              }}
+                            >
+                              <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#16A34A" }} />
+                            </span>
+                          )}
+                          {d.type === "NON_VEG" && (
+                            <span
+                              style={{
+                                width: "14px",
+                                height: "14px",
+                                border: "1.5px solid #DC2626",
+                                borderRadius: "3px",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flexShrink: 0,
+                                boxSizing: "border-box",
+                              }}
+                            >
+                              <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#DC2626" }} />
+                            </span>
+                          )}
+                          {d.type === "VEGAN" && (
+                            <span
+                              style={{
+                                width: "14px",
+                                height: "14px",
+                                border: "1.5px solid #059669",
+                                borderRadius: "3px",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flexShrink: 0,
+                                boxSizing: "border-box",
+                              }}
+                            >
+                              <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#059669" }} />
+                            </span>
+                          )}
+                          {d.type === "JAIN" && (
+                            <span
+                              style={{
+                                width: "14px",
+                                height: "14px",
+                                border: "1.5px solid #16A34A",
+                                borderRadius: "3px",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flexShrink: 0,
+                                boxSizing: "border-box",
+                              }}
+                            >
+                              <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#16A34A" }} />
+                            </span>
+                          )}
                           <span>{d.label}</span>
                           {d.count !== undefined && (
                             <span className={filterStyles.popoverItemCount}>({d.count})</span>
@@ -2521,7 +2590,8 @@ function FoodExploreContent() {
                   sortBy === "fastest" ? filterStyles.filterPillActive : ""
                 }`}
               >
-                <span>{sortBy === "fastest" ? "⚡ Delivery: Fastest" : "⚡ Delivery Time"}</span>
+                <Zap size={13} color={sortBy === "fastest" ? "#EA580C" : "#F59E0B"} />
+                <span>{sortBy === "fastest" ? "Delivery: Fastest" : "Delivery Time"}</span>
                 <ChevronDown
                   size={14}
                   className={`${filterStyles.filterPillChevron} ${
@@ -2545,7 +2615,10 @@ function FoodExploreContent() {
                       sortBy === "fastest" ? filterStyles.popoverItemBtnActive : ""
                     }`}
                   >
-                    <span>⚡ Fastest Delivery (&lt; 30 min)</span>
+                    <div className={filterStyles.popoverItemLeft}>
+                      <Zap size={14} color="#F59E0B" />
+                      <span>Fastest Delivery (&lt; 30 min)</span>
+                    </div>
                     {sortBy === "fastest" && (
                       <Check size={14} className={filterStyles.popoverCheckIcon} />
                     )}
@@ -2560,7 +2633,10 @@ function FoodExploreContent() {
                       sortBy !== "fastest" ? filterStyles.popoverItemBtnActive : ""
                     }`}
                   >
-                    <span>⏱️ Standard Delivery (All)</span>
+                    <div className={filterStyles.popoverItemLeft}>
+                      <Clock size={14} color="#64748B" />
+                      <span>Standard Delivery (All)</span>
+                    </div>
                     {sortBy !== "fastest" && (
                       <Check size={14} className={filterStyles.popoverCheckIcon} />
                     )}
@@ -2580,7 +2656,12 @@ function FoodExploreContent() {
                   sortBy === "rating" ? filterStyles.filterPillActive : ""
                 }`}
               >
-                <span>{sortBy === "rating" ? "★ Rating: Top Rated" : "★ Rating"}</span>
+                <Star
+                  size={13}
+                  color={sortBy === "rating" ? "#EA580C" : "#EAB308"}
+                  fill={sortBy === "rating" ? "#EA580C" : "#EAB308"}
+                />
+                <span>{sortBy === "rating" ? "Rating: Top Rated" : "Rating"}</span>
                 <ChevronDown
                   size={14}
                   className={`${filterStyles.filterPillChevron} ${
@@ -2604,7 +2685,10 @@ function FoodExploreContent() {
                       sortBy === "rating" ? filterStyles.popoverItemBtnActive : ""
                     }`}
                   >
-                    <span>⭐ Top Rated (4.0+ Stars)</span>
+                    <div className={filterStyles.popoverItemLeft}>
+                      <Star size={14} color="#EAB308" fill="#EAB308" />
+                      <span>Top Rated (4.0+ Stars)</span>
+                    </div>
                     {sortBy === "rating" && (
                       <Check size={14} className={filterStyles.popoverCheckIcon} />
                     )}
@@ -2619,7 +2703,10 @@ function FoodExploreContent() {
                       sortBy !== "rating" ? filterStyles.popoverItemBtnActive : ""
                     }`}
                   >
-                    <span>✨ Any Rating</span>
+                    <div className={filterStyles.popoverItemLeft}>
+                      <Sparkles size={14} color={sortBy !== "rating" ? "#EA580C" : "#64748B"} />
+                      <span>Any Rating</span>
+                    </div>
                     {sortBy !== "rating" && (
                       <Check size={14} className={filterStyles.popoverCheckIcon} />
                     )}
@@ -2641,8 +2728,16 @@ function FoodExploreContent() {
                     : ""
                 }`}
               >
+                <Tag
+                  size={13}
+                  color={
+                    offersOnly || openOnly || sortBy === "popular" || selectedCuisines.length > 0
+                      ? "#EA580C"
+                      : "#64748B"
+                  }
+                />
                 <span>
-                  🏷️ More Filters
+                  More Filters
                   {offersOnly || openOnly || sortBy === "popular" || selectedCuisines.length > 0
                     ? ` (${
                         (offersOnly ? 1 : 0) +
@@ -2694,7 +2789,8 @@ function FoodExploreContent() {
                       >
                         {offersOnly && <Check size={11} color="#FFFFFF" />}
                       </span>
-                      <span>🏷️ Offers &amp; Deals</span>
+                      <Tag size={13} color={offersOnly ? "#EA580C" : "#64748B"} />
+                      <span>Offers &amp; Deals</span>
                     </div>
                   </button>
 
@@ -2712,7 +2808,8 @@ function FoodExploreContent() {
                       >
                         {openOnly && <Check size={11} color="#FFFFFF" />}
                       </span>
-                      <span>🏪 Open Kitchens</span>
+                      <Store size={13} color={openOnly ? "#EA580C" : "#64748B"} />
+                      <span>Open Kitchens</span>
                     </div>
                   </button>
 
@@ -2740,7 +2837,8 @@ function FoodExploreContent() {
                       >
                         {sortBy === "popular" && <Check size={11} color="#FFFFFF" />}
                       </span>
-                      <span>✨ Popular Dishes</span>
+                      <Sparkles size={13} color={sortBy === "popular" ? "#EA580C" : "#64748B"} />
+                      <span>Popular Dishes</span>
                     </div>
                   </button>
 
@@ -3000,10 +3098,10 @@ function FoodExploreContent() {
                       {[
                         { value: "", label: "Recommended" },
                         { value: "popular", label: "Most Popular" },
-                        { value: "rating", label: "Rating: High to Low ⭐" },
+                        { value: "rating", label: "Rating: High to Low" },
                         { value: "price_asc", label: "Price: Low to High" },
                         { value: "price_desc", label: "Price: High to Low" },
-                        { value: "fastest", label: "Fastest Delivery ⚡" },
+                        { value: "fastest", label: "Fastest Delivery" },
                       ].map((opt) => {
                         const isSelected = sortBy === opt.value;
                         return (
@@ -4307,11 +4405,11 @@ function FoodExploreContent() {
                 <h4 className="mobile-drawer-section-title">Dietary Preference</h4>
                 <div className="mobile-drawer-chips-grid">
                   {[
-                    { id: "all", label: "All Diet", count: filterCounts.all },
-                    { id: "veg", label: "🌱 Pure Veg", count: filterCounts.veg },
-                    { id: "non_veg", label: "🍗 Non-Veg", count: filterCounts.non_veg },
-                    { id: "vegan", label: "🌿 Vegan", count: filterCounts.vegan },
-                    { id: "jain", label: "🌾 Jain", count: filterCounts.jain },
+                    { id: "all", label: "All Diet", count: filterCounts.all, type: "ALL" },
+                    { id: "veg", label: "Pure Veg", count: filterCounts.veg, type: "VEG" },
+                    { id: "non_veg", label: "Non-Veg", count: filterCounts.non_veg, type: "NON_VEG" },
+                    { id: "vegan", label: "Vegan", count: filterCounts.vegan, type: "VEGAN" },
+                    { id: "jain", label: "Jain", count: filterCounts.jain, type: "JAIN" },
                   ].map((d) => (
                     <button
                       key={d.id}
@@ -4325,6 +4423,26 @@ function FoodExploreContent() {
                       }}
                       className={`mobile-drawer-chip ${selectedDiet === d.id ? "active" : ""}`}
                     >
+                      {d.type === "VEG" && (
+                        <span style={{ width: "12px", height: "12px", border: "1.5px solid #16A34A", borderRadius: "3px", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <span style={{ width: "5px", height: "5px", borderRadius: "50%", backgroundColor: "#16A34A" }} />
+                        </span>
+                      )}
+                      {d.type === "NON_VEG" && (
+                        <span style={{ width: "12px", height: "12px", border: "1.5px solid #DC2626", borderRadius: "3px", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <span style={{ width: "5px", height: "5px", borderRadius: "50%", backgroundColor: "#DC2626" }} />
+                        </span>
+                      )}
+                      {d.type === "VEGAN" && (
+                        <span style={{ width: "12px", height: "12px", border: "1.5px solid #059669", borderRadius: "3px", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <span style={{ width: "5px", height: "5px", borderRadius: "50%", backgroundColor: "#059669" }} />
+                        </span>
+                      )}
+                      {d.type === "JAIN" && (
+                        <span style={{ width: "12px", height: "12px", border: "1.5px solid #16A34A", borderRadius: "3px", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <span style={{ width: "5px", height: "5px", borderRadius: "50%", backgroundColor: "#16A34A" }} />
+                        </span>
+                      )}
                       <span>{d.label}</span>
                       {d.count !== undefined && <span className="mobile-drawer-chip-count">({d.count})</span>}
                     </button>

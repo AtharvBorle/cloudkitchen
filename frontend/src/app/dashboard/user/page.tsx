@@ -543,7 +543,7 @@ export default function UserDashboard() {
                         />
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', userSelect: 'none' }}>
-                        <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'white' }}>Pure Veg 🌱</span>
+                        <span style={{ fontSize: '0.95rem', fontWeight: '600', color: 'white' }}>Pure Veg</span>
                         <div
                             onClick={() => setVegOnly(!vegOnly)}
                             style={{

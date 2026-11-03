@@ -138,9 +138,10 @@ function ResponsiveSellerOrdersContent() {
         (Boolean(o.cancellationReason) && /cancelled by (customer|user|you)/i.test(o.cancellationReason)) ||
         (Boolean(o.refund?.reason) && /cancelled by (customer|user|you)/i.test(o.refund.reason));
 
+      const displayId = (o.orderNumber || o.id || "").replace(/^#/, "").slice(0, 8);
       return {
         id: o.id,
-        orderNumber: o.id,
+        orderNumber: displayId,
         timeAgo: timeAgoStr,
         customerName: o.user?.name || "Customer",
         itemsText: itemsSummary || `${itemCount} items • ₹${o.totalAmount || 0}`,

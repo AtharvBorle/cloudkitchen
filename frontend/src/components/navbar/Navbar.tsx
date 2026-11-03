@@ -53,10 +53,10 @@ const FILTER_CUISINES = [
 ];
 
 const FILTER_DIETARY = [
-  { id: "veg", label: "Pure Veg 🥦", count: 22 },
-  { id: "non-veg", label: "Non-Veg 🍗", count: 18 },
-  { id: "vegan", label: "Vegan (Plant-Based 🌱)", count: 6 },
-  { id: "jain", label: "Jain / Satvik 🌿", count: 8 },
+  { id: "veg", label: "Pure Veg", count: 22 },
+  { id: "non-veg", label: "Non-Veg", count: 18 },
+  { id: "vegan", label: "Vegan (Plant-Based)", count: 6 },
+  { id: "jain", label: "Jain / Satvik", count: 8 },
 ];
 
 const PRICE_TIERS = [
