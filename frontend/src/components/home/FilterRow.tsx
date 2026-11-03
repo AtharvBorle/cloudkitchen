@@ -629,10 +629,10 @@ export default function FilterRow({
               <>
                 {[
                   { id: "all", label: "All Kitchens", count: counts?.all },
-                  { id: "pure_veg", label: "Pure Veg 🥦", count: counts?.pure_veg },
-                  { id: "non_veg", label: "Non-Veg 🍗", count: counts?.non_veg },
-                  { id: "vegan", label: "Vegan 🌱", count: counts?.vegan },
-                  { id: "jain", label: "Jain 🌾", count: counts?.jain },
+                  { id: "pure_veg", label: "Pure Veg", count: counts?.pure_veg, type: "VEG" },
+                  { id: "non_veg", label: "Non-Veg", count: counts?.non_veg, type: "NON_VEG" },
+                  { id: "vegan", label: "Vegan", count: counts?.vegan, type: "VEGAN" },
+                  { id: "jain", label: "Jain", count: counts?.jain, type: "JAIN" },
                 ].map((opt) => {
                   const isSelected =
                     opt.id === "all"
@@ -669,7 +669,29 @@ export default function FilterRow({
                         gap: "8px",
                       }}
                     >
-                      <span>{opt.label}</span>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                        <span>{opt.label}</span>
+                        {opt.type === "VEG" && (
+                          <span style={{ width: "12px", height: "12px", border: "1.5px solid #16A34A", borderRadius: "3px", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <span style={{ width: "5px", height: "5px", borderRadius: "50%", backgroundColor: "#16A34A" }} />
+                          </span>
+                        )}
+                        {opt.type === "NON_VEG" && (
+                          <span style={{ width: "12px", height: "12px", border: "1.5px solid #DC2626", borderRadius: "3px", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <span style={{ width: "5px", height: "5px", borderRadius: "50%", backgroundColor: "#DC2626" }} />
+                          </span>
+                        )}
+                        {opt.type === "VEGAN" && (
+                          <span style={{ width: "12px", height: "12px", border: "1.5px solid #059669", borderRadius: "3px", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <span style={{ width: "5px", height: "5px", borderRadius: "50%", backgroundColor: "#059669" }} />
+                          </span>
+                        )}
+                        {opt.type === "JAIN" && (
+                          <span style={{ width: "12px", height: "12px", border: "1.5px solid #16A34A", borderRadius: "3px", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <span style={{ width: "5px", height: "5px", borderRadius: "50%", backgroundColor: "#16A34A" }} />
+                          </span>
+                        )}
+                      </span>
                       <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                         {opt.count !== undefined && (
                           <span

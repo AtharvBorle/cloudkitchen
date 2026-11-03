@@ -130,10 +130,10 @@ function isPlaceVegAndNonVeg(
 }
 
 const DIETARY = [
-  { id: "pure_veg", label: "Pure Veg 🥦" },
-  { id: "non-veg", label: "Non-Veg 🍗" },
-  { id: "vegan", label: "Vegan (Plant-Based 🌱)" },
-  { id: "jain", label: "Jain / Satvik 🌿" },
+  { id: "pure_veg", label: "Pure Veg", type: "VEG" },
+  { id: "non-veg", label: "Non-Veg", type: "NON_VEG" },
+  { id: "vegan", label: "Vegan (Plant-Based)", type: "VEGAN" },
+  { id: "jain", label: "Jain / Satvik", type: "JAIN" },
 ];
 
 interface PropertiesProps {
@@ -979,9 +979,112 @@ export default function Properties({
                           color: isChecked ? "#0F172A" : "#475569",
                           fontWeight: isChecked ? "500" : "400",
                           fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "8px",
                         }}
                       >
-                        {item.label}
+                        <span>{item.label}</span>
+                        {item.type === "VEG" && (
+                          <span
+                            title="Pure Veg"
+                            style={{
+                              width: "14px",
+                              height: "14px",
+                              border: "1.5px solid #16A34A",
+                              borderRadius: "3px",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0,
+                              boxSizing: "border-box",
+                            }}
+                          >
+                            <span
+                              style={{
+                                width: "6px",
+                                height: "6px",
+                                borderRadius: "50%",
+                                backgroundColor: "#16A34A",
+                              }}
+                            />
+                          </span>
+                        )}
+                        {item.type === "NON_VEG" && (
+                          <span
+                            title="Non-Veg"
+                            style={{
+                              width: "14px",
+                              height: "14px",
+                              border: "1.5px solid #DC2626",
+                              borderRadius: "3px",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0,
+                              boxSizing: "border-box",
+                            }}
+                          >
+                            <span
+                              style={{
+                                width: "6px",
+                                height: "6px",
+                                borderRadius: "50%",
+                                backgroundColor: "#DC2626",
+                              }}
+                            />
+                          </span>
+                        )}
+                        {item.type === "VEGAN" && (
+                          <span
+                            title="Vegan (Plant-Based)"
+                            style={{
+                              width: "14px",
+                              height: "14px",
+                              border: "1.5px solid #059669",
+                              borderRadius: "3px",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0,
+                              boxSizing: "border-box",
+                            }}
+                          >
+                            <span
+                              style={{
+                                width: "6px",
+                                height: "6px",
+                                borderRadius: "50%",
+                                backgroundColor: "#059669",
+                              }}
+                            />
+                          </span>
+                        )}
+                        {item.type === "JAIN" && (
+                          <span
+                            title="Jain / Satvik"
+                            style={{
+                              width: "14px",
+                              height: "14px",
+                              border: "1.5px solid #16A34A",
+                              borderRadius: "3px",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0,
+                              boxSizing: "border-box",
+                            }}
+                          >
+                            <span
+                              style={{
+                                width: "6px",
+                                height: "6px",
+                                borderRadius: "50%",
+                                backgroundColor: "#16A34A",
+                              }}
+                            />
+                          </span>
+                        )}
                       </span>
                     </div>
                   </div>

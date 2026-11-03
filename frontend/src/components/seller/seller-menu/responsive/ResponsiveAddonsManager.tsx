@@ -1111,8 +1111,8 @@ export default function ResponsiveAddonsManager({
           MODAL 4: CENTRALIZED THRESHOLD ADJUST
           ======================================================== */}
       {isThresholdModalOpen && (
-        <div className={styles.modalBackdrop} onClick={() => setIsThresholdModalOpen(false)}>
-          <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+        <div className={styles.centerModalBackdrop} onClick={() => setIsThresholdModalOpen(false)}>
+          <div className={styles.centerModalCard} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
               <h3 className={styles.modalTitle}>Low-Stock Alert Threshold</h3>
               <button

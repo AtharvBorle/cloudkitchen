@@ -191,7 +191,13 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
 
     try {
       let dataUrl: string;
-      if (file.type === "application/pdf") {
+      const isDocument =
+        file.type === "application/pdf" ||
+        file.type.includes("word") ||
+        file.type.includes("officedocument") ||
+        /\.(pdf|docx?)$/i.test(file.name);
+
+      if (isDocument) {
         dataUrl = await readFileAsDataUrl(file);
       } else {
         const compressed = await compressImageFile(file, 1600, 1600, 0.85);
@@ -360,21 +366,21 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
         <input
           ref={identityInputRef}
           type="file"
-          accept=".pdf,.png,.jpg,.jpeg"
+          accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp"
           style={{ display: "none" }}
           onChange={(e) => handleFileSelect("identityProof", e)}
         />
         <input
           ref={fssaiInputRef}
           type="file"
-          accept=".pdf,.png,.jpg,.jpeg"
+          accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp"
           style={{ display: "none" }}
           onChange={(e) => handleFileSelect("fssaiLicense", e)}
         />
         <input
           ref={utilityInputRef}
           type="file"
-          accept=".pdf,.png,.jpg,.jpeg"
+          accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp"
           style={{ display: "none" }}
           onChange={(e) => handleFileSelect("utilityBill", e)}
         />
@@ -1108,6 +1114,18 @@ export const LegalDocuments: React.FC<LegalDocumentsProps> = ({
                         title={previewModal.fileName}
                         className={styles.pdfIframe}
                       />
+                    </div>
+                  ) : Boolean(
+                    (previewModal.fileName && /\.(docx?|doc)$/i.test(previewModal.fileName)) ||
+                    previewModal.dataUrl.includes("word") ||
+                    previewModal.dataUrl.includes("officedocument")
+                  ) ? (
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px", gap: "16px", textAlign: "center" }}>
+                      <FileText size={48} color="#2563EB" />
+                      <div>
+                        <p style={{ fontWeight: 700, fontSize: "1rem", color: "#0F172A", margin: "0 0 4px 0" }}>{previewModal.fileName}</p>
+                        <p style={{ fontSize: "0.82rem", color: "#64748B", margin: 0 }}>Microsoft Word Document ({previewModal.fileSize || "Ready for verification"})</p>
+                      </div>
                     </div>
                   ) : (
                     <div className={styles.imageContainer}>
