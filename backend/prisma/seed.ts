@@ -74,7 +74,7 @@ async function main() {
             sellerProfile: {
                 create: {
                     type: "HOMELY_FOOD",
-                    adhaarUrl: "/uploads/1772103930487-WhatsApp_Image_2026-02-26_at_2.07.43_PM.jpeg",
+                    adhaarUrl: "/uploads/ritu_identity_proof.png",
                     trackingId: "TRK-SEED-01",
                     verificationStatus: "APPROVED",
                     businessName: "Radha's Kitchen Base"
