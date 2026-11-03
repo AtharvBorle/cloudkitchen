@@ -2356,117 +2356,68 @@ export default function SuperAdminSupportPage() {
 
 
                     {/* Status Filter Tab Group */}
-
-
-
                     <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-
-
-
-                        <span style={{ fontSize: "0.75rem", fontWeight: "800", color: "#64748B", display: "flex", alignItems: "center", gap: "5px" }}>
-
-
-
-                            <Filter size={14} /> FILTER BY STATUS
-
-
-
+                        <span style={{ fontSize: "0.75rem", fontWeight: "800", color: "#64748B", display: "flex", alignItems: "center", gap: "5px", letterSpacing: "0.3px" }}>
+                            <Filter size={13} /> FILTER BY STATUS
                         </span>
-
-
-
-                        <div style={{ display: "flex", gap: "5px", backgroundColor: "#F1F5F9", padding: "4px", borderRadius: "8px" }}>
-
-
-
-                            {["ALL", "OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"].map(filter => (
-
-
-
-                                <button
-
-
-
-                                    key={filter}
-
-
-
-                                    onClick={() => setStatusFilter(filter)}
-
-
-
-                                    style={{
-
-
-
-                                        flex: 1,
-
-
-
-                                        padding: "6px 0",
-
-
-
-                                        borderRadius: "6px",
-
-
-
-                                        border: "none",
-
-
-
-                                        backgroundColor: statusFilter === filter ? "white" : "transparent",
-
-
-
-                                        color: statusFilter === filter ? "#1E293B" : "#64748B",
-
-
-
-                                        fontWeight: "700",
-
-
-
-                                        fontSize: "0.75rem",
-
-
-
-                                        cursor: "pointer",
-
-
-
-                                        transition: "all 0.15s",
-
-
-
-                                        boxShadow: statusFilter === filter ? "0 1px 3px rgba(0,0,0,0.05)" : "none"
-
-
-
-                                    }}
-
-
-
-                                >
-
-
-
-                                    {filter.replace("_", " ")}
-
-
-
-                                </button>
-
-
-
-                            ))}
-
-
-
+                        <div
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "3px",
+                                backgroundColor: "#F1F5F9",
+                                padding: "4px",
+                                borderRadius: "10px",
+                                border: "1px solid #E2E8F0",
+                                overflowX: "auto",
+                                scrollbarWidth: "none",
+                            }}
+                        >
+                            {["ALL", "OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"].map(filter => {
+                                const isActive = statusFilter === filter;
+                                return (
+                                    <button
+                                        key={filter}
+                                        type="button"
+                                        onClick={() => setStatusFilter(filter)}
+                                        style={{
+                                            flex: "1 1 auto",
+                                            minHeight: "32px",
+                                            padding: "0 6px",
+                                            borderRadius: "7px",
+                                            border: "none",
+                                            backgroundColor: isActive ? "#FFFFFF" : "transparent",
+                                            color: isActive ? "#0F172A" : "#64748B",
+                                            fontWeight: isActive ? "700" : "600",
+                                            fontSize: "0.7rem",
+                                            letterSpacing: "0.2px",
+                                            whiteSpace: "nowrap",
+                                            cursor: "pointer",
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            boxShadow: isActive ? "0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04)" : "none",
+                                            transition: "all 0.15s ease",
+                                            userSelect: "none",
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            if (!isActive) {
+                                                e.currentTarget.style.backgroundColor = "#E2E8F0";
+                                                e.currentTarget.style.color = "#1E293B";
+                                            }
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            if (!isActive) {
+                                                e.currentTarget.style.backgroundColor = "transparent";
+                                                e.currentTarget.style.color = "#64748B";
+                                            }
+                                        }}
+                                    >
+                                        {filter.replace("_", " ")}
+                                    </button>
+                                );
+                            })}
                         </div>
-
-
-
                     </div>
 
 
