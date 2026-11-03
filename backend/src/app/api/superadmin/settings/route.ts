@@ -2,10 +2,15 @@ import { getSystemSetting, updateSystemSetting } from "@/controllers/superadminS
 import { successResponse, errorResponse } from "@/lib/api-response";
 import { ApiError } from "@/lib/api-error";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(req: Request) {
     try {
         const data = await getSystemSetting(req);
-        return successResponse(data);
+        const response = successResponse(data);
+        response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0");
+        return response;
     } catch (error: any) {
         if (error instanceof ApiError) return errorResponse(error.message, error.statusCode);
         console.error("Error fetching setting:", error);

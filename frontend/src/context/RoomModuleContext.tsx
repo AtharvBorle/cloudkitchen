@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { fetchApi } from "@/lib/fetch-api";
 
 interface RoomModuleContextType {
@@ -52,11 +52,14 @@ export const RoomModuleProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   });
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const isRefreshingRef = useRef<boolean>(false);
 
   // Fetch latest values from backend
   const refreshRoomSetting = useCallback(async () => {
+    if (isRefreshingRef.current) return;
+    isRefreshingRef.current = true;
     try {
-      const res = await fetchApi("/api/public/settings");
+      const res = await fetchApi(`/api/public/settings?t=${Date.now()}`);
       if (res.ok) {
         const json = await res.json();
         const data = json.data || json;
@@ -75,6 +78,8 @@ export const RoomModuleProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }
     } catch (err) {
       // Gracefully fall back to current state
+    } finally {
+      isRefreshingRef.current = false;
     }
   }, []);
 
@@ -110,12 +115,12 @@ export const RoomModuleProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       });
 
       if (!res.ok) {
-        refreshRoomSetting();
+        await refreshRoomSetting();
         return false;
       }
       return true;
     } catch (err) {
-      refreshRoomSetting();
+      await refreshRoomSetting();
       return false;
     } finally {
       setIsLoading(false);
@@ -154,19 +159,19 @@ export const RoomModuleProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       });
 
       if (!res.ok) {
-        refreshRoomSetting();
+        await refreshRoomSetting();
         return false;
       }
       return true;
     } catch (err) {
-      refreshRoomSetting();
+      await refreshRoomSetting();
       return false;
     } finally {
       setIsLoading(false);
     }
   }, [refreshRoomSetting]);
 
-  // Listen to cross-tab updates and sync on mount
+  // Listen to cross-tab updates, window focus, visibility, and sync on mount & periodic polling
   useEffect(() => {
     refreshRoomSetting();
 
@@ -208,17 +213,37 @@ export const RoomModuleProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }
     };
 
+    const handleWindowFocus = () => {
+      refreshRoomSetting();
+    };
+
+    const handleVisibilityChange = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        refreshRoomSetting();
+      }
+    };
+
+    // Periodic sync every 10 seconds so changes in Superadmin reflect on user side in real-time
+    const pollInterval = setInterval(() => {
+      refreshRoomSetting();
+    }, 10000);
+
     window.addEventListener("storage", handleStorage);
     window.addEventListener("room-module-toggled", handleCustomRoom);
     window.addEventListener("chatbot-toggled", handleCustomChatbot);
+    window.addEventListener("focus", handleWindowFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       if (bc) {
         try { bc.close(); } catch {}
       }
+      clearInterval(pollInterval);
       window.removeEventListener("storage", handleStorage);
       window.removeEventListener("room-module-toggled", handleCustomRoom);
       window.removeEventListener("chatbot-toggled", handleCustomChatbot);
+      window.removeEventListener("focus", handleWindowFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [refreshRoomSetting]);
 

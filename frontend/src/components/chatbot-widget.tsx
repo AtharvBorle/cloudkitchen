@@ -576,6 +576,18 @@ export default function ChatbotWidget() {
         };
     }, [status, session]);
 
+    // Close chatbot immediately if disabled platform-wide
+    useEffect(() => {
+        if (!isChatbotEnabled) {
+            setIsOpen(false);
+        }
+    }, [isChatbotEnabled]);
+
+    // Hide chatbot if disabled platform-wide via Superadmin module toggle, or on invoice
+    if (!isChatbotEnabled || pathname?.includes("/invoice")) {
+        return null;
+    }
+
     // Hide chatbot on Superadmin, Admin, Admin Login, Support, Reel Manager, and Seller pages
     const lowerPath = pathname?.toLowerCase() || "";
     if (

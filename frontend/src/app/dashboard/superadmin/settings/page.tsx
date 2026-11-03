@@ -6,8 +6,10 @@ import { ShieldCheck, Sparkles, BedDouble, Utensils, CheckCircle2, AlertCircle, 
 import { fetchApi } from "@/lib/fetch-api";
 
 export default function SuperadminSettingsPage() {
-  const { isRoomEnabled, setRoomEnabled, isChatbotEnabled, setChatbotEnabled, isLoading } = useRoomModule();
+  const { isRoomEnabled, setRoomEnabled, isChatbotEnabled, setChatbotEnabled, refreshRoomSetting, isLoading } = useRoomModule();
   const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [isTogglingChatbot, setIsTogglingChatbot] = useState(false);
+  const [isTogglingRoom, setIsTogglingRoom] = useState(false);
 
   // Tax Settings State
   const [productTaxRate, setProductTaxRate] = useState<string>("5");
@@ -16,14 +18,29 @@ export default function SuperadminSettingsPage() {
   const [taxLoaded, setTaxLoaded] = useState<boolean>(false);
 
   useEffect(() => {
+    // Refresh live module flags from backend when entering settings page
+    refreshRoomSetting();
+
     async function loadTaxSettings() {
       try {
-        const res = await fetchApi("/api/superadmin/settings");
+        const res = await fetchApi(`/api/superadmin/settings?t=${Date.now()}`);
         if (res.ok) {
           const data = await res.json();
           const map = data.data?.settingsMap || data.settingsMap || {};
           if (map.PRODUCT_TAX_RATE !== undefined) setProductTaxRate(String(map.PRODUCT_TAX_RATE));
           if (map.DELIVERY_TAX_RATE !== undefined) setDeliveryTaxRate(String(map.DELIVERY_TAX_RATE));
+          if (map.ENABLE_CHATBOT !== undefined) {
+            const botVal = map.ENABLE_CHATBOT !== "false";
+            if (typeof window !== "undefined") {
+              localStorage.setItem("ENABLE_CHATBOT", botVal ? "true" : "false");
+            }
+          }
+          if (map.ENABLE_ROOM_MODULE !== undefined) {
+            const roomVal = map.ENABLE_ROOM_MODULE === "true";
+            if (typeof window !== "undefined") {
+              localStorage.setItem("ENABLE_ROOM_MODULE", roomVal ? "true" : "false");
+            }
+          }
         }
       } catch (err) {
         console.error("Failed to load tax settings:", err);
@@ -32,7 +49,7 @@ export default function SuperadminSettingsPage() {
       }
     }
     loadTaxSettings();
-  }, []);
+  }, [refreshRoomSetting]);
 
   const handleSaveTax = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,26 +82,40 @@ export default function SuperadminSettingsPage() {
   };
 
   const handleToggle = async (nextState: boolean) => {
-    const ok = await setRoomEnabled(nextState);
-    if (ok) {
-      setSuccessToast(
-        nextState
-          ? "Room Module enabled successfully! Room features are now active across the platform."
-          : "Room Module disabled! All room-related features are hidden across User, Seller, and Admin views."
-      );
-      setTimeout(() => setSuccessToast(null), 4000);
+    setIsTogglingRoom(true);
+    try {
+      const ok = await setRoomEnabled(nextState);
+      if (ok) {
+        setSuccessToast(
+          nextState
+            ? "Room Module enabled successfully! Room features are now active across the platform."
+            : "Room Module disabled! All room-related features are hidden across User, Seller, and Admin views."
+        );
+        setTimeout(() => setSuccessToast(null), 4000);
+      } else {
+        alert("Failed to update Room Module status. Please try again.");
+      }
+    } finally {
+      setIsTogglingRoom(false);
     }
   };
 
   const handleToggleChatbot = async (nextState: boolean) => {
-    const ok = await setChatbotEnabled(nextState);
-    if (ok) {
-      setSuccessToast(
-        nextState
-          ? "Bitey AI Chatbot enabled! The virtual assistant is now active and visible across the platform."
-          : "Bitey AI Chatbot disabled! The virtual assistant is now completely hidden platform-wide."
-      );
-      setTimeout(() => setSuccessToast(null), 4000);
+    setIsTogglingChatbot(true);
+    try {
+      const ok = await setChatbotEnabled(nextState);
+      if (ok) {
+        setSuccessToast(
+          nextState
+            ? "Bitey AI Chatbot enabled! The virtual assistant is now active and visible across the user side."
+            : "Bitey AI Chatbot disabled! The virtual assistant is now completely hidden platform-wide."
+        );
+        setTimeout(() => setSuccessToast(null), 4000);
+      } else {
+        alert("Failed to update Bitey AI Chatbot status. Please try again.");
+      }
+    } finally {
+      setIsTogglingChatbot(false);
     }
   };
 
@@ -342,7 +373,7 @@ export default function SuperadminSettingsPage() {
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "8px" }}>
             <button
               type="button"
-              disabled={isLoading}
+              disabled={isLoading || isTogglingRoom}
               onClick={() => handleToggle(!isRoomEnabled)}
               style={{
                 width: "60px",
@@ -350,12 +381,13 @@ export default function SuperadminSettingsPage() {
                 borderRadius: "16px",
                 backgroundColor: isRoomEnabled ? "#16A34A" : "#CBD5E1",
                 border: "none",
-                cursor: isLoading ? "wait" : "pointer",
+                cursor: (isLoading || isTogglingRoom) ? "wait" : "pointer",
                 position: "relative",
                 transition: "background-color 0.2s ease",
                 padding: 0,
                 outline: "none",
-                boxShadow: "0 2px 5px rgba(0,0,0,0.15)"
+                boxShadow: "0 2px 5px rgba(0,0,0,0.15)",
+                opacity: (isLoading || isTogglingRoom) ? 0.7 : 1
               }}
               title={`Click to ${isRoomEnabled ? "disable" : "enable"} Room Module`}
             >
@@ -446,7 +478,7 @@ export default function SuperadminSettingsPage() {
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "8px" }}>
             <button
               type="button"
-              disabled={isLoading}
+              disabled={isLoading || isTogglingChatbot}
               onClick={() => handleToggleChatbot(!isChatbotEnabled)}
               style={{
                 width: "60px",
@@ -454,12 +486,13 @@ export default function SuperadminSettingsPage() {
                 borderRadius: "16px",
                 backgroundColor: isChatbotEnabled ? "#16A34A" : "#CBD5E1",
                 border: "none",
-                cursor: isLoading ? "wait" : "pointer",
+                cursor: (isLoading || isTogglingChatbot) ? "wait" : "pointer",
                 position: "relative",
                 transition: "background-color 0.2s ease",
                 padding: 0,
                 outline: "none",
-                boxShadow: "0 2px 5px rgba(0,0,0,0.15)"
+                boxShadow: "0 2px 5px rgba(0,0,0,0.15)",
+                opacity: (isLoading || isTogglingChatbot) ? 0.7 : 1
               }}
               title={`Click to ${isChatbotEnabled ? "disable" : "enable"} Bitey Chatbot`}
             >
