@@ -106,11 +106,12 @@ export default function SuperadminOverview() {
   };
 
   const loadData = useCallback(async (isSilent = false) => {
+    const startTime = Date.now();
     if (!isSilent) setRefreshing(true);
     try {
       const [statsRes, sellersRes] = await Promise.all([
-        fetchApi("/api/superadmin/stats"),
-        fetchApi("/api/superadmin/sellers"),
+        fetchApi(`/api/superadmin/stats?t=${Date.now()}`),
+        fetchApi(`/api/superadmin/sellers?t=${Date.now()}`),
       ]);
 
       if (statsRes.ok) {
@@ -128,7 +129,13 @@ export default function SuperadminOverview() {
       showToast("error", "Failed to load live superadmin data.");
     } finally {
       setLoading(false);
-      setRefreshing(false);
+      const elapsed = Date.now() - startTime;
+      const minDuration = 600;
+      if (!isSilent && elapsed < minDuration) {
+        setTimeout(() => setRefreshing(false), minDuration - elapsed);
+      } else {
+        setRefreshing(false);
+      }
     }
   }, []);
 
@@ -386,6 +393,12 @@ export default function SuperadminOverview() {
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#F8FAFC", padding: "32px", fontFamily: "var(--font-sans)" }}>
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
       {/* Toast Alert */}
       {toastMessage && (
         <div
@@ -432,17 +445,39 @@ export default function SuperadminOverview() {
               gap: "8px",
               padding: "10px 18px",
               borderRadius: "10px",
-              backgroundColor: "#FFFFFF",
+              backgroundColor: refreshing ? "#E2E8F0" : "#FFFFFF",
               border: "1px solid #CBD5E1",
-              color: "#334155",
+              color: refreshing ? "#1E293B" : "#334155",
               fontWeight: "600",
               fontSize: "0.9rem",
               cursor: refreshing ? "wait" : "pointer",
               boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+              transition: "all 0.2s ease",
+              opacity: refreshing ? 0.85 : 1,
+            }}
+            onMouseEnter={(e) => {
+              if (!refreshing) {
+                e.currentTarget.style.backgroundColor = "#F1F5F9";
+                e.currentTarget.style.color = "#1E293B";
+                e.currentTarget.style.borderColor = "#94A3B8";
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!refreshing) {
+                e.currentTarget.style.backgroundColor = "#FFFFFF";
+                e.currentTarget.style.color = "#334155";
+                e.currentTarget.style.borderColor = "#CBD5E1";
+              }
             }}
             title="Refresh live data"
           >
-            <RefreshCw size={16} className={refreshing ? "spin-icon" : ""} style={{ animation: refreshing ? "spin 1s linear infinite" : "none" }} />
+            <RefreshCw
+              size={16}
+              style={{
+                animation: refreshing ? "spin 0.8s linear infinite" : "none",
+                transformOrigin: "center",
+              }}
+            />
             <span>{refreshing ? "Refreshing..." : "Refresh Data"}</span>
           </button>
 
