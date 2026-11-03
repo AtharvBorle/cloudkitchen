@@ -32,8 +32,6 @@ import {
     CheckCircle2,
     Clock3,
     Download,
-    Printer,
-    QrCode,
 } from "lucide-react";
 
 export type ApplicationType = {
@@ -1634,8 +1632,8 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                         <div
                             style={{
                                 position: "relative",
-                                width: isDocViewer ? "92vw" : (isPlaceholder || isIdentityDoc) ? "100%" : "auto",
-                                maxWidth: isDocViewer ? "1100px" : isIdentityDoc ? "620px" : isPlaceholder ? "520px" : "90vw",
+                                width: isDocViewer ? "92vw" : isPlaceholder ? "100%" : "auto",
+                                maxWidth: isDocViewer ? "1100px" : isPlaceholder ? "520px" : "90vw",
                                 maxHeight: "92vh",
                                 display: "flex",
                                 flexDirection: "column",
@@ -1649,15 +1647,15 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                                     display: "flex",
                                     alignItems: "center",
                                     justifyContent: "space-between",
-                                    width: (isDocViewer || isPlaceholder || isIdentityDoc) ? "100%" : "auto",
+                                    width: (isDocViewer || isPlaceholder) ? "100%" : "auto",
                                     gap: "14px",
                                     backgroundColor: "#1E293B",
                                     padding: "8px 18px",
-                                    borderRadius: isDocViewer ? "12px 12px 0 0" : (isPlaceholder || isIdentityDoc) ? "14px 14px 0 0" : "30px",
-                                    marginBottom: (isDocViewer || isPlaceholder || isIdentityDoc) ? 0 : "14px",
+                                    borderRadius: isDocViewer ? "12px 12px 0 0" : isPlaceholder ? "14px 14px 0 0" : "30px",
+                                    marginBottom: (isDocViewer || isPlaceholder) ? 0 : "14px",
                                     boxShadow: "0 10px 25px rgba(0,0,0,0.3)",
-                                    border: (isDocViewer || isPlaceholder || isIdentityDoc) ? "1px solid #334155" : "none",
-                                    borderBottom: (isDocViewer || isPlaceholder || isIdentityDoc) ? "none" : undefined,
+                                    border: (isDocViewer || isPlaceholder) ? "1px solid #334155" : "none",
+                                    borderBottom: (isDocViewer || isPlaceholder) ? "none" : undefined,
                                     boxSizing: "border-box",
                                 }}
                             >
@@ -1727,7 +1725,7 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                                             {selectedDocTitle || "Word Document (.docx / .doc)"}
                                         </span>
                                     </div>
-                                ) : (isPlaceholder && !isIdentityDoc) ? (
+                                ) : isPlaceholder ? (
                                     <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
                                         <div
                                             style={{
@@ -1762,26 +1760,6 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                                     </div>
                                 ) : (
                                     <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                                        {isIdentityDoc && (
-                                            <div
-                                                style={{
-                                                    backgroundColor: "#10B981",
-                                                    color: "#FFFFFF",
-                                                    borderRadius: "6px",
-                                                    padding: "3px 8px",
-                                                    fontSize: "0.72rem",
-                                                    fontWeight: 800,
-                                                    letterSpacing: "0.5px",
-                                                    display: "flex",
-                                                    alignItems: "center",
-                                                    gap: "4px",
-                                                    flexShrink: 0,
-                                                }}
-                                            >
-                                                <ShieldCheck size={13} color="#FFFFFF" />
-                                                <span>VERIFIED</span>
-                                            </div>
-                                        )}
                                         {selectedDocTitle && (
                                             <span style={{ color: "#F8FAFC", fontSize: "0.85rem", fontWeight: 600, marginRight: "6px" }}>
                                                 {selectedDocTitle}
@@ -1843,30 +1821,6 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                                             <ExternalLink size={13} />
                                             <span>{isWord && isHttp ? "View Online" : "Full Screen"}</span>
                                         </a>
-                                    )}
-                                    {isIdentityDoc && (
-                                        <button
-                                            type="button"
-                                            onClick={() => window.print()}
-                                            title="Print Identity Proof"
-                                            style={{
-                                                display: "inline-flex",
-                                                alignItems: "center",
-                                                gap: "6px",
-                                                backgroundColor: "#2563EB",
-                                                color: "#FFFFFF",
-                                                padding: "6px 14px",
-                                                borderRadius: "20px",
-                                                fontSize: "0.82rem",
-                                                fontWeight: 600,
-                                                border: "none",
-                                                cursor: "pointer",
-                                                transition: "background-color 0.15s ease",
-                                            }}
-                                        >
-                                            <Printer size={13} />
-                                            <span>Print Proof</span>
-                                        </button>
                                     )}
                                     {!isPlaceholder && (
                                         <a
@@ -2020,98 +1974,89 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                                     )}
                                 </div>
                             ) : isPlaceholder ? (
-                                isIdentityDoc ? (
-                                    <IdentityProofCard
-                                        app={selectedDocApp}
-                                        zoomLevel={zoomLevel}
-                                        imageRotation={imageRotation}
-                                        onClose={closeImage}
-                                    />
-                                ) : (
+                                <div
+                                    style={{
+                                        width: "100%",
+                                        backgroundColor: "#1E293B",
+                                        borderRadius: "0 0 14px 14px",
+                                        padding: "36px 28px",
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        alignItems: "center",
+                                        textAlign: "center",
+                                        gap: "18px",
+                                        border: "1px solid #334155",
+                                        borderTop: "none",
+                                        boxShadow: "0 20px 40px rgba(0,0,0,0.4)",
+                                        boxSizing: "border-box",
+                                    }}
+                                >
                                     <div
                                         style={{
-                                            width: "100%",
-                                            backgroundColor: "#1E293B",
-                                            borderRadius: "0 0 14px 14px",
-                                            padding: "36px 28px",
+                                            width: "68px",
+                                            height: "68px",
+                                            borderRadius: "50%",
+                                            backgroundColor: "rgba(16, 185, 129, 0.15)",
+                                            border: "2px solid #10B981",
                                             display: "flex",
-                                            flexDirection: "column",
                                             alignItems: "center",
-                                            textAlign: "center",
-                                            gap: "18px",
-                                            border: "1px solid #334155",
-                                            borderTop: "none",
-                                            boxShadow: "0 20px 40px rgba(0,0,0,0.4)",
-                                            boxSizing: "border-box",
+                                            justifyContent: "center",
                                         }}
                                     >
-                                        <div
-                                            style={{
-                                                width: "68px",
-                                                height: "68px",
-                                                borderRadius: "50%",
-                                                backgroundColor: "rgba(16, 185, 129, 0.15)",
-                                                border: "2px solid #10B981",
-                                                display: "flex",
-                                                alignItems: "center",
-                                                justifyContent: "center",
-                                            }}
-                                        >
-                                            <ShieldCheck size={38} color="#10B981" />
-                                        </div>
-                                        <div>
-                                            <h4 style={{ color: "#F8FAFC", fontSize: "1.1rem", fontWeight: 700, margin: "0 0 6px 0" }}>
-                                                {selectedDocTitle || "Identity Verification Document"}
-                                            </h4>
-                                            <p style={{ color: "#94A3B8", fontSize: "0.85rem", margin: 0, lineHeight: 1.5 }}>
-                                                Official identity verification record on file. Document approved during registration onboarding.
-                                            </p>
-                                        </div>
-                                        <div
-                                            style={{
-                                                backgroundColor: "#0F172A",
-                                                borderRadius: "10px",
-                                                padding: "12px 18px",
-                                                width: "100%",
-                                                boxSizing: "border-box",
-                                                display: "flex",
-                                                justifyContent: "space-between",
-                                                alignItems: "center",
-                                                border: "1px solid #334155",
-                                            }}
-                                        >
-                                            <span style={{ color: "#94A3B8", fontSize: "0.82rem" }}>Verification Status</span>
-                                            <span
-                                                style={{
-                                                    color: "#10B981",
-                                                    fontSize: "0.82rem",
-                                                    fontWeight: 700,
-                                                    display: "inline-flex",
-                                                    alignItems: "center",
-                                                    gap: "5px",
-                                                }}
-                                            >
-                                                <CheckCircle2 size={14} color="#10B981" /> Approved &amp; Verified
-                                            </span>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={closeImage}
-                                            style={{
-                                                padding: "8px 24px",
-                                                backgroundColor: "#334155",
-                                                color: "#FFFFFF",
-                                                border: "none",
-                                                borderRadius: "8px",
-                                                fontWeight: 600,
-                                                fontSize: "0.85rem",
-                                                cursor: "pointer",
-                                            }}
-                                        >
-                                            Close Preview
-                                        </button>
+                                        <ShieldCheck size={38} color="#10B981" />
                                     </div>
-                                )
+                                    <div>
+                                        <h4 style={{ color: "#F8FAFC", fontSize: "1.1rem", fontWeight: 700, margin: "0 0 6px 0" }}>
+                                            {selectedDocTitle || "Identity Verification Document"}
+                                        </h4>
+                                        <p style={{ color: "#94A3B8", fontSize: "0.85rem", margin: 0, lineHeight: 1.5 }}>
+                                            Official identity verification record on file. Document approved during registration onboarding.
+                                        </p>
+                                    </div>
+                                    <div
+                                        style={{
+                                            backgroundColor: "#0F172A",
+                                            borderRadius: "10px",
+                                            padding: "12px 18px",
+                                            width: "100%",
+                                            boxSizing: "border-box",
+                                            display: "flex",
+                                            justifyContent: "space-between",
+                                            alignItems: "center",
+                                            border: "1px solid #334155",
+                                        }}
+                                    >
+                                        <span style={{ color: "#94A3B8", fontSize: "0.82rem" }}>Verification Status</span>
+                                        <span
+                                            style={{
+                                                color: "#10B981",
+                                                fontSize: "0.82rem",
+                                                fontWeight: 700,
+                                                display: "inline-flex",
+                                                alignItems: "center",
+                                                gap: "5px",
+                                            }}
+                                        >
+                                            <CheckCircle2 size={14} color="#10B981" /> Approved &amp; Verified
+                                        </span>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={closeImage}
+                                        style={{
+                                            padding: "8px 24px",
+                                            backgroundColor: "#334155",
+                                            color: "#FFFFFF",
+                                            border: "none",
+                                            borderRadius: "8px",
+                                            fontWeight: 600,
+                                            fontSize: "0.85rem",
+                                            cursor: "pointer",
+                                        }}
+                                    >
+                                        Close Preview
+                                    </button>
+                                </div>
                             ) : (
                                 <div
                                     style={{
@@ -2127,65 +2072,56 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                                     }}
                                 >
                                     {imageLoadError ? (
-                                        isIdentityDoc ? (
-                                            <IdentityProofCard
-                                                app={selectedDocApp}
-                                                zoomLevel={zoomLevel}
-                                                imageRotation={imageRotation}
-                                                onClose={closeImage}
-                                            />
-                                        ) : (
-                                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "30px 20px", gap: "14px" }}>
-                                                <FileText size={44} color="#38BDF8" />
-                                                <div>
-                                                    <h5 style={{ color: "#F8FAFC", fontSize: "1rem", margin: "0 0 6px 0", fontWeight: 700 }}>
-                                                        {selectedDocTitle || "Document Attachment"}
-                                                    </h5>
-                                                    <p style={{ color: "#94A3B8", fontSize: "0.82rem", margin: 0 }}>
-                                                        Document attached. Click below to download or view in a separate tab.
-                                                    </p>
-                                                </div>
-                                                <div style={{ display: "flex", gap: "10px" }}>
-                                                    <a
-                                                        href={selectedImage}
-                                                        download={selectedDocTitle ? `${selectedDocTitle.replace(/[^\w\d-_]+/g, "_")}` : "document"}
-                                                        style={{
-                                                            display: "inline-flex",
-                                                            alignItems: "center",
-                                                            gap: "6px",
-                                                            backgroundColor: "#2563EB",
-                                                            color: "#FFFFFF",
-                                                            padding: "8px 18px",
-                                                            borderRadius: "8px",
-                                                            fontSize: "0.82rem",
-                                                            fontWeight: 600,
-                                                            textDecoration: "none",
-                                                        }}
-                                                    >
-                                                        <Download size={14} /> Download
-                                                    </a>
-                                                    <a
-                                                        href={selectedImage}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        style={{
-                                                            display: "inline-flex",
-                                                            alignItems: "center",
-                                                            gap: "6px",
-                                                            backgroundColor: "#334155",
-                                                            color: "#FFFFFF",
-                                                            padding: "8px 16px",
-                                                            borderRadius: "8px",
-                                                            fontSize: "0.82rem",
-                                                            fontWeight: 600,
-                                                            textDecoration: "none",
-                                                        }}
-                                                    >
-                                                        <ExternalLink size={14} /> Open
-                                                    </a>
-                                                </div>
+                                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "30px 20px", gap: "14px" }}>
+                                            <FileText size={44} color="#38BDF8" />
+                                            <div>
+                                                <h5 style={{ color: "#F8FAFC", fontSize: "1rem", margin: "0 0 6px 0", fontWeight: 700 }}>
+                                                    {selectedDocTitle || "Document Attachment"}
+                                                </h5>
+                                                <p style={{ color: "#94A3B8", fontSize: "0.82rem", margin: 0 }}>
+                                                    Document attached. Click below to download or view in a separate tab.
+                                                </p>
                                             </div>
-                                        )
+                                            <div style={{ display: "flex", gap: "10px" }}>
+                                                <a
+                                                    href={selectedImage}
+                                                    download={selectedDocTitle ? `${selectedDocTitle.replace(/[^\w\d-_]+/g, "_")}` : "document"}
+                                                    style={{
+                                                        display: "inline-flex",
+                                                        alignItems: "center",
+                                                        gap: "6px",
+                                                        backgroundColor: "#2563EB",
+                                                        color: "#FFFFFF",
+                                                        padding: "8px 18px",
+                                                        borderRadius: "8px",
+                                                        fontSize: "0.82rem",
+                                                        fontWeight: 600,
+                                                        textDecoration: "none",
+                                                    }}
+                                                >
+                                                    <Download size={14} /> Download
+                                                </a>
+                                                <a
+                                                    href={selectedImage}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    style={{
+                                                        display: "inline-flex",
+                                                        alignItems: "center",
+                                                        gap: "6px",
+                                                        backgroundColor: "#334155",
+                                                        color: "#FFFFFF",
+                                                        padding: "8px 16px",
+                                                        borderRadius: "8px",
+                                                        fontSize: "0.82rem",
+                                                        fontWeight: 600,
+                                                        textDecoration: "none",
+                                                    }}
+                                                >
+                                                    <ExternalLink size={14} /> Open
+                                                </a>
+                                            </div>
+                                        </div>
                                     ) : (
                                         <img
                                             src={selectedImage}
@@ -2207,539 +2143,6 @@ export default function RegistrationsClient({ initialApplications }: { initialAp
                     </div>
                 );
             })()}
-        </div>
-    );
-}
-
-export const getDeterministicPAN = (app: ApplicationType | null): string => {
-    if (!app) return "ABCPR6655K";
-    const name = (app.ownerName || app.businessName || "SELLER").trim().toUpperCase();
-    const cleanLetters = name.replace(/[^A-Z]/g, "");
-    const fifthChar = cleanLetters[0] || "P";
-    const rawNum = (app.phone || app.trackingId || app.id || "6655").replace(/\D/g, "");
-    const digits = (rawNum.slice(-4) || "6655").padStart(4, "7");
-    const sum = (name + digits).split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
-    const checkChar = String.fromCharCode(65 + (sum % 26));
-    return `ABCP${fifthChar}${digits}${checkChar}`;
-};
-
-function IdentityProofCard({
-    app,
-    zoomLevel,
-    imageRotation,
-    onClose,
-}: {
-    app: ApplicationType | null;
-    zoomLevel: number;
-    imageRotation: number;
-    onClose: () => void;
-}) {
-    const panNumber = getDeterministicPAN(app);
-    const issueDate = app?.createdAt
-        ? new Date(app.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" })
-        : "17/10/2026";
-    const sellerPhoto = app?.kitchenImages && app.kitchenImages.length > 0 ? app.kitchenImages[0] : null;
-
-    return (
-        <div
-            style={{
-                width: "100%",
-                backgroundColor: "#0F172A",
-                borderRadius: "0 0 14px 14px",
-                padding: "24px 20px",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: "20px",
-                border: "1px solid #334155",
-                borderTop: "none",
-                boxShadow: "0 20px 40px rgba(0,0,0,0.5)",
-                boxSizing: "border-box",
-                overflowY: "auto",
-                maxHeight: "82vh",
-            }}
-        >
-            {/* Zoomable PAN Card Preview Canvas */}
-            <div
-                style={{
-                    transform: `scale(${zoomLevel}) rotate(${imageRotation}deg)`,
-                    transformOrigin: "center center",
-                    transition: "transform 0.2s ease-out",
-                    maxWidth: "100%",
-                    display: "flex",
-                    justifyContent: "center",
-                    padding: "6px 0",
-                }}
-            >
-                {/* Authentic Government of India PAN Card */}
-                <div
-                    style={{
-                        width: "530px",
-                        maxWidth: "92vw",
-                        borderRadius: "14px",
-                        background: "linear-gradient(135deg, #E0F2FE 0%, #BAE6FD 30%, #E0F2FE 65%, #F0F9FF 100%)",
-                        border: "2px solid #7DD3FC",
-                        boxShadow: "0 18px 40px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.9)",
-                        padding: "16px 20px",
-                        position: "relative",
-                        overflow: "hidden",
-                        color: "#0F172A",
-                        boxSizing: "border-box",
-                        fontFamily: "'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-                    }}
-                >
-                    {/* Background Security Watermark */}
-                    <div
-                        style={{
-                            position: "absolute",
-                            top: "52%",
-                            left: "52%",
-                            transform: "translate(-50%, -50%)",
-                            opacity: 0.06,
-                            pointerEvents: "none",
-                            fontSize: "110px",
-                            fontWeight: 900,
-                            letterSpacing: "4px",
-                            userSelect: "none",
-                            color: "#0369A1",
-                        }}
-                    >
-                        GOI
-                    </div>
-
-                    {/* Top Tricolor Strip */}
-                    <div
-                        style={{
-                            height: "4px",
-                            borderRadius: "2px",
-                            background: "linear-gradient(90deg, #FF9933 0%, #FF9933 33.3%, #FFFFFF 33.3%, #FFFFFF 66.6%, #138808 66.6%, #138808 100%)",
-                            marginBottom: "10px",
-                            boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
-                        }}
-                    />
-
-                    {/* Header Row */}
-                    <div
-                        style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            paddingBottom: "8px",
-                            borderBottom: "1px solid rgba(14, 165, 233, 0.25)",
-                        }}
-                    >
-                        {/* Left: Ashoka Emblem */}
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                            <div
-                                style={{
-                                    width: "36px",
-                                    height: "36px",
-                                    borderRadius: "8px",
-                                    backgroundColor: "rgba(3, 105, 161, 0.08)",
-                                    border: "1px solid rgba(3, 105, 161, 0.2)",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    flexShrink: 0,
-                                }}
-                            >
-                                <svg width="24" height="28" viewBox="0 0 24 28" fill="none">
-                                    <path d="M12 2C9.5 2 8 4.5 8 7C8 9 9.2 10.5 10 11.2C8 12 6 14 6 17C6 19.5 7.5 21 9 21.8C7.8 22.5 7 24 7 25.5H17C17 24 16.2 22.5 15 21.8C16.5 21 18 19.5 18 17C18 14 16 12 14 11.2C14.8 10.5 16 9 16 7C16 4.5 14.5 2 12 2Z" fill="#0C4A6E" />
-                                    <circle cx="12" cy="25" r="1.5" fill="#0284C7" />
-                                </svg>
-                            </div>
-                            <div>
-                                <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "#0C4A6E", letterSpacing: "0.6px", lineHeight: 1.1 }}>
-                                    आयकर विभाग
-                                </div>
-                                <div style={{ fontSize: "0.74rem", fontWeight: 800, color: "#0369A1", letterSpacing: "0.4px" }}>
-                                    INCOME TAX DEPARTMENT
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Center / Right Titles */}
-                        <div style={{ textAlign: "right" }}>
-                            <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#0284C7" }}>
-                                भारत सरकार / GOVT. OF INDIA
-                            </div>
-                            <div
-                                style={{
-                                    fontSize: "0.64rem",
-                                    fontWeight: 800,
-                                    color: "#0369A1",
-                                    letterSpacing: "0.5px",
-                                    textTransform: "uppercase",
-                                }}
-                            >
-                                Permanent Account Number Card
-                            </div>
-                        </div>
-
-                        {/* Hologram Circle */}
-                        <div
-                            style={{
-                                width: "38px",
-                                height: "38px",
-                                borderRadius: "50%",
-                                background: "radial-gradient(circle at 35% 35%, #FEF08A 0%, #F59E0B 50%, #B45309 85%, #78350F 100%)",
-                                border: "1.5px solid #FCD34D",
-                                display: "flex",
-                                flexDirection: "column",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                boxShadow: "0 3px 8px rgba(0,0,0,0.25), inset 0 1px 1px rgba(255,255,255,0.7)",
-                                flexShrink: 0,
-                                marginLeft: "6px",
-                            }}
-                        >
-                            <span style={{ fontSize: "0.46rem", fontWeight: 900, color: "#78350F", letterSpacing: "0.2px" }}>NSDL</span>
-                            <span style={{ fontSize: "0.4rem", fontWeight: 800, color: "#451A03" }}>SECURE</span>
-                        </div>
-                    </div>
-
-                    {/* Card Content (Left Photo & Signature, Right Details) */}
-                    <div style={{ display: "flex", gap: "18px", marginTop: "12px", alignItems: "flex-start" }}>
-                        {/* Left Column */}
-                        <div style={{ width: "105px", display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", flexShrink: 0 }}>
-                            {/* Photo Slot */}
-                            <div
-                                style={{
-                                    width: "95px",
-                                    height: "115px",
-                                    borderRadius: "6px",
-                                    border: "1.5px solid #0284C7",
-                                    backgroundColor: "#F1F5F9",
-                                    overflow: "hidden",
-                                    position: "relative",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    boxShadow: "0 3px 8px rgba(0,0,0,0.12)",
-                                }}
-                            >
-                                {sellerPhoto ? (
-                                    <img
-                                        src={sellerPhoto}
-                                        alt={app?.ownerName || "Seller ID Photo"}
-                                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                                    />
-                                ) : (
-                                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                                        <User size={46} color="#64748B" />
-                                        <span style={{ fontSize: "0.62rem", color: "#64748B", fontWeight: 700, marginTop: "4px" }}>
-                                            ID PHOTO
-                                        </span>
-                                    </div>
-                                )}
-                                <div
-                                    style={{
-                                        position: "absolute",
-                                        bottom: 0,
-                                        left: 0,
-                                        right: 0,
-                                        backgroundColor: "rgba(16, 185, 129, 0.95)",
-                                        color: "#FFFFFF",
-                                        fontSize: "0.56rem",
-                                        fontWeight: 800,
-                                        letterSpacing: "0.6px",
-                                        textAlign: "center",
-                                        padding: "2px 0",
-                                    }}
-                                >
-                                    VERIFIED
-                                </div>
-                            </div>
-
-                            {/* Cardholder Signature */}
-                            <div
-                                style={{
-                                    width: "95px",
-                                    height: "32px",
-                                    backgroundColor: "rgba(255, 255, 255, 0.9)",
-                                    borderRadius: "4px",
-                                    border: "1px dashed #0284C7",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    padding: "0 6px",
-                                    boxSizing: "border-box",
-                                }}
-                            >
-                                <span
-                                    style={{
-                                        fontFamily: "'Brush Script MT', 'Dancing Script', 'Segoe Script', cursive",
-                                        fontSize: "1.15rem",
-                                        color: "#0F172A",
-                                        fontWeight: 600,
-                                        whiteSpace: "nowrap",
-                                        overflow: "hidden",
-                                        textOverflow: "ellipsis",
-                                    }}
-                                >
-                                    {app?.ownerName || "Ritu"}
-                                </span>
-                            </div>
-                            <span style={{ fontSize: "0.56rem", color: "#64748B", fontWeight: 700, marginTop: "-4px" }}>
-                                हस्ताक्षर / Signature
-                            </span>
-                        </div>
-
-                        {/* Right Details Column */}
-                        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "7px", minWidth: 0 }}>
-                            {/* Permanent Account Number (PAN) */}
-                            <div>
-                                <span style={{ fontSize: "0.64rem", color: "#0369A1", fontWeight: 700, letterSpacing: "0.5px" }}>
-                                    स्थायी लेखा संख्या / Permanent Account Number
-                                </span>
-                                <div
-                                    style={{
-                                        fontSize: "1.24rem",
-                                        fontWeight: 900,
-                                        fontFamily: "'Courier New', Courier, monospace",
-                                        letterSpacing: "2.5px",
-                                        color: "#0C4A6E",
-                                        margin: "1px 0 0 0",
-                                        lineHeight: 1.2,
-                                    }}
-                                >
-                                    {panNumber}
-                                </div>
-                            </div>
-
-                            {/* Cardholder Name */}
-                            <div>
-                                <span style={{ fontSize: "0.58rem", color: "#64748B", fontWeight: 600 }}>नाम / Name</span>
-                                <div
-                                    style={{
-                                        fontSize: "0.92rem",
-                                        fontWeight: 800,
-                                        color: "#0F172A",
-                                        textTransform: "uppercase",
-                                        lineHeight: 1.2,
-                                    }}
-                                >
-                                    {app?.ownerName || "RITU"}
-                                </div>
-                            </div>
-
-                            {/* Business / Kitchen Name */}
-                            <div>
-                                <span style={{ fontSize: "0.58rem", color: "#64748B", fontWeight: 600 }}>
-                                    व्यापार / Registered Kitchen
-                                </span>
-                                <div
-                                    style={{
-                                        fontSize: "0.85rem",
-                                        fontWeight: 700,
-                                        color: "#1E293B",
-                                        textTransform: "uppercase",
-                                        lineHeight: 1.2,
-                                    }}
-                                >
-                                    {app?.businessName || "RITU'S KITCHEN"}
-                                </div>
-                            </div>
-
-                            {/* Issue Date & QR Code Row */}
-                            <div
-                                style={{
-                                    display: "flex",
-                                    alignItems: "flex-end",
-                                    justifyContent: "space-between",
-                                    marginTop: "2px",
-                                    paddingTop: "4px",
-                                }}
-                            >
-                                <div>
-                                    <span style={{ fontSize: "0.58rem", color: "#64748B", fontWeight: 600 }}>
-                                        जारी करने की तिथि / Issue Date
-                                    </span>
-                                    <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "#0F172A", marginTop: "1px" }}>
-                                        {issueDate}
-                                    </div>
-                                    <div
-                                        style={{
-                                            display: "inline-flex",
-                                            alignItems: "center",
-                                            gap: "4px",
-                                            backgroundColor: "rgba(16, 185, 129, 0.15)",
-                                            border: "1px solid #10B981",
-                                            padding: "2px 8px",
-                                            borderRadius: "4px",
-                                            marginTop: "6px",
-                                        }}
-                                    >
-                                        <CheckCircle2 size={11} color="#059669" />
-                                        <span style={{ fontSize: "0.6rem", color: "#059669", fontWeight: 800 }}>
-                                            UIDAI / NSDL e-KYC VERIFIED
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* QR Code for digital scan */}
-                                <div
-                                    style={{
-                                        width: "50px",
-                                        height: "50px",
-                                        backgroundColor: "#FFFFFF",
-                                        padding: "4px",
-                                        borderRadius: "6px",
-                                        border: "1.5px solid #CBD5E1",
-                                        display: "flex",
-                                        flexDirection: "column",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        boxShadow: "0 2px 5px rgba(0,0,0,0.08)",
-                                        flexShrink: 0,
-                                    }}
-                                >
-                                    <QrCode size={42} color="#0F172A" />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Security Bottom Strip */}
-                    <div
-                        style={{
-                            marginTop: "12px",
-                            paddingTop: "6px",
-                            borderTop: "1px dashed rgba(14, 165, 233, 0.35)",
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                        }}
-                    >
-                        <span style={{ fontSize: "0.56rem", color: "#0369A1", fontWeight: 700 }}>
-                            TRACKING REF: {app?.trackingId || "SHOP-ID1CNL"}
-                        </span>
-                        <span style={{ fontSize: "0.56rem", color: "#0369A1", fontWeight: 700, letterSpacing: "0.4px" }}>
-                            OFFICIAL DIGITAL IDENTITY PROOF
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            {/* Official Registration & Verification Details Card */}
-            <div
-                style={{
-                    backgroundColor: "#1E293B",
-                    borderRadius: "12px",
-                    padding: "16px 20px",
-                    width: "100%",
-                    maxWidth: "530px",
-                    boxSizing: "border-box",
-                    border: "1px solid #334155",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "12px",
-                }}
-            >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <ShieldCheck size={20} color="#10B981" />
-                        <div>
-                            <h5 style={{ color: "#F8FAFC", fontSize: "0.9rem", fontWeight: 700, margin: 0 }}>
-                                Official Identity &amp; PAN Record
-                            </h5>
-                            <p style={{ color: "#94A3B8", fontSize: "0.75rem", margin: 0 }}>
-                                Verified and authenticated document on file for onboarding
-                            </p>
-                        </div>
-                    </div>
-                    <span
-                        style={{
-                            color: "#10B981",
-                            fontSize: "0.78rem",
-                            fontWeight: 700,
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "5px",
-                            backgroundColor: "rgba(16, 185, 129, 0.12)",
-                            padding: "4px 10px",
-                            borderRadius: "6px",
-                            border: "1px solid rgba(16, 185, 129, 0.3)",
-                        }}
-                    >
-                        <CheckCircle2 size={13} color="#10B981" /> Approved &amp; Verified
-                    </span>
-                </div>
-
-                <div
-                    style={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr 1fr",
-                        gap: "10px",
-                        backgroundColor: "#0F172A",
-                        padding: "12px 14px",
-                        borderRadius: "8px",
-                        border: "1px solid #334155",
-                    }}
-                >
-                    <div>
-                        <span style={{ fontSize: "0.7rem", color: "#94A3B8", display: "block" }}>Cardholder Name</span>
-                        <span style={{ fontSize: "0.84rem", color: "#F8FAFC", fontWeight: 600 }}>{app?.ownerName || "Ritu"}</span>
-                    </div>
-                    <div>
-                        <span style={{ fontSize: "0.7rem", color: "#94A3B8", display: "block" }}>PAN Number</span>
-                        <span style={{ fontSize: "0.84rem", color: "#38BDF8", fontWeight: 700, fontFamily: "monospace" }}>{panNumber}</span>
-                    </div>
-                    <div>
-                        <span style={{ fontSize: "0.7rem", color: "#94A3B8", display: "block" }}>Registered Phone</span>
-                        <span style={{ fontSize: "0.84rem", color: "#F8FAFC", fontWeight: 600 }}>{app?.phone || "9988776655"}</span>
-                    </div>
-                    <div>
-                        <span style={{ fontSize: "0.7rem", color: "#94A3B8", display: "block" }}>Tracking ID</span>
-                        <span style={{ fontSize: "0.84rem", color: "#F8FAFC", fontWeight: 600 }}>{app?.trackingId || "SHOP-ID1CNL"}</span>
-                    </div>
-                    <div style={{ gridColumn: "1 / -1" }}>
-                        <span style={{ fontSize: "0.7rem", color: "#94A3B8", display: "block" }}>Registered Kitchen Address</span>
-                        <span style={{ fontSize: "0.8rem", color: "#CBD5E1", fontWeight: 500 }}>
-                            {app?.kitchenAddress || "Sahyadri Hospital, Paud Road, Kothrud, Pune"}
-                        </span>
-                    </div>
-                </div>
-
-                {/* Bottom Action Buttons */}
-                <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "4px" }}>
-                    <button
-                        type="button"
-                        onClick={() => window.print()}
-                        style={{
-                            padding: "8px 16px",
-                            backgroundColor: "#2563EB",
-                            color: "#FFFFFF",
-                            border: "none",
-                            borderRadius: "8px",
-                            fontWeight: 600,
-                            fontSize: "0.82rem",
-                            cursor: "pointer",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "6px",
-                        }}
-                    >
-                        <Printer size={14} /> Print Proof
-                    </button>
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        style={{
-                            padding: "8px 18px",
-                            backgroundColor: "#334155",
-                            color: "#FFFFFF",
-                            border: "none",
-                            borderRadius: "8px",
-                            fontWeight: 600,
-                            fontSize: "0.82rem",
-                            cursor: "pointer",
-                        }}
-                    >
-                        Close Preview
-                    </button>
-                </div>
-            </div>
         </div>
     );
 }
@@ -3086,6 +2489,44 @@ function ApplicationCard({
                                 }
                             } catch {
                                 adhaarUrls = app.adhaarUrl ? [app.adhaarUrl] : [];
+                            }
+
+                            if (adhaarUrls.length === 0) {
+                                return (
+                                    <div
+                                        style={{
+                                            border: "1px solid #E2E8F0",
+                                            borderRadius: "10px",
+                                            padding: "0.75rem 1rem",
+                                            display: "flex",
+                                            justifyContent: "space-between",
+                                            alignItems: "center",
+                                        }}
+                                    >
+                                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                            <div
+                                                style={{
+                                                    width: "36px",
+                                                    height: "36px",
+                                                    borderRadius: "8px",
+                                                    backgroundColor: "#EFF6FF",
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    justifyContent: "center",
+                                                }}
+                                            >
+                                                <FileText size={18} color="#3B82F6" />
+                                            </div>
+                                            <div>
+                                                <p style={{ fontWeight: "600", color: "#334155", margin: 0, fontSize: "0.88rem" }}>
+                                                    Identity / PAN Proof
+                                                </p>
+                                                <p style={{ fontSize: "0.75rem", color: "#64748B", margin: 0 }}>Identity Verification</p>
+                                            </div>
+                                        </div>
+                                        <span style={{ fontSize: "0.82rem", color: "#94A3B8", fontStyle: "italic" }}>Not provided</span>
+                                    </div>
+                                );
                             }
 
                             return adhaarUrls.map((url, idx) => (

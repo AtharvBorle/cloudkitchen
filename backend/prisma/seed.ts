@@ -74,7 +74,7 @@ async function main() {
             sellerProfile: {
                 create: {
                     type: "HOMELY_FOOD",
-                    adhaarUrl: "fake-url",
+                    adhaarUrl: "/uploads/1772103930487-WhatsApp_Image_2026-02-26_at_2.07.43_PM.jpeg",
                     trackingId: "TRK-SEED-01",
                     verificationStatus: "APPROVED",
                     businessName: "Radha's Kitchen Base"
@@ -104,7 +104,7 @@ async function main() {
             sellerProfile: {
                 create: {
                     type: "BAKERY",
-                    adhaarUrl: "fake-url-2",
+                    adhaarUrl: "/uploads/seller_identity_doc.pdf",
                     trackingId: "TRK-SEED-02",
                     verificationStatus: "PENDING",
                     businessName: "Rahul's Fresh Bakes"
