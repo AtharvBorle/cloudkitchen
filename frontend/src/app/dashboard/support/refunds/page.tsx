@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { fetchApi } from "@/lib/fetch-api";
-import { CreditCard, Loader2, Search, Filter, CheckCircle2, XCircle, Clock, AlertCircle } from "lucide-react";
+import { CreditCard, Loader2, Search, Filter, CheckCircle2, XCircle, Clock, AlertCircle, RefreshCw } from "lucide-react";
 
 export default function SupportRefundsPage() {
     const [refunds, setRefunds] = useState<any[]>([]);
@@ -23,10 +23,12 @@ export default function SupportRefundsPage() {
     const [adminNote, setAdminNote] = useState("");
     const [transactionId, setTransactionId] = useState("");
     const [processing, setProcessing] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
 
-    const fetchRefunds = async () => {
+    const fetchRefunds = async (isManual = false) => {
         try {
-            setLoading(true);
+            if (isManual) setRefreshing(true);
+            else setLoading(true);
             const res = await fetchApi("/api/refunds");
             const data = await res.json();
             if (res.ok) {
@@ -36,6 +38,9 @@ export default function SupportRefundsPage() {
             console.error("Failed to load refunds", error);
         } finally {
             setLoading(false);
+            if (isManual) {
+                setTimeout(() => setRefreshing(false), 600);
+            }
         }
     };
 
@@ -153,6 +158,12 @@ export default function SupportRefundsPage() {
 
     return (
         <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+            <style>{`
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            `}</style>
             
             {/* Header */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px" }}>
@@ -161,19 +172,49 @@ export default function SupportRefundsPage() {
                     <p style={{ color: "#64748B", fontSize: "0.9rem" }}>Process and fulfill refund requests for food orders and room stays</p>
                 </div>
                 <button
-                    onClick={fetchRefunds}
+                    type="button"
+                    onClick={() => fetchRefunds(true)}
+                    disabled={refreshing}
                     style={{
-                        backgroundColor: "#F1F5F9",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        backgroundColor: refreshing ? "#E2E8F0" : "#F1F5F9",
                         border: "1px solid #CBD5E1",
-                        color: "#475569",
+                        color: refreshing ? "#1E293B" : "#475569",
                         padding: "8px 16px",
                         borderRadius: "8px",
-                        cursor: "pointer",
+                        cursor: refreshing ? "wait" : "pointer",
                         fontWeight: "700",
-                        fontSize: "0.85rem"
+                        fontSize: "0.85rem",
+                        boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                        transition: "all 0.2s ease",
+                        opacity: refreshing ? 0.85 : 1
                     }}
+                    onMouseEnter={(e) => {
+                        if (!refreshing) {
+                            e.currentTarget.style.backgroundColor = "#E2E8F0";
+                            e.currentTarget.style.color = "#1E293B";
+                            e.currentTarget.style.borderColor = "#94A3B8";
+                        }
+                    }}
+                    onMouseLeave={(e) => {
+                        if (!refreshing) {
+                            e.currentTarget.style.backgroundColor = "#F1F5F9";
+                            e.currentTarget.style.color = "#475569";
+                            e.currentTarget.style.borderColor = "#CBD5E1";
+                        }
+                    }}
+                    title="Refresh refunds"
                 >
-                    Refresh
+                    <RefreshCw
+                        size={15}
+                        style={{
+                            animation: refreshing ? "spin 0.8s linear infinite" : "none",
+                            transformOrigin: "center"
+                        }}
+                    />
+                    <span>{refreshing ? "Refreshing..." : "Refresh"}</span>
                 </button>
             </div>
 

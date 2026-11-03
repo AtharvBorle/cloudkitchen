@@ -50,6 +50,7 @@ export default function SuperAdminSupportPage() {
 
 
     const [loadingDetails, setLoadingDetails] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
 
 
@@ -1569,25 +1570,15 @@ export default function SuperAdminSupportPage() {
 
 
     const handleRefresh = async () => {
-
-
-
-        await fetchTickets();
-
-
-
-        if (selectedTicket) {
-
-
-
-            await fetchTicketDetails(selectedTicket.id);
-
-
-
+        setIsRefreshing(true);
+        try {
+            await fetchTickets();
+            if (selectedTicket) {
+                await fetchTicketDetails(selectedTicket.id);
+            }
+        } finally {
+            setTimeout(() => setIsRefreshing(false), 600);
         }
-
-
-
     };
 
 
@@ -1955,6 +1946,12 @@ export default function SuperAdminSupportPage() {
 
 
         <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+            <style>{`
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            `}</style>
 
 
 
@@ -2075,73 +2072,49 @@ export default function SuperAdminSupportPage() {
 
 
                     <button
-
-
-
+                        type="button"
                         onClick={handleRefresh}
-
-
-
+                        disabled={isRefreshing}
                         style={{
-
-
-
-                            backgroundColor: "#F1F5F9",
-
-
-
-                            border: "1px solid #CBD5E1",
-
-
-
-                            color: "#475569",
-
-
-
-                            padding: "8px 16px",
-
-
-
-                            borderRadius: "8px",
-
-
-
-                            cursor: "pointer",
-
-
-
-                            fontWeight: "700",
-
-
-
-                            fontSize: "0.85rem",
-
-
-
-                            display: "flex",
-
-
-
+                            display: "inline-flex",
                             alignItems: "center",
-
-
-
-                            gap: "6px"
-
-
-
+                            gap: "8px",
+                            backgroundColor: isRefreshing ? "#E2E8F0" : "#F1F5F9",
+                            border: "1px solid #CBD5E1",
+                            color: isRefreshing ? "#1E293B" : "#475569",
+                            padding: "8px 16px",
+                            borderRadius: "8px",
+                            cursor: isRefreshing ? "wait" : "pointer",
+                            fontWeight: "700",
+                            fontSize: "0.85rem",
+                            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                            transition: "all 0.2s ease",
+                            opacity: isRefreshing ? 0.85 : 1
                         }}
-
-
-
+                        onMouseEnter={(e) => {
+                            if (!isRefreshing) {
+                                e.currentTarget.style.backgroundColor = "#E2E8F0";
+                                e.currentTarget.style.color = "#1E293B";
+                                e.currentTarget.style.borderColor = "#94A3B8";
+                            }
+                        }}
+                        onMouseLeave={(e) => {
+                            if (!isRefreshing) {
+                                e.currentTarget.style.backgroundColor = "#F1F5F9";
+                                e.currentTarget.style.color = "#475569";
+                                e.currentTarget.style.borderColor = "#CBD5E1";
+                            }
+                        }}
+                        title="Refresh support tickets"
                     >
-
-
-
-                        <RefreshCw size={16} /> Refresh
-
-
-
+                        <RefreshCw
+                            size={15}
+                            style={{
+                                animation: isRefreshing ? "spin 0.8s linear infinite" : "none",
+                                transformOrigin: "center"
+                            }}
+                        />
+                        <span>{isRefreshing ? "Refreshing..." : "Refresh"}</span>
                     </button>
 
 
